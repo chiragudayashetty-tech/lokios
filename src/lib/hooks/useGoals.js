@@ -41,22 +41,22 @@ export function useGoals() {
 
   // Grouped goal views
   const mainQuest = useMemo(
-    () => goals.find((g) => g.goal_type === 'main_quest' && !g.completed_at),
+    () => goals.find((g) => g.type === 'main_quest' && g.status !== 'completed'),
     [goals]
   )
 
   const sideQuests = useMemo(
-    () => goals.filter((g) => g.goal_type === 'side_quest' && !g.completed_at),
+    () => goals.filter((g) => g.type === 'side_quest' && g.status !== 'completed'),
     [goals]
   )
 
   const longTermGoals = useMemo(
-    () => goals.filter((g) => g.goal_type === 'long_term' && !g.completed_at),
+    () => goals.filter((g) => g.type === 'long_term' && g.status !== 'completed'),
     [goals]
   )
 
   const weeklyGoals = useMemo(
-    () => goals.filter((g) => g.goal_type === 'weekly' && !g.completed_at),
+    () => goals.filter((g) => g.type === 'weekly' && g.status !== 'completed'),
     [goals]
   )
 
@@ -109,7 +109,7 @@ export function useGoals() {
 
       const { data: updated, error } = await supabase
         .from('goals')
-        .update({ completed_at: new Date().toISOString(), progress: 100 })
+        .update({ completed_at: new Date().toISOString(), progress: 100, status: 'completed' })
         .eq('id', id)
         .eq('user_id', user.id)
         .select()
@@ -124,14 +124,14 @@ export function useGoals() {
         weekly: XP_REWARDS.goal_complete_weekly,
         long_term: XP_REWARDS.goal_complete_long_term,
       }
-      const xpAmount = xpMap[goal.goal_type] || XP_REWARDS.goal_complete_side
+      const xpAmount = xpMap[goal.type] || XP_REWARDS.goal_complete_side
 
       await supabase.rpc('award_xp', {
         p_user_id: user.id,
         p_amount: xpAmount,
         p_source_type: 'goal_complete',
         p_source_id: id,
-        p_description: `Completed ${goal.goal_type}: ${goal.title}`,
+        p_description: `Completed ${goal.type}: ${goal.title}`,
         p_stat_category: goal.category || 'discipline',
       })
 

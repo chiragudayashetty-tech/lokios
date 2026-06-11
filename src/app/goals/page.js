@@ -75,10 +75,10 @@ export default function Missions() {
                 <HudPanel glow={activeTab === 'main'} scanLine={activeTab === 'main'}>
                   <div className="flex-between mb-2">
                     <span className="badge badge-amber">{goal.type.replace('_', ' ')}</span>
-                    {!goal.is_completed && <span className="font-mono text-xs text-amber">PRIORITY: {goal.priority}</span>}
+                    {goal.status !== 'completed' && <span className="font-mono text-xs text-amber">PRIORITY: {goal.priority}</span>}
                   </div>
                   
-                  <h3 className={`font-display text-2xl uppercase tracking-wide ${goal.is_completed ? 'text-muted line-through' : 'text-primary'}`}>
+                  <h3 className={`font-display text-2xl uppercase tracking-wide ${goal.status === 'completed' ? 'text-muted line-through' : 'text-primary'}`}>
                     {goal.title}
                   </h3>
                   
@@ -90,7 +90,7 @@ export default function Missions() {
                     <TacticalProgress value={goal.progress} color="var(--accent-primary)" label="COMPLETION" />
                   </div>
                   
-                  {!goal.is_completed && (
+                  {goal.status !== 'completed' && (
                     <div className="mt-4 flex justify-end">
                       <button onClick={() => completeGoal(goal.id)} className="btn btn-secondary btn-sm">
                         <Check size={14} /> COMPLETE

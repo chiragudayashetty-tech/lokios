@@ -49,12 +49,12 @@ export function useTasks() {
       if (task.due_date && task.due_date.split('T')[0] === todayStr) return true
 
       // Match recurring tasks that apply to today
-      if (task.task_type === 'recurring' && task.recurring_days) {
-        return task.recurring_days.includes(dayOfWeek)
+      if (task.type === 'recurring' && task.recurrence_days) {
+        return task.recurrence_days.includes(dayOfWeek)
       }
 
       // Incomplete one-time tasks with no due date
-      if (!task.due_date && !task.completed_at && task.task_type === 'one_time') return true
+      if (!task.due_date && !task.completed_at && task.type === 'custom') return true
 
       return false
     })
@@ -85,7 +85,7 @@ export function useTasks() {
     try {
       const { data: updated, error } = await supabase
         .from('tasks')
-        .update({ completed_at: new Date().toISOString() })
+        .update({ completed_at: new Date().toISOString(), status: 'completed' })
         .eq('id', id)
         .eq('user_id', user.id)
         .select()

@@ -48,7 +48,7 @@ export function useBrainDump() {
         .insert({
           user_id: user.id,
           content,
-          item_type: type,
+          type: type,
         })
         .select()
         .single()
@@ -128,7 +128,7 @@ export function useBrainDump() {
           .insert({
             user_id: user.id,
             title: item.content,
-            task_type: 'one_time',
+            type: 'custom',
           })
           .select()
           .single()
@@ -141,7 +141,7 @@ export function useBrainDump() {
           .insert({
             user_id: user.id,
             title: item.content,
-            goal_type: 'side_quest',
+            type: 'side_quest',
           })
           .select()
           .single()
