@@ -408,6 +408,11 @@ p:last-child {
   grid-template-columns: var(--sidebar-width) 1fr;
   min-height: 100vh;
   width: 100%;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(212, 168, 67, 0.03) 0%, transparent 50%),
+    linear-gradient(rgba(20,20,20,0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,20,20,0.5) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
 }
 
 .app-shell.sidebar-collapsed {
@@ -797,6 +802,67 @@ p:last-child {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-4);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. TACTICAL HUD UI ELEMENTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.hud-panel {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: var(--space-5);
+  transition: all var(--transition-base);
+}
+
+.hud-panel.hud-glow {
+  box-shadow: inset 0 0 40px rgba(212, 168, 67, 0.02);
+  border-color: rgba(212, 168, 67, 0.2);
+}
+
+/* Tactical Corner Brackets */
+.hud-corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--accent-primary);
+  opacity: 0.5;
+  transition: opacity var(--transition-base);
+}
+
+.hud-panel:hover .hud-corner { opacity: 1; }
+
+.hud-corner-tl { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.hud-corner-tr { top: -1px; right: -1px; border-left: none; border-bottom: none; }
+.hud-corner-bl { bottom: -1px; left: -1px; border-right: none; border-top: none; }
+.hud-corner-br { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+/* Clip-path geometry */
+.clip-tactical {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+}
+.clip-tactical-reverse {
+  clip-path: polygon(0 15px, 15px 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--accent-primary), transparent);
+  opacity: 0.3;
+  animation: scan 4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scan {
+  0% { top: 0; opacity: 0; }
+  10% { opacity: 0.5; }
+  90% { opacity: 0.5; }
+  100% { top: 100%; opacity: 0; }
 }
 
 .grid-3 {

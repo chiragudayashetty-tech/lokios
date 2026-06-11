@@ -67,7 +67,7 @@ export default function IntelligenceFeed() {
         })
       }
 
-      // ── 3. MISSED ROUTINES (YESTERDAY) ──
+      // ── 3. MISSED ROUTINES & BATTLE DAMAGE ──
       // Calculate yesterday's date
       const yesterday = new Date(today)
       yesterday.setDate(yesterday.getDate() - 1)
@@ -80,21 +80,75 @@ export default function IntelligenceFeed() {
         .eq('user_id', user.id)
         .eq('date', yesterdayStr)
 
-      if (yesterdayLogs) {
+      // Fetch blueprint to evaluate battles
+      const { data: blueprint } = await supabase
+        .from('user_blueprints')
+        .select('id, battles, last_evaluated_date')
+        .eq('user_id', user.id)
+        .single()
+
+      if (yesterdayLogs && blueprint && blueprint.battles) {
         const completedHabitIds = new Set(yesterdayLogs.map(l => l.habit_id))
-        const missedHabits = habits.filter(h => {
-           // Basic check if habit should have been done yesterday (assuming daily for simplicity)
-           if (h.frequency !== 'daily' && !(h.recurrence_days && h.recurrence_days.includes(yesterday.getDay()))) return false
-           return !completedHabitIds.has(h.id)
+        let totalMissed = 0
+        let battleUpdatesNeeded = false
+        
+        const updatedBattles = blueprint.battles.map(battle => {
+          if (!battle.linked_habits || battle.linked_habits.length === 0) return battle
+          
+          let hpChange = 0
+          let habitsMissed = 0
+          let habitsHit = 0
+
+          battle.linked_habits.forEach(habitId => {
+            if (completedHabitIds.has(habitId)) {
+              hpChange -= 15 // Direct damage to the enemy
+              habitsHit++
+            } else {
+              hpChange += 20 // Enemy heals
+              habitsMissed++
+              totalMissed++
+            }
+          })
+
+          if (hpChange !== 0) {
+            battleUpdatesNeeded = true
+            const oldHp = battle.hp || 100
+            const newHp = Math.max(0, Math.min(100, oldHp + hpChange))
+            
+            if (hpChange > 0) {
+              newAlerts.push({
+                id: `battle_heal_${battle.name}`,
+                type: 'warning',
+                icon: Activity,
+                message: `BATTLE LOST GROUND: Missing counter-measures caused "${battle.name}" to heal +${hpChange} HP.`
+              })
+            } else {
+              newAlerts.push({
+                id: `battle_dmg_${battle.name}`,
+                type: 'success',
+                icon: Zap,
+                message: `DIRECT HIT: Counter-measures dealt -${Math.abs(hpChange)} HP damage to "${battle.name}".`
+              })
+            }
+            return { ...battle, hp: newHp }
+          }
+          return battle
         })
 
-        if (missedHabits.length > 0) {
+        if (totalMissed > 0) {
           newAlerts.push({
             id: 'missed_routines',
-            type: 'warning',
-            icon: Activity,
-            message: `DISCIPLINE BREACH: You missed ${missedHabits.length} routines yesterday. Active Battles have gained strength.`
+            type: 'danger',
+            icon: Skull,
+            message: `DISCIPLINE BREACH: You missed ${totalMissed} critical routines yesterday. (-${totalMissed * 10} XP)`
           })
+        }
+
+        // Persist the battle HP damage if not evaluated today yet
+        if (battleUpdatesNeeded && blueprint.last_evaluated_date !== todayStr) {
+          await supabase.from('user_blueprints')
+            .update({ battles: updatedBattles, last_evaluated_date: todayStr })
+            .eq('id', blueprint.id)
         }
       }
 

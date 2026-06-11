@@ -5,97 +5,38 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { useHabits } from '@/lib/hooks/useHabits'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, Shield, Target, Zap, AlertTriangle, Eye, Flame, Book, Terminal, Save, Database, Swords, X, Plus, Trash2 } from 'lucide-react'
+import { User, Shield, Target, AlertTriangle, Eye, Flame, Swords, X, Plus, Trash2, Edit2, Link as LinkIcon, Crosshair } from 'lucide-react'
 
-// ── DEFAULT BLUEPRINT DATA (pre-seeded from Chirag's Master Prompt) ──
+// ── DEFAULT BLUEPRINT DATA ──
 const DEFAULT_BLUEPRINT = {
   identity: 'Founder, Builder, AI Educator, Marketer, Operator, Lifelong Learner',
   mission: 'Build Beyond Tatva into a leading AI education platform that helps students use AI effectively while creating financial freedom, meaningful impact, and long term personal growth.',
-  motives: `I do not want to spend my life working on goals chosen by other people.
-
-I want to build something valuable that improves the lives of students and creates opportunities for myself and my family.
-
-Beyond Tatva is more than a business. It is proof that I can turn ideas into reality.
-
-If I succeed, I gain freedom, confidence, income, impact, and the ability to build bigger things in the future.
-
-If I fail, I want it to be because I tried everything, not because I stayed comfortable.`,
-  strengths: [
-    'Fast learner',
-    'Curious about technology',
-    'Willing to experiment',
-    'Strong interest in AI',
-    'Creative thinker',
-    'Can learn independently',
-    'Persistent when motivated',
-    'Comfortable with digital tools',
-    'Good at spotting opportunities',
-    'Can connect ideas across different fields'
-  ],
-  weaknesses: [
-    'Phone addiction',
-    'Inconsistent execution',
-    'Overplanning',
-    'Starting too many projects',
-    'Difficulty focusing on one priority',
-    'Procrastination during difficult tasks',
-    'Seeking perfection before launching',
-    'Low sales confidence',
-    'Avoiding uncomfortable conversations',
-    'Short bursts of motivation followed by drop offs'
-  ],
-  values_list: [
-    'No quitting Beyond Tatva',
-    'Workout at least 3 times per week',
-    'Maintain personal hygiene',
-    'Daily learning',
-    'Journal regularly',
-    'Track screen time honestly',
-    'Complete important tasks before entertainment',
-    'Always tell the truth to myself',
-    'Continue improving communication skills',
-    'Protect long term goals over short term comfort'
-  ],
-  future_vision: `Build Beyond Tatva into a recognized education company.
-
-Generate sustainable income exceeding ₹5 lakh per month.
-
-Help thousands of students learn AI and future skills.
-
-Build a strong personal brand.
-
-Become highly skilled in AI, marketing, sales, content creation, and business operations.
-
-Achieve financial independence.
-
-Become physically fit, mentally disciplined, and emotionally resilient.
-
-Create opportunities for students through internships, training, and career guidance.`
+  motives: `I do not want to spend my life working on goals chosen by other people.\n\nI want to build something valuable that improves the lives of students and creates opportunities for myself and my family.\n\nBeyond Tatva is more than a business. It is proof that I can turn ideas into reality.`,
+  strengths: ['Fast learner', 'Curious about technology', 'Willing to experiment', 'Strong interest in AI', 'Creative thinker'],
+  weaknesses: ['Phone addiction', 'Inconsistent execution', 'Overplanning', 'Starting too many projects', 'Difficulty focusing on one priority'],
+  values_list: ['No quitting Beyond Tatva', 'Workout at least 3 times per week', 'Maintain personal hygiene', 'Daily learning', 'Journal regularly'],
+  future_vision: `Build Beyond Tatva into a recognized education company.\n\nGenerate sustainable income exceeding ₹5 lakh per month.`
 }
 
-// ── DEFAULT ACTIVE BATTLES ──
 const DEFAULT_BATTLES = [
-  { name: 'Phone Addiction', status: 'active', severity: 'high', notes: 'Primary discipline threat. Track screen time daily.' },
-  { name: 'Porn Consumption', status: 'active', severity: 'high', notes: 'Drain on discipline and self-respect. Zero tolerance.' },
-  { name: 'Inconsistent Execution', status: 'active', severity: 'high', notes: 'Starting strong, dropping off. Build streak systems.' },
-  { name: 'Fear of Selling', status: 'active', severity: 'medium', notes: 'Avoiding sales calls and uncomfortable conversations.' },
-  { name: 'Poor Sleep Discipline', status: 'active', severity: 'medium', notes: 'Late nights sabotage mornings. Sleep by 12.' },
-  { name: 'Overthinking', status: 'active', severity: 'medium', notes: 'Analysis paralysis. Ship imperfect, iterate.' },
+  { name: 'Phone Addiction', hp: 80, severity: 'high', notes: 'Primary discipline threat.', linked_habits: [] },
+  { name: 'Porn Consumption', hp: 90, severity: 'high', notes: 'Drain on discipline and self-respect.', linked_habits: [] },
+  { name: 'Inconsistent Execution', hp: 70, severity: 'high', notes: 'Starting strong, dropping off.', linked_habits: [] }
 ]
 
-export default function PersonalBlueprint() {
+export default function OperatorDashboard() {
   const { user } = useAuth()
+  const { habits } = useHabits()
   const [loading, setLoading] = useState(true)
   const [blueprint, setBlueprint] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [dbError, setDbError] = useState(false)
-  const [activeSection, setActiveSection] = useState('identity')
-
-  // Battles state (stored as JSON in blueprint.battles)
+  const [editMode, setEditMode] = useState(false)
+  
   const [battles, setBattles] = useState(DEFAULT_BATTLES)
   const [showAddBattle, setShowAddBattle] = useState(false)
-  const [newBattle, setNewBattle] = useState({ name: '', severity: 'medium', notes: '' })
+  const [newBattle, setNewBattle] = useState({ name: '', severity: 'medium', notes: '', linked_habits: [], hp: 100 })
 
   const [form, setForm] = useState({
     identity: DEFAULT_BLUEPRINT.identity,
@@ -115,12 +56,7 @@ export default function PersonalBlueprint() {
   const fetchBlueprint = async () => {
     const supabase = createClient()
     const { data, error } = await supabase.from('user_blueprints').select('*').eq('user_id', user.id).single()
-    if (error && (error.code === '42P01' || error.code === 'PGRST116')) {
-      // Table doesn't exist or no row yet — use defaults
-      if (error.code === '42P01') setDbError(true)
-      setLoading(false)
-      return
-    }
+    
     if (data) {
       setBlueprint(data)
       setForm({
@@ -133,14 +69,21 @@ export default function PersonalBlueprint() {
         future_vision: data.future_vision || DEFAULT_BLUEPRINT.future_vision
       })
       if (data.battles && Array.isArray(data.battles)) {
-        setBattles(data.battles)
+        // Migrate old battles (status) to new battles (hp)
+        const migratedBattles = data.battles.map(b => ({
+          name: b.name,
+          severity: b.severity,
+          notes: b.notes,
+          hp: b.hp !== undefined ? b.hp : (b.status === 'defeated' ? 0 : 100),
+          linked_habits: b.linked_habits || []
+        }))
+        setBattles(migratedBattles)
       }
     }
     setLoading(false)
   }
 
-  const handleSave = async (e) => {
-    if (e) e.preventDefault()
+  const handleSave = async () => {
     setSaving(true)
     const supabase = createClient()
 
@@ -163,12 +106,13 @@ export default function PersonalBlueprint() {
     }
     await fetchBlueprint()
     setSaving(false)
+    setEditMode(false)
   }
 
   const addBattle = () => {
     if (!newBattle.name.trim()) return
-    setBattles(prev => [...prev, { ...newBattle, status: 'active' }])
-    setNewBattle({ name: '', severity: 'medium', notes: '' })
+    setBattles(prev => [...prev, { ...newBattle }])
+    setNewBattle({ name: '', severity: 'medium', notes: '', linked_habits: [], hp: 100 })
     setShowAddBattle(false)
   }
 
@@ -176,268 +120,255 @@ export default function PersonalBlueprint() {
     setBattles(prev => prev.filter((_, i) => i !== idx))
   }
 
-  const toggleBattleStatus = (idx) => {
+  const toggleLinkedHabit = (battleIdx, habitId) => {
     setBattles(prev => prev.map((b, i) => {
-      if (i !== idx) return b
-      const cycle = { active: 'winning', winning: 'defeated', defeated: 'active' }
-      return { ...b, status: cycle[b.status] || 'active' }
+      if (i !== battleIdx) return b
+      const isLinked = b.linked_habits?.includes(habitId)
+      return {
+        ...b,
+        linked_habits: isLinked 
+          ? b.linked_habits.filter(id => id !== habitId)
+          : [...(b.linked_habits || []), habitId]
+      }
     }))
   }
 
-  const handleSeed = async () => {
-    if (!confirm("⚠️ DESTRUCTIVE: This will delete ALL current habits and inject your exact Weekday/Saturday/Sunday routines. Proceed?")) return
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING IDENTITY MATRIX...</span></div></AppShell>
 
-    const supabase = createClient()
-    await supabase.from('habits').delete().eq('user_id', user.id)
-
-    const routines = [
-      // ── WEEKDAYS ──
-      { user_id: user.id, title: "Wake up at 7AM",              category: "discipline",    frequency: "daily", stat_category: "discipline",    xp_per_completion: 25 },
-      { user_id: user.id, title: "Morning hygiene",             category: "personal_care", frequency: "daily", stat_category: "discipline",    xp_per_completion: 15 },
-      { user_id: user.id, title: "Breakfast",                   category: "personal_care", frequency: "daily", stat_category: "discipline",    xp_per_completion: 10 },
-      { user_id: user.id, title: "Beyond Tatva Deep Work (90m)",category: "founder",       frequency: "daily", stat_category: "founder",       xp_per_completion: 30 },
-      { user_id: user.id, title: "Workout",                     category: "fitness",       frequency: "daily", stat_category: "strength",      xp_per_completion: 25 },
-      { user_id: user.id, title: "Lunch",                       category: "personal_care", frequency: "daily", stat_category: "discipline",    xp_per_completion: 5  },
-      { user_id: user.id, title: "BT Content / Course Building",category: "founder",       frequency: "daily", stat_category: "founder",       xp_per_completion: 25 },
-      { user_id: user.id, title: "Marketing / Outreach",        category: "founder",       frequency: "daily", stat_category: "communication", xp_per_completion: 25 },
-      { user_id: user.id, title: "AI Learning",                 category: "learning",      frequency: "daily", stat_category: "learning",      xp_per_completion: 25 },
-      { user_id: user.id, title: "Reading (20 mins)",           category: "learning",      frequency: "daily", stat_category: "learning",      xp_per_completion: 20 },
-      { user_id: user.id, title: "Journal",                     category: "discipline",    frequency: "daily", stat_category: "discipline",    xp_per_completion: 20 },
-      { user_id: user.id, title: "Personal Care",               category: "personal_care", frequency: "daily", stat_category: "discipline",    xp_per_completion: 15 },
-      { user_id: user.id, title: "Sleep by 12",                 category: "discipline",    frequency: "daily", stat_category: "discipline",    xp_per_completion: 20 },
-    ]
-
-    // Saturday additions
-    const saturdayRoutines = [
-      { user_id: user.id, title: "Weekly Review",        category: "founder",  frequency: "weekly", stat_category: "founder",  xp_per_completion: 40 },
-      { user_id: user.id, title: "Portfolio Update",     category: "founder",  frequency: "weekly", stat_category: "creation", xp_per_completion: 30 },
-      { user_id: user.id, title: "Content Creation",     category: "founder",  frequency: "weekly", stat_category: "founder",  xp_per_completion: 30 },
-      { user_id: user.id, title: "Skill Building",       category: "learning", frequency: "weekly", stat_category: "learning", xp_per_completion: 30 },
-    ]
-
-    // Sunday additions
-    const sundayRoutines = [
-      { user_id: user.id, title: "Weekly Planning",     category: "founder",       frequency: "weekly", stat_category: "founder",    xp_per_completion: 40 },
-      { user_id: user.id, title: "Calendar Planning",   category: "discipline",    frequency: "weekly", stat_category: "discipline", xp_per_completion: 25 },
-      { user_id: user.id, title: "Goal Review",         category: "founder",       frequency: "weekly", stat_category: "founder",    xp_per_completion: 30 },
-      { user_id: user.id, title: "Life Admin",          category: "discipline",    frequency: "weekly", stat_category: "discipline", xp_per_completion: 20 },
-      { user_id: user.id, title: "Family Time",         category: "personal_care", frequency: "weekly", stat_category: "discipline", xp_per_completion: 15 },
-      { user_id: user.id, title: "Recovery",            category: "fitness",       frequency: "weekly", stat_category: "strength",   xp_per_completion: 20 },
-    ]
-
-    await supabase.from('habits').insert([...routines, ...saturdayRoutines, ...sundayRoutines])
-    alert('✅ All routines injected! Go to Daily Ops to see them.')
-  }
-
-  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING DEEP STORAGE...</span></div></AppShell>
-
-  const SEVERITY_COLORS = { high: 'var(--danger)', medium: 'var(--accent-primary)', low: 'var(--info)' }
-  const STATUS_LABELS = { active: '⚔️ ACTIVE', winning: '🟢 WINNING', defeated: '✅ DEFEATED' }
-  const STATUS_COLORS = { active: 'var(--danger)', winning: 'var(--success)', defeated: 'var(--text-muted)' }
-
-  const SECTIONS = [
-    { id: 'identity', label: 'IDENTITY', icon: User },
-    { id: 'mission', label: 'MISSION', icon: Target },
-    { id: 'battles', label: 'BATTLES', icon: Swords },
-    { id: 'strengths', label: 'INTEL', icon: Shield },
-    { id: 'values', label: 'CODE', icon: Flame },
-    { id: 'vision', label: 'VISION', icon: Eye },
-  ]
+  const SEVERITY_COLORS = { high: 'var(--danger)', medium: 'var(--warning)', low: 'var(--info)' }
 
   return (
     <AppShell>
-      <div className="page-container max-w-5xl">
-
-        <header className="page-header flex-between flex-wrap gap-4">
+      <div className="page-container full px-4 md:px-8 max-w-[1600px] mx-auto">
+        <header className="page-header flex-between mb-8">
           <div>
-            <h1 className="page-title flex items-center gap-3"><User className="text-amber" /> PERSONAL BLUEPRINT</h1>
-            <p className="page-subtitle font-mono uppercase text-xs">Core identity, active battles, and foundational directives.</p>
+            <h1 className="font-display text-4xl font-bold tracking-widest text-primary uppercase">OPERATOR DASHBOARD</h1>
+            <p className="font-mono text-xs text-amber tracking-widest uppercase mt-1">Identity Matrix & War Room</p>
           </div>
-          <button className="btn btn-primary flex items-center gap-2" onClick={handleSave} disabled={saving || dbError}>
-            <Save size={16} /> {saving ? 'SAVING...' : 'SAVE ALL'}
-          </button>
+          <div className="flex gap-3">
+            <button className={`btn ${editMode ? 'btn-ghost' : 'btn-primary'}`} onClick={() => setEditMode(!editMode)}>
+              {editMode ? 'CANCEL' : 'ENTER EDIT MODE'}
+            </button>
+            {editMode && (
+              <button className="btn btn-primary bg-success text-white border-success-subtle hover:bg-success-glow" onClick={handleSave} disabled={saving}>
+                {saving ? 'SAVING...' : 'SAVE DIRECTIVES'}
+              </button>
+            )}
+          </div>
         </header>
 
-        {dbError && (
-          <HudPanel className="mb-6 border-danger bg-danger-subtle">
-            <div className="flex items-center gap-4 text-danger font-mono">
-              <AlertTriangle size={28} />
-              <div>
-                <strong className="block mb-1">DATABASE MIGRATION REQUIRED</strong>
-                <span className="text-xs">The user_blueprints table does not exist. Run migration_01.sql in Supabase SQL Editor.</span>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* ── COLUMN 1: IDENTITY (3/12) ── */}
+          <div className="lg:col-span-3 flex flex-col gap-6">
+            <HudPanel glow className="border-info" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
+              <div className="flex items-center gap-2 mb-4 text-info border-b border-border-color pb-2">
+                <User size={16} /> <span className="font-display text-lg uppercase tracking-widest">IDENTITY</span>
               </div>
-            </div>
-          </HudPanel>
-        )}
+              {editMode ? (
+                <textarea className="textarea h-32 font-mono text-xs" value={form.identity} onChange={e => setForm({...form, identity: e.target.value})} />
+              ) : (
+                <div className="font-mono text-sm leading-relaxed text-secondary">{form.identity}</div>
+              )}
+            </HudPanel>
 
-        {/* Section Tabs */}
-        <div className="tabs mb-6">
-          {SECTIONS.map(s => {
-            const Icon = s.icon
-            return (
-              <button key={s.id} className={`tab-item flex items-center gap-2 ${activeSection === s.id ? 'tab-active' : ''}`}
-                onClick={() => setActiveSection(s.id)}>
-                <Icon size={14} /> {s.label}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* ── IDENTITY ── */}
-        {activeSection === 'identity' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-col gap-6">
-            <HudPanel label="CORE IDENTITY" glow className="border-info">
-              <div className="flex-col gap-4">
-                <div>
-                  <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><User size={14} className="text-info"/> WHO I AM</label>
-                  <textarea className="textarea h-20 font-mono" value={form.identity} onChange={e => setForm({...form, identity: e.target.value})} disabled={dbError} />
-                </div>
+            <HudPanel className="border-amber" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
+              <div className="flex items-center gap-2 mb-4 text-amber border-b border-border-color pb-2">
+                <Target size={16} /> <span className="font-display text-lg uppercase tracking-widest">MISSION</span>
               </div>
+              {editMode ? (
+                <textarea className="textarea h-48 font-mono text-xs" value={form.mission} onChange={e => setForm({...form, mission: e.target.value})} />
+              ) : (
+                <div className="font-mono text-sm leading-relaxed text-primary">{form.mission}</div>
+              )}
             </HudPanel>
-          </motion.div>
-        )}
 
-        {/* ── MISSION ── */}
-        {activeSection === 'mission' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-col gap-6">
-            <HudPanel label="PRIMARY MISSION" glow className="border-amber">
-              <div className="flex-col gap-4">
-                <div>
-                  <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Target size={14} className="text-amber"/> MISSION STATEMENT</label>
-                  <textarea className="textarea h-24 font-mono" value={form.mission} onChange={e => setForm({...form, mission: e.target.value})} disabled={dbError} />
-                </div>
-                <div>
-                  <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Zap size={14} className="text-amber"/> WHY DOES THIS MATTER?</label>
-                  <textarea className="textarea h-48 font-mono text-sm" value={form.motives} onChange={e => setForm({...form, motives: e.target.value})} disabled={dbError} />
-                </div>
+            <HudPanel className="border-border-color" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
+              <div className="flex items-center gap-2 mb-4 text-muted border-b border-border-color pb-2">
+                <Eye size={16} /> <span className="font-display text-lg uppercase tracking-widest">5-YEAR ENDGAME</span>
               </div>
+              {editMode ? (
+                <textarea className="textarea h-48 font-mono text-xs" value={form.future_vision} onChange={e => setForm({...form, future_vision: e.target.value})} />
+              ) : (
+                <div className="font-mono text-xs leading-relaxed text-secondary whitespace-pre-wrap">{form.future_vision}</div>
+              )}
             </HudPanel>
-          </motion.div>
-        )}
-
-        {/* ── ACTIVE BATTLES ── */}
-        {activeSection === 'battles' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-col gap-6">
-            <HudPanel label="ACTIVE BATTLES" className="border-danger">
-              <div className="flex-between mb-4">
-                <p className="font-mono text-xs text-secondary">Goals are what you want. Battles are what is currently trying to stop you.</p>
-                <button className="btn btn-ghost btn-sm flex items-center gap-1" onClick={() => setShowAddBattle(true)}>
-                  <Plus size={14} /> ADD
-                </button>
-              </div>
-
-              <div className="flex-col gap-3">
-                {battles.map((battle, idx) => (
-                  <div key={idx} className={`relative p-4 bg-tertiary border transition-all group ${battle.status === 'defeated' ? 'border-border-color opacity-50' : 'border-border-color hover:border-danger'}`}
-                    style={{ borderLeftWidth: '3px', borderLeftColor: STATUS_COLORS[battle.status] }}>
-                    <div className="flex-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <h3 className={`font-display text-lg uppercase tracking-wider ${battle.status === 'defeated' ? 'text-muted line-through' : 'text-primary'}`}>
-                          {battle.name}
-                        </h3>
-                        <span className="font-mono text-[9px] px-2 py-0.5 border uppercase"
-                          style={{ color: SEVERITY_COLORS[battle.severity], borderColor: SEVERITY_COLORS[battle.severity] }}>
-                          {battle.severity}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => toggleBattleStatus(idx)}
-                          className="font-mono text-[10px] uppercase px-2 py-1 border hover:bg-hover transition-colors"
-                          style={{ color: STATUS_COLORS[battle.status], borderColor: STATUS_COLORS[battle.status] }}>
-                          {STATUS_LABELS[battle.status]}
-                        </button>
-                        <button onClick={() => removeBattle(idx)} className="opacity-0 group-hover:opacity-100 text-muted hover:text-danger p-1 transition-all">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                    {battle.notes && <p className="font-mono text-xs text-secondary pl-0.5">{battle.notes}</p>}
-                  </div>
-                ))}
-              </div>
-
-              {/* Add Battle Modal */}
-              <AnimatePresence>
-                {showAddBattle && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 p-4 bg-tertiary border border-danger overflow-hidden">
-                    <div className="flex-between mb-3">
-                      <span className="font-display text-sm uppercase text-danger">DECLARE NEW BATTLE</span>
-                      <button onClick={() => setShowAddBattle(false)} className="text-muted hover:text-danger"><X size={16} /></button>
-                    </div>
-                    <div className="flex-col gap-3">
-                      <input type="text" className="input font-mono" placeholder="Battle name..." value={newBattle.name}
-                        onChange={e => setNewBattle({...newBattle, name: e.target.value})} autoFocus />
-                      <div className="grid grid-cols-2 gap-3">
-                        <select className="select font-mono" value={newBattle.severity}
-                          onChange={e => setNewBattle({...newBattle, severity: e.target.value})}>
-                          <option value="low">LOW SEVERITY</option>
-                          <option value="medium">MEDIUM SEVERITY</option>
-                          <option value="high">HIGH SEVERITY</option>
-                        </select>
-                        <input type="text" className="input font-mono text-sm" placeholder="Notes..." value={newBattle.notes}
-                          onChange={e => setNewBattle({...newBattle, notes: e.target.value})} />
-                      </div>
-                      <button onClick={addBattle} className="btn btn-primary w-full">DECLARE BATTLE</button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </HudPanel>
-
-            <div className="font-mono text-[10px] text-muted text-center">
-              Click the status button to cycle: ACTIVE → WINNING → DEFEATED. Remember to hit SAVE ALL.
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── STRENGTHS & WEAKNESSES ── */}
-        {activeSection === 'strengths' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <HudPanel label="KNOWN ADVANTAGES" className="border-success">
-              <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Shield size={14} className="text-success"/> One per line</label>
-              <textarea className="textarea h-64 font-mono text-sm" value={form.strengths} onChange={e => setForm({...form, strengths: e.target.value})} disabled={dbError} />
-            </HudPanel>
-            <HudPanel label="KNOWN VULNERABILITIES" className="border-danger">
-              <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><AlertTriangle size={14} className="text-danger"/> One per line</label>
-              <textarea className="textarea h-64 font-mono text-sm" value={form.weaknesses} onChange={e => setForm({...form, weaknesses: e.target.value})} disabled={dbError} />
-            </HudPanel>
-          </motion.div>
-        )}
-
-        {/* ── NON-NEGOTIABLES ── */}
-        {activeSection === 'values' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-col gap-6">
-            <HudPanel label="NON-NEGOTIABLES" glow className="border-amber">
-              <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Flame size={14} className="text-amber"/> THE CODE — One per line</label>
-              <textarea className="textarea h-64 font-mono text-sm" value={form.values_list} onChange={e => setForm({...form, values_list: e.target.value})} disabled={dbError} />
-            </HudPanel>
-          </motion.div>
-        )}
-
-        {/* ── 5 YEAR VISION ── */}
-        {activeSection === 'vision' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-col gap-6">
-            <HudPanel label="5 YEAR TARGET" glow className="border-info">
-              <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Eye size={14} className="text-info"/> THE ENDGAME</label>
-              <textarea className="textarea h-64 font-mono text-sm" value={form.future_vision} onChange={e => setForm({...form, future_vision: e.target.value})} disabled={dbError} />
-            </HudPanel>
-          </motion.div>
-        )}
-
-        {/* ── INJECT ROUTINES ── */}
-        <HudPanel label="SYSTEM INITIALIZER" className="mt-8 border-danger">
-          <div className="flex-between">
-            <div>
-              <h3 className="font-display text-xl uppercase text-danger mb-1">INJECT ROUTINES (DESTRUCTIVE)</h3>
-              <p className="font-mono text-xs text-secondary">Deletes all current habits. Seeds your exact Weekday (13 habits) + Saturday (4) + Sunday (6) routines.</p>
-            </div>
-            <button className="btn bg-danger text-white hover:opacity-80 border border-danger-subtle px-6 py-2" onClick={handleSeed}>
-              INJECT
-            </button>
           </div>
-        </HudPanel>
 
+          {/* ── COLUMN 2: WAR ROOM / BATTLES (5/12) ── */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <HudPanel glow className="border-danger" style={{ clipPath: 'polygon(0 15px, 15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
+              <div className="flex items-center justify-between mb-6 border-b border-danger-subtle pb-3">
+                <div className="flex items-center gap-2 text-danger">
+                  <Swords size={20} /> <span className="font-display text-xl uppercase tracking-widest font-bold">WAR ROOM</span>
+                </div>
+                {editMode && (
+                  <button className="btn btn-ghost btn-sm text-danger hover:bg-danger-subtle flex items-center gap-1" onClick={() => setShowAddBattle(true)}>
+                    <Plus size={14} /> DEPLOY BATTLE
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <AnimatePresence>
+                  {battles.map((battle, idx) => {
+                    const isDefeated = battle.hp <= 0;
+                    const borderColor = isDefeated ? 'var(--text-muted)' : SEVERITY_COLORS[battle.severity];
+                    
+                    return (
+                      <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                        className={`relative p-4 bg-tertiary border transition-all ${isDefeated ? 'opacity-50' : ''}`}
+                        style={{ borderLeftWidth: '4px', borderLeftColor: borderColor }}>
+                        
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className={`font-display text-xl uppercase tracking-wider ${isDefeated ? 'line-through text-muted' : 'text-primary'}`}>
+                              {battle.name}
+                            </h3>
+                            <span className="font-mono text-[9px] px-2 py-0.5 border uppercase mt-1 inline-block"
+                              style={{ color: borderColor, borderColor: borderColor }}>
+                              {isDefeated ? 'DEFEATED' : `THREAT: ${battle.severity}`}
+                            </span>
+                          </div>
+                          
+                          {editMode && (
+                            <button onClick={() => removeBattle(idx)} className="text-muted hover:text-danger p-1">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+
+                        {!isDefeated && (
+                          <div className="mt-4 mb-3">
+                            <div className="flex justify-between font-mono text-[10px] mb-1">
+                              <span className="text-muted">BATTLE HP (HEALS ON FAILURE, TAKES DAMAGE ON SUCCESS)</span>
+                              <span className={battle.hp > 80 ? 'text-danger' : 'text-amber'}>{battle.hp} / 100</span>
+                            </div>
+                            <div className="h-2 w-full bg-bg-primary border border-border-color rounded-full overflow-hidden">
+                              <motion.div 
+                                className={`h-full ${battle.hp > 80 ? 'bg-danger' : 'bg-amber'}`} 
+                                initial={{ width: 0 }} 
+                                animate={{ width: `${Math.max(0, Math.min(100, battle.hp))}%` }} 
+                                transition={{ duration: 1 }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="mt-3 pt-3 border-t border-border-subtle">
+                          <div className="font-mono text-[10px] text-muted mb-2 flex items-center gap-1"><LinkIcon size={10} /> LINKED COUNTER-MEASURES (ROUTINES)</div>
+                          
+                          {editMode ? (
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                              {habits.map(habit => {
+                                const isLinked = battle.linked_habits?.includes(habit.id);
+                                return (
+                                  <div key={habit.id} onClick={() => toggleLinkedHabit(idx, habit.id)}
+                                    className={`text-[10px] font-mono p-1.5 border cursor-pointer truncate transition-colors ${isLinked ? 'border-amber text-amber bg-amber-subtle' : 'border-border-color text-muted hover:border-secondary'}`}>
+                                    {isLinked ? '✓ ' : '+ '}{habit.title}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {battle.linked_habits?.length > 0 ? (
+                                battle.linked_habits.map(id => {
+                                  const habit = habits.find(h => h.id === id);
+                                  return habit ? (
+                                    <span key={id} className="font-mono text-[9px] px-2 py-1 bg-bg-secondary border border-border-color text-secondary flex items-center gap-1">
+                                      <Crosshair size={10} className="text-amber" /> {habit.title}
+                                    </span>
+                                  ) : null;
+                                })
+                              ) : (
+                                <span className="font-mono text-[9px] text-danger">NO COUNTER-MEASURES DEPLOYED. VULNERABILITY DETECTED.</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </AnimatePresence>
+
+                {/* Add Battle Modal inline */}
+                <AnimatePresence>
+                  {showAddBattle && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      className="mt-2 p-4 bg-tertiary border border-danger">
+                      <div className="flex justify-between mb-3">
+                        <span className="font-display text-sm uppercase text-danger">DEPLOY NEW BATTLE</span>
+                        <button onClick={() => setShowAddBattle(false)} className="text-muted hover:text-danger"><X size={16} /></button>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        <input type="text" className="input font-mono" placeholder="Battle name..." value={newBattle.name} onChange={e => setNewBattle({...newBattle, name: e.target.value})} autoFocus />
+                        <select className="select font-mono" value={newBattle.severity} onChange={e => setNewBattle({...newBattle, severity: e.target.value})}>
+                          <option value="low">LOW THREAT</option>
+                          <option value="medium">MEDIUM THREAT</option>
+                          <option value="high">HIGH THREAT</option>
+                          <option value="extreme">EXTREME THREAT</option>
+                        </select>
+                        <button onClick={addBattle} className="btn btn-primary w-full text-danger border-danger hover:bg-danger-subtle">DEPLOY BATTLE</button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </HudPanel>
+          </div>
+
+          {/* ── COLUMN 3: INTEL (4/12) ── */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            <HudPanel className="border-success" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
+              <div className="flex items-center gap-2 mb-4 text-success border-b border-border-color pb-2">
+                <Shield size={16} /> <span className="font-display text-lg uppercase tracking-widest">KNOWN ADVANTAGES</span>
+              </div>
+              {editMode ? (
+                <textarea className="textarea h-40 font-mono text-xs" value={form.strengths} onChange={e => setForm({...form, strengths: e.target.value})} />
+              ) : (
+                <ul className="flex flex-col gap-2 font-mono text-xs text-secondary">
+                  {form.strengths.split('\n').filter(Boolean).map((s, i) => (
+                    <li key={i} className="flex gap-2"><span className="text-success">■</span> {s}</li>
+                  ))}
+                </ul>
+              )}
+            </HudPanel>
+
+            <HudPanel className="border-danger" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
+              <div className="flex items-center gap-2 mb-4 text-danger border-b border-border-color pb-2">
+                <AlertTriangle size={16} /> <span className="font-display text-lg uppercase tracking-widest">VULNERABILITIES</span>
+              </div>
+              {editMode ? (
+                <textarea className="textarea h-40 font-mono text-xs" value={form.weaknesses} onChange={e => setForm({...form, weaknesses: e.target.value})} />
+              ) : (
+                <ul className="flex flex-col gap-2 font-mono text-xs text-secondary">
+                  {form.weaknesses.split('\n').filter(Boolean).map((w, i) => (
+                    <li key={i} className="flex gap-2"><span className="text-danger">■</span> {w}</li>
+                  ))}
+                </ul>
+              )}
+            </HudPanel>
+
+            <HudPanel glow className="border-amber" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
+              <div className="flex items-center gap-2 mb-4 text-amber border-b border-border-color pb-2">
+                <Flame size={16} /> <span className="font-display text-lg uppercase tracking-widest">THE CODE (NON-NEGOTIABLES)</span>
+              </div>
+              {editMode ? (
+                <textarea className="textarea h-40 font-mono text-xs" value={form.values_list} onChange={e => setForm({...form, values_list: e.target.value})} />
+              ) : (
+                <ul className="flex flex-col gap-3 font-mono text-xs text-primary">
+                  {form.values_list.split('\n').filter(Boolean).map((v, i) => (
+                    <li key={i} className="flex gap-2 p-2 border border-border-color bg-tertiary">
+                      <span className="text-amber">{String(i+1).padStart(2, '0')}</span> {v}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </HudPanel>
+          </div>
+
+        </div>
       </div>
     </AppShell>
   )
