@@ -89,7 +89,7 @@ export default function DailyOps() {
                               <div className="flex-1 flex-between">
                                 <span className="task-title font-sans text-sm">{habit.title}</span>
                                 <div className="flex gap-2">
-                                  <span className="badge badge-amber gap-1"><Flame size={10} /> {habit.streak_count || 0}</span>
+                                  <span className="badge badge-amber gap-1"><Flame size={10} /> {habit.current_streak || 0}</span>
                                   <span className="font-mono text-xs text-muted">+5 XP</span>
                                 </div>
                               </div>

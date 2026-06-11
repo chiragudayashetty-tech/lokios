@@ -37,7 +37,7 @@ export function useHabits() {
           .from('habit_logs')
           .select('*')
           .eq('user_id', user.id)
-          .eq('completed_date', todayStr),
+          .eq('date', todayStr),
       ])
 
       if (habitsRes.error) throw habitsRes.error
@@ -78,7 +78,7 @@ export function useHabits() {
           .insert({
             user_id: user.id,
             habit_id: habitId,
-            completed_date: todayStr,
+            date: todayStr,
           })
           .select()
           .single()
@@ -93,7 +93,7 @@ export function useHabits() {
           p_amount: XP_REWARDS.habit_complete,
           p_source_type: 'habit_complete',
           p_source_id: habitId,
-          p_description: `Completed habit: ${habit?.name || 'Unknown'}`,
+          p_description: `Completed habit: ${habit?.title || 'Unknown'}`,
           p_stat_category: habit?.category || 'discipline',
         })
 
