@@ -3,147 +3,106 @@
 import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import { useTasks } from '@/lib/hooks/useTasks'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Plus, Check, Calendar, AlertCircle } from 'lucide-react'
 
-export default function Tasks() {
-  const { tasks, todayTasks, addTask, completeTask } = useTasks()
+export default function Operations() {
+  const { tasks, todayTasks, loading, addTask, completeTask, deleteTask } = useTasks()
   const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [showCompleted, setShowCompleted] = useState(false)
 
-  const handleQuickAdd = async (e) => {
-    if (e.key === 'Enter' && newTaskTitle.trim()) {
-      await addTask({ title: newTaskTitle.trim(), due_date: new Date().toISOString().split('T')[0] })
-      setNewTaskTitle('')
-    }
+  const handleAdd = async (e) => {
+    e.preventDefault()
+    if (!newTaskTitle.trim()) return
+    await addTask({ title: newTaskTitle, due_date: new Date().toISOString().split('T')[0] })
+    setNewTaskTitle('')
   }
 
-  const upcomingTasks = tasks.filter(t => t.status !== 'completed' && (!t.due_date || new Date(t.due_date) > new Date()))
-  const completedTasks = tasks.filter(t => t.status === 'completed')
-  const overdueTasks = tasks.filter(t => t.status !== 'completed' && t.due_date && new Date(t.due_date).toDateString() !== new Date().toDateString() && new Date(t.due_date) < new Date())
+  const today = new Date().toISOString().split('T')[0]
+  const pending = tasks.filter(t => t.status !== 'completed')
+  const overdue = pending.filter(t => t.due_date && t.due_date < today)
+  const dueToday = pending.filter(t => t.due_date === today)
+  const upcoming = pending.filter(t => !t.due_date || t.due_date > today)
+  const completed = tasks.filter(t => t.status === 'completed')
+
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING OPERATIONS...</span></div></AppShell>
+
+  const TaskList = ({ title, items, colorClass, borderClass }) => {
+    if (items.length === 0) return null
+    return (
+      <div className="mb-8">
+        <h2 className={`font-display text-lg uppercase tracking-wider mb-3 ${colorClass}`}>{title} [{items.length}]</h2>
+        <div className="flex-col gap-2">
+          <AnimatePresence>
+            {items.map(task => (
+              <motion.div
+                key={task.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                className={`task-item ${task.status === 'completed' ? 'completed' : ''}`}
+                style={{ borderLeftColor: borderClass }}
+              >
+                <button 
+                  onClick={() => completeTask(task.id)}
+                  className="flex-center shrink-0 w-5 h-5 border rounded-sm mt-1"
+                  style={{ borderColor: task.status === 'completed' ? 'var(--text-muted)' : borderClass }}
+                >
+                  {task.status === 'completed' && <Check size={12} />}
+                </button>
+                <div className="flex-1 flex-col gap-1">
+                  <span className="task-title font-mono">{task.title}</span>
+                  {task.due_date && (
+                    <span className="font-mono text-xs flex items-center gap-1 text-muted">
+                      <Calendar size={10} /> {task.due_date}
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2 items-center">
+                  <span className="font-mono text-xs text-amber">+10 XP</span>
+                  <button onClick={() => deleteTask(task.id)} className="text-muted hover:text-danger px-2">×</button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <AppShell>
       <div className="page-container narrow">
         <header className="page-header">
-          <h1 className="page-title">Tasks</h1>
-          <p className="page-subtitle">Action items and to-dos.</p>
+          <h1 className="page-title">OPERATIONS</h1>
+          <p className="page-subtitle font-mono uppercase text-xs">Tactical task execution.</p>
         </header>
 
-        {/* Quick Add */}
-        <div style={{ marginBottom: 'var(--space-6)', position: 'relative' }}>
+        <form onSubmit={handleAdd} className="mb-8 relative">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-amber font-mono">{`>`}</span>
           <input 
             type="text" 
-            className="input" 
-            placeholder="+ Add a new task for today... (Press Enter)"
+            className="input font-mono bg-secondary border-hud-border" 
+            style={{ paddingLeft: '2.5rem', height: '3.5rem', fontSize: '1rem' }}
+            placeholder="INPUT NEW OPERATION..." 
             value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            onKeyDown={handleQuickAdd}
-            style={{ padding: 'var(--space-4)', fontSize: 'var(--text-lg-size)', borderRadius: 'var(--radius-lg)' }}
+            onChange={e => setNewTaskTitle(e.target.value)}
           />
-        </div>
+          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-primary btn-sm">
+            DEPLOY
+          </button>
+        </form>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }}>
-          {/* Overdue */}
-          {overdueTasks.length > 0 && (
-            <section>
-              <h3 style={{ fontSize: 'var(--text-sm-size)', color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--space-3)' }}>Overdue</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {overdueTasks.map(task => (
-                  <TaskItem key={task.id} task={task} onComplete={() => completeTask(task.id)} />
-                ))}
-              </div>
-            </section>
-          )}
+        <TaskList title="OVERDUE THREATS" items={overdue} colorClass="text-danger" borderClass="var(--danger)" />
+        <TaskList title="ACTIVE OPERATIONS (TODAY)" items={dueToday} colorClass="text-amber" borderClass="var(--accent-primary)" />
+        <TaskList title="UPCOMING" items={upcoming} colorClass="text-secondary" borderClass="var(--border-color)" />
+        
+        {completed.length > 0 && (
+          <div className="mt-12 opacity-60">
+            <TaskList title="DEBRIEFED (COMPLETED)" items={completed.slice(0, 10)} colorClass="text-muted" borderClass="transparent" />
+          </div>
+        )}
 
-          {/* Today */}
-          <section>
-            <h3 style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--space-3)' }}>Today</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              {todayTasks.filter(t => t.status !== 'completed').map(task => (
-                <TaskItem key={task.id} task={task} onComplete={() => completeTask(task.id)} />
-              ))}
-              {todayTasks.filter(t => t.status !== 'completed').length === 0 && (
-                <div style={{ padding: 'var(--space-4)', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
-                  All caught up for today!
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Upcoming */}
-          {upcomingTasks.length > 0 && (
-            <section>
-              <h3 style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 'var(--space-3)' }}>Upcoming</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {upcomingTasks.map(task => (
-                  <TaskItem key={task.id} task={task} onComplete={() => completeTask(task.id)} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Completed */}
-          {completedTasks.length > 0 && (
-            <section>
-              <button 
-                onClick={() => setShowCompleted(!showCompleted)}
-                style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
-              >
-                <span>{showCompleted ? '▼' : '▶'}</span> Completed ({completedTasks.length})
-              </button>
-              
-              {showCompleted && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: 'var(--space-3)', opacity: 0.7 }}>
-                  {completedTasks.map(task => (
-                    <TaskItem key={task.id} task={task} readOnly />
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-        </div>
       </div>
     </AppShell>
-  )
-}
-
-function TaskItem({ task, onComplete, readOnly = false }) {
-  const priorityColors = { 1: 'var(--text-muted)', 2: 'var(--info)', 3: 'var(--success)', 4: 'var(--warning)', 5: 'var(--danger)' }
-  
-  return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      padding: 'var(--space-3) var(--space-4)', 
-      background: 'var(--bg-secondary)', 
-      borderRadius: 'var(--radius-md)',
-      gap: 'var(--space-3)'
-    }}>
-      <input 
-        type="checkbox" 
-        checked={task.status === 'completed'}
-        onChange={readOnly ? undefined : onComplete}
-        disabled={readOnly}
-        style={{ width: '20px', height: '20px', accentColor: 'var(--success)', cursor: readOnly ? 'default' : 'pointer' }}
-      />
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-        <span style={{ 
-          color: task.status === 'completed' ? 'var(--text-muted)' : 'var(--text-primary)',
-          textDecoration: task.status === 'completed' ? 'line-through' : 'none'
-        }}>
-          {task.title}
-        </span>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: priorityColors[task.priority || 2] }} title={`Priority ${task.priority || 2}`} />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-        {task.due_date && (
-          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-            {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-          </span>
-        )}
-        <span className="badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--accent-secondary)' }}>
-          +{task.xp_reward || 15} XP
-        </span>
-      </div>
-    </div>
   )
 }

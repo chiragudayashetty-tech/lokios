@@ -1,182 +1,198 @@
 'use client'
 
+import { motion } from 'framer-motion'
+import { Flame, Rocket, Target, BookOpen, MessageSquare, Palette, Dumbbell } from 'lucide-react'
+import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
+import HudPanel from '@/components/ui/HudPanel'
+import BattleCard from '@/components/ui/BattleCard'
+import StatCard from '@/components/ui/StatCard'
+import TacticalProgress from '@/components/ui/ProgressBar'
+import TypewriterText from '@/components/ui/TypewriterText'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { useTasks } from '@/lib/hooks/useTasks'
 import { useGoals } from '@/lib/hooks/useGoals'
 import { useCalendar } from '@/lib/hooks/useCalendar'
-import { getRankDisplay, getRankProgress } from '@/lib/utils/ranks'
+import { useUserConfig } from '@/lib/hooks/useUserConfig'
+import { useCharacterStats } from '@/lib/hooks/useCharacterStats'
+import { getRankDisplay } from '@/lib/utils/ranks'
 import { xpToNextLevel } from '@/lib/utils/xp'
-import Link from 'next/link'
+import { STAT_CATEGORIES } from '@/lib/constants'
 
-export default function Dashboard() {
+export default function MissionControl() {
   const { profile } = useProfile()
-  const { todayTasks, completeTask } = useTasks()
+  const { config } = useUserConfig()
+  const { stats } = useCharacterStats()
   const { mainQuest } = useGoals()
+  const { todayTasks } = useTasks()
   const { events } = useCalendar()
   
-  if (!profile) return null
-  
-  const rank = getRankDisplay(profile.current_rank || 'E')
-  const xpInfo = xpToNextLevel(profile.total_xp || 0)
-  const rankProgress = getRankProgress(profile.total_xp || 0, profile.current_rank || 'E')
+  const rankInfo = getRankDisplay(profile?.rank)
+  const xpProgress = profile ? xpToNextLevel(profile.total_xp) : { percentage: 0 }
   
   const completedTasks = todayTasks.filter(t => t.status === 'completed').length
-  const totalTasks = todayTasks.length
-  const progressPct = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100)
+  const todayEvents = events.filter(e => new Date(e.start_time).toDateString() === new Date().toDateString())
+
+  const ICON_MAP = {
+    Rocket, Target, BookOpen, MessageSquare, Palette, Dumbbell
+  }
 
   return (
     <AppShell>
       <div className="page-container">
-        <header className="page-header">
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Welcome back, {profile.full_name || profile.username || 'Commander'}.</p>
-        </header>
-
-        <div className="grid-auto" style={{ marginBottom: 'var(--space-6)' }}>
-          {/* Main Quest */}
-          <div className="card" style={{ gridColumn: '1 / -1' }}>
-            <div className="card-header">
-              <h2 className="card-title">Main Quest</h2>
-              <span className="badge badge-warning">Priority</span>
-            </div>
-            {mainQuest ? (
+        
+        {/* TOP IDENTITY BAR */}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <HudPanel label="OPERATOR STATUS" className="flex-between flex-wrap gap-4" style={{ padding: '1rem 1.5rem' }}>
+            <div className="flex items-center gap-4">
               <div>
-                <h3 style={{ fontSize: 'var(--text-xl-size)', marginBottom: 'var(--space-2)' }}>
-                  {mainQuest.title}
-                </h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <div className="progress-bar" style={{ flex: 1, background: 'var(--bg-tertiary)', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ width: `${mainQuest.progress || 0}%`, background: 'var(--accent-gradient)', height: '100%' }}></div>
-                  </div>
-                  <span style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-secondary)' }}>{mainQuest.progress || 0}%</span>
+                <h1 className="font-display text-2xl uppercase tracking-wider glow-amber text-primary">
+                  {profile?.full_name || profile?.username || 'COMMANDER'}
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="badge badge-amber">{config?.class || 'OPERATOR'}</span>
+                  <span className="badge" style={{ color: rankInfo.color, borderColor: rankInfo.color, borderWidth: '1px', borderStyle: 'solid', background: 'transparent' }}>
+                    {rankInfo.icon} {rankInfo.name}
+                  </span>
+                  <span className="font-mono text-sm text-muted">LV.{profile?.level || 1}</span>
                 </div>
               </div>
-            ) : (
-              <div className="empty-state" style={{ padding: 'var(--space-4) 0' }}>
-                <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-3)' }}>No Main Quest set.</p>
-                <Link href="/goals" className="btn btn-primary btn-sm">Set Main Quest</Link>
+            </div>
+            {config?.current_arc && (
+              <div className="text-right">
+                <div className="font-display text-xs text-muted uppercase tracking-wide">CURRENT ARC</div>
+                <TypewriterText text={config.current_arc} speed={40} className="text-amber uppercase" />
               </div>
             )}
-          </div>
+          </HudPanel>
+        </motion.div>
 
-          {/* Level & XP */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Level {profile.current_level || 1}</h3>
-              <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>{profile.total_xp} XP</span>
-            </div>
-            <div style={{ marginTop: 'var(--space-2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', marginBottom: '4px', color: 'var(--text-secondary)' }}>
-                <span>Progress to Level {profile.current_level + 1}</span>
-                <span>{xpInfo.current} / {xpInfo.required}</span>
-              </div>
-              <div className="progress-bar" style={{ background: 'var(--bg-tertiary)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ width: `${xpInfo.percentage}%`, background: 'var(--success)', height: '100%' }}></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Rank */}
-          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-            <div style={{ 
-              width: '48px', height: '48px', borderRadius: '50%', 
-              background: `linear-gradient(135deg, ${rank.color}, transparent)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '24px', boxShadow: `0 0 15px ${rank.color}40`
-            }}>
-              {rank.icon}
-            </div>
-            <div>
-              <div style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)' }}>Current Rank</div>
-              <div style={{ fontSize: 'var(--text-lg-size)', fontWeight: 'bold', color: rank.color }}>{rank.name}</div>
-            </div>
-          </div>
-
-          {/* Streak */}
-          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-            <div style={{ fontSize: '32px' }}>🔥</div>
-            <div>
-              <div style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)' }}>Active Streak</div>
-              <div style={{ fontSize: 'var(--text-2xl-size)', fontWeight: 'bold' }}>{profile.streak_days || 0} <span style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-secondary)' }}>days</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid-2">
-          {/* Today's Tasks */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">Today's Tasks</h2>
-              <span className="badge">{completedTasks}/{totalTasks}</span>
-            </div>
-            {todayTasks.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                {todayTasks.map(task => (
-                  <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-2)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={task.status === 'completed'}
-                      onChange={() => completeTask(task.id)}
-                      style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)' }}
-                    />
-                    <span style={{ flex: 1, textDecoration: task.status === 'completed' ? 'line-through' : 'none', color: task.status === 'completed' ? 'var(--text-muted)' : 'inherit' }}>
-                      {task.title}
+        {/* HERO: ACTIVE MISSION */}
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="mb-8">
+          <HudPanel label="PRIMARY MISSION" glow scanLine style={{ minHeight: '160px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            {mainQuest ? (
+              <>
+                <h2 className="font-display text-3xl uppercase tracking-wider text-primary mb-2 glow-amber">{mainQuest.title}</h2>
+                <div className="flex gap-3 mb-6">
+                  {config?.current_enemy && (
+                    <span className="font-mono text-xs text-danger bg-danger-subtle px-2 py-1 uppercase border border-danger" style={{ opacity: 0.8 }}>
+                      THREAT: {config.current_enemy}
                     </span>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-secondary)' }}>+{task.xp_reward || 15} XP</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 'var(--space-4)' }}>No tasks for today. Rest well.</p>
-            )}
-            <div style={{ marginTop: 'var(--space-4)' }}>
-              <Link href="/tasks" className="btn btn-ghost btn-sm btn-full">Manage Tasks</Link>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-            {/* Progress */}
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-               <div style={{ position: 'relative', width: '80px', height: '80px' }}>
-                 <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                   <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--bg-tertiary)" strokeWidth="3" />
-                   <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--accent-primary)" strokeWidth="3" strokeDasharray={`${progressPct}, 100`} />
-                 </svg>
-                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-sm-size)', fontWeight: 'bold' }}>
-                   {progressPct}%
-                 </div>
-               </div>
-               <div>
-                 <h3 style={{ fontSize: 'var(--text-base)', marginBottom: '4px' }}>Daily Progress</h3>
-                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Complete tasks and habits to fill your ring.</p>
-               </div>
-            </div>
-
-            {/* Calendar Widget */}
-            <div className="card">
-              <div className="card-header">
-                <h3 className="card-title">Today's Schedule</h3>
-              </div>
-              {events.filter(e => new Date(e.start_time).toDateString() === new Date().toDateString()).length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  {events.filter(e => new Date(e.start_time).toDateString() === new Date().toDateString()).map(event => (
-                    <div key={event.id} style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-sm-size)' }}>
-                      <div style={{ color: 'var(--text-muted)', width: '45px' }}>
-                        {new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </div>
-                      <div style={{ flex: 1, borderLeft: `2px solid ${event.color || 'var(--accent-primary)'}`, paddingLeft: 'var(--space-2)' }}>
-                        {event.title}
-                      </div>
-                    </div>
-                  ))}
+                  )}
+                  {config?.current_bottleneck && (
+                    <span className="font-mono text-xs text-warning bg-warning-subtle px-2 py-1 uppercase border border-warning" style={{ opacity: 0.8 }}>
+                      BOTTLENECK: {config.current_bottleneck}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <p style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)' }}>No events scheduled.</p>
-              )}
+                <TacticalProgress value={mainQuest.progress} max={100} label="MISSION PROGRESS" showValue />
+              </>
+            ) : (
+              <div className="flex-col flex-center text-center">
+                <span className="font-mono text-muted mb-4">NO ACTIVE PRIMARY MISSION DETECTED</span>
+                <Link href="/goals" className="btn btn-secondary">ASSIGN MISSION</Link>
+              </div>
+            )}
+          </HudPanel>
+        </motion.div>
+
+        {/* OVERALL LEVEL PROGRESS */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} className="mb-8">
+          <TacticalProgress value={xpProgress.percentage} max={100} label="LEVEL PROGRESSION" color="var(--info)" height={4} />
+        </motion.div>
+
+        {/* ACTIVE BATTLES */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
+          <div className="font-display text-sm text-muted uppercase tracking-wider mb-4">Active Battles</div>
+          {config?.battles?.length > 0 ? (
+            <div className="grid-auto">
+              {config.battles.map((battle, i) => (
+                <BattleCard 
+                  key={i} 
+                  name={battle.name} 
+                  metric={battle.metric} 
+                  current={battle.current} 
+                  target={battle.target} 
+                />
+              ))}
             </div>
+          ) : (
+            <div className="empty-state p-6">
+              <span>No active battles tracked.</span>
+              <Link href="/command-center" className="text-amber underline mt-2">Configure in Command Center</Link>
+            </div>
+          )}
+        </motion.div>
+
+        {/* CHARACTER STATS */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-8">
+          <div className="font-display text-sm text-muted uppercase tracking-wider mb-4">Operator Stats</div>
+          <div className="grid-3">
+            {STAT_CATEGORIES.map((cat) => {
+              const statData = stats?.[cat.id] || { level: 1, xp: 0 }
+              return (
+                <StatCard 
+                  key={cat.id} 
+                  name={cat.name} 
+                  level={statData.level} 
+                  xp={statData.xp} 
+                  icon={ICON_MAP[cat.icon]} 
+                />
+              )
+            })}
           </div>
+        </motion.div>
+
+        {/* TODAY OVERVIEW */}
+        <div className="grid-2">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
+            <HudPanel label="OPERATIONS (TODAY)">
+              <div className="flex-between mb-4">
+                <span className="font-mono text-sm text-amber">COMPLETED: {completedTasks}/{todayTasks.length}</span>
+                <Link href="/tasks" className="badge badge-amber">MANAGE</Link>
+              </div>
+              <div className="flex-col gap-2">
+                {todayTasks.length > 0 ? (
+                  todayTasks.slice(0, 5).map(task => (
+                    <div key={task.id} className={`task-item ${task.status === 'completed' ? 'completed' : ''}`}>
+                      <span className="task-title flex-1">{task.title}</span>
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-muted font-mono text-sm">NO OPERATIONS SCHEDULED</span>
+                )}
+              </div>
+            </HudPanel>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="flex-col gap-6">
+            <HudPanel label="STREAK INTELLIGENCE">
+              <div className="flex items-center gap-4">
+                <Flame size={48} className="text-warning" style={{ filter: 'drop-shadow(0 0 10px var(--warning-subtle))' }} />
+                <div className="flex-col">
+                  <span className="font-mono text-4xl text-warning font-bold">{profile?.streak_days || 0}</span>
+                  <span className="font-display text-sm text-muted uppercase tracking-wider">Day Streak</span>
+                </div>
+              </div>
+            </HudPanel>
+
+            <HudPanel label="SCHEDULE">
+              <div className="flex-col gap-3">
+                {todayEvents.length > 0 ? (
+                  todayEvents.map(event => (
+                    <div key={event.id} className="flex gap-3 text-sm">
+                      <span className="font-mono text-amber shrink-0">{new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      <span className="text-primary truncate">{event.title}</span>
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-muted font-mono text-sm">NO EVENTS DETECTED</span>
+                )}
+              </div>
+            </HudPanel>
+          </motion.div>
         </div>
+
       </div>
     </AppShell>
   )

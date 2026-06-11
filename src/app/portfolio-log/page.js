@@ -2,179 +2,100 @@
 
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import HudPanel from '@/components/ui/HudPanel'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink } from 'lucide-react'
 
-export default function PortfolioLog() {
+export default function ProofOfWork() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('work')
-  const [workLogs, setWorkLogs] = useState([])
+  const [activeTab, setActiveTab] = useState('timeline')
+  const [logs, setLogs] = useState([])
   const [projects, setProjects] = useState([])
-  const [skills, setSkills] = useState([])
   const [loading, setLoading] = useState(true)
-
-  const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
     const fetchData = async () => {
-      setLoading(true)
-      const [workRes, projRes, skillRes] = await Promise.all([
+      const supabase = createClient()
+      const [logsRes, projRes] = await Promise.all([
         supabase.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-        supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('skills').select('*').eq('user_id', user.id).order('level', { ascending: false })
+        supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
       ])
-      if (workRes.data) setWorkLogs(workRes.data)
+      if (logsRes.data) setLogs(logsRes.data)
       if (projRes.data) setProjects(projRes.data)
-      if (skillRes.data) setSkills(skillRes.data)
       setLoading(false)
     }
     fetchData()
-  }, [user, supabase])
+  }, [user])
 
-  const [showForm, setShowForm] = useState(false)
-  
-  // Work Log Form State
-  const [workForm, setWorkForm] = useState({ title: '', type: 'project_work', description: '', date: new Date().toISOString().split('T')[0], duration_hours: 1, is_public: true })
-
-  const handleAddWorkLog = async (e) => {
-    e.preventDefault()
-    const { data } = await supabase.from('work_logs').insert({ user_id: user.id, ...workForm }).select().single()
-    if (data) setWorkLogs([data, ...workLogs])
-    setShowForm(false)
-    setWorkForm({ title: '', type: 'project_work', description: '', date: new Date().toISOString().split('T')[0], duration_hours: 1, is_public: true })
-  }
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING ARCHIVES...</span></div></AppShell>
 
   return (
     <AppShell>
-      <div className="page-container">
-        <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-container narrow">
+        <header className="page-header flex-between">
           <div>
-            <h1 className="page-title">Portfolio Log</h1>
-            <p className="page-subtitle">Record your achievements for your public portfolio.</p>
+            <h1 className="page-title">PROOF OF WORK</h1>
+            <p className="page-subtitle font-mono uppercase text-xs">Immutable record of execution and value creation.</p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ Add Entry</button>
         </header>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-6)', borderBottom: '1px solid var(--border-color)', paddingBottom: 'var(--space-2)' }}>
-          {['work', 'projects', 'skills'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                padding: 'var(--space-2) var(--space-4)',
-                background: 'none',
-                color: activeTab === tab ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                border: 'none',
-                borderBottom: activeTab === tab ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                fontWeight: 600,
-                textTransform: 'capitalize',
-                cursor: 'pointer'
-              }}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="tab-list">
+          <button className={`tab-item ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>TIMELINE</button>
+          <button className={`tab-item ${activeTab === 'projects' ? 'active' : ''}`} onClick={() => setActiveTab('projects')}>PROJECTS</button>
         </div>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-muted)' }}>Loading...</div>
-        ) : (
-          <div>
-            {activeTab === 'work' && (
-              <div className="grid-auto">
-                {workLogs.length > 0 ? workLogs.map(log => (
-                  <div key={log.id} className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-                      <span className="badge" style={{ background: 'var(--bg-tertiary)' }}>{log.type.replace('_', ' ')}</span>
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{new Date(log.date).toLocaleDateString()}</span>
-                    </div>
-                    <h3 style={{ fontSize: 'var(--text-lg-size)', marginBottom: 'var(--space-2)' }}>{log.title}</h3>
-                    <p style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-secondary)' }}>{log.description}</p>
-                    {log.duration_hours > 0 && (
-                      <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                        ⏱ {log.duration_hours} hours
+        <AnimatePresence mode="wait">
+          {activeTab === 'timeline' && (
+            <motion.div key="timeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="timeline">
+                {logs.map((log, i) => (
+                  <motion.div key={log.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="timeline-node">
+                    <HudPanel className="p-4 ml-4">
+                      <div className="flex-between mb-2">
+                        <span className="badge badge-amber">{log.category}</span>
+                        <span className="font-mono text-xs text-muted">{log.date}</span>
                       </div>
-                    )}
-                  </div>
-                )) : <p style={{ color: 'var(--text-muted)' }}>No work logs yet.</p>}
+                      <h3 className="font-display text-xl uppercase tracking-wide text-primary">{log.title}</h3>
+                      <p className="text-sm text-secondary mt-1 font-mono">{log.description}</p>
+                      {log.duration_minutes && (
+                        <div className="mt-3 font-mono text-xs text-amber">DURATION: {log.duration_minutes}m</div>
+                      )}
+                    </HudPanel>
+                  </motion.div>
+                ))}
+                {logs.length === 0 && <div className="empty-state ml-4">NO WORK LOGS FOUND</div>}
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {activeTab === 'projects' && (
-              <div className="grid-auto">
-                {projects.length > 0 ? projects.map(proj => (
-                  <div key={proj.id} className="card">
-                    <h3 style={{ fontSize: 'var(--text-lg-size)' }}>{proj.title}</h3>
-                    <p style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>{proj.tagline}</p>
-                    <span className="badge" style={{ background: proj.status === 'active' ? 'var(--success-subtle)' : 'var(--bg-tertiary)', color: proj.status === 'active' ? 'var(--success)' : 'var(--text-muted)' }}>{proj.status}</span>
-                  </div>
-                )) : <p style={{ color: 'var(--text-muted)' }}>No projects yet.</p>}
-              </div>
-            )}
-
-            {activeTab === 'skills' && (
-              <div className="grid-auto">
-                {skills.length > 0 ? skills.map(skill => (
-                  <div key={skill.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-                    <div style={{ fontSize: '32px' }}>{skill.icon || '🎓'}</div>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: 'var(--text-base)' }}>{skill.name}</h3>
-                      <div className="progress-bar" style={{ height: '4px', background: 'var(--bg-tertiary)', marginTop: 'var(--space-2)' }}>
-                        <div style={{ width: `${(skill.level / 10) * 100}%`, height: '100%', background: 'var(--accent-gradient)' }}></div>
+          {activeTab === 'projects' && (
+            <motion.div key="projects" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="grid-2">
+                {projects.map((proj, i) => (
+                  <motion.div key={proj.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}>
+                    <HudPanel glow>
+                      <div className="flex-between mb-2">
+                        <span className={`badge ${proj.status === 'completed' ? 'badge-success' : 'badge-amber'}`}>{proj.status}</span>
                       </div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'right' }}>Lv.{skill.level}</div>
-                    </div>
-                  </div>
-                )) : <p style={{ color: 'var(--text-muted)' }}>No skills added yet.</p>}
+                      <h3 className="font-display text-2xl uppercase tracking-wide text-primary">{proj.name}</h3>
+                      <p className="text-sm text-secondary mt-2 line-clamp-2 font-mono">{proj.description}</p>
+                      {proj.tech_stack && proj.tech_stack.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-4">
+                          {proj.tech_stack.map(tech => <span key={tech} className="badge bg-tertiary text-[10px]">{tech}</span>)}
+                        </div>
+                      )}
+                    </HudPanel>
+                  </motion.div>
+                ))}
+                {projects.length === 0 && <div className="empty-state col-span-2">NO PROJECTS REGISTERED</div>}
               </div>
-            )}
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Add Work Log Modal */}
-        {showForm && (
-          <div className="modal-overlay" onClick={() => setShowForm(false)} style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)', backdropFilter: 'blur(4px)' }}>
-            <div className="card" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '500px' }}>
-              <h2 style={{ marginBottom: 'var(--space-4)' }}>Add Work Log</h2>
-              <form onSubmit={handleAddWorkLog} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                <div>
-                  <label className="text-muted text-sm" style={{display: 'block', marginBottom: '8px'}}>Title</label>
-                  <input type="text" className="input" value={workForm.title} onChange={e => setWorkForm({...workForm, title: e.target.value})} required autoFocus />
-                </div>
-                <div className="grid-2">
-                  <div>
-                    <label className="text-muted text-sm" style={{display: 'block', marginBottom: '8px'}}>Type</label>
-                    <select className="select" value={workForm.type} onChange={e => setWorkForm({...workForm, type: e.target.value})}>
-                      <option value="project_work">Project Work</option>
-                      <option value="video">Video</option>
-                      <option value="workshop">Workshop</option>
-                      <option value="design">Design</option>
-                      <option value="code">Code</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-muted text-sm" style={{display: 'block', marginBottom: '8px'}}>Date</label>
-                    <input type="date" className="input" value={workForm.date} onChange={e => setWorkForm({...workForm, date: e.target.value})} required />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-muted text-sm" style={{display: 'block', marginBottom: '8px'}}>Description</label>
-                  <textarea className="textarea" value={workForm.description} onChange={e => setWorkForm({...workForm, description: e.target.value})} style={{ minHeight: '80px' }} />
-                </div>
-                <div>
-                  <label className="text-muted text-sm" style={{display: 'block', marginBottom: '8px'}}>Duration (Hours)</label>
-                  <input type="number" step="0.5" className="input" value={workForm.duration_hours} onChange={e => setWorkForm({...workForm, duration_hours: parseFloat(e.target.value)})} />
-                </div>
-                <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-                  <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)} style={{ flex: 1 }}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Log</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </AppShell>
   )

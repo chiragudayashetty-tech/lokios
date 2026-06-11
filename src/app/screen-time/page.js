@@ -2,155 +2,144 @@
 
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import HudPanel from '@/components/ui/HudPanel'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { motion } from 'framer-motion'
 
-export default function ScreenTime() {
+export default function ScreenIntel() {
   const { user } = useAuth()
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [formData, setFormData] = useState({ total_hours: 0, doom_scroll_minutes: 0, focus_hours: 0, notes: '' })
-  const [loading, setLoading] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [history, setHistory] = useState([])
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [totalHours, setTotalHours] = useState(0)
+  const [focusHours, setFocusHours] = useState(0)
+  const [doomScroll, setDoomScroll] = useState(0)
+  const [notes, setNotes] = useState('')
 
   useEffect(() => {
     if (!user) return
-    const fetchLog = async () => {
+    const fetchLogs = async () => {
       const supabase = createClient()
-      const { data } = await supabase.from('screen_time_logs').select('*').eq('user_id', user.id).eq('date', selectedDate).single()
-      if (data) {
-        setFormData({
-          total_hours: data.total_hours || 0,
-          doom_scroll_minutes: data.doom_scroll_minutes || 0,
-          focus_hours: data.focus_hours || 0,
-          notes: data.notes || ''
-        })
-      } else {
-        setFormData({ total_hours: 0, doom_scroll_minutes: 0, focus_hours: 0, notes: '' })
-      }
+      const { data } = await supabase.from('screen_time_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
+      if (data) setLogs(data)
+      setLoading(false)
     }
-    fetchLog()
-  }, [user, selectedDate])
+    fetchLogs()
+  }, [user])
 
   useEffect(() => {
-    if (!user) return
-    const fetchHistory = async () => {
-      const supabase = createClient()
-      const { data } = await supabase.from('screen_time_logs').select('date, total_hours, focus_hours').eq('user_id', user.id).order('date', { ascending: false }).limit(7)
-      if (data) setHistory(data.reverse())
+    const todayLog = logs.find(l => l.date === date)
+    if (todayLog) {
+      setTotalHours(todayLog.total_hours || 0)
+      setFocusHours(todayLog.focus_hours || 0)
+      setDoomScroll(todayLog.doom_scroll_minutes || 0)
+      setNotes(todayLog.notes || '')
+    } else {
+      setTotalHours(0)
+      setFocusHours(0)
+      setDoomScroll(0)
+      setNotes('')
     }
-    fetchHistory()
-  }, [user, saved])
+  }, [date, logs])
 
   const handleSave = async (e) => {
     e.preventDefault()
-    setLoading(true)
+    if (!user) return
     const supabase = createClient()
-    await supabase.from('screen_time_logs').upsert({
+    
+    const payload = {
       user_id: user.id,
-      date: selectedDate,
-      ...formData
-    }, { onConflict: 'user_id, date' })
-    setLoading(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+      date,
+      total_hours: parseFloat(totalHours),
+      focus_hours: parseFloat(focusHours),
+      doom_scroll_minutes: parseInt(doomScroll),
+      notes,
+      updated_at: new Date().toISOString()
+    }
+
+    await supabase.from('screen_time_logs').upsert(payload, { onConflict: 'user_id,date' })
+    const { data } = await supabase.from('screen_time_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
+    if (data) setLogs(data)
   }
 
-  const maxHours = Math.max(...history.map(h => h.total_hours || 0), 12)
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">GATHERING INTEL...</span></div></AppShell>
+
+  // Chart Logic (Last 7 days)
+  const last7Days = Array.from({length: 7}, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (6 - i))
+    return d.toISOString().split('T')[0]
+  })
+
+  const chartData = last7Days.map(d => {
+    const log = logs.find(l => l.date === d)
+    return {
+      date: d.substring(5), // MM-DD
+      total: log?.total_hours || 0,
+      focus: log?.focus_hours || 0
+    }
+  })
+
+  const maxHours = Math.max(...chartData.map(d => d.total), 12)
 
   return (
     <AppShell>
       <div className="page-container narrow">
-        <header className="page-header" style={{ textAlign: 'center' }}>
-          <h1 className="page-title">Screen Time</h1>
-          <p className="page-subtitle">Track your digital consumption vs production.</p>
+        <header className="page-header">
+          <h1 className="page-title">SCREEN INTEL</h1>
+          <p className="page-subtitle font-mono uppercase text-xs">Monitor device usage and focus metrics.</p>
         </header>
 
-        <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-            <h2 className="card-title">Daily Log</h2>
-            <input 
-              type="date" 
-              className="input" 
-              value={selectedDate} 
-              onChange={e => setSelectedDate(e.target.value)}
-              style={{ width: 'auto', padding: 'var(--space-1) var(--space-2)' }}
-            />
-          </div>
-
-          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div className="grid-2">
+        <div className="grid-2 mb-8">
+          <HudPanel label="DATA ENTRY">
+            <form onSubmit={handleSave} className="flex-col gap-4">
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Total Screen Hours</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <input type="number" step="0.5" min="0" max="24" className="input" value={formData.total_hours} onChange={e => setFormData({...formData, total_hours: parseFloat(e.target.value) || 0})} />
-                  <span style={{ color: 'var(--text-muted)' }}>hrs</span>
+                <label className="font-mono text-xs text-muted mb-1 block">DATE OF INTEL</label>
+                <input type="date" className="input font-mono" value={date} onChange={e=>setDate(e.target.value)} required />
+              </div>
+              <div className="grid-2">
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">TOTAL HOURS</label>
+                  <input type="number" step="0.5" min="0" className="input font-mono text-xl" value={totalHours} onChange={e=>setTotalHours(e.target.value)} />
+                </div>
+                <div>
+                  <label className="font-mono text-xs text-amber mb-1 block">FOCUS HOURS</label>
+                  <input type="number" step="0.5" min="0" className="input font-mono text-xl border-amber text-amber" value={focusHours} onChange={e=>setFocusHours(e.target.value)} />
                 </div>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Focus Hours (Deep Work)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <input type="number" step="0.5" min="0" max="24" className="input" value={formData.focus_hours} onChange={e => setFormData({...formData, focus_hours: parseFloat(e.target.value) || 0})} />
-                  <span style={{ color: 'var(--text-muted)' }}>hrs</span>
-                </div>
+                <label className="font-mono text-xs text-danger mb-1 block">DOOM SCROLL (MINUTES)</label>
+                <input type="number" min="0" className="input font-mono text-xl border-danger text-danger" value={doomScroll} onChange={e=>setDoomScroll(e.target.value)} />
               </div>
-            </div>
+              <button type="submit" className="btn btn-primary mt-2">TRANSMIT DATA</button>
+            </form>
+          </HudPanel>
 
-            <div>
-              <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Doom Scroll Minutes (Waste)</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <input type="number" min="0" className="input" value={formData.doom_scroll_minutes} onChange={e => setFormData({...formData, doom_scroll_minutes: parseInt(e.target.value) || 0})} style={{ maxWidth: '150px' }} />
-                <span style={{ color: 'var(--text-muted)' }}>mins</span>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Notes</label>
-              <textarea className="textarea" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="What apps consumed your time today?" style={{ minHeight: '80px' }} />
-            </div>
-
-            <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: 'var(--space-2)' }}>
-              {loading ? 'Saving...' : saved ? 'Saved ✓' : 'Save Log'}
-            </button>
-          </form>
-        </div>
-
-        {/* 7-Day Chart */}
-        <div className="card">
-          <h3 className="card-title" style={{ marginBottom: 'var(--space-6)' }}>Last 7 Days</h3>
-          {history.length > 0 ? (
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '150px', gap: 'var(--space-2)' }}>
-              {history.map(day => {
-                const totalHeight = `${((day.total_hours || 0) / maxHours) * 100}%`
-                const focusHeight = day.total_hours > 0 ? `${((day.focus_hours || 0) / day.total_hours) * 100}%` : '0%'
-                const dateLabel = new Date(day.date).toLocaleDateString(undefined, { weekday: 'short' })
-                
-                return (
-                  <div key={day.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)', height: '100%' }}>
-                    <div style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'flex-end', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
-                      <div style={{ width: '100%', height: totalHeight, background: 'var(--text-muted)', position: 'relative' }}>
-                        <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: focusHeight, background: 'var(--accent-primary)' }}></div>
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{dateLabel}</span>
+          <HudPanel label="7-DAY ANALYSIS" glow>
+            <div className="flex items-end gap-2 h-[250px] pt-8 pb-4 border-b border-border-color">
+              {chartData.map((data, i) => (
+                <div key={i} className="flex-1 flex flex-col justify-end items-center gap-1 group relative">
+                  {/* Tooltip */}
+                  <div className="absolute -top-10 bg-secondary border border-border-color p-1 font-mono text-xs hidden group-hover:block z-10 whitespace-nowrap">
+                    Tot: {data.total}h | Foc: {data.focus}h
                   </div>
-                )
-              })}
+                  {/* Bars container */}
+                  <div className="w-full relative bg-tertiary" style={{ height: `${(data.total / maxHours) * 100}%`, minHeight: '4px' }}>
+                    {/* Focus fill */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-accent-primary opacity-80 transition-all" style={{ height: `${data.total > 0 ? (data.focus / data.total) * 100 : 0}%` }} />
+                  </div>
+                  <span className="font-mono text-[10px] text-muted">{data.date}</span>
+                </div>
+              ))}
             </div>
-          ) : (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>No recent history found.</p>
-          )}
-          <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', justifyContent: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <div style={{ width: '10px', height: '10px', background: 'var(--accent-primary)', borderRadius: '2px' }}></div>
-              Focus Time
+            <div className="flex gap-4 mt-4 font-mono text-xs uppercase text-muted">
+              <span className="flex items-center gap-2"><div className="w-3 h-3 bg-tertiary border border-muted" /> Total Time</span>
+              <span className="flex items-center gap-2"><div className="w-3 h-3 bg-accent-primary" /> Focus Time</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <div style={{ width: '10px', height: '10px', background: 'var(--text-muted)', borderRadius: '2px' }}></div>
-              Total Screen Time
-            </div>
-          </div>
+          </HudPanel>
         </div>
+
       </div>
     </AppShell>
   )

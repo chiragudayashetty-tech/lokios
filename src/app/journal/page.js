@@ -2,137 +2,137 @@
 
 import { useState, useEffect, useRef } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import HudPanel from '@/components/ui/HudPanel'
 import { useJournal } from '@/lib/hooks/useJournal'
 import { MOOD_EMOJIS } from '@/lib/constants'
+import { motion } from 'framer-motion'
+import { ChevronLeft, ChevronRight, Save, CheckCircle } from 'lucide-react'
 
-export default function Journal() {
-  const { entries, saveEntry } = useJournal()
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [saving, setSaving] = useState(false)
-  
-  // Find entry for selected date or initialize empty
-  const currentEntry = entries.find(e => e.date === selectedDate) || {
-    date: selectedDate,
+export default function FieldLog() {
+  const { entries, todayEntry, loading, saveEntry } = useJournal()
+  const [dateStr, setDateStr] = useState(new Date().toISOString().split('T')[0])
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const debounceRef = useRef(null)
+
+  const currentEntry = entries.find(e => e.date === dateStr) || {
     what_did_i_do: '',
     what_did_i_learn: '',
     what_went_well: '',
     needs_improvement: '',
-    mood: 0,
-    tags: []
+    mood: 3
   }
 
   const [formData, setFormData] = useState(currentEntry)
-  const saveTimeoutRef = useRef(null)
 
-  // Update form data when date changes
   useEffect(() => {
-    setFormData(entries.find(e => e.date === selectedDate) || {
-      date: selectedDate,
-      what_did_i_do: '',
-      what_did_i_learn: '',
-      what_went_well: '',
-      needs_improvement: '',
-      mood: 0,
-      tags: []
+    setFormData(entries.find(e => e.date === dateStr) || {
+      what_did_i_do: '', what_did_i_learn: '', what_went_well: '', needs_improvement: '', mood: 3
     })
-  }, [selectedDate, entries])
+  }, [dateStr, entries])
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    const newData = { ...formData, [field]: value }
+    setFormData(newData)
     
-    // Auto-save logic (debounce 1.5s)
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    setSaving(true)
-    saveTimeoutRef.current = setTimeout(async () => {
-      await saveEntry({ ...formData, [field]: value })
-      setSaving(false)
+    setIsSaving(true)
+    setSaveSuccess(false)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    
+    debounceRef.current = setTimeout(async () => {
+      await saveEntry({ ...newData, date: dateStr })
+      setIsSaving(false)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2000)
     }, 1500)
   }
 
-  const handleDateChange = (days) => {
-    const d = new Date(selectedDate)
+  const changeDate = (days) => {
+    const d = new Date(dateStr)
     d.setDate(d.getDate() + days)
-    setSelectedDate(d.toISOString().split('T')[0])
+    setDateStr(d.toISOString().split('T')[0])
   }
 
-  // Calculate if entry is "full" (all fields have content)
-  const isFull = formData.what_did_i_do && formData.what_did_i_learn && formData.what_went_well && formData.needs_improvement && formData.mood > 0;
-  const wordCount = Object.values(formData).filter(v => typeof v === 'string').join(' ').split(/\s+/).filter(w => w.length > 0).length;
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">RETRIEVING LOGS...</span></div></AppShell>
+
+  const isToday = dateStr === new Date().toISOString().split('T')[0]
+  const wordCount = Object.values(formData).filter(v => typeof v === 'string').join(' ').split(/\s+/).filter(w => w.length > 0).length
 
   return (
     <AppShell>
       <div className="page-container narrow">
-        <header className="page-header" style={{ textAlign: 'center' }}>
-          <h1 className="page-title">Daily Journal</h1>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
-            <button onClick={() => handleDateChange(-1)} className="btn btn-ghost btn-icon">◀</button>
-            <div style={{ fontSize: 'var(--text-lg-size)', fontWeight: 600 }}>
-              {new Date(selectedDate).toDateString() === new Date().toDateString() ? 'Today' : new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-            </div>
-            <button onClick={() => handleDateChange(1)} className="btn btn-ghost btn-icon" disabled={selectedDate >= new Date().toISOString().split('T')[0]}>▶</button>
-          </div>
+        <header className="page-header">
+          <h1 className="page-title">FIELD LOG</h1>
+          <p className="page-subtitle font-mono uppercase text-xs">Daily debrief and tactical review.</p>
         </header>
 
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          {/* Mood Selector */}
-          <div style={{ textAlign: 'center' }}>
-            <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-3)' }}>How was your day?</label>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-4)' }}>
-              {MOOD_EMOJIS.map(m => (
-                <button
-                  key={m.level}
-                  onClick={() => handleChange('mood', m.level)}
-                  style={{
-                    fontSize: '32px',
-                    opacity: formData.mood === m.level ? 1 : 0.4,
-                    transform: formData.mood === m.level ? 'scale(1.2)' : 'scale(1)',
-                    transition: 'all var(--transition-fast)'
-                  }}
-                  title={m.label}
-                >
-                  {m.emoji}
-                </button>
+        <div className="flex-center gap-4 mb-8">
+          <button onClick={() => changeDate(-1)} className="btn btn-ghost p-2"><ChevronLeft /></button>
+          <div className="font-display text-2xl tracking-widest text-amber">{new Date(dateStr).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase()}</div>
+          <button onClick={() => changeDate(1)} disabled={isToday} className="btn btn-ghost p-2" style={{ opacity: isToday ? 0.3 : 1 }}>
+            <ChevronRight />
+          </button>
+        </div>
+
+        <HudPanel label="DEBRIEF PROTOCOL" glow>
+          <div className="flex-col gap-8">
+            
+            {/* Mood Selector */}
+            <div>
+              <label className="font-display text-sm text-amber uppercase tracking-widest mb-3 block">OPERATOR CONDITION</label>
+              <div className="flex gap-4">
+                {MOOD_EMOJIS.map(mood => (
+                  <button
+                    key={mood.value}
+                    onClick={() => handleChange('mood', mood.value)}
+                    className={`flex-center p-3 rounded-sm transition-all text-2xl bg-primary border ${formData.mood === mood.value ? 'border-amber shadow-amber' : 'border-border-color opacity-50'}`}
+                    style={{ filter: formData.mood === mood.value ? 'drop-shadow(0 0 10px var(--amber-glow))' : 'none' }}
+                    title={mood.label}
+                  >
+                    {mood.emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Prompts */}
+            <div className="flex-col gap-6">
+              {[
+                { field: 'what_did_i_do', label: 'DEBRIEF 01: OPERATIONS EXECUTED' },
+                { field: 'what_did_i_learn', label: 'DEBRIEF 02: INTEL GATHERED' },
+                { field: 'what_went_well', label: 'DEBRIEF 03: TACTICAL SUCCESSES' },
+                { field: 'needs_improvement', label: 'DEBRIEF 04: SYSTEM FAILURES & CRITICAL FIXES' }
+              ].map((prompt, i) => (
+                <div key={prompt.field}>
+                  <label className="font-display text-sm text-amber uppercase tracking-widest mb-2 block">{prompt.label}</label>
+                  <textarea
+                    className="textarea font-mono text-sm"
+                    value={formData[prompt.field]}
+                    onChange={(e) => handleChange(prompt.field, e.target.value)}
+                    placeholder="Input data..."
+                    style={{ minHeight: i === 0 ? '150px' : '100px' }}
+                  />
+                </div>
               ))}
             </div>
-          </div>
 
-          <hr style={{ margin: '0' }} />
-
-          {/* Prompts */}
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 'var(--space-2)' }}>1. What did I build today?</label>
-            <textarea className="textarea" placeholder="Projects, code, content..." value={formData.what_did_i_do || ''} onChange={e => handleChange('what_did_i_do', e.target.value)} />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 'var(--space-2)' }}>2. What did I learn today?</label>
-            <textarea className="textarea" placeholder="New concepts, insights, lessons..." value={formData.what_did_i_learn || ''} onChange={e => handleChange('what_did_i_learn', e.target.value)} />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 'var(--space-2)' }}>3. What wasted my time today?</label>
-            <textarea className="textarea" placeholder="Distractions, inefficiencies..." value={formData.what_went_well || ''} onChange={e => handleChange('what_went_well', e.target.value)} />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 'var(--space-2)' }}>4. What is tomorrow's priority?</label>
-            <textarea className="textarea" placeholder="The one thing that must get done..." value={formData.needs_improvement || ''} onChange={e => handleChange('needs_improvement', e.target.value)} />
-          </div>
-
-          {/* Footer stats / save indicator */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-4)', borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-4)' }}>
-            <div style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)' }}>
-              {wordCount} words • {isFull ? 'Full Entry (+30 XP)' : 'Partial Entry (+15 XP)'}
+            <div className="flex-between border-t border-border-color pt-4 mt-2">
+              <span className="font-mono text-xs text-muted">WORD COUNT: {wordCount}</span>
+              <div className="flex items-center gap-4">
+                <span className="font-display text-xs text-secondary tracking-widest uppercase">FULL DEBRIEF +30 XP | PARTIAL +15 XP</span>
+                <div className="flex items-center gap-2 font-mono text-xs text-amber">
+                  {isSaving ? (
+                    <><Save size={14} className="animate-pulse" /> SAVING...</>
+                  ) : saveSuccess ? (
+                    <><CheckCircle size={14} className="text-success" /> SECURED</>
+                  ) : null}
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: saving ? 'var(--warning)' : 'var(--success)' }}>
-              {saving ? (
-                <>⏳ Saving...</>
-              ) : (
-                <>✓ Saved</>
-              )}
-            </div>
+
           </div>
-        </div>
+        </HudPanel>
+
       </div>
     </AppShell>
   )

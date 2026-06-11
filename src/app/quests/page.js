@@ -2,158 +2,141 @@
 
 import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import HudPanel from '@/components/ui/HudPanel'
+import TacticalProgress from '@/components/ui/ProgressBar'
 import { useHabits } from '@/lib/hooks/useHabits'
 import { QUEST_CATEGORIES } from '@/lib/constants'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Rocket, Dumbbell, BookOpen, Sparkles, Target, ChevronDown, ChevronUp, Plus, Check, Flame } from 'lucide-react'
 
-export default function DailyQuests() {
-  const { habits, todayLogs, toggleHabit, addHabit } = useHabits()
-  const [expandedCats, setExpandedCats] = useState(
-    QUEST_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.id]: true }), {})
-  )
+const ICON_MAP = { Rocket, Dumbbell, BookOpen, Sparkles, Target }
+
+export default function DailyOps() {
+  const { habits, todayLogs, loading, toggleHabit, addHabit } = useHabits()
+  const [expanded, setExpanded] = useState(QUEST_CATEGORIES.map(c => c.id))
+  
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newQuest, setNewQuest] = useState({ title: '', category: 'founder' })
+  const [newTitle, setNewTitle] = useState('')
+  const [newCategory, setNewCategory] = useState(QUEST_CATEGORIES[0].id)
 
   const toggleCategory = (id) => {
-    setExpandedCats(prev => ({ ...prev, [id]: !prev[id] }))
+    setExpanded(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
   }
 
-  const handleAddSubmit = async (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault()
-    if (!newQuest.title) return
-    await addHabit(newQuest)
-    setNewQuest({ title: '', category: 'founder' })
+    if (!newTitle.trim()) return
+    await addHabit({ title: newTitle, category: newCategory, frequency: 'daily' })
+    setNewTitle('')
     setShowAddForm(false)
   }
 
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING OPS...</span></div></AppShell>
+
   return (
     <AppShell>
-      <div className="page-container">
+      <div className="page-container narrow">
         <header className="page-header">
-          <h1 className="page-title">Daily Quests</h1>
-          <p className="page-subtitle">Build habits, maintain streaks, level up your stats.</p>
+          <h1 className="page-title">DAILY OPS</h1>
+          <p className="page-subtitle font-mono uppercase text-xs">Complete daily operations to build stats and maintain streaks.</p>
         </header>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          {QUEST_CATEGORIES.map(category => {
-            const categoryHabits = habits.filter(h => h.category === category.id)
-            if (categoryHabits.length === 0) return null
+        <div className="flex-col gap-6">
+          {QUEST_CATEGORIES.map((category) => {
+            const catHabits = habits.filter(h => h.category === category.id)
+            if (catHabits.length === 0) return null
 
-            const completedCount = categoryHabits.filter(h => todayLogs.some(l => l.habit_id === h.id && l.completed)).length
-            const totalCount = categoryHabits.length
-            const isExpanded = expandedCats[category.id]
+            const isExpanded = expanded.includes(category.id)
+            const completedCount = catHabits.filter(h => todayLogs.some(log => log.habit_id === h.id)).length
+            const Icon = ICON_MAP[category.icon] || Target
 
             return (
-              <div key={category.id} className="card card-flat" style={{ padding: 0, overflow: 'hidden' }}>
-                <div 
+              <HudPanel key={category.id} className="p-0" style={{ padding: 0 }}>
+                <button 
+                  className="w-full flex-between p-4 bg-secondary transition-all hover:bg-hover border-b border-border-color"
                   onClick={() => toggleCategory(category.id)}
-                  style={{ 
-                    padding: 'var(--space-4)', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    background: category.color ? `${category.color}15` : 'var(--bg-secondary)',
-                    borderBottom: isExpanded ? '1px solid var(--border-color)' : 'none'
-                  }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <span style={{ fontSize: '24px' }}>{category.icon}</span>
-                    <h3 style={{ fontSize: 'var(--text-lg-size)' }}>{category.name}</h3>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-                    <span className="badge" style={{ background: completedCount === totalCount ? 'var(--success-subtle)' : 'var(--bg-tertiary)' }}>
-                      {completedCount} / {totalCount}
+                  <div className="flex items-center gap-3">
+                    <Icon size={20} color={category.color} />
+                    <span className="font-display uppercase tracking-wide text-primary text-lg">{category.name}</span>
+                    <span className="badge font-mono" style={{ backgroundColor: `${category.color}22`, color: category.color }}>
+                      {completedCount}/{catHabits.length}
                     </span>
-                    <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
                   </div>
-                </div>
+                  {isExpanded ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
+                </button>
 
-                {isExpanded && (
-                  <div style={{ padding: 'var(--space-3)' }}>
-                    {categoryHabits.map(habit => {
-                      const isCompleted = todayLogs.some(l => l.habit_id === habit.id && l.completed)
-                      return (
-                        <div key={habit.id} style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          padding: 'var(--space-3)',
-                          borderBottom: '1px solid var(--border-color)',
-                          gap: 'var(--space-4)'
-                        }}>
-                          <input 
-                            type="checkbox" 
-                            checked={isCompleted}
-                            onChange={() => toggleHabit(habit.id, !isCompleted)}
-                            style={{ width: '22px', height: '22px', accentColor: category.color || 'var(--accent-primary)', cursor: 'pointer' }}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 'var(--text-base)', color: isCompleted ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: isCompleted ? 'line-through' : 'none' }}>
-                              {habit.title}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 flex-col gap-2">
+                        {catHabits.map(habit => {
+                          const isCompleted = todayLogs.some(log => log.habit_id === habit.id)
+                          return (
+                            <div key={habit.id} className={`task-item ${isCompleted ? 'completed' : ''} m-0`}>
+                              <button 
+                                onClick={() => toggleHabit(habit.id)}
+                                className="flex-center shrink-0 w-6 h-6 border rounded-sm"
+                                style={{ borderColor: isCompleted ? category.color : 'var(--border-color)', backgroundColor: isCompleted ? `${category.color}22` : 'transparent' }}
+                              >
+                                {isCompleted && <Check size={14} color={category.color} />}
+                              </button>
+                              <div className="flex-1 flex-between">
+                                <span className="task-title font-sans text-sm">{habit.title}</span>
+                                <div className="flex gap-2">
+                                  <span className="badge badge-amber gap-1"><Flame size={10} /> {habit.streak_count || 0}</span>
+                                  <span className="font-mono text-xs text-muted">+5 XP</span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                            {habit.current_streak > 0 && (
-                              <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)' }}>
-                                🔥 {habit.current_streak}
-                              </span>
-                            )}
-                            <span className="badge" style={{ background: 'var(--bg-tertiary)' }}>+{habit.xp_per_completion} XP</span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+                          )
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <div className="px-4 pb-4 pt-2">
+                  <TacticalProgress value={completedCount} max={catHabits.length} color={category.color} height={2} showValue={false} />
+                </div>
+              </HudPanel>
             )
           })}
-
-          <div style={{ marginTop: 'var(--space-4)' }}>
-            {!showAddForm ? (
-              <button 
-                className="btn btn-secondary btn-full" 
-                onClick={() => setShowAddForm(true)}
-                style={{ borderStyle: 'dashed' }}
-              >
-                + Add Custom Quest
-              </button>
-            ) : (
-              <div className="card">
-                <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>New Custom Quest</h3>
-                <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>Quest Title</label>
-                    <input 
-                      type="text" 
-                      className="input" 
-                      value={newQuest.title} 
-                      onChange={e => setNewQuest({...newQuest, title: e.target.value})}
-                      placeholder="e.g., Meditate for 10 minutes"
-                      autoFocus
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>Category</label>
-                    <select 
-                      className="select" 
-                      value={newQuest.category}
-                      onChange={e => setNewQuest({...newQuest, category: e.target.value})}
-                    >
-                      {QUEST_CATEGORIES.map(c => (
-                        <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Add Quest</button>
-                    <button type="button" className="btn btn-ghost" onClick={() => setShowAddForm(false)}>Cancel</button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
         </div>
+
+        <div className="mt-8">
+          {!showAddForm ? (
+            <button className="btn btn-secondary btn-full" onClick={() => setShowAddForm(true)}>
+              <Plus size={16} /> ADD NEW OPERATION
+            </button>
+          ) : (
+            <HudPanel glow>
+              <form onSubmit={handleAdd} className="flex-col gap-4">
+                <div className="font-display uppercase text-sm text-amber">Configure New Operation</div>
+                <input 
+                  type="text" 
+                  className="input" 
+                  placeholder="Operation name..." 
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  autoFocus
+                />
+                <select className="select font-mono" value={newCategory} onChange={e => setNewCategory(e.target.value)}>
+                  {QUEST_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <div className="flex gap-2">
+                  <button type="submit" className="btn btn-primary flex-1">DEPLOY</button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowAddForm(false)}>CANCEL</button>
+                </div>
+              </form>
+            </HudPanel>
+          )}
+        </div>
+
       </div>
     </AppShell>
   )

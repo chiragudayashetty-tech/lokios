@@ -2,147 +2,137 @@
 
 import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import HudPanel from '@/components/ui/HudPanel'
 import { useBrainDump } from '@/lib/hooks/useBrainDump'
-import { getRelativeTime } from '@/lib/utils/dates'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Lightbulb, CheckSquare, Target, FileText, Shuffle, Plus, ArrowRight, Trash2 } from 'lucide-react'
 
-export default function BrainDump() {
-  const { items, addItem, organizeItem, discardItem, convertItem } = useBrainDump()
+const TYPE_ICONS = {
+  idea: Lightbulb,
+  task: CheckSquare,
+  goal: Target,
+  note: FileText,
+  random: Shuffle
+}
+
+export default function IntelDrop() {
+  const { items, loading, addItem, organizeItem, discardItem, convertItem } = useBrainDump()
   const [content, setContent] = useState('')
-  const [type, setType] = useState('idea')
-  const [filter, setFilter] = useState('inbox')
-
-  const types = [
-    { id: 'idea', icon: '💡', label: 'Idea' },
-    { id: 'task', icon: '✅', label: 'Task' },
-    { id: 'goal', icon: '🎯', label: 'Goal' },
-    { id: 'note', icon: '📝', label: 'Note' },
-    { id: 'random', icon: '🎲', label: 'Random' }
-  ]
-
-  const filters = ['inbox', 'organized', 'discarded', 'all']
+  const [selectedType, setSelectedType] = useState('note')
+  const [activeTab, setActiveTab] = useState('inbox')
 
   const handleCapture = async (e) => {
     e.preventDefault()
     if (!content.trim()) return
-    await addItem(content.trim(), type)
+    await addItem(content, selectedType)
     setContent('')
   }
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleCapture(e)
-    }
-  }
+  const TABS = [
+    { id: 'inbox', label: 'INBOX' },
+    { id: 'organized', label: 'ORGANIZED' },
+    { id: 'discarded', label: 'DISCARDED' }
+  ]
 
-  const filteredItems = items.filter(item => filter === 'all' ? true : item.status === filter)
+  const filteredItems = items.filter(item => {
+    if (activeTab === 'inbox') return item.status === 'inbox'
+    if (activeTab === 'organized') return item.status === 'organized' || item.status === 'converted'
+    if (activeTab === 'discarded') return item.status === 'discarded'
+    return true
+  })
+
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING INTEL...</span></div></AppShell>
 
   return (
     <AppShell>
       <div className="page-container narrow">
         <header className="page-header">
-          <h1 className="page-title">Brain Dump</h1>
-          <p className="page-subtitle">Quick capture system. Instantly log your thoughts.</p>
+          <h1 className="page-title">INTEL DROP</h1>
+          <p className="page-subtitle font-mono uppercase text-xs">Unstructured data capture and processing.</p>
         </header>
 
-        {/* Capture Input */}
-        <div className="card" style={{ padding: 'var(--space-4)', marginBottom: 'var(--space-8)', borderColor: 'var(--accent-primary)' }}>
+        <HudPanel glow className="mb-8" style={{ padding: 0 }}>
           <form onSubmit={handleCapture}>
             <textarea 
-              className="textarea"
-              placeholder="Dump your thoughts here... (Press Enter to capture)"
+              className="brain-dump-input w-full bg-transparent border-0" 
+              placeholder="Awaiting intel transmission..." 
               value={content}
               onChange={e => setContent(e.target.value)}
-              onKeyDown={handleKeyDown}
-              style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, minHeight: '60px', fontSize: 'var(--text-lg-size)' }}
               autoFocus
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-4)', borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-3)' }}>
-              <div style={{ display: 'flex', gap: 'var(--space-2)', overflowX: 'auto' }}>
-                {types.map(t => (
-                  <button
-                    key={t.id}
+            <div className="flex-between p-4 border-t border-border-color bg-secondary">
+              <div className="flex gap-2">
+                {Object.entries(TYPE_ICONS).map(([type, Icon]) => (
+                  <button 
+                    key={type}
                     type="button"
-                    onClick={() => setType(t.id)}
-                    style={{
-                      padding: 'var(--space-1) var(--space-3)',
-                      background: type === t.id ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
-                      color: type === t.id ? '#fff' : 'var(--text-secondary)',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: 'var(--text-sm-size)',
-                      border: type === t.id ? '1px solid var(--accent-primary)' : '1px solid transparent',
-                      display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer'
-                    }}
+                    onClick={() => setSelectedType(type)}
+                    className={`p-2 rounded-sm transition-all ${selectedType === type ? 'bg-amber-subtle text-amber border border-amber' : 'text-muted hover:text-secondary'}`}
+                    title={type.toUpperCase()}
                   >
-                    <span>{t.icon}</span> <span className="hidden-mobile">{t.label}</span>
+                    <Icon size={18} />
                   </button>
                 ))}
               </div>
-              <button type="submit" className="btn btn-primary btn-sm" disabled={!content.trim()}>
-                Capture <span style={{ opacity: 0.7, fontSize: '0.8em', marginLeft: '4px' }}>+2 XP</span>
+              <button type="submit" className="btn btn-primary" disabled={!content.trim()}>
+                CAPTURE INTEL <Plus size={16} />
               </button>
             </div>
           </form>
-        </div>
+        </HudPanel>
 
-        {/* Filters */}
-        <div style={{ display: 'flex', gap: 'var(--space-4)', marginBottom: 'var(--space-6)', borderBottom: '1px solid var(--border-color)' }}>
-          {filters.map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              style={{
-                padding: 'var(--space-2) 0',
-                background: 'none',
-                color: filter === f ? 'var(--accent-primary)' : 'var(--text-muted)',
-                border: 'none',
-                borderBottom: filter === f ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                textTransform: 'capitalize',
-                fontWeight: filter === f ? 600 : 400,
-                cursor: 'pointer'
-              }}
+        <div className="tab-list">
+          {TABS.map(tab => (
+            <button 
+              key={tab.id}
+              className={`tab-item ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
             >
-              {f}
+              {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Stream */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {filteredItems.length > 0 ? (
-            filteredItems.map(item => {
-              const itemType = types.find(t => t.id === item.type) || types[4]
+        <div className="flex-col gap-4">
+          <AnimatePresence>
+            {filteredItems.map(item => {
+              const Icon = TYPE_ICONS[item.type] || FileText
               return (
-                <div key={item.id} className="card card-flat" style={{ padding: 'var(--space-4)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>{getRelativeTime(item.created_at)}</span>
-                    <span className="badge" style={{ background: 'var(--bg-tertiary)' }}>{itemType.icon} {itemType.label}</span>
-                  </div>
-                  <p style={{ whiteSpace: 'pre-wrap', marginBottom: 'var(--space-4)' }}>{item.content}</p>
-                  
-                  {item.status === 'inbox' && (
-                    <div style={{ display: 'flex', gap: 'var(--space-2)', borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-3)' }}>
-                      <button onClick={() => convertItem(item.id, 'task')} className="btn btn-ghost btn-sm">Convert to Task</button>
-                      <button onClick={() => convertItem(item.id, 'goal')} className="btn btn-ghost btn-sm">Convert to Goal</button>
-                      <div style={{ flex: 1 }}></div>
-                      <button onClick={() => discardItem(item.id)} className="btn btn-ghost btn-sm" style={{ color: 'var(--text-muted)' }}>Discard</button>
-                      <button onClick={() => organizeItem(item.id)} className="btn btn-secondary btn-sm">Mark Organized</button>
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                >
+                  <HudPanel className="flex-col gap-3">
+                    <div className="flex-between">
+                      <span className="badge badge-amber flex items-center gap-1"><Icon size={10} /> {item.type}</span>
+                      <span className="font-mono text-xs text-muted">{new Date(item.created_at).toLocaleString()}</span>
                     </div>
-                  )}
-                  {item.status !== 'inbox' && (
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-3)' }}>
-                      {item.status === 'discarded' ? 'Discarded' : `Organized ${item.converted_to ? `as ${item.converted_to}` : ''}`}
-                    </div>
-                  )}
-                </div>
+                    <p className="font-mono text-sm whitespace-pre-wrap">{item.content}</p>
+                    
+                    {item.status === 'inbox' && (
+                      <div className="flex gap-2 mt-2 pt-2 border-t border-border-color">
+                        <button onClick={() => organizeItem(item.id)} className="btn btn-secondary btn-sm flex-1">
+                          ORGANIZE
+                        </button>
+                        <div className="flex gap-2">
+                          <button onClick={() => convertItem(item.id, 'task')} className="btn btn-ghost btn-sm" title="Convert to Task"><CheckSquare size={14} /></button>
+                          <button onClick={() => discardItem(item.id)} className="btn btn-ghost btn-sm text-danger" title="Discard"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                    )}
+                  </HudPanel>
+                </motion.div>
               )
-            })
-          ) : (
-            <div className="empty-state" style={{ textAlign: 'center', padding: 'var(--space-12) 0', color: 'var(--text-muted)' }}>
-              Empty. Nothing here right now.
-            </div>
+            })}
+          </AnimatePresence>
+          
+          {filteredItems.length === 0 && (
+            <div className="empty-state">NO INTEL IN THIS DIRECTORY</div>
           )}
         </div>
+
       </div>
     </AppShell>
   )

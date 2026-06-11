@@ -2,153 +2,143 @@
 
 import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import HudPanel from '@/components/ui/HudPanel'
+import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
+import { Target, Flag, Star, Clock, Plus, Check, Trophy } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
-export default function Goals() {
-  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, addGoal, completeGoal } = useGoals()
+export default function Missions() {
+  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, loading, addGoal, completeGoal } = useGoals()
   const [activeTab, setActiveTab] = useState('main')
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newGoal, setNewGoal] = useState({ title: '', description: '', type: 'side_quest', category: 'personal' })
+  const [showForm, setShowForm] = useState(false)
 
-  const tabs = [
-    { id: 'main', label: 'Main Quest', data: mainQuest ? [mainQuest] : [] },
-    { id: 'weekly', label: 'Weekly Goals', data: weeklyGoals },
-    { id: 'side', label: 'Side Quests', data: sideQuests },
-    { id: 'long', label: 'Long Term', data: longTermGoals },
+  const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', priority: 3 })
+
+  const TABS = [
+    { id: 'main', label: 'PRIMARY', icon: Trophy, items: mainQuest ? [mainQuest] : [] },
+    { id: 'side', label: 'SIDE OPS', icon: Target, items: sideQuests },
+    { id: 'long', label: 'LONG RANGE', icon: Star, items: longTermGoals },
+    { id: 'weekly', label: 'WEEKLY', icon: Clock, items: weeklyGoals },
   ]
 
-  const activeData = tabs.find(t => t.id === activeTab)?.data || []
+  const activeData = TABS.find(t => t.id === activeTab)?.items || []
 
   const handleAdd = async (e) => {
     e.preventDefault()
-    if (!newGoal.title) return
-    await addGoal(newGoal)
-    setShowAddForm(false)
-    setNewGoal({ title: '', description: '', type: 'side_quest', category: 'personal' })
+    if (!formData.title) return
+    await addGoal(formData)
+    setShowForm(false)
+    setFormData({ title: '', description: '', type: 'side_quest', priority: 3 })
   }
+
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING MISSIONS...</span></div></AppShell>
 
   return (
     <AppShell>
-      <div className="page-container">
-        <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-container narrow">
+        <header className="page-header flex-between">
           <div>
-            <h1 className="page-title">Goals</h1>
-            <p className="page-subtitle">Track your long-term vision and weekly targets.</p>
+            <h1 className="page-title">MISSIONS</h1>
+            <p className="page-subtitle font-mono uppercase text-xs">Strategic objectives and long-term targets.</p>
           </div>
-          <button className="btn btn-primary" onClick={() => setShowAddForm(true)}>+ New Goal</button>
+          <button className="btn btn-primary" onClick={() => setShowForm(true)}><Plus size={16} /> NEW MISSION</button>
         </header>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-6)', overflowX: 'auto', paddingBottom: 'var(--space-2)' }}>
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: 'var(--space-2) var(--space-4)',
-                background: activeTab === tab.id ? 'var(--accent-subtle)' : 'var(--bg-secondary)',
-                color: activeTab === tab.id ? '#fff' : 'var(--text-secondary)',
-                border: activeTab === tab.id ? '1px solid var(--accent-primary)' : '1px solid transparent',
-                borderRadius: 'var(--radius-full)',
-                fontWeight: 600,
-                fontSize: 'var(--text-sm-size)',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {tab.label} {tab.data.length > 0 && `(${tab.data.length})`}
-            </button>
-          ))}
+        <div className="tab-list">
+          {TABS.map(tab => {
+            const Icon = tab.icon
+            return (
+              <button 
+                key={tab.id}
+                className={`tab-item flex items-center gap-2 ${activeTab === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <Icon size={16} />
+                {tab.label}
+                <span className="badge ml-1" style={{ fontSize: '9px' }}>{tab.items.length}</span>
+              </button>
+            )
+          })}
         </div>
 
-        {/* Grid */}
-        {activeData.length > 0 ? (
-          <div className="grid-auto">
-            {activeData.map(goal => (
-              <div key={goal.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
-                  <span className="badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>{goal.category}</span>
-                  {goal.status === 'completed' ? (
-                    <span className="badge" style={{ background: 'var(--success-subtle)', color: 'var(--success)' }}>Completed</span>
-                  ) : (
-                    <span className="badge" style={{ background: 'rgba(108, 92, 231, 0.1)', color: 'var(--accent-secondary)' }}>+{goal.xp_reward || 100} XP</span>
-                  )}
-                </div>
-                
-                <h3 style={{ fontSize: 'var(--text-lg-size)', marginBottom: 'var(--space-2)' }}>{goal.title}</h3>
-                {goal.description && (
-                  <p style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)', flex: 1 }}>
-                    {goal.description}
-                  </p>
-                )}
-                
-                <div style={{ marginTop: 'auto', paddingTop: 'var(--space-4)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', marginBottom: '4px' }}>
-                    <span>Progress</span>
-                    <span>{goal.progress || 0}%</span>
-                  </div>
-                  <div className="progress-bar" style={{ height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', marginBottom: 'var(--space-4)' }}>
-                    <div style={{ width: `${goal.progress || 0}%`, height: '100%', background: 'var(--accent-gradient)', borderRadius: '3px' }}></div>
+        <div className="flex-col gap-6">
+          <AnimatePresence mode="popLayout">
+            {activeData.map((goal, i) => (
+              <motion.div
+                key={goal.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <HudPanel glow={activeTab === 'main'} scanLine={activeTab === 'main'}>
+                  <div className="flex-between mb-2">
+                    <span className="badge badge-amber">{goal.type.replace('_', ' ')}</span>
+                    {!goal.is_completed && <span className="font-mono text-xs text-amber">PRIORITY: {goal.priority}</span>}
                   </div>
                   
-                  {goal.status !== 'completed' && (
-                    <button 
-                      className="btn btn-secondary btn-full"
-                      onClick={() => completeGoal(goal.id)}
-                    >
-                      Complete Goal
-                    </button>
+                  <h3 className={`font-display text-2xl uppercase tracking-wide ${goal.is_completed ? 'text-muted line-through' : 'text-primary'}`}>
+                    {goal.title}
+                  </h3>
+                  
+                  {goal.description && (
+                    <p className="text-sm text-secondary mt-2 font-mono">{goal.description}</p>
                   )}
-                </div>
-              </div>
+                  
+                  <div className="mt-6">
+                    <TacticalProgress value={goal.progress} color="var(--accent-primary)" label="COMPLETION" />
+                  </div>
+                  
+                  {!goal.is_completed && (
+                    <div className="mt-4 flex justify-end">
+                      <button onClick={() => completeGoal(goal.id)} className="btn btn-secondary btn-sm">
+                        <Check size={14} /> COMPLETE
+                      </button>
+                    </div>
+                  )}
+                </HudPanel>
+              </motion.div>
             ))}
-          </div>
-        ) : (
-          <div className="empty-state" style={{ padding: 'var(--space-12) 0', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '48px', marginBottom: 'var(--space-4)' }}>🎯</div>
-            <p>No goals found in this category.</p>
-          </div>
-        )}
+          </AnimatePresence>
 
-        {/* Add Modal */}
-        {showAddForm && (
-          <div className="modal-overlay" onClick={() => setShowAddForm(false)} style={{ position: 'fixed', inset: 0, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)', backdropFilter: 'blur(4px)' }}>
-            <div className="card" onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '500px' }}>
-              <h2 style={{ marginBottom: 'var(--space-4)' }}>New Goal</h2>
-              <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {activeData.length === 0 && (
+            <div className="empty-state">
+              <Target size={48} className="text-muted mb-4 opacity-20" />
+              <p>NO MISSIONS IN THIS CATEGORY</p>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Form */}
+        {showForm && (
+          <div className="modal-overlay">
+            <HudPanel className="modal-content">
+              <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2">Initialize Mission</div>
+              <form onSubmit={handleAdd} className="flex-col gap-4">
                 <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Title</label>
-                  <input type="text" className="input" value={newGoal.title} onChange={e => setNewGoal({...newGoal, title: e.target.value})} required autoFocus />
+                  <label className="font-mono text-xs text-muted mb-1 block">MISSION TITLE</label>
+                  <input type="text" className="input" value={formData.title} onChange={e=>setFormData({...formData, title: e.target.value})} required />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Description</label>
-                  <textarea className="textarea" value={newGoal.description} onChange={e => setNewGoal({...newGoal, description: e.target.value})} />
+                  <label className="font-mono text-xs text-muted mb-1 block">CLASSIFICATION</label>
+                  <select className="select font-mono" value={formData.type} onChange={e=>setFormData({...formData, type: e.target.value})}>
+                    <option value="main_quest">PRIMARY MISSION</option>
+                    <option value="side_quest">SIDE OPERATION</option>
+                    <option value="weekly">WEEKLY TARGET</option>
+                    <option value="long_term">LONG RANGE GOAL</option>
+                  </select>
                 </div>
-                <div className="grid-2">
-                  <div>
-                    <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Type</label>
-                    <select className="select" value={newGoal.type} onChange={e => setNewGoal({...newGoal, type: e.target.value})}>
-                      <option value="main_quest">Main Quest</option>
-                      <option value="weekly">Weekly Goal</option>
-                      <option value="side_quest">Side Quest</option>
-                      <option value="long_term">Long Term</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Category</label>
-                    <select className="select" value={newGoal.category} onChange={e => setNewGoal({...newGoal, category: e.target.value})}>
-                      <option value="personal">Personal</option>
-                      <option value="business">Business</option>
-                      <option value="health">Health</option>
-                      <option value="learning">Learning</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">BRIEFING (OPTIONAL)</label>
+                  <textarea className="textarea" value={formData.description} onChange={e=>setFormData({...formData, description: e.target.value})} />
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
-                  <button type="button" className="btn btn-ghost" onClick={() => setShowAddForm(false)} style={{ flex: 1 }}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Create Goal</button>
+                <div className="flex gap-2 mt-4">
+                  <button type="submit" className="btn btn-primary flex-1">DEPLOY</button>
+                  <button type="button" className="btn btn-ghost" onClick={()=>setShowForm(false)}>ABORT</button>
                 </div>
               </form>
-            </div>
+            </HudPanel>
           </div>
         )}
       </div>

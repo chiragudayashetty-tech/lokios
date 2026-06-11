@@ -1,149 +1,122 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import HudPanel from '@/components/ui/HudPanel'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/hooks/useProfile'
-import { getRankDisplay } from '@/lib/utils/ranks'
-import { createClient } from '@/lib/supabase/client'
+import { useUserConfig } from '@/lib/hooks/useUserConfig'
+import { getRankDisplay, getAllRanks } from '@/lib/utils/ranks'
+import { xpToNextLevel } from '@/lib/utils/xp'
+import { motion } from 'framer-motion'
+import { User as UserIcon, Shield, Trophy, Settings, LogOut } from 'lucide-react'
 
 export default function Profile() {
-  const { signOut } = useAuth()
-  const { profile, updateProfile } = useProfile()
-  const [formData, setFormData] = useState({})
-  const [saving, setSaving] = useState(false)
-  const [achievements, setAchievements] = useState([])
-  const [userAchievements, setUserAchievements] = useState([])
+  const { user, signOut } = useAuth()
+  const { profile, loading: pLoading } = useProfile()
+  const { config, loading: cLoading } = useUserConfig()
+  
+  if (pLoading || cLoading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING PROFILE DATA...</span></div></AppShell>
 
-  useEffect(() => {
-    if (profile) setFormData(profile)
-  }, [profile])
-
-  useEffect(() => {
-    if (!profile?.id) return
-    const fetchAchievements = async () => {
-      const supabase = createClient()
-      const [allAchRes, userAchRes] = await Promise.all([
-        supabase.from('achievements').select('*').order('xp_reward', { ascending: true }),
-        supabase.from('user_achievements').select('achievement_id, earned_at').eq('user_id', profile.id)
-      ])
-      if (allAchRes.data) setAchievements(allAchRes.data)
-      if (userAchRes.data) setUserAchievements(userAchRes.data.map(a => a.achievement_id))
-    }
-    fetchAchievements()
-  }, [profile])
-
-  const handleSave = async (e) => {
-    e.preventDefault()
-    setSaving(true)
-    await updateProfile(formData)
-    setSaving(false)
-  }
-
-  if (!profile) return null
-
-  const rank = getRankDisplay(profile.current_rank || 'E')
+  const rankInfo = getRankDisplay(profile?.rank)
+  const xpProgress = profile ? xpToNextLevel(profile.total_xp) : { percentage: 0, current: 0, required: 50 }
 
   return (
     <AppShell>
       <div className="page-container narrow">
         <header className="page-header">
-          <h1 className="page-title">Profile Settings</h1>
+          <h1 className="page-title">OPERATOR PROFILE</h1>
+          <p className="page-subtitle font-mono uppercase text-xs">Identity, credentials, and system access.</p>
         </header>
 
-        {/* Profile Card */}
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-5)', marginBottom: 'var(--space-6)', background: `linear-gradient(to right, var(--bg-secondary), ${rank.color}15)` }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--bg-tertiary)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
-            {profile.avatar_url ? <img src={profile.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '👤'}
-          </div>
-          <div>
-            <h2 style={{ fontSize: 'var(--text-2xl-size)' }}>{profile.full_name || profile.username || 'Commander'}</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginTop: '4px' }}>
-              <span className="badge" style={{ background: rank.color, color: '#fff' }}>{rank.icon} {rank.name}</span>
-              <span style={{ fontSize: 'var(--text-sm-size)', color: 'var(--text-secondary)' }}>Level {profile.current_level} • {profile.total_xp} XP</span>
+        <HudPanel glow scanLine className="mb-8">
+          <div className="flex items-center gap-6">
+            <div className="w-24 h-24 rounded-sm bg-tertiary border-2 border-amber flex-center overflow-hidden shrink-0 relative">
+              <UserIcon size={48} className="text-amber opacity-50" />
+              <div className="absolute inset-0 border border-amber opacity-20 m-1" />
             </div>
+            <div className="flex-col flex-1">
+              <h2 className="font-display text-3xl uppercase tracking-wider text-primary glow-amber">{profile?.full_name || 'COMMANDER'}</h2>
+              <span className="font-mono text-sm text-secondary">@{profile?.username || 'user'}</span>
+              
+              <div className="flex items-center gap-4 mt-4 border-t border-border-color pt-4">
+                <div className="flex items-center gap-2">
+                  <Shield size={16} color={rankInfo.color} />
+                  <span className="font-display tracking-widest text-sm" style={{ color: rankInfo.color }}>{rankInfo.name.toUpperCase()}</span>
+                </div>
+                <div className="w-px h-4 bg-border-color" />
+                <div className="font-mono text-amber text-sm">LV. {profile?.level || 1}</div>
+                <div className="w-px h-4 bg-border-color" />
+                <div className="font-mono text-muted text-xs">{profile?.total_xp || 0} TOTAL XP</div>
+              </div>
+            </div>
+          </div>
+        </HudPanel>
+
+        <div className="grid-2">
+          <div className="flex-col gap-6">
+            <HudPanel label="CREDENTIALS">
+              <div className="flex-col gap-4 font-mono text-sm">
+                <div className="flex-between border-b border-border-color pb-2">
+                  <span className="text-muted">OPERATOR ID</span>
+                  <span className="text-primary truncate ml-4">{user?.id}</span>
+                </div>
+                <div className="flex-between border-b border-border-color pb-2">
+                  <span className="text-muted">LINKED EMAIL</span>
+                  <span className="text-primary truncate ml-4">{user?.email}</span>
+                </div>
+                <div className="flex-between border-b border-border-color pb-2">
+                  <span className="text-muted">CLASS</span>
+                  <span className="text-amber">{config?.class || 'UNASSIGNED'}</span>
+                </div>
+                <div className="flex-between pb-2">
+                  <span className="text-muted">ACCOUNT CREATED</span>
+                  <span className="text-primary">{new Date(user?.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </HudPanel>
+
+            <HudPanel label="RANKS PROTOCOL">
+              <div className="flex-col gap-2 font-mono text-xs">
+                {getAllRanks().map(r => (
+                  <div key={r.code} className={`flex-between p-2 border ${r.code === profile?.rank ? 'border-amber bg-amber-subtle text-amber' : 'border-transparent text-muted'}`}>
+                    <div className="flex items-center gap-2">
+                      <span style={{ color: r.color }}>{r.icon}</span>
+                      <span>{r.name.toUpperCase()}</span>
+                    </div>
+                    <span>{r.minXp.toLocaleString()}+ XP</span>
+                  </div>
+                ))}
+              </div>
+            </HudPanel>
+          </div>
+
+          <div className="flex-col gap-6">
+            <HudPanel label="PORTFOLIO SETTINGS">
+              <div className="flex-col gap-4 font-mono text-sm">
+                <div className="flex-col gap-1">
+                  <span className="text-muted text-xs">PUBLIC URL</span>
+                  <div className="p-3 bg-tertiary border border-border-color text-primary truncate">
+                    {window.location.origin}/p/{profile?.public_portfolio_slug || profile?.username}
+                  </div>
+                </div>
+                <div className="flex-between p-3 bg-tertiary border border-border-color">
+                  <span className="text-muted">VISIBILITY</span>
+                  <span className={profile?.portfolio_visible ? 'text-success' : 'text-danger'}>
+                    {profile?.portfolio_visible ? 'PUBLIC (ONLINE)' : 'PRIVATE (OFFLINE)'}
+                  </span>
+                </div>
+              </div>
+            </HudPanel>
+
+            <HudPanel label="SYSTEM ACTION">
+              <button onClick={signOut} className="btn btn-danger w-full flex-center py-4 tracking-widest gap-2">
+                <LogOut size={16} /> END SESSION
+              </button>
+            </HudPanel>
           </div>
         </div>
 
-        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          {/* Personal Info */}
-          <section className="card">
-            <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>Personal Information</h3>
-            <div className="grid-2">
-              <div>
-                <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Username</label>
-                <input type="text" className="input" value={formData.username || ''} onChange={e => setFormData({...formData, username: e.target.value})} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Full Name</label>
-                <input type="text" className="input" value={formData.full_name || ''} onChange={e => setFormData({...formData, full_name: e.target.value})} />
-              </div>
-            </div>
-            <div style={{ marginTop: 'var(--space-4)' }}>
-              <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Bio</label>
-              <textarea className="textarea" value={formData.bio || ''} onChange={e => setFormData({...formData, bio: e.target.value})} />
-            </div>
-          </section>
-
-          {/* Portfolio Settings */}
-          <section className="card">
-            <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>Public Portfolio Settings</h3>
-            <div style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-              <input type="checkbox" checked={formData.portfolio_visible || false} onChange={e => setFormData({...formData, portfolio_visible: e.target.checked})} style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)' }} />
-              <label>Make portfolio public</label>
-            </div>
-            
-            {formData.portfolio_visible && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Portfolio Slug</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>chiragos.com/p/</span>
-                    <input type="text" className="input" value={formData.public_portfolio_slug || ''} onChange={e => setFormData({...formData, public_portfolio_slug: e.target.value})} placeholder="your-name" />
-                  </div>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>Headline</label>
-                  <input type="text" className="input" value={formData.portfolio_headline || ''} onChange={e => setFormData({...formData, portfolio_headline: e.target.value})} placeholder="e.g. Developer & Designer" />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-sm-size)', color: 'var(--text-muted)', marginBottom: 'var(--space-2)' }}>About</label>
-                  <textarea className="textarea" value={formData.portfolio_about || ''} onChange={e => setFormData({...formData, portfolio_about: e.target.value})} />
-                </div>
-              </div>
-            )}
-          </section>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Saving...' : 'Save Settings'}
-            </button>
-          </div>
-        </form>
-
-        {/* Achievements */}
-        <section style={{ marginTop: 'var(--space-10)' }}>
-          <h2 style={{ fontSize: 'var(--text-2xl-size)', marginBottom: 'var(--space-6)' }}>Achievements</h2>
-          <div className="grid-auto">
-            {achievements.map(ach => {
-              const earned = userAchievements.includes(ach.id)
-              return (
-                <div key={ach.id} className="card card-flat" style={{ opacity: earned ? 1 : 0.4, filter: earned ? 'none' : 'grayscale(100%)', display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
-                  <div style={{ fontSize: '32px' }}>{ach.icon || '🏆'}</div>
-                  <div>
-                    <h4 style={{ fontWeight: 600 }}>{ach.name}</h4>
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{ach.description}</p>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--accent-secondary)', marginTop: '4px' }}>+{ach.xp_reward} XP</div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
-        <div style={{ marginTop: 'var(--space-12)', borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-6)', textAlign: 'center' }}>
-          <button onClick={signOut} className="btn btn-danger btn-sm">Sign Out</button>
-        </div>
       </div>
     </AppShell>
   )
