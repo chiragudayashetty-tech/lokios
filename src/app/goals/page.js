@@ -17,7 +17,7 @@ export default function Missions() {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
 
-  const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', priority: 3 })
+  const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', priority: 3, deadline: '' })
 
   const TABS = [
     { id: 'main', label: 'PRIMARY', icon: Flag, items: mainQuest ? [mainQuest] : [] },
@@ -41,7 +41,8 @@ export default function Missions() {
     setEditForm({
       title: goal.title,
       description: goal.description || '',
-      priority: goal.priority
+      priority: goal.priority,
+      deadline: goal.deadline ? goal.deadline.split('T')[0] : ''
     })
   }
 
@@ -128,6 +129,12 @@ export default function Missions() {
                       <div className="flex-col gap-3 mb-4">
                         <input type="text" className="input font-mono text-lg py-1 border-amber" value={editForm.title} onChange={e=>setEditForm({...editForm, title: e.target.value})} />
                         <textarea className="textarea font-mono text-sm py-1" value={editForm.description} onChange={e=>setEditForm({...editForm, description: e.target.value})} rows={2} />
+                        <div className="grid-2">
+                          <div>
+                            <label className="font-mono text-xs text-muted mb-1 block">DEADLINE</label>
+                            <input type="date" className="input font-mono text-sm py-1" value={editForm.deadline || ''} onChange={e=>setEditForm({...editForm, deadline: e.target.value})} />
+                          </div>
+                        </div>
                         <div className="flex justify-end gap-2 mt-2">
                           <button onClick={() => saveEdit(goal.id)} className="btn btn-primary btn-sm">SAVE</button>
                           <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
@@ -216,6 +223,10 @@ export default function Missions() {
                         <option value="weekly">WEEKLY TARGET</option>
                         <option value="long_term">LONG RANGE GOAL</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">DEADLINE (OPTIONAL)</label>
+                      <input type="date" className="input" value={formData.deadline} onChange={e=>setFormData({...formData, deadline: e.target.value})} />
                     </div>
                     <div>
                       <label className="font-mono text-xs text-muted mb-1 block">BRIEFING (OPTIONAL)</label>

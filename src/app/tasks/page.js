@@ -9,13 +9,14 @@ import { Plus, Check, Calendar, AlertCircle, Trash2, Edit2, RotateCcw, Repeat, M
 export default function Operations() {
   const { tasks, todayTasks, loading, addTask, editTask, completeTask, undoCompleteTask, deleteTask } = useTasks()
   const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [newTaskDate, setNewTaskDate] = useState(new Date().toISOString().split('T')[0])
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
 
   const handleAdd = async (e) => {
     e.preventDefault()
     if (!newTaskTitle.trim()) return
-    await addTask({ title: newTaskTitle, due_date: new Date().toISOString().split('T')[0], type: 'custom' })
+    await addTask({ title: newTaskTitle, due_date: newTaskDate || null, type: 'custom' })
     setNewTaskTitle('')
   }
 
@@ -144,17 +145,26 @@ export default function Operations() {
           <p className="page-subtitle font-mono uppercase text-xs">Tactical task execution.</p>
         </header>
 
-        <form onSubmit={handleAdd} className="mb-8 relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-amber font-mono">{`>`}</span>
+        <form onSubmit={handleAdd} className="mb-8 relative flex gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-amber font-mono">{`>`}</span>
+            <input 
+              type="text" 
+              className="input font-mono bg-secondary border-hud-border hover:border-amber focus:border-amber transition-colors w-full" 
+              style={{ paddingLeft: '2.5rem', height: '3.5rem', fontSize: '1rem' }}
+              placeholder="INPUT NEW OPERATION..." 
+              value={newTaskTitle}
+              onChange={e => setNewTaskTitle(e.target.value)}
+            />
+          </div>
           <input 
-            type="text" 
-            className="input font-mono bg-secondary border-hud-border hover:border-amber focus:border-amber transition-colors" 
-            style={{ paddingLeft: '2.5rem', height: '3.5rem', fontSize: '1rem' }}
-            placeholder="INPUT NEW OPERATION..." 
-            value={newTaskTitle}
-            onChange={e => setNewTaskTitle(e.target.value)}
+            type="date" 
+            className="input font-mono bg-secondary border-hud-border hover:border-amber focus:border-amber transition-colors w-40" 
+            style={{ height: '3.5rem' }}
+            value={newTaskDate}
+            onChange={e => setNewTaskDate(e.target.value)}
           />
-          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-primary btn-sm">
+          <button type="submit" className="btn btn-primary px-8" style={{ height: '3.5rem' }}>
             DEPLOY
           </button>
         </form>

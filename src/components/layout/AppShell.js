@@ -18,7 +18,6 @@ const NAV_ITEMS = [
   { href: '/goals', icon: Target, label: 'Missions' },
   { href: '/tasks', icon: CheckSquare, label: 'Operations' },
   { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
-  { href: '/journal', icon: BookOpen, label: 'Field Log' },
   { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },
   { href: '/calendar', icon: CalendarDays, label: 'Calendar' },
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },

@@ -4,13 +4,26 @@ import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import { useCalendar } from '@/lib/hooks/useCalendar'
+import { useTasks } from '@/lib/hooks/useTasks'
+import { useGoals } from '@/lib/hooks/useGoals'
+import { useAuth } from '@/lib/hooks/useAuth'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Plus, MapPin, AlignLeft, Calendar as CalendarIcon, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, MapPin, AlignLeft, Calendar as CalendarIcon, Clock, CheckSquare, Target } from 'lucide-react'
 
 export default function Calendar() {
+  const { user } = useAuth()
   const [currentDate, setCurrentDate] = useState(new Date())
   const { events, loading, addEvent } = useCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1)
+  const { tasks, loading: tLoading } = useTasks()
+  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, loading: gLoading } = useGoals()
   
+  const allGoals = [
+    ...(mainQuest ? [mainQuest] : []),
+    ...(sideQuests || []),
+    ...(longTermGoals || []),
+    ...(weeklyGoals || [])
+  ]
+
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({ title: '', description: '', location: '', start_time: '', end_time: '' })
@@ -36,10 +49,18 @@ export default function Calendar() {
     setFormData({ title: '', description: '', location: '', start_time: '', end_time: '' })
   }
 
-  const selectedDateEvents = events.filter(e => new Date(e.start_time).toISOString().split('T')[0] === selectedDate)
+  // Combine Events, Tasks, and Goals
+  const getItemsForDate = (dateStr) => {
+    const dayEvents = events.filter(e => new Date(e.start_time).toISOString().split('T')[0] === dateStr).map(e => ({ ...e, _type: 'event' }))
+    const dayTasks = tasks.filter(t => t.due_date === dateStr).map(t => ({ ...t, _type: 'task', start_time: `${dateStr}T00:00:00` }))
+    const dayGoals = allGoals.filter(g => g.deadline && g.deadline.split('T')[0] === dateStr).map(g => ({ ...g, _type: 'goal', start_time: g.deadline }))
+    return [...dayEvents, ...dayTasks, ...dayGoals]
+  }
+
+  const selectedDateItems = getItemsForDate(selectedDate)
   const todayStr = new Date().toISOString().split('T')[0]
 
-  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">SYNCING SATELLITES...</span></div></AppShell>
+  if (loading || tLoading || gLoading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">SYNCING SATELLITES...</span></div></AppShell>
 
   return (
     <AppShell>
@@ -49,12 +70,17 @@ export default function Calendar() {
             <h1 className="page-title">CALENDAR</h1>
             <p className="page-subtitle font-mono uppercase text-xs">Temporal scheduling and event tracking.</p>
           </div>
-          <button className="btn btn-primary" onClick={() => {
-            setFormData({...formData, start_time: `${selectedDate}T09:00`, end_time: `${selectedDate}T10:00`})
-            setShowAddForm(true)
-          }}>
-            <Plus size={16} /> NEW EVENT
-          </button>
+          <div className="flex items-center gap-4">
+            <a href={`/api/calendar?user_id=${user?.id}`} target="_blank" className="text-amber font-mono text-xs underline hover:text-primary">
+              .ICS SUBSCRIPTION
+            </a>
+            <button className="btn btn-primary" onClick={() => {
+              setFormData({...formData, start_time: `${selectedDate}T09:00`, end_time: `${selectedDate}T10:00`})
+              setShowAddForm(true)
+            }}>
+              <Plus size={16} /> NEW EVENT
+            </button>
+          </div>
         </header>
 
         <HudPanel className="p-0 mb-8" style={{ padding: 0 }}>
@@ -82,7 +108,7 @@ export default function Calendar() {
               const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
               const isToday = dateStr === todayStr
               const isSelected = dateStr === selectedDate
-              const dayEvents = events.filter(e => new Date(e.start_time).toISOString().split('T')[0] === dateStr)
+              const dayItems = getItemsForDate(dateStr)
 
               return (
                 <div 
@@ -93,15 +119,18 @@ export default function Calendar() {
                 >
                   <div className="flex-between">
                     <span className={`font-mono text-sm ${isToday ? 'text-amber' : 'text-primary'}`}>{day}</span>
-                    {dayEvents.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber" />}
+                    {dayItems.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber" />}
                   </div>
                   <div className="mt-2 flex-col gap-1">
-                    {dayEvents.slice(0, 2).map(e => (
-                      <div key={e.id} className="text-[9px] font-mono truncate text-muted bg-primary px-1 border-l border-amber">
-                        {e.title}
-                      </div>
-                    ))}
-                    {dayEvents.length > 2 && <div className="text-[9px] text-muted text-center">+{dayEvents.length - 2}</div>}
+                    {dayItems.slice(0, 2).map((item, idx) => {
+                      const color = item._type === 'task' ? 'border-success' : item._type === 'goal' ? 'border-info' : 'border-amber'
+                      return (
+                        <div key={idx} className={`text-[9px] font-mono truncate text-muted bg-primary px-1 border-l ${color}`}>
+                          {item.title}
+                        </div>
+                      )
+                    })}
+                    {dayItems.length > 2 && <div className="text-[9px] text-muted text-center">+{dayItems.length - 2}</div>}
                   </div>
                 </div>
               )
@@ -116,21 +145,40 @@ export default function Calendar() {
           
           <div className="flex-col gap-4">
             <AnimatePresence>
-              {selectedDateEvents.map((event, i) => (
-                <motion.div key={event.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="flex gap-4 p-4 bg-tertiary border border-border-color border-l-2 border-l-amber">
-                  <div className="flex-col text-right shrink-0 w-20">
-                    <span className="font-mono text-amber">{new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                    {event.end_time && <span className="font-mono text-xs text-muted mt-1">{new Date(event.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>}
-                  </div>
-                  <div className="flex-col gap-2">
-                    <span className="font-display text-lg uppercase tracking-wide text-primary">{event.title}</span>
-                    {event.location && <div className="flex items-center gap-2 text-xs text-secondary font-mono"><MapPin size={12} /> {event.location}</div>}
-                    {event.description && <div className="flex items-start gap-2 text-xs text-muted font-mono"><AlignLeft size={12} className="mt-0.5" /> {event.description}</div>}
-                  </div>
-                </motion.div>
-              ))}
+              {selectedDateItems.map((item, i) => {
+                const isTask = item._type === 'task'
+                const isGoal = item._type === 'goal'
+                const typeColor = isTask ? 'border-l-success' : isGoal ? 'border-l-info' : 'border-l-amber'
+                const Icon = isTask ? CheckSquare : isGoal ? Target : CalendarIcon
+                const iconColor = isTask ? 'text-success' : isGoal ? 'text-info' : 'text-amber'
+
+                return (
+                  <motion.div key={`${item._type}-${item.id}`} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className={`flex gap-4 p-4 bg-tertiary border border-border-color border-l-2 ${typeColor}`}>
+                    <div className="flex-col text-right shrink-0 w-20">
+                      {item._type === 'event' ? (
+                        <>
+                          <span className="font-mono text-amber">{new Date(item.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                          {item.end_time && <span className="font-mono text-xs text-muted mt-1">{new Date(item.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>}
+                        </>
+                      ) : isGoal ? (
+                        <span className="font-mono text-info">{new Date(item.deadline).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      ) : (
+                        <span className="font-mono text-success">ALL DAY</span>
+                      )}
+                    </div>
+                    <div className="flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <Icon size={14} className={iconColor} />
+                        <span className="font-display text-lg uppercase tracking-wide text-primary">{item.title}</span>
+                      </div>
+                      {item.location && <div className="flex items-center gap-2 text-xs text-secondary font-mono"><MapPin size={12} /> {item.location}</div>}
+                      {item.description && <div className="flex items-start gap-2 text-xs text-muted font-mono"><AlignLeft size={12} className="mt-0.5" /> {item.description}</div>}
+                    </div>
+                  </motion.div>
+                )
+              })}
             </AnimatePresence>
-            {selectedDateEvents.length === 0 && <div className="empty-state py-8">NO EVENTS SCHEDULED</div>}
+            {selectedDateItems.length === 0 && <div className="empty-state py-8">NO EVENTS OR DEADLINES SCHEDULED</div>}
           </div>
         </HudPanel>
 

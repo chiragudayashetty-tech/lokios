@@ -18,6 +18,14 @@ export default function ProofOfWork() {
   const [editingId, setEditingId] = useState(null)
   const [newMediaUrl, setNewMediaUrl] = useState('')
 
+  // New Log Form State
+  const [showAddLog, setShowAddLog] = useState(false)
+  const [newLog, setNewLog] = useState({ title: '', description: '', type: 'feature', duration_hours: '' })
+
+  // New Project Form State
+  const [showAddProject, setShowAddProject] = useState(false)
+  const [newProj, setNewProj] = useState({ name: '', description: '', status: 'in_progress', tech_stack: '' })
+
   useEffect(() => {
     if (!user) return
     fetchData()
@@ -47,6 +55,45 @@ export default function ProofOfWork() {
     }
   }
 
+  const handleCreateLog = async (e) => {
+    e.preventDefault()
+    if (!newLog.title.trim()) return
+    const supabase = createClient()
+    const { data, error } = await supabase.from('work_logs').insert([{
+      user_id: user.id,
+      title: newLog.title,
+      description: newLog.description,
+      type: newLog.type,
+      duration_hours: newLog.duration_hours ? parseFloat(newLog.duration_hours) : null,
+      date: new Date().toISOString().split('T')[0]
+    }]).select()
+    
+    if (data) {
+      setLogs([data[0], ...logs])
+      setShowAddLog(false)
+      setNewLog({ title: '', description: '', type: 'feature', duration_hours: '' })
+    }
+  }
+
+  const handleCreateProject = async (e) => {
+    e.preventDefault()
+    if (!newProj.name.trim()) return
+    const supabase = createClient()
+    const { data, error } = await supabase.from('projects').insert([{
+      user_id: user.id,
+      name: newProj.name,
+      description: newProj.description,
+      status: newProj.status,
+      tech_stack: newProj.tech_stack.split(',').map(s => s.trim()).filter(Boolean)
+    }]).select()
+    
+    if (data) {
+      setProjects([data[0], ...projects])
+      setShowAddProject(false)
+      setNewProj({ name: '', description: '', status: 'in_progress', tech_stack: '' })
+    }
+  }
+
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING ARCHIVES...</span></div></AppShell>
 
   return (
@@ -57,12 +104,100 @@ export default function ProofOfWork() {
             <h1 className="page-title">PROOF OF WORK</h1>
             <p className="page-subtitle font-mono uppercase text-xs">Immutable record of execution and value creation.</p>
           </div>
+          {activeTab === 'timeline' ? (
+            <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddLog(true)}>
+              <Plus size={16} /> ADD LOG
+            </button>
+          ) : (
+            <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddProject(true)}>
+              <Plus size={16} /> ADD PROJECT
+            </button>
+          )}
         </header>
 
         <div className="tab-list">
           <button className={`tab-item ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>TIMELINE</button>
           <button className={`tab-item ${activeTab === 'projects' ? 'active' : ''}`} onClick={() => setActiveTab('projects')}>PROJECTS</button>
         </div>
+
+        {/* ADD LOG FORM */}
+        <AnimatePresence>
+          {showAddLog && activeTab === 'timeline' && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-8 overflow-hidden">
+              <HudPanel className="border-amber">
+                <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2">Log Execution</div>
+                <form onSubmit={handleCreateLog} className="flex-col gap-4">
+                  <div className="grid-2">
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">TITLE</label>
+                      <input type="text" className="input" value={newLog.title} onChange={e=>setNewLog({...newLog, title: e.target.value})} required placeholder="e.g. Built Analytics Dashboard" />
+                    </div>
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">TYPE</label>
+                      <select className="select" value={newLog.type} onChange={e=>setNewLog({...newLog, type: e.target.value})}>
+                        <option value="feature">Feature</option>
+                        <option value="project_launch">Project Launch</option>
+                        <option value="learning">Learning</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">DESCRIPTION</label>
+                    <textarea className="textarea" value={newLog.description} onChange={e=>setNewLog({...newLog, description: e.target.value})} rows={2} placeholder="What value was created?" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">DURATION (HOURS)</label>
+                    <input type="number" step="0.5" className="input" value={newLog.duration_hours} onChange={e=>setNewLog({...newLog, duration_hours: e.target.value})} placeholder="e.g. 2.5" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" className="btn btn-primary">SAVE LOG</button>
+                    <button type="button" className="btn btn-ghost" onClick={() => setShowAddLog(false)}>CANCEL</button>
+                  </div>
+                </form>
+              </HudPanel>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ADD PROJECT FORM */}
+        <AnimatePresence>
+          {showAddProject && activeTab === 'projects' && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-8 overflow-hidden">
+              <HudPanel className="border-amber">
+                <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2">Register Project</div>
+                <form onSubmit={handleCreateProject} className="flex-col gap-4">
+                  <div className="grid-2">
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">PROJECT NAME</label>
+                      <input type="text" className="input" value={newProj.name} onChange={e=>setNewProj({...newProj, name: e.target.value})} required />
+                    </div>
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">STATUS</label>
+                      <select className="select" value={newProj.status} onChange={e=>setNewProj({...newProj, status: e.target.value})}>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="paused">Paused</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">DESCRIPTION</label>
+                    <textarea className="textarea" value={newProj.description} onChange={e=>setNewProj({...newProj, description: e.target.value})} rows={2} />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">TECH STACK (COMMA SEPARATED)</label>
+                    <input type="text" className="input" value={newProj.tech_stack} onChange={e=>setNewProj({...newProj, tech_stack: e.target.value})} placeholder="e.g. React, Supabase, Tailwind" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" className="btn btn-primary">REGISTER</button>
+                    <button type="button" className="btn btn-ghost" onClick={() => setShowAddProject(false)}>CANCEL</button>
+                  </div>
+                </form>
+              </HudPanel>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence mode="wait">
           {activeTab === 'timeline' && (
@@ -96,14 +231,14 @@ export default function ProofOfWork() {
                           <div className="font-mono text-[10px] text-muted mb-2 tracking-widest">ATTACHMENTS //</div>
                           <div className="flex flex-wrap gap-2">
                             {log.media_urls.map((url, idx) => {
-                              const isImage = url.match(/\.(jpeg|jpg|gif|png)$/) != null
+                              const isImage = url.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null
                               return isImage ? (
                                 <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block border border-border-color hover:border-amber transition-colors">
                                   <img src={url} alt="Proof" className="h-20 w-auto object-cover" />
                                 </a>
                               ) : (
                                 <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="badge bg-tertiary flex items-center gap-1 hover:text-amber transition-colors">
-                                  <LinkIcon size={12} /> {new URL(url).hostname}
+                                  <LinkIcon size={12} /> {(new URL(url)).hostname}
                                 </a>
                               )
                             })}
@@ -142,7 +277,7 @@ export default function ProofOfWork() {
                       <div className="flex-between mb-2">
                         <span className={`badge ${proj.status === 'completed' ? 'badge-success' : 'badge-amber'}`}>{proj.status}</span>
                       </div>
-                      <h3 className="font-display text-2xl uppercase tracking-wide text-primary">{proj.title}</h3>
+                      <h3 className="font-display text-2xl uppercase tracking-wide text-primary">{proj.name}</h3>
                       <p className="text-sm text-secondary mt-2 line-clamp-2 font-mono">{proj.description}</p>
                       {proj.tech_stack && proj.tech_stack.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-4">

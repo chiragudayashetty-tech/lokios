@@ -44,23 +44,20 @@ export default function Profile() {
     await supabase.from('habits').delete().eq('user_id', user.id)
     
     const routines = [
-      { user_id: user.id, title: "Beyond Tatva task", category: "business", frequency: "daily", stat_category: "founder", xp_per_completion: 15, icon: "Rocket" },
-      { user_id: user.id, title: "Workout", category: "health", frequency: "daily", stat_category: "strength", xp_per_completion: 20, icon: "Dumbbell" },
-      { user_id: user.id, title: "Read 10 pages", category: "learning", frequency: "daily", stat_category: "learning", xp_per_completion: 10, icon: "BookOpen" },
-      { user_id: user.id, title: "Learn one skill", category: "learning", frequency: "daily", stat_category: "learning", xp_per_completion: 15, icon: "Sparkles" },
-      { user_id: user.id, title: "Hair treatment", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 5, icon: "Target" },
-      { user_id: user.id, title: "Skin care", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 5, icon: "Target" },
-      { user_id: user.id, title: "Grooming", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 5, icon: "Target" },
-      { user_id: user.id, title: "Screen time target", category: "health", frequency: "daily", stat_category: "discipline", xp_per_completion: 20, icon: "Flame" },
-      { user_id: user.id, title: "Journal entry", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 10, icon: "BookOpen" },
-      { user_id: user.id, title: "Weekly review", category: "business", frequency: "weekly", stat_category: "founder", xp_per_completion: 30, icon: "Target" },
-      { user_id: user.id, title: "Portfolio update", category: "business", frequency: "weekly", stat_category: "creation", xp_per_completion: 30, icon: "Rocket" },
-      { user_id: user.id, title: "Deep cleaning of tasks", category: "personal", frequency: "weekly", stat_category: "discipline", xp_per_completion: 15, icon: "Flame" },
-      { user_id: user.id, title: "Learning project", category: "learning", frequency: "weekly", stat_category: "learning", xp_per_completion: 50, icon: "Sparkles" },
-      { user_id: user.id, title: "Weekly planning", category: "business", frequency: "weekly", stat_category: "founder", xp_per_completion: 30, icon: "Target" },
-      { user_id: user.id, title: "Goal review", category: "business", frequency: "weekly", stat_category: "founder", xp_per_completion: 20, icon: "Target" },
-      { user_id: user.id, title: "Calendar planning", category: "business", frequency: "weekly", stat_category: "discipline", xp_per_completion: 20, icon: "Target" },
-      { user_id: user.id, title: "Recovery and rest", category: "health", frequency: "weekly", stat_category: "strength", xp_per_completion: 25, icon: "Dumbbell" }
+      { user_id: user.id, title: "Wakeup Before 7am", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Target" },
+      { user_id: user.id, title: "No Snoozing", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Flame" },
+      { user_id: user.id, title: "Drink 3L Water", category: "health", frequency: "daily", stat_category: "discipline", xp_per_completion: 30, icon: "Target" },
+      { user_id: user.id, title: "Workout", category: "health", frequency: "daily", stat_category: "strength", xp_per_completion: 25, icon: "Dumbbell" },
+      { user_id: user.id, title: "Morning Working", category: "business", frequency: "daily", stat_category: "founder", xp_per_completion: 25, icon: "Rocket" },
+      { user_id: user.id, title: "Read Books", category: "learning", frequency: "daily", stat_category: "learning", xp_per_completion: 25, icon: "BookOpen" },
+      { user_id: user.id, title: "Meditation", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Target" },
+      { user_id: user.id, title: "Skill Learning atleast 1hr", category: "learning", frequency: "daily", stat_category: "learning", xp_per_completion: 21, icon: "Sparkles" },
+      { user_id: user.id, title: "Daily Journal", category: "personal", frequency: "daily", stat_category: "creation", xp_per_completion: 30, icon: "BookOpen" },
+      { user_id: user.id, title: "Limit Social Media", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 30, icon: "Shield" },
+      { user_id: user.id, title: "No Alcohol", category: "health", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Shield" },
+      { user_id: user.id, title: "Track Expenses", category: "business", frequency: "daily", stat_category: "founder", xp_per_completion: 30, icon: "Target" },
+      { user_id: user.id, title: "Sleep By 12", category: "health", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Target" },
+      { user_id: user.id, title: "Startup work", category: "business", frequency: "daily", stat_category: "founder", xp_per_completion: 25, icon: "Rocket" }
     ]
     await supabase.from('habits').insert(routines)
     
