@@ -143,6 +143,69 @@ export function useGoals() {
     }
   }, [user, goals])
 
+  const deleteGoal = useCallback(async (id) => {
+    if (!user) return false
+
+    try {
+      const { error } = await supabase
+        .from('goals')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      setGoals((prev) => prev.filter((g) => g.id !== id))
+      return true
+    } catch (error) {
+      console.error('Error deleting goal:', error)
+      return false
+    }
+  }, [user])
+
+  const togglePauseGoal = useCallback(async (id, currentStatus) => {
+    if (!user) return null
+
+    const newStatus = currentStatus === 'paused' ? 'active' : 'paused'
+
+    try {
+      const { data: updated, error } = await supabase
+        .from('goals')
+        .update({ status: newStatus })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+      setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
+      return updated
+    } catch (error) {
+      console.error('Error pausing goal:', error)
+      return null
+    }
+  }, [user])
+
+  const updateProgress = useCallback(async (id, progress) => {
+    if (!user) return null
+
+    try {
+      const { data: updated, error } = await supabase
+        .from('goals')
+        .update({ progress })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+      setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
+      return updated
+    } catch (error) {
+      console.error('Error updating progress:', error)
+      return null
+    }
+  }, [user])
+
   return {
     goals,
     mainQuest,
@@ -153,5 +216,8 @@ export function useGoals() {
     addGoal,
     updateGoal,
     completeGoal,
+    deleteGoal,
+    togglePauseGoal,
+    updateProgress,
   }
 }

@@ -9,6 +9,7 @@ import BattleCard from '@/components/ui/BattleCard'
 import StatCard from '@/components/ui/StatCard'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import TypewriterText from '@/components/ui/TypewriterText'
+import IntelligenceFeed from '@/components/ui/IntelligenceFeed'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { useTasks } from '@/lib/hooks/useTasks'
 import { useGoals } from '@/lib/hooks/useGoals'
@@ -65,6 +66,11 @@ export default function MissionControl() {
               </div>
             )}
           </HudPanel>
+        </motion.div>
+
+        {/* INTELLIGENCE LAYER */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-8">
+          <IntelligenceFeed />
         </motion.div>
 
         {/* HERO: ACTIVE MISSION */}

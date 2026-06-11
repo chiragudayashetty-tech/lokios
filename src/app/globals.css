@@ -16,14 +16,14 @@
 
 :root {
   /* ── Color Palette: Backgrounds ── */
-  --bg-primary:     #0b0d12;
-  --bg-secondary:   #111318;
-  --bg-tertiary:    #181b23;
-  --bg-hover:       #1e2230;
-  --bg-active:      #252a38;
-  --bg-input:       #0d0f14;
-  --bg-overlay:     rgba(0, 0, 0, 0.75);
-  --bg-overlay-heavy: rgba(0, 0, 0, 0.88);
+  --bg-primary:     #050505; /* Matte black */
+  --bg-secondary:   #0a0a0a; /* Darkest gunmetal */
+  --bg-tertiary:    #141414; /* Gunmetal */
+  --bg-hover:       #1c1c1c;
+  --bg-active:      #262626;
+  --bg-input:       #080808;
+  --bg-overlay:     rgba(0, 0, 0, 0.85);
+  --bg-overlay-heavy: rgba(0, 0, 0, 0.95);
 
   /* ── Color Palette: Text ── */
   --text-primary:   #e2e4e9;
@@ -41,9 +41,10 @@
   --accent-hover:     #e0b64e;
   --accent-pressed:   #c49a3a;
 
-  /* ── Color Palette: Secondary — Deep Navy ── */
-  --navy-glow:        rgba(26, 95, 180, 0.3);
-  --navy-subtle:      rgba(26, 95, 180, 0.08);
+  /* ── Color Palette: Secondary — Blue Holographic ── */
+  --accent-secondary: #00f0ff;
+  --navy-glow:        rgba(0, 240, 255, 0.3);
+  --navy-subtle:      rgba(0, 240, 255, 0.08);
 
   /* ── Color Palette: Semantic ── */
   --success:        #2ecc71;
@@ -78,13 +79,13 @@
   --amber-glow-xl:     rgba(212, 168, 67, 0.08);
 
   /* ── Borders ── */
-  --border-color:  #1e2130;
-  --border-subtle: #161925;
-  --border-strong: #2a2f40;
+  --border-color:  #1f1f1f;
+  --border-subtle: #111111;
+  --border-strong: #2f2f2f;
 
   /* ── Glass / Frosted Panels ── */
-  --glass-bg:     rgba(17, 19, 24, 0.85);
-  --glass-border: rgba(212, 168, 67, 0.1);
+  --glass-bg:     rgba(5, 5, 5, 0.85);
+  --glass-border: rgba(212, 168, 67, 0.15);
   --glass-blur:   16px;
 
   /* ── Radius ── */

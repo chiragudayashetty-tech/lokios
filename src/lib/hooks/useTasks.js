@@ -112,6 +112,50 @@ export function useTasks() {
     }
   }, [user, tasks])
 
+  const undoCompleteTask = useCallback(async (id) => {
+    if (!user) return null
+
+    try {
+      const { data: updated, error } = await supabase
+        .from('tasks')
+        .update({ completed_at: null, status: 'pending' })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      return updated
+    } catch (error) {
+      console.error('Error undoing task completion:', error)
+      return null
+    }
+  }, [user])
+
+  const editTask = useCallback(async (id, updates) => {
+    if (!user) return null
+
+    try {
+      const { data: updated, error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      return updated
+    } catch (error) {
+      console.error('Error editing task:', error)
+      return null
+    }
+  }, [user])
+
   const deleteTask = useCallback(async (id) => {
     if (!user) return false
 
@@ -136,7 +180,9 @@ export function useTasks() {
     todayTasks: getTodayTasks(),
     loading,
     addTask,
+    editTask,
     completeTask,
+    undoCompleteTask,
     deleteTask,
   }
 }
