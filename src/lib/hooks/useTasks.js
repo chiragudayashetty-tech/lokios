@@ -79,13 +79,20 @@ export function useTasks() {
     }
   }, [user])
 
-  const completeTask = useCallback(async (id) => {
+  const completeTask = useCallback(async (id, proofUrl = null) => {
     if (!user) return null
 
     try {
+      const updates = { completed_at: new Date().toISOString(), status: 'completed' }
+      if (proofUrl) {
+        // Fetch current media_urls first
+        const { data: curr } = await supabase.from('tasks').select('media_urls').eq('id', id).single()
+        updates.media_urls = curr?.media_urls ? [...curr.media_urls, proofUrl] : [proofUrl]
+      }
+
       const { data: updated, error } = await supabase
         .from('tasks')
-        .update({ completed_at: new Date().toISOString(), status: 'completed' })
+        .update(updates)
         .eq('id', id)
         .eq('user_id', user.id)
         .select()

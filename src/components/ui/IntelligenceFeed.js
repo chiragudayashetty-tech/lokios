@@ -3,16 +3,16 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useGoals } from '@/lib/hooks/useGoals'
-import { useHabits } from '@/lib/hooks/useHabits'
+import { useTasks } from '@/lib/hooks/useTasks'
 import { useAuth } from '@/lib/hooks/useAuth'
 import HudPanel from './HudPanel'
-import { AlertTriangle, Activity, Flame, ShieldAlert, Cpu } from 'lucide-react'
+import { AlertTriangle, Activity, Zap, Cpu } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function IntelligenceFeed() {
   const { user } = useAuth()
   const { mainQuest } = useGoals()
-  const { habits } = useHabits()
+  const { tasks } = useTasks()
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -24,40 +24,20 @@ export default function IntelligenceFeed() {
       const supabase = createClient()
       
       // 1. Check Main Quest Stall
-      if (mainQuest && mainQuest.length > 0) {
-        const quest = mainQuest[0]
-        const lastUpdated = new Date(quest.updated_at).getTime()
+      if (mainQuest) {
+        const lastUpdated = new Date(mainQuest.updated_at).getTime()
         const daysSinceUpdate = (new Date().getTime() - lastUpdated) / (1000 * 3600 * 24)
         if (daysSinceUpdate > 3) {
           newAlerts.push({
             id: 'quest_stall',
-            type: 'warning',
-            icon: AlertTriangle,
-            message: `MAIN MISSION STALLED: "${quest.title}" has no activity in ${Math.floor(daysSinceUpdate)} days.`
-          })
-        }
-      }
-
-      // 2. Check Fitness Streak
-      if (habits && habits.length > 0) {
-        const fitnessHabits = habits.filter(h => h.category === 'health' || h.stat_category === 'strength')
-        let brokenStreak = false
-        fitnessHabits.forEach(h => {
-          if (h.total_completions > 0 && h.current_streak === 0) {
-            brokenStreak = true
-          }
-        })
-        if (brokenStreak) {
-          newAlerts.push({
-            id: 'fitness_streak',
             type: 'danger',
-            icon: Flame,
-            message: "FITNESS STREAK BROKEN: Physical conditioning routines missed."
+            icon: AlertTriangle,
+            message: `MISSION STALLED: "${mainQuest.title}" has no activity in ${Math.floor(daysSinceUpdate)} days.`
           })
         }
       }
 
-      // 3. Check Screen Time Regression
+      // 2. Check Screen Time Regression (Discipline Battle)
       const { data: screenTime } = await supabase
         .from('screen_time_logs')
         .select('*')
@@ -70,11 +50,29 @@ export default function IntelligenceFeed() {
         if (latest.total_hours > previous.total_hours && latest.total_hours > 6) {
           newAlerts.push({
             id: 'screen_time',
-            type: 'danger',
+            type: 'warning',
             icon: Activity,
-            message: `PHONE ADDICTION REGRESSING: Screen time increased to ${latest.total_hours}h.`
+            message: `DISCIPLINE BATTLE LOSING GROUND: Screen time increased to ${latest.total_hours}h.`
           })
         }
+      }
+
+      // 3. Check Communication Skill Increase
+      const todayStr = new Date().toISOString().split('T')[0]
+      const commTasksToday = tasks.filter(t => 
+        t.status === 'completed' && 
+        t.completed_at && 
+        t.completed_at.startsWith(todayStr) && 
+        t.stat_category === 'communication'
+      )
+      
+      if (commTasksToday.length > 0) {
+        newAlerts.push({
+          id: 'comm_skill',
+          type: 'success',
+          icon: Zap,
+          message: `COMMUNICATION SKILL INCREASED: Operational requirements met today.`
+        })
       }
       
       setAlerts(newAlerts)
@@ -82,42 +80,52 @@ export default function IntelligenceFeed() {
     }
 
     generateIntelligence()
-  }, [user, mainQuest, habits])
+  }, [user, mainQuest, tasks])
 
   if (loading) return null
 
   if (alerts.length === 0) {
     return (
-      <HudPanel glow>
-        <div className="flex items-center gap-3 text-success">
+      <HudPanel glow className="mb-6">
+        <div className="flex items-center gap-3 text-info">
           <Cpu size={16} />
-          <span className="font-mono text-sm uppercase tracking-widest">SYSTEM OPTIMAL: NO THREATS DETECTED</span>
+          <span className="font-mono text-sm uppercase tracking-widest">INTELLIGENCE: NO CRITICAL ALERTS</span>
         </div>
       </HudPanel>
     )
   }
 
   return (
-    <div className="flex-col gap-3">
+    <div className="flex-col gap-3 mb-6">
       <AnimatePresence>
         {alerts.map((alert, i) => {
           const Icon = alert.icon
-          const colorClass = alert.type === 'danger' ? 'text-danger border-danger' : 'text-amber border-amber'
-          const bgClass = alert.type === 'danger' ? 'bg-danger-subtle' : 'bg-amber-subtle'
+          let colorClass, bgClass;
+          
+          if (alert.type === 'danger') {
+            colorClass = 'text-danger border-danger'
+            bgClass = 'bg-danger-subtle'
+          } else if (alert.type === 'warning') {
+            colorClass = 'text-amber border-amber'
+            bgClass = 'bg-amber-subtle'
+          } else {
+            colorClass = 'text-info border-info'
+            bgClass = 'bg-info-subtle'
+          }
           
           return (
             <motion.div
               key={alert.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
             >
               <div className={`p-4 border ${colorClass} ${bgClass} flex items-start gap-4 relative overflow-hidden group`}>
-                <div className={`absolute top-0 left-0 w-1 h-full ${alert.type === 'danger' ? 'bg-danger' : 'bg-amber'}`} />
-                <Icon className={`mt-0.5 shrink-0 ${alert.type === 'danger' ? 'text-danger' : 'text-amber'}`} size={18} />
+                <div className={`absolute top-0 left-0 w-1 h-full ${alert.type === 'danger' ? 'bg-danger' : alert.type === 'warning' ? 'bg-amber' : 'bg-info'}`} />
+                <Icon className={`mt-0.5 shrink-0 ${colorClass.split(' ')[0]}`} size={18} />
                 <div className="flex-col">
-                  <span className="font-display text-sm tracking-widest uppercase text-primary">INTELLIGENCE ALERT</span>
-                  <span className={`font-mono text-xs ${alert.type === 'danger' ? 'text-danger' : 'text-amber'}`}>{alert.message}</span>
+                  <span className="font-mono text-sm tracking-widest uppercase text-primary">A.I. ANALYSIS</span>
+                  <span className={`font-mono text-xs ${colorClass.split(' ')[0]}`}>{alert.message}</span>
                 </div>
               </div>
             </motion.div>

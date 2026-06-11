@@ -5,12 +5,14 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { useProfile } from '@/lib/hooks/useProfile'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, Image as ImageIcon, Link as LinkIcon, Edit2, Save } from 'lucide-react'
+import { Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText } from 'lucide-react'
 
 export default function ProofOfWork() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('timeline')
+  const { profile } = useProfile()
+  const [activeTab, setActiveTab] = useState('timeline') // timeline | projects | resume
   const [logs, setLogs] = useState([])
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -24,7 +26,7 @@ export default function ProofOfWork() {
 
   // New Project Form State
   const [showAddProject, setShowAddProject] = useState(false)
-  const [newProj, setNewProj] = useState({ name: '', description: '', status: 'in_progress', tech_stack: '' })
+  const [newProj, setNewProj] = useState({ title: '', description: '', status: 'active', tech_stack: '' })
 
   useEffect(() => {
     if (!user) return
@@ -77,11 +79,11 @@ export default function ProofOfWork() {
 
   const handleCreateProject = async (e) => {
     e.preventDefault()
-    if (!newProj.name.trim()) return
+    if (!newProj.title.trim()) return
     const supabase = createClient()
     const { data, error } = await supabase.from('projects').insert([{
       user_id: user.id,
-      name: newProj.name,
+      title: newProj.title,
       description: newProj.description,
       status: newProj.status,
       tech_stack: newProj.tech_stack.split(',').map(s => s.trim()).filter(Boolean)
@@ -90,7 +92,7 @@ export default function ProofOfWork() {
     if (data) {
       setProjects([data[0], ...projects])
       setShowAddProject(false)
-      setNewProj({ name: '', description: '', status: 'in_progress', tech_stack: '' })
+      setNewProj({ title: '', description: '', status: 'active', tech_stack: '' })
     }
   }
 
@@ -98,200 +100,259 @@ export default function ProofOfWork() {
 
   return (
     <AppShell>
-      <div className="page-container narrow">
-        <header className="page-header flex-between">
+      <div className="page-container max-w-5xl">
+        <header className="page-header flex-between flex-wrap gap-4">
           <div>
-            <h1 className="page-title">PROOF OF WORK</h1>
-            <p className="page-subtitle font-mono uppercase text-xs">Immutable record of execution and value creation.</p>
+            <h1 className="page-title flex items-center gap-3"><Terminal className="text-amber" /> PORTFOLIO ENGINE</h1>
+            <p className="page-subtitle">Proof of work, project history, and auto-generated resume.</p>
           </div>
-          {activeTab === 'timeline' ? (
-            <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddLog(true)}>
-              <Plus size={16} /> ADD LOG
-            </button>
-          ) : (
-            <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddProject(true)}>
-              <Plus size={16} /> ADD PROJECT
-            </button>
-          )}
         </header>
 
-        <div className="tab-list">
-          <button className={`tab-item ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>TIMELINE</button>
-          <button className={`tab-item ${activeTab === 'projects' ? 'active' : ''}`} onClick={() => setActiveTab('projects')}>PROJECTS</button>
+        {/* TABS */}
+        <div className="tabs mb-6">
+          <button className={`tab-item ${activeTab === 'timeline' ? 'tab-active' : ''}`} onClick={() => setActiveTab('timeline')}>
+            TIMELINE LOGS
+          </button>
+          <button className={`tab-item ${activeTab === 'projects' ? 'tab-active' : ''}`} onClick={() => setActiveTab('projects')}>
+            PROJECTS
+          </button>
+          <button className={`tab-item ${activeTab === 'resume' ? 'tab-active' : ''}`} onClick={() => setActiveTab('resume')}>
+            RESUME (AUTO-GEN)
+          </button>
         </div>
 
-        {/* ADD LOG FORM */}
-        <AnimatePresence>
-          {showAddLog && activeTab === 'timeline' && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-8 overflow-hidden">
-              <HudPanel className="border-amber">
-                <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2">Log Execution</div>
-                <form onSubmit={handleCreateLog} className="flex-col gap-4">
-                  <div className="grid-2">
-                    <div>
-                      <label className="font-mono text-xs text-muted mb-1 block">TITLE</label>
-                      <input type="text" className="input" value={newLog.title} onChange={e=>setNewLog({...newLog, title: e.target.value})} required placeholder="e.g. Built Analytics Dashboard" />
-                    </div>
-                    <div>
-                      <label className="font-mono text-xs text-muted mb-1 block">TYPE</label>
-                      <select className="select" value={newLog.type} onChange={e=>setNewLog({...newLog, type: e.target.value})}>
-                        <option value="feature">Feature</option>
-                        <option value="project_launch">Project Launch</option>
-                        <option value="learning">Learning</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="font-mono text-xs text-muted mb-1 block">DESCRIPTION</label>
-                    <textarea className="textarea" value={newLog.description} onChange={e=>setNewLog({...newLog, description: e.target.value})} rows={2} placeholder="What value was created?" />
-                  </div>
-                  <div>
-                    <label className="font-mono text-xs text-muted mb-1 block">DURATION (HOURS)</label>
-                    <input type="number" step="0.5" className="input" value={newLog.duration_hours} onChange={e=>setNewLog({...newLog, duration_hours: e.target.value})} placeholder="e.g. 2.5" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="submit" className="btn btn-primary">SAVE LOG</button>
-                    <button type="button" className="btn btn-ghost" onClick={() => setShowAddLog(false)}>CANCEL</button>
-                  </div>
-                </form>
-              </HudPanel>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* TIMELINE TAB */}
+        {activeTab === 'timeline' && (
+          <div className="flex-col gap-6">
+            <div className="flex justify-end">
+              <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddLog(!showAddLog)}>
+                <Plus size={16} /> ADD LOG
+              </button>
+            </div>
 
-        {/* ADD PROJECT FORM */}
-        <AnimatePresence>
-          {showAddProject && activeTab === 'projects' && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-8 overflow-hidden">
-              <HudPanel className="border-amber">
-                <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2">Register Project</div>
-                <form onSubmit={handleCreateProject} className="flex-col gap-4">
-                  <div className="grid-2">
-                    <div>
-                      <label className="font-mono text-xs text-muted mb-1 block">PROJECT NAME</label>
-                      <input type="text" className="input" value={newProj.name} onChange={e=>setNewProj({...newProj, name: e.target.value})} required />
-                    </div>
-                    <div>
-                      <label className="font-mono text-xs text-muted mb-1 block">STATUS</label>
-                      <select className="select" value={newProj.status} onChange={e=>setNewProj({...newProj, status: e.target.value})}>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="paused">Paused</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="font-mono text-xs text-muted mb-1 block">DESCRIPTION</label>
-                    <textarea className="textarea" value={newProj.description} onChange={e=>setNewProj({...newProj, description: e.target.value})} rows={2} />
-                  </div>
-                  <div>
-                    <label className="font-mono text-xs text-muted mb-1 block">TECH STACK (COMMA SEPARATED)</label>
-                    <input type="text" className="input" value={newProj.tech_stack} onChange={e=>setNewProj({...newProj, tech_stack: e.target.value})} placeholder="e.g. React, Supabase, Tailwind" />
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="submit" className="btn btn-primary">REGISTER</button>
-                    <button type="button" className="btn btn-ghost" onClick={() => setShowAddProject(false)}>CANCEL</button>
-                  </div>
-                </form>
-              </HudPanel>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            <AnimatePresence>
+              {showAddLog && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                  <HudPanel label="NEW WORK LOG" className="border-amber mb-6">
+                    <form onSubmit={handleCreateLog} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">TITLE</label>
+                        <input type="text" className="input font-mono text-sm" value={newLog.title} onChange={e => setNewLog({...newLog, title: e.target.value})} required />
+                      </div>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">TYPE</label>
+                        <select className="select font-mono text-sm" value={newLog.type} onChange={e => setNewLog({...newLog, type: e.target.value})}>
+                          <option value="project_work">PROJECT WORK</option>
+                          <option value="content">CONTENT CREATION</option>
+                          <option value="meeting">MEETING / SALES</option>
+                          <option value="learning">LEARNING</option>
+                          <option value="other">OTHER</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="font-mono text-xs text-muted mb-1 block">DESCRIPTION</label>
+                        <textarea className="textarea font-mono text-sm h-20" value={newLog.description} onChange={e => setNewLog({...newLog, description: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">DURATION (HOURS)</label>
+                        <input type="number" step="0.5" className="input font-mono text-sm" value={newLog.duration_hours} onChange={e => setNewLog({...newLog, duration_hours: e.target.value})} />
+                      </div>
+                      <div className="flex items-end justify-end">
+                        <button type="submit" className="btn btn-primary w-full md:w-auto">SAVE LOG</button>
+                      </div>
+                    </form>
+                  </HudPanel>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-        <AnimatePresence mode="wait">
-          {activeTab === 'timeline' && (
-            <motion.div key="timeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <div className="timeline">
-                {logs.map((log, i) => (
-                  <motion.div key={log.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="timeline-node">
-                    <HudPanel className="p-4 ml-4 group relative">
-                      
-                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setEditingId(editingId === log.id ? null : log.id)} className="btn btn-ghost p-1.5 hover:text-amber">
-                          <Edit2 size={14} />
+            <div className="flex-col gap-0 border-l border-border-strong ml-4 pl-6 relative">
+              {logs.map((log) => (
+                <div key={log.id} className="relative pb-8 group">
+                  <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
+                  
+                  <div className="bg-tertiary border border-border-color p-4 hover:border-amber transition-colors">
+                    <div className="flex-between mb-2">
+                      <span className="font-mono text-xs text-amber">{log.date}</span>
+                      <span className="badge">{log.type.replace('_', ' ').toUpperCase()}</span>
+                    </div>
+                    
+                    <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-2">{log.title}</h3>
+                    {log.description && <p className="font-mono text-sm text-secondary mb-4">{log.description}</p>}
+                    
+                    {log.media_urls && log.media_urls.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {log.media_urls.map((url, idx) => (
+                          <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-mono text-[10px] text-amber hover:text-primary transition-colors bg-bg-primary border border-amber px-2 py-1">
+                            <ExternalLink size={10} /> PROOF {idx + 1}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center border-t border-border-color pt-3 mt-2">
+                      <span className="font-mono text-xs text-muted">
+                        {log.duration_hours ? `DURATION: ${log.duration_hours}H` : 'NO DURATION LOGGED'}
+                      </span>
+                      <button onClick={() => setEditingId(editingId === log.id ? null : log.id)} className="font-mono text-[10px] text-muted hover:text-primary flex items-center gap-1">
+                        <Plus size={10} /> ADD PROOF
+                      </button>
+                    </div>
+
+                    {editingId === log.id && (
+                      <div className="mt-4 flex gap-2">
+                        <input type="url" placeholder="https://..." className="input font-mono text-xs flex-1 py-1" value={newMediaUrl} onChange={e => setNewMediaUrl(e.target.value)} />
+                        <button onClick={() => handleAddMedia(log.id, log.media_urls)} className="btn btn-primary btn-sm flex items-center gap-1">
+                          <Save size={12} /> SAVE
                         </button>
                       </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {logs.length === 0 && <div className="font-mono text-sm text-muted py-8">NO WORK LOGS ARCHIVED.</div>}
+            </div>
+          </div>
+        )}
 
-                      <div className="flex-between mb-2">
-                        <span className="badge badge-amber">{log.type || 'WORK'}</span>
-                        <span className="font-mono text-xs text-muted mr-6">{log.date}</span>
+        {/* PROJECTS TAB */}
+        {activeTab === 'projects' && (
+          <div className="flex-col gap-6">
+            <div className="flex justify-end">
+              <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddProject(!showAddProject)}>
+                <Plus size={16} /> ADD PROJECT
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {showAddProject && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                  <HudPanel label="NEW PROJECT" className="border-info mb-6">
+                    <form onSubmit={handleCreateProject} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">PROJECT TITLE</label>
+                        <input type="text" className="input font-mono text-sm" value={newProj.title} onChange={e => setNewProj({...newProj, title: e.target.value})} required />
                       </div>
-                      
-                      <h3 className="font-display text-xl uppercase tracking-wide text-primary">{log.title}</h3>
-                      <p className="text-sm text-secondary mt-1 font-mono">{log.description}</p>
-                      
-                      {log.duration_hours && (
-                        <div className="mt-2 font-mono text-xs text-amber">DURATION: {log.duration_hours}h</div>
-                      )}
-
-                      {/* Attachments Display */}
-                      {log.media_urls && log.media_urls.length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-border-color">
-                          <div className="font-mono text-[10px] text-muted mb-2 tracking-widest">ATTACHMENTS //</div>
-                          <div className="flex flex-wrap gap-2">
-                            {log.media_urls.map((url, idx) => {
-                              const isImage = url.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null
-                              return isImage ? (
-                                <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block border border-border-color hover:border-amber transition-colors">
-                                  <img src={url} alt="Proof" className="h-20 w-auto object-cover" />
-                                </a>
-                              ) : (
-                                <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="badge bg-tertiary flex items-center gap-1 hover:text-amber transition-colors">
-                                  <LinkIcon size={12} /> {(new URL(url)).hostname}
-                                </a>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Edit Mode: Add Attachment */}
-                      {editingId === log.id && (
-                        <div className="mt-4 pt-3 border-t border-amber flex gap-2">
-                          <input 
-                            type="text" 
-                            className="input font-mono text-sm py-1 flex-1" 
-                            placeholder="PASTE IMAGE OR RESOURCE URL..."
-                            value={newMediaUrl}
-                            onChange={e => setNewMediaUrl(e.target.value)}
-                          />
-                          <button onClick={() => handleAddMedia(log.id, log.media_urls)} className="btn btn-primary btn-sm shrink-0">ATTACH</button>
-                        </div>
-                      )}
-
-                    </HudPanel>
-                  </motion.div>
-                ))}
-                {logs.length === 0 && <div className="empty-state ml-4">NO WORK LOGS FOUND</div>}
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'projects' && (
-            <motion.div key="projects" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <div className="grid-2">
-                {projects.map((proj, i) => (
-                  <motion.div key={proj.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}>
-                    <HudPanel glow>
-                      <div className="flex-between mb-2">
-                        <span className={`badge ${proj.status === 'completed' ? 'badge-success' : 'badge-amber'}`}>{proj.status}</span>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">STATUS</label>
+                        <select className="select font-mono text-sm" value={newProj.status} onChange={e => setNewProj({...newProj, status: e.target.value})}>
+                          <option value="idea">IDEA</option>
+                          <option value="active">ACTIVE</option>
+                          <option value="paused">PAUSED</option>
+                          <option value="completed">COMPLETED</option>
+                        </select>
                       </div>
-                      <h3 className="font-display text-2xl uppercase tracking-wide text-primary">{proj.name}</h3>
-                      <p className="text-sm text-secondary mt-2 line-clamp-2 font-mono">{proj.description}</p>
-                      {proj.tech_stack && proj.tech_stack.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-4">
-                          {proj.tech_stack.map(tech => <span key={tech} className="badge bg-tertiary text-[10px]">{tech}</span>)}
-                        </div>
-                      )}
-                    </HudPanel>
-                  </motion.div>
-                ))}
-                {projects.length === 0 && <div className="empty-state col-span-2">NO PROJECTS REGISTERED</div>}
+                      <div className="md:col-span-2">
+                        <label className="font-mono text-xs text-muted mb-1 block">DESCRIPTION</label>
+                        <textarea className="textarea font-mono text-sm h-20" value={newProj.description} onChange={e => setNewProj({...newProj, description: e.target.value})} />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="font-mono text-xs text-muted mb-1 block">TECH STACK / SKILLS (COMMA SEPARATED)</label>
+                        <input type="text" className="input font-mono text-sm" value={newProj.tech_stack} onChange={e => setNewProj({...newProj, tech_stack: e.target.value})} placeholder="React, Node.js, Marketing..." />
+                      </div>
+                      <div className="md:col-span-2 flex justify-end">
+                        <button type="submit" className="btn btn-primary w-full md:w-auto">SAVE PROJECT</button>
+                      </div>
+                    </form>
+                  </HudPanel>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {projects.map((proj) => (
+                <div key={proj.id} className="bg-tertiary border border-border-color p-5 hover:border-info transition-colors flex-col h-full group">
+                  <div className="flex-between mb-3">
+                    <h3 className="font-display text-2xl uppercase tracking-wider text-primary group-hover:text-info transition-colors">{proj.title}</h3>
+                    <span className={`badge ${proj.status === 'active' ? 'badge-amber' : proj.status === 'completed' ? 'badge-success' : ''}`}>
+                      {proj.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="font-mono text-sm text-secondary mb-4 flex-1">{proj.description}</p>
+                  
+                  {proj.tech_stack && proj.tech_stack.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-auto">
+                      {proj.tech_stack.map((tech, idx) => (
+                        <span key={idx} className="font-mono text-[10px] text-muted bg-bg-primary px-2 py-1 border border-border-strong">
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {projects.length === 0 && <div className="font-mono text-sm text-muted col-span-2 py-8 text-center">NO PROJECTS ARCHIVED.</div>}
+            </div>
+          </div>
+        )}
+
+        {/* RESUME TAB (AUTO-GEN) */}
+        {activeTab === 'resume' && (
+          <HudPanel className="bg-bg-primary border-amber" style={{ padding: '3rem 2rem' }}>
+            <div className="max-w-3xl mx-auto flex-col gap-10">
+              
+              {/* Header */}
+              <div className="text-center border-b border-border-color pb-8">
+                <h1 className="font-display text-5xl uppercase tracking-widest text-primary mb-2">{profile?.full_name || 'CHIRAG SHETTY'}</h1>
+                <p className="font-mono text-sm text-amber uppercase tracking-widest">FOUNDER & OPERATOR</p>
+                <div className="flex justify-center gap-4 mt-4 font-mono text-xs text-muted">
+                  <span>LEVEL {profile?.level || 1}</span>
+                  <span>•</span>
+                  <span>{profile?.current_rank || 'E'} RANK</span>
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {/* Experience Summary */}
+              <div>
+                <h2 className="font-display text-2xl uppercase tracking-wider text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2">
+                  <Briefcase size={20} /> EXPERIENCE LOG
+                </h2>
+                <div className="flex-col gap-6">
+                  {logs.slice(0, 5).map(log => (
+                    <div key={log.id}>
+                      <div className="flex justify-between items-baseline mb-1">
+                        <h3 className="font-mono text-sm text-primary uppercase">{log.title}</h3>
+                        <span className="font-mono text-[10px] text-muted">{log.date}</span>
+                      </div>
+                      <p className="font-mono text-xs text-secondary leading-relaxed">{log.description || 'Executed operational directive.'}</p>
+                    </div>
+                  ))}
+                  {logs.length === 0 && <p className="font-mono text-xs text-muted">Awaiting operational data.</p>}
+                </div>
+              </div>
+
+              {/* Projects */}
+              <div>
+                <h2 className="font-display text-2xl uppercase tracking-wider text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2">
+                  <Database size={20} /> KEY PROJECTS
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {projects.map(proj => (
+                    <div key={proj.id} className="border border-border-color p-4 bg-tertiary">
+                      <h3 className="font-mono text-sm text-primary uppercase mb-2">{proj.title}</h3>
+                      <p className="font-mono text-[10px] text-secondary mb-3">{proj.description}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {proj.tech_stack?.map((t, i) => (
+                          <span key={i} className="font-mono text-[8px] border border-border-strong px-1 text-muted">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {projects.length === 0 && <p className="font-mono text-xs text-muted">Awaiting project data.</p>}
+                </div>
+              </div>
+
+              {/* Stats Footer */}
+              <div className="border-t border-border-color pt-6 mt-4 flex justify-between">
+                <div className="font-mono text-[10px] text-muted">AUTO-GENERATED BY CHIRAGOS</div>
+                <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => window.print()}>
+                  <FileText size={14} /> EXPORT PDF
+                </button>
+              </div>
+
+            </div>
+          </HudPanel>
+        )}
 
       </div>
     </AppShell>

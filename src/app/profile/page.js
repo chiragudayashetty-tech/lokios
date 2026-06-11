@@ -1,175 +1,205 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { useProfile } from '@/lib/hooks/useProfile'
-import { useUserConfig } from '@/lib/hooks/useUserConfig'
-import { getRankDisplay, getAllRanks } from '@/lib/utils/ranks'
-import { xpToNextLevel } from '@/lib/utils/xp'
-import { motion } from 'framer-motion'
-import { User as UserIcon, Shield, Trophy, Settings, LogOut, Database } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { motion } from 'framer-motion'
+import { User, Shield, Target, Zap, AlertTriangle, Eye, Flame, Book, Terminal, Save, Database } from 'lucide-react'
 
-export default function Profile() {
-  const { user, signOut } = useAuth()
-  const { profile, loading: pLoading } = useProfile()
-  const { config, loading: cLoading } = useUserConfig()
-  const [isSeeding, setIsSeeding] = useState(false)
+export default function PersonalBlueprint() {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [blueprint, setBlueprint] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [dbError, setDbError] = useState(false)
 
-  const handleSeed = async () => {
+  // Edit states
+  const [form, setForm] = useState({
+    identity: '',
+    mission: '',
+    motives: '',
+    values_list: '',
+    weaknesses: '',
+    strengths: '',
+    future_vision: ''
+  })
+
+  useEffect(() => {
     if (!user) return
-    setIsSeeding(true)
+    fetchBlueprint()
+  }, [user])
+
+  const fetchBlueprint = async () => {
+    const supabase = createClient()
+    const { data, error } = await supabase.from('user_blueprints').select('*').eq('user_id', user.id).single()
+    if (error && error.code === '42P01') {
+      // Table doesn't exist yet (migration not run)
+      setDbError(true)
+      setLoading(false)
+      return
+    }
+    if (data) {
+      setBlueprint(data)
+      setForm({
+        identity: data.identity || '',
+        mission: data.mission || '',
+        motives: data.motives || '',
+        values_list: data.values_list ? data.values_list.join('\n') : '',
+        weaknesses: data.weaknesses ? data.weaknesses.join('\n') : '',
+        strengths: data.strengths ? data.strengths.join('\n') : '',
+        future_vision: data.future_vision || ''
+      })
+    }
+    setLoading(false)
+  }
+
+  const handleSave = async (e) => {
+    e.preventDefault()
+    setSaving(true)
     const supabase = createClient()
     
-    const notificationPrefs = {
-      who_i_want_to_become: "A highly disciplined founder operating at peak performance.",
-      class: "Founder",
-      current_arc: "Discipline Rebuild",
-      current_mission: "Launch Beyond Tatva",
-      twelve_month_goal: "20 paid students, ₹30,000/month income, Complete Beyond Tatva course, Improve communication skills, Build portfolio, Reduce phone addiction",
-      battles: [
-        { name: "Phone Addiction", metric: "Hours/Day", current: 13, target: 6 },
-        { name: "Communication", metric: "Confidence", current: 20, target: 100 },
-        { name: "Fitness", metric: "Workouts/Week", current: 2, target: 5 },
-        { name: "Personal Care", metric: "Consistency", current: 40, target: 100 }
-      ],
-      skills_to_master: ["AI", "Marketing", "Sales", "Content Creation", "Video Editing", "Automation", "Business"],
-      vision: "To build a suite of successful products and operate as an elite founder.",
-      purpose: "To push boundaries and create massive value."
+    const payload = {
+      user_id: user.id,
+      identity: form.identity,
+      mission: form.mission,
+      motives: form.motives,
+      values_list: form.values_list.split('\n').filter(Boolean),
+      weaknesses: form.weaknesses.split('\n').filter(Boolean),
+      strengths: form.strengths.split('\n').filter(Boolean),
+      future_vision: form.future_vision
     }
 
-    await supabase.from('profiles').update({ full_name: "Chirag Shetty", notification_prefs: notificationPrefs }).eq('id', user.id)
+    if (blueprint) {
+      await supabase.from('user_blueprints').update(payload).eq('id', blueprint.id)
+    } else {
+      await supabase.from('user_blueprints').insert([payload])
+    }
+    await fetchBlueprint()
+    setSaving(false)
+  }
+
+  const handleSeed = async () => {
+    if (!confirm("This will erase current habits and seed the exact Weekday/Weekend routines from your Master Prompt. Ensure you ran the SQL Migration first. Proceed?")) return
+    
+    const supabase = createClient()
+    
+    // Clear existing
     await supabase.from('habits').delete().eq('user_id', user.id)
     
+    // Weekdays = [1,2,3,4,5]
+    // Saturday = [6]
+    // Sunday = [0]
     const routines = [
-      { user_id: user.id, title: "Wakeup Before 7am", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Target" },
-      { user_id: user.id, title: "No Snoozing", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Flame" },
-      { user_id: user.id, title: "Drink 3L Water", category: "health", frequency: "daily", stat_category: "discipline", xp_per_completion: 30, icon: "Target" },
-      { user_id: user.id, title: "Workout", category: "health", frequency: "daily", stat_category: "strength", xp_per_completion: 25, icon: "Dumbbell" },
-      { user_id: user.id, title: "Morning Working", category: "business", frequency: "daily", stat_category: "founder", xp_per_completion: 25, icon: "Rocket" },
-      { user_id: user.id, title: "Read Books", category: "learning", frequency: "daily", stat_category: "learning", xp_per_completion: 25, icon: "BookOpen" },
-      { user_id: user.id, title: "Meditation", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Target" },
-      { user_id: user.id, title: "Skill Learning atleast 1hr", category: "learning", frequency: "daily", stat_category: "learning", xp_per_completion: 21, icon: "Sparkles" },
-      { user_id: user.id, title: "Daily Journal", category: "personal", frequency: "daily", stat_category: "creation", xp_per_completion: 30, icon: "BookOpen" },
-      { user_id: user.id, title: "Limit Social Media", category: "personal", frequency: "daily", stat_category: "discipline", xp_per_completion: 30, icon: "Shield" },
-      { user_id: user.id, title: "No Alcohol", category: "health", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Shield" },
-      { user_id: user.id, title: "Track Expenses", category: "business", frequency: "daily", stat_category: "founder", xp_per_completion: 30, icon: "Target" },
-      { user_id: user.id, title: "Sleep By 12", category: "health", frequency: "daily", stat_category: "discipline", xp_per_completion: 25, icon: "Target" },
-      { user_id: user.id, title: "Startup work", category: "business", frequency: "daily", stat_category: "founder", xp_per_completion: 25, icon: "Rocket" }
+      // WEEKDAYS (Founder, Fitness, Learning, Personal Care, Reflection)
+      { user_id: user.id, title: "Beyond Tatva work", category: "business", frequency: "custom", recurrence_days: [1,2,3,4,5], stat_category: "founder", xp_per_completion: 30, icon: "Rocket" },
+      { user_id: user.id, title: "Workout", category: "health", frequency: "custom", recurrence_days: [1,2,3,4,5], stat_category: "strength", xp_per_completion: 25, icon: "Dumbbell" },
+      { user_id: user.id, title: "Read", category: "learning", frequency: "custom", recurrence_days: [1,2,3,4,5], stat_category: "learning", xp_per_completion: 20, icon: "BookOpen" },
+      { user_id: user.id, title: "Learn", category: "learning", frequency: "custom", recurrence_days: [1,2,3,4,5], stat_category: "learning", xp_per_completion: 25, icon: "Terminal" },
+      { user_id: user.id, title: "Hair treatment", category: "personal", frequency: "custom", recurrence_days: [1,2,3,4,5], stat_category: "discipline", xp_per_completion: 15, icon: "Shield" },
+      { user_id: user.id, title: "Skin care", category: "personal", frequency: "custom", recurrence_days: [1,2,3,4,5], stat_category: "discipline", xp_per_completion: 15, icon: "Shield" },
+      { user_id: user.id, title: "Grooming", category: "personal", frequency: "custom", recurrence_days: [1,2,3,4,5], stat_category: "discipline", xp_per_completion: 15, icon: "Shield" },
+      { user_id: user.id, title: "Journal", category: "personal", frequency: "custom", recurrence_days: [1,2,3,4,5], stat_category: "discipline", xp_per_completion: 20, icon: "BookOpen" },
+      
+      // SATURDAY
+      { user_id: user.id, title: "Weekly review", category: "business", frequency: "custom", recurrence_days: [6], stat_category: "founder", xp_per_completion: 40, icon: "Target" },
+      { user_id: user.id, title: "Portfolio update", category: "business", frequency: "custom", recurrence_days: [6], stat_category: "creation", xp_per_completion: 50, icon: "Database" },
+      { user_id: user.id, title: "Learning project", category: "learning", frequency: "custom", recurrence_days: [6], stat_category: "learning", xp_per_completion: 50, icon: "Terminal" },
+      
+      // SUNDAY
+      { user_id: user.id, title: "Weekly planning", category: "business", frequency: "custom", recurrence_days: [0], stat_category: "founder", xp_per_completion: 40, icon: "Target" },
+      { user_id: user.id, title: "Calendar planning", category: "business", frequency: "custom", recurrence_days: [0], stat_category: "discipline", xp_per_completion: 30, icon: "Calendar" },
+      { user_id: user.id, title: "Recovery", category: "health", frequency: "custom", recurrence_days: [0], stat_category: "strength", xp_per_completion: 20, icon: "Shield" }
     ]
     await supabase.from('habits').insert(routines)
-    
-    setIsSeeding(false)
-    window.location.reload()
+    alert('Routines Seeded!')
   }
-  
-  if (pLoading || cLoading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING PROFILE DATA...</span></div></AppShell>
 
-  const rankInfo = getRankDisplay(profile?.rank)
-  const xpProgress = profile ? xpToNextLevel(profile.total_xp) : { percentage: 0, current: 0, required: 50 }
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING DEEP STORAGE...</span></div></AppShell>
 
   return (
     <AppShell>
-      <div className="page-container narrow">
-        <header className="page-header">
-          <h1 className="page-title">OPERATOR PROFILE</h1>
-          <p className="page-subtitle font-mono uppercase text-xs">Identity, credentials, and system access.</p>
+      <div className="page-container max-w-4xl">
+        <header className="page-header flex-between">
+          <div>
+            <h1 className="page-title">PERSONAL BLUEPRINT</h1>
+            <p className="page-subtitle font-mono uppercase text-xs">Core identity and foundational directives.</p>
+          </div>
+          <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={handleSave} disabled={saving || dbError}>
+            <Save size={16} /> {saving ? 'SAVING...' : 'SAVE DIRECTIVES'}
+          </button>
         </header>
 
-        <HudPanel glow scanLine className="mb-8">
-          <div className="flex items-center gap-6">
-            <div className="w-24 h-24 rounded-sm bg-tertiary border-2 border-amber flex-center overflow-hidden shrink-0 relative">
-              <UserIcon size={48} className="text-amber opacity-50" />
-              <div className="absolute inset-0 border border-amber opacity-20 m-1" />
-            </div>
-            <div className="flex-col flex-1">
-              <h2 className="font-display text-3xl uppercase tracking-wider text-primary glow-amber">{profile?.full_name || 'COMMANDER'}</h2>
-              <span className="font-mono text-sm text-secondary">@{profile?.username || 'user'}</span>
-              
-              <div className="flex items-center gap-4 mt-4 border-t border-border-color pt-4">
-                <div className="flex items-center gap-2">
-                  <Shield size={16} color={rankInfo.color} />
-                  <span className="font-display tracking-widest text-sm" style={{ color: rankInfo.color }}>{rankInfo.name.toUpperCase()}</span>
-                </div>
-                <div className="w-px h-4 bg-border-color" />
-                <div className="font-mono text-amber text-sm">LV. {profile?.level || 1}</div>
-                <div className="w-px h-4 bg-border-color" />
-                <div className="font-mono text-muted text-xs">{profile?.total_xp || 0} TOTAL XP</div>
+        {dbError && (
+          <HudPanel className="mb-8 border-danger bg-danger-subtle">
+            <div className="flex items-center gap-4 text-danger font-mono">
+              <AlertTriangle size={32} />
+              <div>
+                <strong className="block mb-1">DATABASE MIGRATION REQUIRED</strong>
+                <span className="text-xs">The user_blueprints table does not exist. Please run migration_01.sql in your Supabase SQL Editor.</span>
               </div>
             </div>
+          </HudPanel>
+        )}
+
+        <form onSubmit={handleSave} className="flex-col gap-8">
+          
+          <HudPanel label="CORE IDENTITY" glow className="border-info">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><User size={14} className="text-info"/> IDENTITY</label>
+                <input type="text" className="input" value={form.identity} onChange={e=>setForm({...form, identity: e.target.value})} placeholder="e.g. Founder, Developer, Leader" disabled={dbError} />
+              </div>
+              <div>
+                <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Target size={14} className="text-amber"/> PRIMARY MISSION</label>
+                <input type="text" className="input" value={form.mission} onChange={e=>setForm({...form, mission: e.target.value})} placeholder="e.g. Launch Beyond Tatva" disabled={dbError} />
+              </div>
+            </div>
+          </HudPanel>
+
+          <HudPanel label="DRIVERS & MOTIVES">
+            <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Zap size={14} className="text-amber"/> WHY DOES THIS MATTER?</label>
+            <textarea className="textarea h-32" value={form.motives} onChange={e=>setForm({...form, motives: e.target.value})} placeholder="What is the deeper reason?" disabled={dbError} />
+          </HudPanel>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <HudPanel label="STRENGTHS">
+              <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Shield size={14} className="text-success"/> KNOWN ADVANTAGES (One per line)</label>
+              <textarea className="textarea h-40 font-mono" value={form.strengths} onChange={e=>setForm({...form, strengths: e.target.value})} placeholder="- Quick learner&#10;- Technical skills" disabled={dbError} />
+            </HudPanel>
+            
+            <HudPanel label="WEAKNESSES">
+              <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><AlertTriangle size={14} className="text-danger"/> KNOWN VULNERABILITIES (One per line)</label>
+              <textarea className="textarea h-40 font-mono" value={form.weaknesses} onChange={e=>setForm({...form, weaknesses: e.target.value})} placeholder="- Inconsistent&#10;- Phone addiction" disabled={dbError} />
+            </HudPanel>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <HudPanel label="CORE VALUES">
+              <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Flame size={14} className="text-amber"/> NON-NEGOTIABLES (One per line)</label>
+              <textarea className="textarea h-40 font-mono" value={form.values_list} onChange={e=>setForm({...form, values_list: e.target.value})} disabled={dbError} />
+            </HudPanel>
+            
+            <HudPanel label="FUTURE VISION">
+              <label className="font-mono text-xs text-muted mb-2 flex items-center gap-2"><Eye size={14} className="text-info"/> 5 YEAR TARGET</label>
+              <textarea className="textarea h-40" value={form.future_vision} onChange={e=>setForm({...form, future_vision: e.target.value})} disabled={dbError} />
+            </HudPanel>
+          </div>
+
+        </form>
+
+        <HudPanel label="SYSTEM INITIALIZER" className="mt-8 border-danger">
+          <div className="flex-between">
+            <div>
+              <h3 className="font-display text-xl uppercase text-danger mb-1">INJECT ROUTINES (DESTRUCTIVE)</h3>
+              <p className="font-mono text-xs text-secondary">This will delete all current habits and seed the exact Weekday/Saturday/Sunday routines requested.</p>
+            </div>
+            <button className="btn bg-danger text-white hover:bg-danger-hover border border-danger-subtle px-6 py-2" onClick={handleSeed}>
+              INJECT
+            </button>
           </div>
         </HudPanel>
-
-        <div className="grid-2">
-          <div className="flex-col gap-6">
-            <HudPanel label="CREDENTIALS">
-              <div className="flex-col gap-4 font-mono text-sm">
-                <div className="flex-between border-b border-border-color pb-2">
-                  <span className="text-muted">OPERATOR ID</span>
-                  <span className="text-primary truncate ml-4">{user?.id}</span>
-                </div>
-                <div className="flex-between border-b border-border-color pb-2">
-                  <span className="text-muted">LINKED EMAIL</span>
-                  <span className="text-primary truncate ml-4">{user?.email}</span>
-                </div>
-                <div className="flex-between border-b border-border-color pb-2">
-                  <span className="text-muted">CLASS</span>
-                  <span className="text-amber">{config?.class || 'UNASSIGNED'}</span>
-                </div>
-                <div className="flex-between pb-2">
-                  <span className="text-muted">ACCOUNT CREATED</span>
-                  <span className="text-primary">{new Date(user?.created_at).toLocaleDateString()}</span>
-                </div>
-              </div>
-            </HudPanel>
-
-            <HudPanel label="RANKS PROTOCOL">
-              <div className="flex-col gap-2 font-mono text-xs">
-                {getAllRanks().map(r => (
-                  <div key={r.code} className={`flex-between p-2 border ${r.code === profile?.rank ? 'border-amber bg-amber-subtle text-amber' : 'border-transparent text-muted'}`}>
-                    <div className="flex items-center gap-2">
-                      <span style={{ color: r.color }}>{r.icon}</span>
-                      <span>{r.name.toUpperCase()}</span>
-                    </div>
-                    <span>{r.minXp.toLocaleString()}+ XP</span>
-                  </div>
-                ))}
-              </div>
-            </HudPanel>
-          </div>
-
-          <div className="flex-col gap-6">
-            <HudPanel label="PORTFOLIO SETTINGS">
-              <div className="flex-col gap-4 font-mono text-sm">
-                <div className="flex-col gap-1">
-                  <span className="text-muted text-xs">PUBLIC URL</span>
-                  <div className="p-3 bg-tertiary border border-border-color text-primary truncate">
-                    {window.location.origin}/p/{profile?.public_portfolio_slug || profile?.username}
-                  </div>
-                </div>
-                <div className="flex-between p-3 bg-tertiary border border-border-color">
-                  <span className="text-muted">VISIBILITY</span>
-                  <span className={profile?.portfolio_visible ? 'text-success' : 'text-danger'}>
-                    {profile?.portfolio_visible ? 'PUBLIC (ONLINE)' : 'PRIVATE (OFFLINE)'}
-                  </span>
-                </div>
-              </div>
-            </HudPanel>
-
-            <HudPanel label="SYSTEM ACTION">
-              <div className="flex-col gap-4">
-                <button onClick={handleSeed} disabled={isSeeding} className="btn btn-secondary w-full flex-center py-4 tracking-widest gap-2">
-                  <Database size={16} /> {isSeeding ? 'SEEDING...' : 'INITIALIZE BLUEPRINT'}
-                </button>
-                <button onClick={signOut} className="btn btn-danger w-full flex-center py-4 tracking-widest gap-2">
-                  <LogOut size={16} /> END SESSION
-                </button>
-              </div>
-            </HudPanel>
-          </div>
-        </div>
 
       </div>
     </AppShell>

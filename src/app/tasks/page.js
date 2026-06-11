@@ -2,38 +2,28 @@
 
 import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import HudPanel from '@/components/ui/HudPanel'
 import { useTasks } from '@/lib/hooks/useTasks'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Check, Calendar, AlertCircle, Trash2, Edit2, RotateCcw, Repeat, MoreVertical, X } from 'lucide-react'
+import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap } from 'lucide-react'
 
 export default function Operations() {
   const { tasks, todayTasks, loading, addTask, editTask, completeTask, undoCompleteTask, deleteTask } = useTasks()
-  const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [newTaskDate, setNewTaskDate] = useState(new Date().toISOString().split('T')[0])
+
+  const [activeTab, setActiveTab] = useState('today')
+  const [showDeploy, setShowDeploy] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
 
-  const handleAdd = async (e) => {
-    e.preventDefault()
-    if (!newTaskTitle.trim()) return
-    await addTask({ title: newTaskTitle, due_date: newTaskDate || null, type: 'custom' })
-    setNewTaskTitle('')
-  }
+  // Deploy form
+  const [deployForm, setDeployForm] = useState({
+    title: '', description: '', due_date: new Date().toISOString().split('T')[0],
+    priority: 3, category: 'personal', recurrence_type: ''
+  })
 
-  const startEdit = (task) => {
-    setEditingId(task.id)
-    setEditForm({
-      title: task.title,
-      due_date: task.due_date || '',
-      type: task.type || 'custom',
-      recurrence_type: task.recurrence_type || ''
-    })
-  }
-
-  const saveEdit = async (id) => {
-    await editTask(id, editForm)
-    setEditingId(null)
-  }
+  // Proof state
+  const [proofTask, setProofTask] = useState(null)
+  const [proofUrl, setProofUrl] = useState('')
 
   const today = new Date().toISOString().split('T')[0]
   const pending = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
@@ -42,142 +32,350 @@ export default function Operations() {
   const upcoming = pending.filter(t => !t.due_date || t.due_date > today)
   const completed = tasks.filter(t => t.status === 'completed')
 
-  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING OPERATIONS...</span></div></AppShell>
+  const completionRate = tasks.length === 0 ? 0 : Math.round((completed.length / tasks.length) * 100)
 
-  const TaskItem = ({ task, borderClass }) => {
-    const isCompleted = task.status === 'completed'
-    const isEditing = editingId === task.id
+  const handleDeploy = async (e) => {
+    e.preventDefault()
+    if (!deployForm.title.trim()) return
+    await addTask({
+      title: deployForm.title,
+      description: deployForm.description || null,
+      due_date: deployForm.due_date || null,
+      priority: deployForm.priority,
+      category: deployForm.category,
+      type: deployForm.recurrence_type ? 'recurring' : 'custom',
+      recurrence_type: deployForm.recurrence_type || null,
+    })
+    setDeployForm({ title: '', description: '', due_date: new Date().toISOString().split('T')[0], priority: 3, category: 'personal', recurrence_type: '' })
+    setShowDeploy(false)
+  }
 
-    if (isEditing) {
-      return (
-        <div className="p-4 bg-tertiary border border-amber flex-col gap-3 mb-2">
-          <input 
-            type="text" 
-            className="input font-mono text-sm py-1" 
-            value={editForm.title} 
-            onChange={e => setEditForm({...editForm, title: e.target.value})} 
-          />
-          <div className="grid-2">
-            <div>
-              <label className="font-mono text-xs text-muted mb-1 block">DUE DATE</label>
-              <input type="date" className="input font-mono py-1" value={editForm.due_date} onChange={e => setEditForm({...editForm, due_date: e.target.value})} />
-            </div>
-            <div>
-              <label className="font-mono text-xs text-muted mb-1 block">RECURRENCE</label>
-              <select className="select font-mono py-1" value={editForm.recurrence_type || ''} onChange={e => {
-                const val = e.target.value;
-                setEditForm({...editForm, recurrence_type: val, type: val ? 'recurring' : 'custom'})
-              }}>
-                <option value="">ONE TIME</option>
-                <option value="daily">DAILY</option>
-                <option value="weekly">WEEKLY</option>
-                <option value="monthly">MONTHLY</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex gap-2 justify-end mt-2">
-            <button onClick={() => saveEdit(task.id)} className="btn btn-primary btn-sm">SAVE</button>
-            <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
-          </div>
-        </div>
-      )
+  const handleComplete = (task) => {
+    setProofTask(task)
+    setProofUrl('')
+  }
+
+  const submitCompletion = async (skipProof = false) => {
+    if (!proofTask) return
+    await completeTask(proofTask.id, skipProof ? null : proofUrl)
+    setProofTask(null)
+    setProofUrl('')
+  }
+
+  const startEdit = (task) => {
+    setEditingId(task.id)
+    setEditForm({
+      title: task.title, due_date: task.due_date || '', priority: task.priority || 3,
+      type: task.type || 'custom', recurrence_type: task.recurrence_type || '', description: task.description || ''
+    })
+  }
+
+  const saveEdit = async (id) => {
+    await editTask(id, editForm)
+    setEditingId(null)
+  }
+
+  // Which list to show based on active tab
+  const getActiveList = () => {
+    switch (activeTab) {
+      case 'today': return [...overdue, ...dueToday]
+      case 'upcoming': return upcoming
+      case 'completed': return completed.slice(0, 20)
+      case 'all': return pending
+      default: return dueToday
     }
-
-    return (
-      <motion.div
-        layout
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
-        className={`task-item ${isCompleted ? 'completed' : ''} group`}
-        style={{ borderLeftColor: borderClass }}
-      >
-        <button 
-          onClick={() => isCompleted ? undoCompleteTask(task.id) : completeTask(task.id)}
-          className="flex-center shrink-0 w-5 h-5 border rounded-sm mt-1 hover:border-amber transition-colors"
-          style={{ borderColor: isCompleted ? 'var(--text-muted)' : borderClass }}
-        >
-          {isCompleted && <Check size={12} />}
-        </button>
-        <div className="flex-1 flex-col gap-1">
-          <span className={`task-title font-mono ${isCompleted ? 'line-through text-muted' : ''}`}>{task.title}</span>
-          <div className="flex items-center gap-3">
-            {task.due_date && (
-              <span className="font-mono text-xs flex items-center gap-1 text-muted">
-                <Calendar size={10} /> {task.due_date}
-              </span>
-            )}
-            {task.type === 'recurring' && task.recurrence_type && (
-              <span className="font-mono text-[10px] flex items-center gap-1 text-amber">
-                <Repeat size={10} /> {task.recurrence_type.toUpperCase()}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
-          {!isCompleted && <button onClick={() => startEdit(task)} className="btn btn-ghost p-1.5 hover:text-amber" title="Edit"><Edit2 size={14} /></button>}
-          {isCompleted && <button onClick={() => undoCompleteTask(task.id)} className="btn btn-ghost p-1.5 hover:text-primary" title="Undo"><RotateCcw size={14} /></button>}
-          <button onClick={() => deleteTask(task.id)} className="btn btn-ghost p-1.5 hover:text-danger" title="Delete"><Trash2 size={14} /></button>
-        </div>
-      </motion.div>
-    )
   }
 
-  const TaskList = ({ title, items, colorClass, borderClass }) => {
-    if (items.length === 0) return null
-    return (
-      <div className="mb-8">
-        <h2 className={`font-display text-lg uppercase tracking-wider mb-3 ${colorClass}`}>{title} [{items.length}]</h2>
-        <div className="flex-col gap-2">
-          <AnimatePresence>
-            {items.map(task => <TaskItem key={task.id} task={task} borderClass={borderClass} />)}
-          </AnimatePresence>
-        </div>
-      </div>
-    )
+  const activeList = getActiveList()
+
+  const PRIORITY_COLORS = {
+    1: 'var(--text-muted)', 2: 'var(--info)', 3: 'var(--accent-primary)',
+    4: 'var(--warning)', 5: 'var(--danger)'
   }
+  const PRIORITY_LABELS = { 1: 'LOW', 2: 'NORMAL', 3: 'MEDIUM', 4: 'HIGH', 5: 'CRITICAL' }
+
+  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING OPERATIONS...</span></div></AppShell>
 
   return (
     <AppShell>
-      <div className="page-container narrow">
-        <header className="page-header">
-          <h1 className="page-title">OPERATIONS</h1>
-          <p className="page-subtitle font-mono uppercase text-xs">Tactical task execution.</p>
+      <div className="page-container" style={{ maxWidth: '1400px' }}>
+
+        {/* HEADER */}
+        <header className="flex-between flex-wrap gap-4 mb-6">
+          <div>
+            <h1 className="page-title flex items-center gap-3"><Target className="text-amber" /> OPERATIONS</h1>
+            <p className="page-subtitle font-mono text-xs uppercase">Deploy morning work goals. Execute. Complete. Prove.</p>
+          </div>
+          <button className="btn btn-primary flex items-center gap-2" onClick={() => setShowDeploy(true)}>
+            <Plus size={18} /> DEPLOY OPERATION
+          </button>
         </header>
 
-        <form onSubmit={handleAdd} className="mb-8 relative flex gap-2">
-          <div className="relative flex-1">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-amber font-mono">{`>`}</span>
-            <input 
-              type="text" 
-              className="input font-mono bg-secondary border-hud-border hover:border-amber focus:border-amber transition-colors w-full" 
-              style={{ paddingLeft: '2.5rem', height: '3.5rem', fontSize: '1rem' }}
-              placeholder="INPUT NEW OPERATION..." 
-              value={newTaskTitle}
-              onChange={e => setNewTaskTitle(e.target.value)}
-            />
-          </div>
-          <input 
-            type="date" 
-            className="input font-mono bg-secondary border-hud-border hover:border-amber focus:border-amber transition-colors w-40" 
-            style={{ height: '3.5rem' }}
-            value={newTaskDate}
-            onChange={e => setNewTaskDate(e.target.value)}
-          />
-          <button type="submit" className="btn btn-primary px-8" style={{ height: '3.5rem' }}>
-            DEPLOY
-          </button>
-        </form>
+        {/* METRICS ROW */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <HudPanel className="p-4 flex-col items-center justify-center text-center">
+            <div className="font-display text-3xl text-primary">{pending.length}</div>
+            <div className="font-mono text-[10px] text-muted uppercase tracking-widest">PENDING</div>
+          </HudPanel>
+          <HudPanel className="p-4 flex-col items-center justify-center text-center border-danger">
+            <div className="font-display text-3xl text-danger">{overdue.length}</div>
+            <div className="font-mono text-[10px] text-muted uppercase tracking-widest">OVERDUE</div>
+          </HudPanel>
+          <HudPanel className="p-4 flex-col items-center justify-center text-center border-amber">
+            <div className="font-display text-3xl text-amber">{dueToday.length}</div>
+            <div className="font-mono text-[10px] text-muted uppercase tracking-widest">DUE TODAY</div>
+          </HudPanel>
+          <HudPanel className="p-4 flex-col items-center justify-center text-center">
+            <div className="font-display text-3xl text-success">{completionRate}%</div>
+            <div className="font-mono text-[10px] text-muted uppercase tracking-widest">COMPLETION</div>
+          </HudPanel>
+        </div>
 
-        <TaskList title="OVERDUE THREATS" items={overdue} colorClass="text-danger" borderClass="var(--danger)" />
-        <TaskList title="ACTIVE OPERATIONS (TODAY)" items={dueToday} colorClass="text-amber" borderClass="var(--accent-primary)" />
-        <TaskList title="UPCOMING" items={upcoming} colorClass="text-secondary" borderClass="var(--border-color)" />
-        
-        {completed.length > 0 && (
-          <div className="mt-12 opacity-60">
-            <TaskList title="DEBRIEFED (COMPLETED)" items={completed.slice(0, 10)} colorClass="text-muted" borderClass="var(--border-color)" />
+        {/* TABS */}
+        <div className="tabs mb-6">
+          {[
+            { id: 'today', label: `TODAY (${overdue.length + dueToday.length})` },
+            { id: 'upcoming', label: `UPCOMING (${upcoming.length})` },
+            { id: 'all', label: `ALL PENDING (${pending.length})` },
+            { id: 'completed', label: `COMPLETED (${completed.length})` }
+          ].map(tab => (
+            <button key={tab.id} className={`tab-item ${activeTab === tab.id ? 'tab-active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* OPERATIONS GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AnimatePresence mode="popLayout">
+            {activeList.map((task) => {
+              const isCompleted = task.status === 'completed'
+              const isEditing = editingId === task.id
+              const isOverdue = !isCompleted && task.due_date && task.due_date < today
+              const priorityColor = PRIORITY_COLORS[task.priority] || PRIORITY_COLORS[3]
+
+              if (isEditing) {
+                return (
+                  <motion.div key={task.id} layout className="col-span-1">
+                    <HudPanel className="p-5 border-amber">
+                      <div className="flex-col gap-3">
+                        <input type="text" className="input font-mono" value={editForm.title}
+                          onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
+                        <textarea className="textarea font-mono text-sm h-16" value={editForm.description}
+                          onChange={e => setEditForm({ ...editForm, description: e.target.value })} placeholder="Description..." />
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <label className="font-mono text-[10px] text-muted mb-1 block">DUE DATE</label>
+                            <input type="date" className="input font-mono text-xs" value={editForm.due_date}
+                              onChange={e => setEditForm({ ...editForm, due_date: e.target.value })} />
+                          </div>
+                          <div>
+                            <label className="font-mono text-[10px] text-muted mb-1 block">PRIORITY</label>
+                            <select className="select font-mono text-xs" value={editForm.priority}
+                              onChange={e => setEditForm({ ...editForm, priority: parseInt(e.target.value) })}>
+                              {[1, 2, 3, 4, 5].map(p => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="font-mono text-[10px] text-muted mb-1 block">RECURRENCE</label>
+                            <select className="select font-mono text-xs" value={editForm.recurrence_type}
+                              onChange={e => setEditForm({ ...editForm, recurrence_type: e.target.value, type: e.target.value ? 'recurring' : 'custom' })}>
+                              <option value="">ONE TIME</option>
+                              <option value="daily">DAILY</option>
+                              <option value="weekly">WEEKLY</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end mt-2">
+                          <button onClick={() => saveEdit(task.id)} className="btn btn-primary btn-sm">SAVE</button>
+                          <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
+                        </div>
+                      </div>
+                    </HudPanel>
+                  </motion.div>
+                )
+              }
+
+              return (
+                <motion.div key={task.id} layout initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                  className="col-span-1"
+                >
+                  <div className={`relative bg-tertiary border p-5 transition-all duration-200 group ${isOverdue ? 'border-danger hover:border-danger' : isCompleted ? 'border-border-color opacity-60' : 'border-border-color hover:border-amber'}`}
+                    style={{ borderLeftWidth: '3px', borderLeftColor: priorityColor }}>
+
+                    {/* Top row: Priority + Actions */}
+                    <div className="flex-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border"
+                          style={{ color: priorityColor, borderColor: priorityColor, opacity: 0.8 }}>
+                          {PRIORITY_LABELS[task.priority] || 'MEDIUM'}
+                        </span>
+                        {isOverdue && (
+                          <span className="font-mono text-[9px] text-danger flex items-center gap-1">
+                            <AlertTriangle size={10} /> OVERDUE
+                          </span>
+                        )}
+                        {task.recurrence_type && (
+                          <span className="font-mono text-[9px] text-info flex items-center gap-1">
+                            <Repeat size={10} /> {task.recurrence_type.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {!isCompleted && <button onClick={() => startEdit(task)} className="p-1.5 text-muted hover:text-amber transition-colors"><Edit2 size={13} /></button>}
+                        {isCompleted && <button onClick={() => undoCompleteTask(task.id)} className="p-1.5 text-muted hover:text-info transition-colors" title="Undo"><RotateCcw size={13} /></button>}
+                        <button onClick={() => deleteTask(task.id)} className="p-1.5 text-muted hover:text-danger transition-colors"><Trash2 size={13} /></button>
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className={`font-display text-xl uppercase tracking-wider mb-1 ${isCompleted ? 'line-through text-muted' : 'text-primary'}`}>
+                      {task.title}
+                    </h3>
+                    {task.description && <p className="font-mono text-xs text-secondary mb-3 line-clamp-2">{task.description}</p>}
+
+                    {/* Bottom row */}
+                    <div className="flex-between mt-4 pt-3 border-t border-border-subtle">
+                      <div className="flex items-center gap-3">
+                        {task.due_date && (
+                          <span className="font-mono text-[10px] text-muted flex items-center gap-1">
+                            <Calendar size={10} /> {task.due_date}
+                          </span>
+                        )}
+                        {task.media_urls && task.media_urls.length > 0 && (
+                          <span className="font-mono text-[10px] text-amber">[{task.media_urls.length} PROOF]</span>
+                        )}
+                      </div>
+                      {!isCompleted && (
+                        <button onClick={() => handleComplete(task)}
+                          className="btn btn-primary btn-sm flex items-center gap-1.5 px-4">
+                          <Zap size={12} /> EXECUTE
+                        </button>
+                      )}
+                      {isCompleted && (
+                        <span className="font-mono text-[10px] text-success flex items-center gap-1">
+                          <CheckCircle2 size={12} /> COMPLETED
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </div>
+
+        {activeList.length === 0 && (
+          <div className="text-center py-16">
+            <div className="font-mono text-sm text-muted mb-4">
+              {activeTab === 'completed' ? 'NO COMPLETED OPERATIONS YET.' : 'NO OPERATIONS IN THIS VIEW.'}
+            </div>
+            <button onClick={() => setShowDeploy(true)} className="btn btn-primary btn-sm">DEPLOY OPERATION</button>
           </div>
         )}
+
+        {/* DEPLOY MODAL */}
+        <AnimatePresence>
+          {showDeploy && (
+            <div className="modal-overlay">
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}>
+                <HudPanel className="modal-content border-amber" style={{ width: '520px', maxWidth: '95vw' }}>
+                  <div className="flex-between mb-5 border-b border-border-color pb-3">
+                    <span className="font-display text-xl uppercase text-amber tracking-widest">DEPLOY OPERATION</span>
+                    <button onClick={() => setShowDeploy(false)} className="text-muted hover:text-danger"><X size={18} /></button>
+                  </div>
+                  <form onSubmit={handleDeploy} className="flex-col gap-4">
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">OPERATION TITLE *</label>
+                      <input type="text" className="input font-mono" value={deployForm.title}
+                        onChange={e => setDeployForm({ ...deployForm, title: e.target.value })} required autoFocus
+                        placeholder="e.g. Complete Module 3 of Beyond Tatva" />
+                    </div>
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">DESCRIPTION</label>
+                      <textarea className="textarea font-mono text-sm h-20" value={deployForm.description}
+                        onChange={e => setDeployForm({ ...deployForm, description: e.target.value })}
+                        placeholder="What needs to be done..." />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">DUE DATE</label>
+                        <input type="date" className="input font-mono" value={deployForm.due_date}
+                          onChange={e => setDeployForm({ ...deployForm, due_date: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">PRIORITY</label>
+                        <select className="select font-mono" value={deployForm.priority}
+                          onChange={e => setDeployForm({ ...deployForm, priority: parseInt(e.target.value) })}>
+                          {[1, 2, 3, 4, 5].map(p => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
+                        <select className="select font-mono" value={deployForm.category}
+                          onChange={e => setDeployForm({ ...deployForm, category: e.target.value })}>
+                          <option value="personal">PERSONAL</option>
+                          <option value="business">BUSINESS</option>
+                          <option value="health">HEALTH</option>
+                          <option value="learning">LEARNING</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">RECURRENCE</label>
+                        <select className="select font-mono" value={deployForm.recurrence_type}
+                          onChange={e => setDeployForm({ ...deployForm, recurrence_type: e.target.value })}>
+                          <option value="">ONE TIME</option>
+                          <option value="daily">DAILY</option>
+                          <option value="weekly">WEEKLY</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button type="submit" className="btn btn-primary flex-1 py-3">DEPLOY</button>
+                      <button type="button" className="btn btn-ghost" onClick={() => setShowDeploy(false)}>ABORT</button>
+                    </div>
+                  </form>
+                </HudPanel>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* PROOF MODAL */}
+        <AnimatePresence>
+          {proofTask && (
+            <div className="modal-overlay">
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}>
+                <HudPanel className="modal-content border-success" style={{ width: '440px', maxWidth: '95vw' }}>
+                  <div className="flex-between mb-4 border-b border-border-color pb-3">
+                    <span className="font-display text-xl uppercase text-success tracking-widest">OPERATION COMPLETE</span>
+                    <button onClick={() => setProofTask(null)} className="text-muted hover:text-danger"><X size={18} /></button>
+                  </div>
+                  <p className="font-mono text-sm text-primary mb-4 truncate">{proofTask.title}</p>
+                  <div className="flex-col gap-4">
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">ATTACH PROOF (URL)</label>
+                      <input type="url" className="input font-mono text-sm w-full" placeholder="https://screenshot.link or drive.google.com/..."
+                        value={proofUrl} onChange={e => setProofUrl(e.target.value)} autoFocus />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => submitCompletion(false)} className="btn btn-primary flex-1" disabled={!proofUrl.trim()}>
+                        UPLOAD & COMPLETE
+                      </button>
+                      <button onClick={() => submitCompletion(true)} className="btn btn-ghost">
+                        SKIP PROOF
+                      </button>
+                    </div>
+                  </div>
+                </HudPanel>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
       </div>
     </AppShell>

@@ -61,13 +61,13 @@
   --info-glow:      rgba(52, 152, 219, 0.3);
 
   /* ── Color Palette: Rank System ── */
-  --rank-e:       #9CA3AF;
-  --rank-d:       #60A5FA;
-  --rank-c:       #818CF8;
-  --rank-b:       #A78BFA;
-  --rank-a:       #C084FC;
-  --rank-s:       #E879F9;
-  --rank-emperor: #F59E0B;
+  --rank-e:       #8a8f9a; /* text-secondary */
+  --rank-d:       #3498db; /* info */
+  --rank-c:       #00f0ff; /* navy holographic */
+  --rank-b:       #d4a843; /* amber */
+  --rank-a:       #f39c12; /* warning */
+  --rank-s:       #e74c3c; /* danger/red */
+  --rank-emperor: #d4a843; /* intense amber */
 
   /* ── HUD Chrome ── */
   --hud-border:        rgba(212, 168, 67, 0.15);
@@ -1658,21 +1658,22 @@ select:focus {
 
 .badge-rank-b {
   background: rgba(167, 139, 250, 0.1);
+  background: var(--rank-b-subtle);
   color: var(--rank-b);
-  border-color: rgba(167, 139, 250, 0.2);
+  border-color: var(--rank-b-border);
 }
 
 .badge-rank-a {
-  background: rgba(192, 132, 252, 0.1);
+  background: var(--rank-a-subtle);
   color: var(--rank-a);
-  border-color: rgba(192, 132, 252, 0.2);
+  border-color: var(--rank-a-border);
 }
 
 .badge-rank-s {
-  background: rgba(232, 121, 249, 0.1);
+  background: var(--rank-s-subtle);
   color: var(--rank-s);
-  border-color: rgba(232, 121, 249, 0.2);
-  box-shadow: 0 0 8px rgba(232, 121, 249, 0.15);
+  border-color: var(--rank-s-border);
+  box-shadow: 0 0 8px var(--rank-s-glow);
 }
 
 .badge-rank-emperor {
