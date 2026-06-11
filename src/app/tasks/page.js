@@ -18,7 +18,7 @@ export default function Operations() {
   // Deploy form
   const [deployForm, setDeployForm] = useState({
     title: '', description: '', due_date: new Date().toISOString().split('T')[0],
-    priority: 3, category: 'personal', recurrence_type: ''
+    difficulty: 'MEDIUM', category: 'personal', recurrence_type: ''
   })
 
   // Proof state
@@ -41,12 +41,12 @@ export default function Operations() {
       title: deployForm.title,
       description: deployForm.description || null,
       due_date: deployForm.due_date || null,
-      priority: deployForm.priority,
+      difficulty: deployForm.difficulty,
       category: deployForm.category,
       type: deployForm.recurrence_type ? 'recurring' : 'custom',
       recurrence_type: deployForm.recurrence_type || null,
     })
-    setDeployForm({ title: '', description: '', due_date: new Date().toISOString().split('T')[0], priority: 3, category: 'personal', recurrence_type: '' })
+    setDeployForm({ title: '', description: '', due_date: new Date().toISOString().split('T')[0], difficulty: 'MEDIUM', category: 'personal', recurrence_type: '' })
     setShowDeploy(false)
   }
 
@@ -65,7 +65,7 @@ export default function Operations() {
   const startEdit = (task) => {
     setEditingId(task.id)
     setEditForm({
-      title: task.title, due_date: task.due_date || '', priority: task.priority || 3,
+      title: task.title, due_date: task.due_date || '', difficulty: task.difficulty || 'MEDIUM',
       type: task.type || 'custom', recurrence_type: task.recurrence_type || '', description: task.description || ''
     })
   }
@@ -88,11 +88,12 @@ export default function Operations() {
 
   const activeList = getActiveList()
 
-  const PRIORITY_COLORS = {
-    1: 'var(--text-muted)', 2: 'var(--info)', 3: 'var(--accent-primary)',
-    4: 'var(--warning)', 5: 'var(--danger)'
+  const DIFFICULTY_CONFIG = {
+    EASY: { label: 'EASY', color: 'var(--info)', xp: 15 },
+    MEDIUM: { label: 'MEDIUM', color: 'var(--accent-primary)', xp: 30 },
+    HARD: { label: 'HARD', color: 'var(--warning)', xp: 60 },
+    EXTREME: { label: 'EXTREME', color: 'var(--danger)', xp: 120 }
   }
-  const PRIORITY_LABELS = { 1: 'LOW', 2: 'NORMAL', 3: 'MEDIUM', 4: 'HIGH', 5: 'CRITICAL' }
 
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING OPERATIONS...</span></div></AppShell>
 
@@ -153,7 +154,8 @@ export default function Operations() {
               const isCompleted = task.status === 'completed'
               const isEditing = editingId === task.id
               const isOverdue = !isCompleted && task.due_date && task.due_date < today
-              const priorityColor = PRIORITY_COLORS[task.priority] || PRIORITY_COLORS[3]
+              const diffConfig = DIFFICULTY_CONFIG[task.difficulty] || DIFFICULTY_CONFIG.MEDIUM
+              const dynamicXp = isOverdue ? Math.floor(diffConfig.xp * 0.5) : diffConfig.xp
 
               if (isEditing) {
                 return (
@@ -171,10 +173,13 @@ export default function Operations() {
                               onChange={e => setEditForm({ ...editForm, due_date: e.target.value })} />
                           </div>
                           <div>
-                            <label className="font-mono text-[10px] text-muted mb-1 block">PRIORITY</label>
-                            <select className="select font-mono text-xs" value={editForm.priority}
-                              onChange={e => setEditForm({ ...editForm, priority: parseInt(e.target.value) })}>
-                              {[1, 2, 3, 4, 5].map(p => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}
+                            <label className="font-mono text-[10px] text-muted mb-1 block">DIFFICULTY</label>
+                            <select className="select font-mono text-xs" value={editForm.difficulty}
+                              onChange={e => setEditForm({ ...editForm, difficulty: e.target.value })}>
+                              <option value="EASY">EASY</option>
+                              <option value="MEDIUM">MEDIUM</option>
+                              <option value="HARD">HARD</option>
+                              <option value="EXTREME">EXTREME</option>
                             </select>
                           </div>
                           <div>
@@ -203,14 +208,14 @@ export default function Operations() {
                   className="col-span-1"
                 >
                   <div className={`relative bg-tertiary border p-5 transition-all duration-200 group ${isOverdue ? 'border-danger hover:border-danger' : isCompleted ? 'border-border-color opacity-60' : 'border-border-color hover:border-amber'}`}
-                    style={{ borderLeftWidth: '3px', borderLeftColor: priorityColor }}>
+                    style={{ borderLeftWidth: '3px', borderLeftColor: diffConfig.color }}>
 
-                    {/* Top row: Priority + Actions */}
+                    {/* Top row: Difficulty + Actions */}
                     <div className="flex-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border"
-                          style={{ color: priorityColor, borderColor: priorityColor, opacity: 0.8 }}>
-                          {PRIORITY_LABELS[task.priority] || 'MEDIUM'}
+                          style={{ color: diffConfig.color, borderColor: diffConfig.color, opacity: 0.8 }}>
+                          {diffConfig.label}
                         </span>
                         {isOverdue && (
                           <span className="font-mono text-[9px] text-danger flex items-center gap-1">
@@ -246,6 +251,14 @@ export default function Operations() {
                         )}
                         {task.media_urls && task.media_urls.length > 0 && (
                           <span className="font-mono text-[10px] text-amber">[{task.media_urls.length} PROOF]</span>
+                        )}
+                        {!isCompleted && (
+                          <span className={`font-mono text-[10px] ${isOverdue ? 'text-danger line-through' : 'text-success'}`}>
+                            +{diffConfig.xp} XP
+                          </span>
+                        )}
+                        {!isCompleted && isOverdue && (
+                          <span className="font-mono text-[10px] text-danger">+{dynamicXp} XP (PENALTY)</span>
                         )}
                       </div>
                       {!isCompleted && (
@@ -306,10 +319,13 @@ export default function Operations() {
                           onChange={e => setDeployForm({ ...deployForm, due_date: e.target.value })} />
                       </div>
                       <div>
-                        <label className="font-mono text-xs text-muted mb-1 block">PRIORITY</label>
-                        <select className="select font-mono" value={deployForm.priority}
-                          onChange={e => setDeployForm({ ...deployForm, priority: parseInt(e.target.value) })}>
-                          {[1, 2, 3, 4, 5].map(p => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}
+                        <label className="font-mono text-xs text-muted mb-1 block">DIFFICULTY</label>
+                        <select className="select font-mono" value={deployForm.difficulty}
+                          onChange={e => setDeployForm({ ...deployForm, difficulty: e.target.value })}>
+                          <option value="EASY">EASY (+15 XP)</option>
+                          <option value="MEDIUM">MEDIUM (+30 XP)</option>
+                          <option value="HARD">HARD (+60 XP)</option>
+                          <option value="EXTREME">EXTREME (+120 XP)</option>
                         </select>
                       </div>
                     </div>

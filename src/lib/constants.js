@@ -42,6 +42,13 @@ export const XP_REWARDS = {
   weekly_review: 40
 };
 
+export const DIFFICULTY_LEVELS = {
+  EASY: { id: 'EASY', label: 'EASY', xp: 15, penalty: 0, color: 'var(--info)' },
+  MEDIUM: { id: 'MEDIUM', label: 'MEDIUM', xp: 30, penalty: 10, color: 'var(--accent-primary)' },
+  HARD: { id: 'HARD', label: 'HARD', xp: 60, penalty: 25, color: 'var(--warning)' },
+  EXTREME: { id: 'EXTREME', label: 'EXTREME', xp: 120, penalty: 50, color: 'var(--danger)' }
+};
+
 export const MOOD_EMOJIS = [
   { value: 1, emoji: '😞', label: 'Terrible' },
   { value: 2, emoji: '😕', label: 'Bad' },

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
-import { XP_REWARDS } from '@/lib/constants'
+import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
 
 export function useTasks() {
   const [tasks, setTasks] = useState([])
@@ -100,11 +100,26 @@ export function useTasks() {
 
       if (error) throw error
 
-      // Award XP
+      // Dynamic XP Calculation based on Difficulty and Deadlines
       const task = tasks.find((t) => t.id === id)
+      
+      // Default to MEDIUM if no difficulty set
+      const difficultyData = DIFFICULTY_LEVELS[task?.difficulty] || DIFFICULTY_LEVELS.MEDIUM
+      let xpAward = difficultyData.xp
+
+      // Check if overdue
+      if (task?.due_date) {
+        const today = new Date().toISOString().split('T')[0]
+        const dueDate = task.due_date.split('T')[0]
+        if (dueDate < today) {
+          // Overdue: Only award 50% XP
+          xpAward = Math.floor(xpAward * 0.5)
+        }
+      }
+
       await supabase.rpc('award_xp', {
         p_user_id: user.id,
-        p_amount: XP_REWARDS.task_complete,
+        p_amount: xpAward,
         p_source_type: 'task_complete',
         p_source_id: id,
         p_description: `Completed task: ${task?.title || 'Unknown'}`,

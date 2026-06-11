@@ -17,7 +17,7 @@ export default function Missions() {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
 
-  const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', priority: 3, deadline: '' })
+  const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '' })
 
   const TABS = [
     { id: 'main', label: 'PRIMARY', icon: Flag, items: mainQuest ? [mainQuest] : [] },
@@ -28,12 +28,22 @@ export default function Missions() {
 
   const activeData = TABS.find(t => t.id === activeTab)?.items || []
 
+  const DIFFICULTY_CONFIG = {
+    EASY: { label: 'EASY', color: 'var(--info)' },
+    MEDIUM: { label: 'MEDIUM', color: 'var(--accent-primary)' },
+    HARD: { label: 'HARD', color: 'var(--warning)' },
+    EXTREME: { label: 'EXTREME', color: 'var(--danger)' }
+  }
+
   const handleAdd = async (e) => {
     e.preventDefault()
-    if (!formData.title) return
+    if (formData.type === 'long_term' && !formData.deadline) {
+      alert("LONG RANGE MISSIONS REQUIRE A STRICT DEADLINE.")
+      return
+    }
     await addGoal(formData)
     setShowForm(false)
-    setFormData({ title: '', description: '', type: 'side_quest', priority: 3 })
+    setFormData({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '' })
   }
 
   const startEdit = (goal) => {
@@ -41,7 +51,7 @@ export default function Missions() {
     setEditForm({
       title: goal.title,
       description: goal.description || '',
-      priority: goal.priority,
+      difficulty: goal.difficulty || 'HARD',
       deadline: goal.deadline ? goal.deadline.split('T')[0] : ''
     })
   }
@@ -107,7 +117,12 @@ export default function Missions() {
                         <span className={`badge ${isPaused ? 'bg-secondary text-muted' : 'badge-amber'}`}>
                           {isPaused ? 'PAUSED' : goal.type.replace('_', ' ')}
                         </span>
-                        {goal.status !== 'completed' && <span className="font-mono text-xs text-muted">PRIORITY: {goal.priority}</span>}
+                        {goal.status !== 'completed' && (
+                          <span className="font-mono text-[9px] px-2 py-0.5 border uppercase" 
+                                style={{ color: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color, borderColor: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color }}>
+                            {DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].label}
+                          </span>
+                        )}
                       </div>
                       
                       {/* Controls */}
@@ -129,7 +144,16 @@ export default function Missions() {
                       <div className="flex-col gap-3 mb-4">
                         <input type="text" className="input font-mono text-lg py-1 border-amber" value={editForm.title} onChange={e=>setEditForm({...editForm, title: e.target.value})} />
                         <textarea className="textarea font-mono text-sm py-1" value={editForm.description} onChange={e=>setEditForm({...editForm, description: e.target.value})} rows={2} />
-                        <div className="grid-2">
+                        <div className="grid-2 gap-3 mt-3">
+                          <div>
+                            <label className="font-mono text-xs text-muted mb-1 block">DIFFICULTY</label>
+                            <select className="select font-mono text-sm py-1" value={editForm.difficulty} onChange={e=>setEditForm({...editForm, difficulty: e.target.value})}>
+                              <option value="EASY">EASY</option>
+                              <option value="MEDIUM">MEDIUM</option>
+                              <option value="HARD">HARD</option>
+                              <option value="EXTREME">EXTREME</option>
+                            </select>
+                          </div>
                           <div>
                             <label className="font-mono text-xs text-muted mb-1 block">DEADLINE</label>
                             <input type="date" className="input font-mono text-sm py-1" value={editForm.deadline || ''} onChange={e=>setEditForm({...editForm, deadline: e.target.value})} />
@@ -225,8 +249,19 @@ export default function Missions() {
                       </select>
                     </div>
                     <div>
-                      <label className="font-mono text-xs text-muted mb-1 block">DEADLINE (OPTIONAL)</label>
-                      <input type="date" className="input" value={formData.deadline} onChange={e=>setFormData({...formData, deadline: e.target.value})} />
+                      <label className="font-mono text-xs text-muted mb-1 block">DIFFICULTY</label>
+                      <select className="select font-mono" value={formData.difficulty} onChange={e=>setFormData({...formData, difficulty: e.target.value})}>
+                        <option value="EASY">EASY</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="HARD">HARD</option>
+                        <option value="EXTREME">EXTREME</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">
+                        {formData.type === 'long_term' ? 'STRICT DEADLINE (REQUIRED)' : 'DEADLINE (OPTIONAL)'}
+                      </label>
+                      <input type="date" className="input" value={formData.deadline} onChange={e=>setFormData({...formData, deadline: e.target.value})} required={formData.type === 'long_term'} />
                     </div>
                     <div>
                       <label className="font-mono text-xs text-muted mb-1 block">BRIEFING (OPTIONAL)</label>
