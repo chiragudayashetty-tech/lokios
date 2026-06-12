@@ -40,13 +40,34 @@ export default function AppShell({ children }) {
 
   if (!user) return null
 
-  const mainItems = NAV_ITEMS.slice(0, 4)
-  const moreItems = NAV_ITEMS.slice(4)
+  const mainItems = [
+    NAV_ITEMS[0], // Command Center
+    NAV_ITEMS[1], // Daily Ops
+    NAV_ITEMS[3], // Operations
+    NAV_ITEMS[8], // Operator Profile
+  ]
+
 
   return (
     <div className="app-shell">
-      {/* Desktop Sidebar */}
-      <aside className="sidebar">
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 hidden-desktop"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Desktop & Mobile Sidebar */}
+      <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+        {mobileMenuOpen && (
+          <button 
+            className="absolute top-4 right-4 text-muted hover:text-danger hidden-desktop"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <X size={20} />
+          </button>
+        )}
         <div className="sidebar-header">
           <Shield size={24} color="var(--accent-primary)" />
           <span className="sidebar-brand">CHIRAGOS</span>
@@ -59,7 +80,7 @@ export default function AppShell({ children }) {
             const isActive = pathname === item.href
             const Icon = item.icon
             return (
-              <Link key={item.href} href={item.href}>
+              <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
                 <motion.div 
                   className={`nav-item ${isActive ? 'active' : ''}`}
                   whileHover={{ x: 4 }}
@@ -107,39 +128,6 @@ export default function AppShell({ children }) {
         </button>
       </nav>
 
-      {/* Mobile More Overlay */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div 
-            className="fixed inset-0 z-50 flex flex-col"
-            style={{ backgroundColor: 'var(--bg-primary)' }}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-          >
-            <div className="flex-between p-4 border-b border-subtle">
-              <span className="sidebar-brand">SYSTEMS</span>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-amber">
-                <X size={24} />
-              </button>
-            </div>
-            <div className="flex-col p-4 gap-2 overflow-y-auto">
-              {moreItems.map((item) => {
-                const isActive = pathname === item.href
-                const Icon = item.icon
-                return (
-                  <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                    <div className={`nav-item ${isActive ? 'active' : ''}`} style={{ padding: '1rem' }}>
-                      <Icon size={20} strokeWidth={1.5} color={isActive ? 'var(--accent-primary)' : 'currentColor'} />
-                      <span className="font-display text-lg uppercase tracking-wide">{item.label}</span>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
