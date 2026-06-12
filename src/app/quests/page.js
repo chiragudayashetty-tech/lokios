@@ -118,7 +118,7 @@ export default function DailyOps() {
         </header>
 
         {/* Top Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid-3 gap-4 mb-6">
           {/* Today's Progress */}
           <HudPanel glow className="flex items-center gap-5 p-5">
             <div className="relative w-16 h-16 shrink-0 flex-center">
@@ -332,7 +332,7 @@ export default function DailyOps() {
 
         {/* Top 10 Daily Habits Sidebar */}
         {habits.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <div className="grid-2 gap-6 mt-6">
             <HudPanel label="TOP 10 DAILY HABITS">
               <div className="flex-col gap-2">
                 {habits.slice(0, 10).map((h, i) => {
@@ -397,7 +397,7 @@ export default function DailyOps() {
                       <label className="font-mono text-xs text-muted mb-1 block">ROUTINE TITLE</label>
                       <input type="text" className="input" value={newTitle} onChange={e => setNewTitle(e.target.value)} required autoFocus placeholder="e.g. Wake up at 7AM" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid-2 gap-4">
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
                         <select className="select font-mono" value={newCategory} onChange={e => setNewCategory(e.target.value)}>

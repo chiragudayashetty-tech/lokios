@@ -113,7 +113,7 @@ export default function Operations() {
         </header>
 
         {/* METRICS ROW */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid-4 gap-4 mb-6">
           <HudPanel className="p-4 flex-col items-center justify-center text-center">
             <div className="font-display text-3xl text-primary">{pending.length}</div>
             <div className="font-mono text-[10px] text-muted uppercase tracking-widest">PENDING</div>
@@ -148,7 +148,7 @@ export default function Operations() {
         </div>
 
         {/* OPERATIONS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid-2 gap-4">
           <AnimatePresence mode="popLayout">
             {activeList.map((task) => {
               const isCompleted = task.status === 'completed'
@@ -166,7 +166,7 @@ export default function Operations() {
                           onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
                         <textarea className="textarea font-mono text-sm h-16" value={editForm.description}
                           onChange={e => setEditForm({ ...editForm, description: e.target.value })} placeholder="Description..." />
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid-3 gap-3">
                           <div>
                             <label className="font-mono text-[10px] text-muted mb-1 block">DUE DATE</label>
                             <input type="date" className="input font-mono text-xs" value={editForm.due_date}
@@ -312,7 +312,7 @@ export default function Operations() {
                         onChange={e => setDeployForm({ ...deployForm, description: e.target.value })}
                         placeholder="What needs to be done..." />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid-2 gap-4">
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">DUE DATE</label>
                         <input type="date" className="input font-mono" value={deployForm.due_date}
@@ -329,7 +329,7 @@ export default function Operations() {
                         </select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid-2 gap-4">
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
                         <select className="select font-mono" value={deployForm.category}

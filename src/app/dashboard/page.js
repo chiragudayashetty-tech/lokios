@@ -98,10 +98,34 @@ export default function MissionControl() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <style dangerouslySetInnerHTML={{__html: `
+          .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-6);
+            align-items: start;
+          }
+          @media (min-width: 1280px) {
+            .dashboard-grid {
+              grid-template-columns: 8fr 4fr;
+            }
+          }
+          .dashboard-inner-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-6);
+          }
+          @media (min-width: 768px) {
+            .dashboard-inner-grid {
+              grid-template-columns: 1fr 1fr;
+            }
+          }
+        `}} />
 
-          {/* LEFT COLUMN (8 cols) */}
-          <div className="xl:col-span-8 flex-col gap-6">
+        <div className="dashboard-grid">
+
+          {/* LEFT COLUMN */}
+          <div className="flex flex-col gap-6">
 
             {/* INTELLIGENCE FEED */}
             <IntelligenceFeed />
@@ -141,7 +165,7 @@ export default function MissionControl() {
               </div>
             </HudPanel>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="dashboard-inner-grid">
 
               {/* SECTION 3: TODAY'S BATTLE PLAN */}
               <HudPanel label="TODAY'S BATTLE PLAN">
@@ -210,8 +234,8 @@ export default function MissionControl() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN (4 cols) */}
-          <div className="xl:col-span-4 flex-col gap-6">
+          {/* RIGHT COLUMN */}
+          <div className="flex flex-col gap-6">
 
             {/* SECTION 2: ACTIVE BATTLES */}
             <HudPanel label="ACTIVE BATTLES" className="border-danger">

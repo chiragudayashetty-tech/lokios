@@ -139,7 +139,7 @@ export default function OperatorDashboard() {
 
   return (
     <AppShell>
-      <div className="page-container full px-4 md:px-8 max-w-[1600px] mx-auto">
+      <div className="page-container full" style={{ padding: 'var(--space-4)', maxWidth: '1600px', margin: '0 auto' }}>
         <header className="page-header flex-between mb-8">
           <div>
             <h1 className="font-display text-4xl font-bold tracking-widest text-primary uppercase">OPERATOR DASHBOARD</h1>
@@ -157,10 +157,24 @@ export default function OperatorDashboard() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <style dangerouslySetInnerHTML={{__html: `
+          .operator-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-6);
+            align-items: start;
+          }
+          @media (min-width: 1024px) {
+            .operator-grid {
+              grid-template-columns: 3fr 5fr 4fr;
+            }
+          }
+        `}} />
+
+        <div className="operator-grid">
           
-          {/* ── COLUMN 1: IDENTITY (3/12) ── */}
-          <div className="lg:col-span-3 flex flex-col gap-6">
+          {/* ── COLUMN 1: IDENTITY ── */}
+          <div className="flex flex-col gap-6">
             <HudPanel glow className="border-info" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
               <div className="flex items-center gap-2 mb-4 text-info border-b border-border-color pb-2">
                 <User size={16} /> <span className="font-display text-lg uppercase tracking-widest">IDENTITY</span>
@@ -195,8 +209,8 @@ export default function OperatorDashboard() {
             </HudPanel>
           </div>
 
-          {/* ── COLUMN 2: WAR ROOM / BATTLES (5/12) ── */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
+          {/* ── COLUMN 2: WAR ROOM / BATTLES ── */}
+          <div className="flex flex-col gap-6">
             <HudPanel glow className="border-danger" style={{ clipPath: 'polygon(0 15px, 15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
               <div className="flex items-center justify-between mb-6 border-b border-danger-subtle pb-3">
                 <div className="flex items-center gap-2 text-danger">
@@ -318,8 +332,8 @@ export default function OperatorDashboard() {
             </HudPanel>
           </div>
 
-          {/* ── COLUMN 3: INTEL (4/12) ── */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
+          {/* ── COLUMN 3: INTEL ── */}
+          <div className="flex flex-col gap-6">
             <HudPanel className="border-success" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
               <div className="flex items-center gap-2 mb-4 text-success border-b border-border-color pb-2">
                 <Shield size={16} /> <span className="font-display text-lg uppercase tracking-widest">KNOWN ADVANTAGES</span>

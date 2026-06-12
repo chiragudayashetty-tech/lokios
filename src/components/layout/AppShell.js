@@ -46,7 +46,7 @@ export default function AppShell({ children }) {
   return (
     <div className="app-shell">
       {/* Desktop Sidebar */}
-      <aside className="sidebar hidden-mobile">
+      <aside className="sidebar">
         <div className="sidebar-header">
           <Shield size={24} color="var(--accent-primary)" />
           <span className="sidebar-brand">CHIRAGOS</span>
@@ -88,7 +88,7 @@ export default function AppShell({ children }) {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="mobile-nav hidden-desktop">
+      <nav className="mobile-nav">
         {mainItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
