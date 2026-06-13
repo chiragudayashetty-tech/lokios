@@ -209,7 +209,7 @@ export default function ProofOfWork() {
                       {log.duration_hours ? (log.duration_hours >= 24 && log.duration_hours % 24 === 0 ? `DURATION: ${log.duration_hours / 24} DAYS` : `DURATION: ${log.duration_hours} HOURS`) : 'NO DURATION LOGGED'}
                     </div>
                     
-                    {log.media_urls && log.media_urls.length > 0 && (
+                    {Array.isArray(log.media_urls) && log.media_urls.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-4">
                         {log.media_urls.map((url, idx) => (
                           <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-mono text-[10px] text-amber hover:text-primary transition-colors bg-bg-primary border border-amber px-2 py-1">
@@ -294,12 +294,12 @@ export default function ProofOfWork() {
                   <div className="flex-between mb-3">
                     <h3 className="font-display text-2xl uppercase tracking-wider text-primary group-hover:text-info transition-colors">{proj.title}</h3>
                     <span className={`badge ${proj.status === 'active' ? 'badge-amber' : proj.status === 'completed' ? 'badge-success' : ''}`}>
-                      {proj.status.toUpperCase()}
+                      {(proj.status || 'UNKNOWN').toUpperCase()}
                     </span>
                   </div>
                   <p className="font-mono text-sm text-secondary mb-4 flex-1">{proj.description}</p>
                   
-                  {proj.tech_stack && proj.tech_stack.length > 0 && (
+                  {Array.isArray(proj.tech_stack) && proj.tech_stack.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-auto">
                       {proj.tech_stack.map((tech, idx) => (
                         <span key={idx} className="font-mono text-[10px] text-muted bg-bg-primary px-2 py-1 border border-border-strong">
