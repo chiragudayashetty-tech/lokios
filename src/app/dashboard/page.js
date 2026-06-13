@@ -34,7 +34,7 @@ export default function MissionControl() {
   }, [])
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchTimeline() {
       const supabase = createClient()
       
       // Fetch timeline
@@ -44,7 +44,13 @@ export default function MissionControl() {
         .order('created_at', { ascending: false })
         .limit(8)
       if (timelineData) setTimeline(timelineData)
+    }
+    fetchTimeline()
+  }, [todayLogs, tasks]) // Refetch when logs or tasks change
 
+  useEffect(() => {
+    async function fetchBattles() {
+      const supabase = createClient()
       // Fetch battles from blueprint
       const { data: bpData } = await supabase
         .from('user_blueprints')
@@ -54,7 +60,7 @@ export default function MissionControl() {
         setBattles(bpData.battles.filter(b => b.status !== 'defeated'))
       }
     }
-    fetchData()
+    fetchBattles()
   }, [])
 
   // Today's Battle Plan
@@ -217,9 +223,11 @@ export default function MissionControl() {
                <div className="font-mono text-[10px] text-muted">
                  {completedTodayItems} / {totalTodayItems} OBJECTIVES
                </div>
-               <div className="w-full h-1.5 bg-bg-primary rounded-full overflow-hidden mt-4">
-                 <div className="h-full rounded-full transition-all duration-1000 ease-out bg-success"
-                   style={{ width: `${todayPct}%` }} />
+               <div className="w-full h-4 bg-bg-tertiary rounded-full overflow-hidden mt-6 border border-border-color">
+                 <div className="h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r from-success-subtle to-success relative"
+                   style={{ width: `${todayPct}%` }}>
+                   <div className="absolute inset-0 bg-white opacity-20" style={{ backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent)', backgroundSize: '1rem 1rem' }} />
+                 </div>
                </div>
             </HudPanel>
 

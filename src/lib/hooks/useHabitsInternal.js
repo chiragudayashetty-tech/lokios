@@ -139,6 +139,14 @@ export function useHabitsInternal() {
         } else if (existingLog && (!existingLog.status || existingLog.status === 'completed')) {
           // Un-complete
           await supabase.from('habit_logs').delete().eq('id', existingLog.id)
+          if (targetDate === todayStr) {
+            await supabase.from('xp_history')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('source_type', 'habit_complete')
+              .eq('source_id', habitId)
+              .gte('created_at', `${targetDate}T00:00:00`)
+          }
           setMonthLogs((prev) => prev.filter((l) => l.id !== existingLog.id))
         } else {
           // Normal complete
