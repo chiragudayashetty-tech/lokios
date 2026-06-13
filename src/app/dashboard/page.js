@@ -82,90 +82,72 @@ export default function MissionControl() {
     <AppShell>
       <div className="page-container relative max-w-[1600px]">
 
-        {/* HEADER */}
-        <header className="mb-6 flex-between flex-wrap gap-4 border-b border-border-color pb-4">
+        <header className="mb-8 flex-between flex-wrap gap-4 pb-4">
           <div>
-            <h1 className="font-display text-4xl uppercase tracking-widest text-primary glow-amber flex items-center gap-3">
-              <Crosshair size={28} className="text-amber" /> MISSION CONTROL
+            <h1 className="font-display text-4xl lg:text-5xl font-bold tracking-tight text-primary flex items-center gap-3">
+              MISSION CONTROL
             </h1>
-            <p className="font-mono text-xs uppercase tracking-widest text-muted mt-1">
-              OPERATOR: {profile?.full_name || 'CHIRAG SHETTY'} // CLASS: FOUNDER // ARC: DISCIPLINE REBUILD
+            <p className="font-mono text-xs uppercase tracking-widest text-muted mt-2">
+              OPERATOR: {profile?.full_name || 'CHIRAG SHETTY'} // ARC: DISCIPLINE REBUILD
             </p>
           </div>
           <div className="text-right">
-            <div className="font-mono text-2xl text-amber">{currentTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}</div>
-            <div className="font-mono text-[10px] text-muted tracking-widest uppercase">{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+            <div className="font-mono text-3xl font-bold text-primary tracking-tighter">{currentTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}</div>
+            <div className="font-mono text-[10px] text-muted tracking-widest uppercase mt-1">{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
           </div>
         </header>
 
         <style dangerouslySetInnerHTML={{__html: `
-          .dashboard-grid {
+          .bento-grid {
             display: grid;
             grid-template-columns: 1fr;
             gap: var(--space-6);
-            align-items: start;
+            align-items: stretch;
           }
-          @media (min-width: 1280px) {
-            .dashboard-grid {
-              grid-template-columns: 8fr 4fr;
+          @media (min-width: 1024px) {
+            .bento-grid {
+              grid-template-columns: repeat(12, 1fr);
+              grid-auto-rows: minmax(min-content, max-content);
             }
-          }
-          .dashboard-inner-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: var(--space-6);
-          }
-          @media (min-width: 768px) {
-            .dashboard-inner-grid {
-              grid-template-columns: 1fr 1fr;
-            }
+            .bento-col-span-8 { grid-column: span 8; }
+            .bento-col-span-4 { grid-column: span 4; }
+            .bento-col-span-12 { grid-column: span 12; }
+            .bento-col-span-6 { grid-column: span 6; }
           }
         `}} />
 
-        <div className="dashboard-grid">
+        <div className="bento-grid">
 
-          {/* LEFT COLUMN */}
-          <div className="flex flex-col gap-6">
+          {/* LEFT BENTO AREA (8 cols) */}
+          <div className="bento-col-span-8 flex flex-col gap-6">
 
             {/* INTELLIGENCE FEED */}
             <IntelligenceFeed />
 
             {/* SECTION 1: CURRENT MISSION */}
-            <HudPanel glow scanLine className="relative overflow-hidden border-amber" style={{ minHeight: '180px' }}>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber opacity-5 blur-[100px] rounded-full" />
-              <div className="flex-between mb-4">
-                <span className="font-mono text-xs text-amber flex items-center gap-2"><Target size={14} /> CURRENT MISSION</span>
-                <span className="badge badge-amber animate-pulse">ACTIVE</span>
+            <HudPanel className="relative overflow-hidden border-info-subtle bg-gradient-to-br from-bg-tertiary to-bg-primary" style={{ minHeight: '180px' }}>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-info opacity-10 blur-[100px] rounded-full pointer-events-none" />
+              <div className="flex-between mb-4 relative z-10">
+                <span className="font-mono text-xs text-info flex items-center gap-2"><Target size={14} /> ACTIVE OBJECTIVE</span>
+                <span className="badge badge-info animate-pulse">EXECUTING</span>
               </div>
 
               {mainQuest ? (
-                <>
-                  <h2 className="font-display text-4xl uppercase tracking-wider text-primary mb-2">{mainQuest.title}</h2>
+                <div className="relative z-10">
+                  <h2 className="font-display text-4xl lg:text-5xl font-bold tracking-tight text-primary mb-2 leading-tight">{mainQuest.title}</h2>
                   <p className="font-mono text-sm text-secondary mb-8 max-w-2xl">{mainQuest.description || 'Execution phase initialized.'}</p>
-                  <TacticalProgress value={mainQuest.progress} max={100} label="MISSION COMPLETION" showValue color="var(--accent-primary)" />
-                </>
+                  <TacticalProgress value={mainQuest.progress} max={100} label="MISSION COMPLETION" showValue color="var(--info)" />
+                </div>
               ) : (
-                <div className="flex-center flex-col h-full opacity-50 py-8">
-                  <AlertTriangle size={32} className="text-amber mb-2" />
-                  <span className="font-mono text-sm">AWAITING PRIMARY MISSION DIRECTIVE</span>
+                <div className="flex-center flex-col h-full opacity-50 py-8 relative z-10">
+                  <AlertTriangle size={32} className="text-muted mb-2" />
+                  <span className="font-mono text-sm">NO ACTIVE DIRECTIVES</span>
                   <Link href="/goals" className="btn btn-primary btn-sm mt-4">ASSIGN MISSION</Link>
                 </div>
               )}
             </HudPanel>
 
-            {/* TODAY'S PROGRESS BAR */}
-            <HudPanel className="p-4">
-              <div className="flex-between mb-2">
-                <span className="font-mono text-xs text-amber uppercase tracking-widest">TODAY'S PROGRESS</span>
-                <span className="font-mono text-xs text-primary">{completedTodayItems} / {totalTodayItems}</span>
-              </div>
-              <div className="w-full h-3 bg-bg-primary rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-1000 ease-out"
-                  style={{ width: `${todayPct}%`, background: todayPct === 100 ? 'var(--success)' : 'var(--accent-primary)' }} />
-              </div>
-            </HudPanel>
-
-            <div className="dashboard-inner-grid">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* SECTION 3: TODAY'S BATTLE PLAN */}
               <HudPanel label="TODAY'S BATTLE PLAN">
@@ -173,18 +155,17 @@ export default function MissionControl() {
                   <AnimatePresence>
                     {activeHabits.map(habit => (
                       <motion.div key={habit.id} layout initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0, height:0}}
-                        className="flex items-center gap-3 p-3 bg-tertiary border border-border-color group hover:border-amber transition-colors cursor-pointer"
-                        onClick={() => toggleHabit(habit.id)}>
-                        <div className="w-4 h-4 border border-border-strong group-hover:border-amber flex-center shrink-0" />
+                        className="flex items-center gap-3 p-3 bg-tertiary border border-border-color group hover:border-info transition-colors cursor-pointer rounded-md">
+                        <div className="w-4 h-4 border border-border-strong group-hover:border-info flex-center shrink-0 rounded-sm" />
                         <span className="font-mono text-sm text-primary flex-1 truncate">{habit.title}</span>
-                        <span className="font-mono text-[9px] text-amber">+{habit.xp_per_completion || 5}</span>
+                        <span className="font-mono text-[9px] text-info font-bold">+{habit.xp_per_completion || 5} XP</span>
                       </motion.div>
                     ))}
                     {pendingTasks.map(task => (
                       <motion.div key={task.id} layout initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0, height:0}}
-                        className="flex items-center gap-3 p-3 bg-tertiary border border-info-subtle group hover:border-info transition-colors cursor-pointer"
+                        className="flex items-center gap-3 p-3 bg-tertiary border border-info-subtle group hover:border-info transition-colors cursor-pointer rounded-md"
                         onClick={() => completeTask(task.id)}>
-                        <div className="w-4 h-4 border border-info flex-center shrink-0" />
+                        <div className="w-4 h-4 border border-info flex-center shrink-0 rounded-sm" />
                         <span className="font-mono text-sm text-primary flex-1 truncate">{task.title}</span>
                         <span className="font-mono text-[9px] text-info">TASK</span>
                       </motion.div>
@@ -232,18 +213,35 @@ export default function MissionControl() {
                 )}
               </HudPanel>
             </div>
+            </div>
           </div>
 
-          {/* RIGHT COLUMN */}
-          <div className="flex flex-col gap-6">
+          {/* RIGHT BENTO AREA (4 cols) */}
+          <div className="bento-col-span-4 flex flex-col gap-6">
+
+            {/* TODAY'S PROGRESS WIDGET */}
+            <HudPanel className="p-5 flex-col flex-center text-center relative overflow-hidden">
+               <div className="absolute -right-4 -top-4 w-24 h-24 bg-success opacity-10 blur-[40px] rounded-full" />
+               <h3 className="font-mono text-xs text-muted uppercase tracking-widest mb-1">DAILY COMPLETION</h3>
+               <div className="font-display text-6xl font-bold tracking-tighter text-primary my-2">
+                 {todayPct}<span className="text-2xl text-secondary">%</span>
+               </div>
+               <div className="font-mono text-[10px] text-muted">
+                 {completedTodayItems} / {totalTodayItems} OBJECTIVES
+               </div>
+               <div className="w-full h-1.5 bg-bg-primary rounded-full overflow-hidden mt-4">
+                 <div className="h-full rounded-full transition-all duration-1000 ease-out bg-success"
+                   style={{ width: `${todayPct}%` }} />
+               </div>
+            </HudPanel>
 
             {/* SECTION 2: ACTIVE BATTLES */}
-            <HudPanel label="ACTIVE BATTLES" className="border-danger">
+            <HudPanel label="BATTLE STATUS" className="border-danger-subtle">
               <div className="flex-col gap-3">
                 {battles.length > 0 ? battles.map((battle, idx) => {
                   const Icon = BATTLE_ICONS[battle.name] || Swords
                   const statusColor = STATUS_COLORS[battle.status] || 'var(--danger)'
-                  const severityColor = SEVERITY_COLORS[battle.severity] || 'var(--accent-primary)'
+                  const severityColor = SEVERITY_COLORS[battle.severity] || 'var(--info)'
                   return (
                     <div key={idx} className="relative p-3 bg-tertiary border border-border-color overflow-hidden group hover:border-danger transition-colors">
                       <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: severityColor }} />
@@ -278,7 +276,7 @@ export default function MissionControl() {
                     })}
                   </div>
                 )}
-                <Link href="/profile" className="font-mono text-[10px] text-muted hover:text-amber text-center transition-colors mt-1">
+                <Link href="/profile" className="font-mono text-[10px] text-muted hover:text-primary hover:underline text-center transition-colors mt-1">
                   MANAGE BATTLES →
                 </Link>
               </div>
@@ -290,18 +288,18 @@ export default function MissionControl() {
                 <AnimatePresence>
                   {timeline.map((item, i) => (
                     <motion.div key={item.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-                      className="relative pl-6 py-3 border-l border-border-strong group hover:border-amber transition-colors">
-                      <div className="absolute left-[-4px] top-4 w-2 h-2 rounded-full bg-border-color group-hover:bg-amber transition-colors" />
+                      className="relative pl-6 py-3 border-l border-border-strong group hover:border-info transition-colors">
+                      <div className="absolute left-[-4px] top-4 w-2 h-2 rounded-full bg-border-color group-hover:bg-info transition-colors" />
                       <div className="font-mono text-[9px] text-muted mb-1">{new Date(item.created_at).toLocaleTimeString()}</div>
-                      <div className="font-mono text-xs text-primary uppercase leading-relaxed">{item.description}</div>
-                      <div className="font-mono text-[10px] text-amber mt-1">+{item.amount} XP</div>
+                      <div className="font-mono text-xs text-primary leading-relaxed">{item.description}</div>
+                      <div className="font-mono text-[10px] text-info mt-1 font-bold">+{item.amount} XP</div>
                     </motion.div>
                   ))}
                   {timeline.length === 0 && <div className="font-mono text-xs text-muted py-4">NO RECENT ACTIVITY DETECTED.</div>}
                 </AnimatePresence>
               </div>
               <div className="pt-4 mt-2 border-t border-border-color text-center">
-                <Link href="/portfolio-log" className="font-mono text-xs text-amber hover:text-primary transition-colors underline">VIEW FULL LOGS</Link>
+                <Link href="/portfolio-log" className="font-mono text-xs text-info hover:text-primary transition-colors hover:underline">VIEW FULL LOGS</Link>
               </div>
             </HudPanel>
 

@@ -34,7 +34,7 @@ export default function AppShell({ children }) {
   if (authLoading || profileLoading) {
     return (
       <div className="flex-center" style={{ height: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-        <div className="typewriter-text font-mono text-amber">INITIALIZING SYSTEMS...</div>
+        <div className="font-mono text-sm tracking-widest text-primary animate-pulse">LOADING WORKSPACE...</div>
       </div>
     )
   }
@@ -101,8 +101,8 @@ export default function AppShell({ children }) {
           <div className="sidebar-user">
             <Shield size={24} color="var(--accent-primary)" opacity={0.5} />
             <div className="flex-col">
-              <span className="sidebar-username">{profile?.rank || 'OPERATOR'}</span>
-              <span className="sidebar-rank">LV.{profile?.level || 1}</span>
+              <span className="font-display uppercase text-xs tracking-wide">{profile?.rank || 'OPERATOR'}</span>
+              <span className="font-mono text-sm text-primary font-bold">LV.{profile?.level || 1}</span>
             </div>
           </div>
         </div>

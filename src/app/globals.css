@@ -16,81 +16,81 @@
 
 :root {
   /* ── Color Palette: Backgrounds ── */
-  --bg-primary:     #050505; /* Matte black */
-  --bg-secondary:   #0a0a0a; /* Darkest gunmetal */
-  --bg-tertiary:    #141414; /* Gunmetal */
-  --bg-hover:       #1c1c1c;
-  --bg-active:      #262626;
-  --bg-input:       #080808;
-  --bg-overlay:     rgba(0, 0, 0, 0.85);
-  --bg-overlay-heavy: rgba(0, 0, 0, 0.95);
+  --bg-primary:     #000000; /* Pure black */
+  --bg-secondary:   #0A0A0A; /* Deepest gray */
+  --bg-tertiary:    #111111; /* Elevated gray */
+  --bg-hover:       #1A1A1A;
+  --bg-active:      #222222;
+  --bg-input:       #050505;
+  --bg-overlay:     rgba(0, 0, 0, 0.7);
+  --bg-overlay-heavy: rgba(0, 0, 0, 0.9);
 
   /* ── Color Palette: Text ── */
-  --text-primary:   #e2e4e9;
-  --text-secondary: #8a8f9a;
-  --text-muted:     #5c6170;
-  --text-inverse:   #0b0d12;
-  --text-disabled:  #3a3f4d;
+  --text-primary:   #EDEDED;
+  --text-secondary: #A1A1AA;
+  --text-muted:     #71717A;
+  --text-inverse:   #000000;
+  --text-disabled:  #3F3F46;
 
-  /* ── Color Palette: Accent — Tactical Amber ── */
-  --accent-primary:   #d4a843;
-  --accent-secondary: #1a5fb4;
-  --accent-gradient:  linear-gradient(135deg, #d4a843, #c4963a);
-  --accent-glow:      rgba(212, 168, 67, 0.3);
-  --accent-subtle:    rgba(212, 168, 67, 0.08);
-  --accent-hover:     #e0b64e;
-  --accent-pressed:   #c49a3a;
+  /* ── Color Palette: Accent — Pure White & Linear Gradients ── */
+  --accent-primary:   #FFFFFF;
+  --accent-secondary: #A855F7;
+  --accent-gradient:  linear-gradient(135deg, #A855F7, #3B82F6);
+  --accent-glow:      rgba(255, 255, 255, 0.1);
+  --accent-subtle:    rgba(255, 255, 255, 0.05);
+  --accent-hover:     #F4F4F5;
+  --accent-pressed:   #E4E4E7;
 
-  /* ── Color Palette: Secondary — Blue Holographic ── */
-  --accent-secondary: #00f0ff;
-  --navy-glow:        rgba(0, 240, 255, 0.3);
-  --navy-subtle:      rgba(0, 240, 255, 0.08);
+  /* ── Color Palette: Secondary — Vercel Blue ── */
+  --accent-secondary: #0070F3;
+  --navy-glow:        rgba(0, 112, 243, 0.15);
+  --navy-subtle:      rgba(0, 112, 243, 0.05);
 
   /* ── Color Palette: Semantic ── */
-  --success:        #2ecc71;
-  --success-subtle: rgba(46, 204, 113, 0.1);
-  --success-glow:   rgba(46, 204, 113, 0.3);
-  --warning:        #f39c12;
-  --warning-subtle: rgba(243, 156, 18, 0.1);
-  --warning-glow:   rgba(243, 156, 18, 0.3);
-  --danger:         #e74c3c;
-  --danger-subtle:  rgba(231, 76, 60, 0.1);
-  --danger-glow:    rgba(231, 76, 60, 0.3);
-  --info:           #3498db;
-  --info-subtle:    rgba(52, 152, 219, 0.1);
-  --info-glow:      rgba(52, 152, 219, 0.3);
+  --success:        #10B981;
+  --success-subtle: rgba(16, 185, 129, 0.1);
+  --success-glow:   rgba(16, 185, 129, 0.2);
+  --warning:        #F59E0B;
+  --warning-subtle: rgba(245, 158, 11, 0.1);
+  --warning-glow:   rgba(245, 158, 11, 0.2);
+  --danger:         #EF4444;
+  --danger-subtle:  rgba(239, 68, 68, 0.1);
+  --danger-glow:    rgba(239, 68, 68, 0.2);
+  --info:           #3B82F6;
+  --info-subtle:    rgba(59, 130, 246, 0.1);
+  --info-glow:      rgba(59, 130, 246, 0.2);
 
   /* ── Color Palette: Rank System ── */
-  --rank-e:       #8a8f9a; /* text-secondary */
-  --rank-d:       #3498db; /* info */
-  --rank-c:       #00f0ff; /* navy holographic */
-  --rank-b:       #d4a843; /* amber */
-  --rank-a:       #f39c12; /* warning */
-  --rank-s:       #e74c3c; /* danger/red */
-  --rank-emperor: #d4a843; /* intense amber */
+  --rank-e:       #A1A1AA; /* zinc-400 */
+  --rank-d:       #3B82F6; /* blue-500 */
+  --rank-c:       #8B5CF6; /* violet-500 */
+  --rank-b:       #D946EF; /* fuchsia-500 */
+  --rank-a:       #F59E0B; /* amber-500 */
+  --rank-s:       #EF4444; /* red-500 */
+  --rank-emperor: #FFFFFF; /* pure white */
 
-  /* ── HUD Chrome ── */
-  --hud-border:        rgba(212, 168, 67, 0.15);
-  --hud-border-active: rgba(212, 168, 67, 0.4);
-  --hud-border-hover:  rgba(212, 168, 67, 0.25);
-  --amber-glow:        rgba(212, 168, 67, 0.3);
-  --amber-glow-sm:     rgba(212, 168, 67, 0.2);
-  --amber-glow-lg:     rgba(212, 168, 67, 0.15);
-  --amber-glow-xl:     rgba(212, 168, 67, 0.08);
+  /* ── HUD Chrome -> Sleek Glass ── */
+  --hud-border:        rgba(255, 255, 255, 0.08);
+  --hud-border-active: rgba(255, 255, 255, 0.2);
+  --hud-border-hover:  rgba(255, 255, 255, 0.15);
+  --amber-glow:        rgba(255, 255, 255, 0.1);
+  --amber-glow-sm:     rgba(255, 255, 255, 0.05);
+  --amber-glow-lg:     rgba(255, 255, 255, 0.03);
+  --amber-glow-xl:     rgba(255, 255, 255, 0.01);
 
   /* ── Borders ── */
-  --border-color:  #1f1f1f;
-  --border-subtle: #111111;
-  --border-strong: #2f2f2f;
+  --border-color:  rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-strong: rgba(255, 255, 255, 0.15);
 
   /* ── Glass / Frosted Panels ── */
-  --glass-bg:     rgba(5, 5, 5, 0.85);
-  --glass-border: rgba(212, 168, 67, 0.15);
-  --glass-blur:   16px;
+  --glass-bg:     rgba(10, 10, 10, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur:   32px;
 
   /* ── Radius ── */
-  --radius-xs:   2px;
-  --radius-sm:   4px;
+  --radius-xs:   4px;
+  --radius-sm:   6px;
   --radius-md:   8px;
   --radius-lg:   12px;
   --radius-xl:   16px;
@@ -98,10 +98,10 @@
   --radius-full: 9999px;
 
   /* ── Shadows ── */
-  --shadow-xs:    0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm:    0 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg:    0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xs:    0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm:    0 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.8);
+  --shadow-lg:    0 12px 24px rgba(0, 0, 0, 0.9);
   --shadow-xl:    0 16px 48px rgba(0, 0, 0, 0.6);
   --shadow-amber: 0 0 20px rgba(212, 168, 67, 0.15);
   --shadow-amber-lg: 0 0 40px rgba(212, 168, 67, 0.1), 0 0 80px rgba(212, 168, 67, 0.05);
@@ -408,15 +408,13 @@ p:last-child {
   grid-template-columns: var(--sidebar-width) 1fr;
   min-height: 100vh;
   width: 100%;
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(212, 168, 67, 0.03) 0%, transparent 50%),
-    linear-gradient(rgba(20,20,20,0.5) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20,20,20,0.5) 1px, transparent 1px);
-  background-size: 100% 100%, 40px 40px, 40px 40px;
+  background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 100%, rgba(168, 85, 247, 0.03) 0%, transparent 50%);
+  background-color: var(--bg-primary);
 }
 
 .app-shell.sidebar-collapsed {
-  grid-template-columns: var(--sidebar-collapsed) 1fr;
+  /* removed grid */
 }
 
 /* ── Sidebar ── */
@@ -426,7 +424,9 @@ p:last-child {
   left: 0;
   width: var(--sidebar-width);
   height: 100vh;
-  background: var(--bg-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
@@ -544,7 +544,7 @@ p:last-child {
   height: 70%;
   background: var(--accent-primary);
   border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 8px var(--amber-glow);
+  box-shadow: 0 0 8px var(--accent-subtle);
 }
 
 .nav-item-icon {
@@ -559,7 +559,7 @@ p:last-child {
 
 .nav-item.active .nav-item-icon {
   opacity: 1;
-  filter: drop-shadow(0 0 4px var(--amber-glow-sm));
+  filter: drop-shadow(0 0 4px var(--accent-subtle));
 }
 
 .nav-item-label {
@@ -710,6 +710,7 @@ p:last-child {
   overflow-x: hidden;
   padding: var(--space-6) var(--space-8);
   position: relative;
+  scroll-behavior: smooth;
 }
 
 .main-content-full {
@@ -902,11 +903,15 @@ p:last-child {
 
 .hud-panel {
   position: relative;
-  background: var(--bg-secondary);
-  border: 1px solid var(--hud-border);
-  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: var(--space-5);
   transition: all var(--transition-smooth);
+  box-shadow: 0 4px 24px -8px rgba(0,0,0,0.5);
+  overflow: hidden;
 }
 
 .hud-panel.compact {
@@ -926,12 +931,15 @@ p:last-child {
 }
 
 .hud-panel.interactive:hover {
-  border-color: var(--hud-border-hover);
-  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  background: rgba(20, 20, 20, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -8px rgba(0,0,0,0.8);
 }
 
 .hud-panel.interactive:active {
-  background: var(--bg-active);
+  transform: translateY(0);
+  background: rgba(15, 15, 15, 0.9);
 }
 
 /* ── HUD Glow Effect ── */
@@ -940,27 +948,27 @@ p:last-child {
 }
 
 .hud-glow:hover {
-  box-shadow: 0 0 16px var(--amber-glow-lg), 0 0 4px var(--amber-glow-sm);
-  border-color: var(--hud-border-hover);
+  box-shadow: 0 0 20px var(--accent-subtle);
+  border-color: var(--border-strong);
 }
 
 .hud-glow.active,
 .hud-glow.always {
-  box-shadow: 0 0 20px var(--amber-glow-lg), 0 0 6px var(--amber-glow-sm);
-  border-color: var(--hud-border-active);
+  box-shadow: 0 0 30px var(--accent-subtle);
+  border-color: var(--accent-subtle);
 }
 
 /* ── HUD Corner Brackets ── */
 .hud-corner {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border-style: solid;
-  border-color: var(--accent-primary);
-  opacity: 0.5;
+  border-color: var(--accent-subtle);
+  opacity: 0.2;
   pointer-events: none;
   z-index: 1;
-  transition: opacity var(--transition-base);
+  transition: opacity var(--transition-base), border-color var(--transition-base);
 }
 
 .hud-panel:hover .hud-corner {
@@ -1030,21 +1038,7 @@ p:last-child {
 
 /* ── Scan Line ── */
 .scan-line {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--accent-primary) 20%,
-    var(--accent-primary) 80%,
-    transparent 100%
-  );
-  opacity: 0.3;
-  animation: scan-vertical 4s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 2;
+  display: none; /* Disable scanlines for minimal look */
 }
 
 .scan-line.fast {
