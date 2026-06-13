@@ -7,6 +7,12 @@ import { Shield, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import TypewriterText from '@/components/ui/TypewriterText'
 
+const AUTH_PILLARS = [
+  { value: '1', label: 'Private console' },
+  { value: '2', label: 'Focus tools' },
+  { value: '3', label: 'Execution loops' },
+]
+
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
@@ -21,7 +27,7 @@ export default function Login() {
     if (params.get('error')) {
       setError('Authentication failed. Please try again.')
     }
-    
+
     // Check if already logged in
     const checkUser = async () => {
       const supabase = createClient()
@@ -43,10 +49,10 @@ export default function Login() {
         if (error) throw error
         router.push('/dashboard')
       } else {
-        const { error } = await supabase.auth.signUp({ 
-          email, 
+        const { error } = await supabase.auth.signUp({
+          email,
           password,
-          options: { data: { username: email.split('@')[0] } } 
+          options: { data: { username: email.split('@')[0] } }
         })
         if (error) throw error
         // Auto sign-in logic depends on Supabase email confirmation settings
@@ -76,111 +82,130 @@ export default function Login() {
   }
 
   return (
-    <div className="flex-center tactical-grid" style={{ minHeight: '100vh', width: '100%', padding: '1rem' }}>
-      
-      <motion.div 
-        className="hud-panel hud-glow"
-        style={{ width: '100%', maxWidth: '400px', padding: '2.5rem 2rem', position: 'relative' }}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="scan-line" />
-        
-        {/* Header */}
-        <div className="flex-col flex-center mb-8">
-          <motion.div
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Shield size={48} color="var(--accent-primary)" style={{ filter: 'drop-shadow(0 0 10px var(--amber-glow))' }} />
-          </motion.div>
-          <h1 className="font-display tracking-wider mt-4 glow-amber text-amber" style={{ fontSize: '2rem', lineHeight: 1 }}>
-            CHIRAGOS
-          </h1>
-          <TypewriterText 
-            text="Initializing Command Center..." 
-            speed={50} 
-            className="text-xs mt-2 text-muted uppercase" 
-          />
-        </div>
-
-        {/* Tabs */}
-        <div className="flex mb-6" style={{ borderBottom: '1px solid var(--border-color)' }}>
-          <button 
-            onClick={() => { setIsLogin(true); setError(null); }}
-            className={`flex-1 pb-2 font-display uppercase tracking-wide text-sm transition-all ${isLogin ? 'text-amber' : 'text-muted'}`}
-            style={{ borderBottom: `2px solid ${isLogin ? 'var(--accent-primary)' : 'transparent'}` }}
-          >
-            Authenticate
-          </button>
-          <button 
-            onClick={() => { setIsLogin(false); setError(null); }}
-            className={`flex-1 pb-2 font-display uppercase tracking-wide text-sm transition-all ${!isLogin ? 'text-amber' : 'text-muted'}`}
-            style={{ borderBottom: `2px solid ${!isLogin ? 'var(--accent-primary)' : 'transparent'}` }}
-          >
-            Register
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 border border-danger bg-danger-subtle text-danger font-mono text-xs">
-            [ERROR]: {error}
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleAuth} className="flex-col gap-4">
-          <div style={{ position: 'relative' }}>
-            <Mail size={16} className="text-muted" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input 
-              type="email" 
-              placeholder="OPERATOR EMAIL" 
-              className="input font-mono text-sm" 
-              style={{ paddingLeft: '2.5rem' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div style={{ position: 'relative' }}>
-            <Lock size={16} className="text-muted" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input 
-              type="password" 
-              placeholder="ACCESS CODE" 
-              className="input font-mono text-sm" 
-              style={{ paddingLeft: '2.5rem' }}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <button type="submit" className="btn btn-primary btn-full mt-2" disabled={loading} style={{ height: '44px' }}>
-            {loading ? <Loader2 size={18} className="animate-spin" /> : (
-              <>
-                {isLogin ? 'INITIATE LOGIN' : 'CREATE PROTOCOL'}
-                <ArrowRight size={16} />
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="flex-center my-6" style={{ position: 'relative' }}>
-          <div style={{ position: 'absolute', width: '100%', height: '1px', background: 'var(--border-color)' }} />
-          <span className="font-mono text-xs text-muted bg-secondary px-2" style={{ position: 'relative', zIndex: 1 }}>OR OVERRIDE WITH</span>
-        </div>
-
-        <button 
-          onClick={handleGoogleLogin} 
-          type="button" 
-          className="btn btn-secondary btn-full font-display tracking-wide"
+    <div className="auth-shell">
+      <div className="auth-grid">
+        <motion.section
+          className="auth-intro glass-panel-strong"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          GOOGLE OAUTH PROTOCOL
-        </button>
+          <div>
+            <p className="auth-kicker">Private command surface</p>
+            <h1>ChiragOS</h1>
+            <p className="auth-lede">
+              A focused operating system for planning the day, protecting attention, and turning intent into execution.
+            </p>
+          </div>
 
-      </motion.div>
+          <div className="auth-metrics">
+            {AUTH_PILLARS.map((item) => (
+              <div key={item.label} className="auth-metric">
+                <span className="auth-metric-value">0{item.value}</span>
+                <span className="auth-metric-label">{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="auth-note">Focused by design. No extra noise.</div>
+        </motion.section>
+
+        <motion.div
+          className="hud-panel hud-glow auth-card"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.08 }}
+        >
+          <div className="scan-line" />
+
+          <div className="auth-card-header">
+            <div className="auth-card-icon">
+              <Shield size={22} color="var(--accent-primary)" />
+            </div>
+            <div>
+              <p className="auth-kicker">Secure entry</p>
+              <h2 className="auth-card-title">Access the console</h2>
+              <TypewriterText
+                text="Initializing command center..."
+                speed={42}
+                className="auth-subtitle"
+              />
+            </div>
+          </div>
+
+          <div className="auth-tabs">
+            <button
+              onClick={() => { setIsLogin(true); setError(null); }}
+              className={`auth-tab ${isLogin ? 'active' : ''}`}
+              type="button"
+            >
+              Sign in
+            </button>
+            <button
+              onClick={() => { setIsLogin(false); setError(null); }}
+              className={`auth-tab ${!isLogin ? 'active' : ''}`}
+              type="button"
+            >
+              Create account
+            </button>
+          </div>
+
+          {error && (
+            <div className="auth-error">
+              [ERROR]: {error}
+            </div>
+          )}
+
+          <form onSubmit={handleAuth} className="auth-form">
+            <label className="auth-field">
+              <Mail size={16} className="auth-field-icon" />
+              <input
+                type="email"
+                placeholder="operator@email.com"
+                className="input font-mono text-sm"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </label>
+
+            <label className="auth-field">
+              <Lock size={16} className="auth-field-icon" />
+              <input
+                type="password"
+                placeholder="access code"
+                className="input font-mono text-sm"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </label>
+
+            <button type="submit" className="btn btn-primary btn-full auth-remote" disabled={loading}>
+              {loading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <>
+                  {isLogin ? 'Initialize login' : 'Create profile'}
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="auth-divider">
+            <span>Or continue with</span>
+          </div>
+
+          <button
+            onClick={handleGoogleLogin}
+            type="button"
+            className="btn btn-secondary btn-full font-display tracking-wide"
+          >
+            Google OAuth
+          </button>
+        </motion.div>
+      </div>
     </div>
   )
 }
