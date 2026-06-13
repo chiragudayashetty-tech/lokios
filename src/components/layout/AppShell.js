@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Home, Crosshair, Target, CheckSquare, Lightbulb, 
   BookOpen, Briefcase, CalendarDays, Monitor, User, 
-  Menu, X, Shield 
+  Menu, X, Shield, Trophy
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },
   { href: '/calendar', icon: CalendarDays, label: 'Calendar' },
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
+  { href: '/xp', icon: Trophy, label: 'XP Metrics' },
   { href: '/profile', icon: User, label: 'Operator Profile' }
 ]
 
@@ -44,7 +45,7 @@ export default function AppShell({ children }) {
     NAV_ITEMS[0], // Command Center
     NAV_ITEMS[1], // Daily Ops
     NAV_ITEMS[3], // Operations
-    NAV_ITEMS[8], // Operator Profile
+    NAV_ITEMS[9], // Operator Profile
   ]
 
 
