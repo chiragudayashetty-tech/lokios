@@ -22,7 +22,7 @@ export default function XPDashboard() {
     const fetchData = async () => {
       const supabase = createClient()
       
-      const { data: profile } = await supabase.from('user_profiles').select('total_xp').eq('id', user.id).single()
+      const { data: profile } = await supabase.from('profiles').select('total_xp').eq('id', user.id).single()
       if (profile) setTotalXp(profile.total_xp || 0)
 
       const { data: history } = await supabase.from('xp_history').select('*').eq('user_id', user.id).order('created_at', { ascending: true })

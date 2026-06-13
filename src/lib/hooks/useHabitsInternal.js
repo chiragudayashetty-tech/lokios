@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS } from '@/lib/constants'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
 
 export function useHabitsInternal() {
   const [habits, setHabits] = useState([])
@@ -104,14 +105,14 @@ export function useHabitsInternal() {
         const alreadyFailed = monthLogs.some(l => l.habit_id === habitId && l.date === targetDate && l.status === 'failed')
         if (!alreadyFailed) {
           const habit = habits.find((h) => h.id === habitId)
-          await supabase.rpc('award_xp', {
-            p_user_id: user.id,
-            p_amount: -15,
-            p_source_type: 'habit_failed',
-            p_source_id: habitId,
-            p_description: `Failed habit: ${habit?.title || 'Unknown'}`,
-            p_stat_category: habit?.stat_category || 'discipline',
-          })
+          await robustAwardXP(
+            user.id,
+            -15,
+            'habit_failed',
+            habitId,
+            `Failed habit: ${habit?.title || 'Unknown'}`,
+            habit?.stat_category || 'discipline'
+          )
           
           setMonthLogs((prev) => [...prev.filter(l => !(l.habit_id === habitId && l.date === targetDate)), {
             id: `virtual_fail_${habitId}_${Date.now()}`,
@@ -131,10 +132,10 @@ export function useHabitsInternal() {
           
           if (targetDate === todayStr) {
             const habit = habits.find((h) => h.id === habitId)
-            await supabase.rpc('award_xp', {
-              p_user_id: user.id, p_amount: habit?.xp_per_completion || 25, p_source_type: 'habit_complete',
-              p_source_id: habitId, p_description: `Completed habit: ${habit?.title || 'Unknown'}`, p_stat_category: habit?.stat_category || 'discipline',
-            })
+            await robustAwardXP(
+              user.id, habit?.xp_per_completion || 25, 'habit_complete',
+              habitId, `Completed habit: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline'
+            )
           }
         } else if (existingLog && (!existingLog.status || existingLog.status === 'completed')) {
           // Un-complete
@@ -157,10 +158,10 @@ export function useHabitsInternal() {
           
           if (targetDate === todayStr) {
             const habit = habits.find((h) => h.id === habitId)
-            await supabase.rpc('award_xp', {
-              p_user_id: user.id, p_amount: habit?.xp_per_completion || 25, p_source_type: 'habit_complete',
-              p_source_id: habitId, p_description: `Completed habit: ${habit?.title || 'Unknown'}`, p_stat_category: habit?.stat_category || 'discipline',
-            })
+            await robustAwardXP(
+              user.id, habit?.xp_per_completion || 25, 'habit_complete',
+              habitId, `Completed habit: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline'
+            )
           }
         }
       }

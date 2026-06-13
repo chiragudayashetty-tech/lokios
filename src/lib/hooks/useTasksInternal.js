@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
 
 export function useTasksInternal() {
   const [tasks, setTasks] = useState([])
@@ -120,14 +121,14 @@ export function useTasksInternal() {
         }
       }
 
-      await supabase.rpc('award_xp', {
-        p_user_id: user.id,
-        p_amount: xpAward,
-        p_source_type: 'task_complete',
-        p_source_id: id,
-        p_description: `Completed task: ${task?.title || 'Unknown'}`,
-        p_stat_category: task?.category || 'discipline',
-      })
+      await robustAwardXP(
+        user.id,
+        xpAward,
+        'task_complete',
+        id,
+        `Completed task: ${task?.title || 'Unknown'}`,
+        task?.category || 'discipline'
+      )
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       return updated
