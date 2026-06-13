@@ -3,10 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
-  const userId = searchParams.get('user_id')
+  const username = searchParams.get('username')
 
-  if (!userId) {
-    return new NextResponse("Missing user_id parameter. Add ?user_id=YOUR_ID", { status: 400 })
+  if (!username) {
+    return new NextResponse("Missing username parameter. Add ?username=YOUR_USERNAME", { status: 400 })
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -14,6 +14,15 @@ export async function GET(request) {
 
   // Using service role key if available to bypass RLS for background sync, otherwise falls back to anon
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+  // Look up user_id from profiles table using username
+  const { data: profile } = await supabase.from('profiles').select('id').eq('username', username).single()
+  
+  if (!profile) {
+    return new NextResponse("User not found.", { status: 404 })
+  }
+  
+  const userId = profile.id
 
   const [eventsRes, tasksRes, goalsRes] = await Promise.all([
     supabase.from('calendar_events').select('*').eq('user_id', userId),

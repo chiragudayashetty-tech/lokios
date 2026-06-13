@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
+import { getLocalDateStr } from '@/lib/utils/dates'
 
 export function useGoalsInternal() {
   const [goals, setGoals] = useState([])
@@ -106,7 +107,7 @@ export function useGoalsInternal() {
     }
   }, [user])
 
-  const completeGoal = useCallback(async (id, proofUrl = null) => {
+  const completeGoal = useCallback(async (id, proofUrl = null, skipXp = false) => {
     if (!user) return null
 
     try {
@@ -130,28 +131,30 @@ export function useGoalsInternal() {
           title: `Mission Accomplished: ${goal.title}`,
           description: goal.description || 'Completed Mission.',
           type: 'other', // safe enum fallback
-          date: new Date().toISOString().split('T')[0],
+          date: getLocalDateStr(),
           media_urls: [proofUrl]
         }])
       }
 
-      // Determine XP based on goal type
-      const xpMap = {
-        main_quest: XP_REWARDS.goal_complete_main,
-        side_quest: XP_REWARDS.goal_complete_side,
-        weekly: XP_REWARDS.goal_complete_weekly,
-        long_term: XP_REWARDS.goal_complete_long_term,
-      }
-      const xpAmount = xpMap[goal.type] || XP_REWARDS.goal_complete_side
+      if (!skipXp) {
+        // Determine XP based on goal type
+        const xpMap = {
+          main_quest: XP_REWARDS.goal_complete_main,
+          side_quest: XP_REWARDS.goal_complete_side,
+          weekly: XP_REWARDS.goal_complete_weekly,
+          long_term: XP_REWARDS.goal_complete_long_term,
+        }
+        const xpAmount = xpMap[goal.type] || XP_REWARDS.goal_complete_side
 
-      await robustAwardXP(
-        user.id,
-        xpAmount,
-        'goal_complete',
-        id,
-        `Completed ${goal.type}: ${goal.title}`,
-        goal.category || 'discipline'
-      )
+        await robustAwardXP(
+          user.id,
+          xpAmount,
+          'goal_complete',
+          id,
+          `Completed ${goal.type}: ${goal.title}`,
+          goal.category || 'discipline'
+        )
+      }
 
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
       return updated
@@ -175,7 +178,7 @@ export function useGoalsInternal() {
 
       if (error) throw error
 
-      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStr = getLocalDateStr()
       await robustRemoveXP(user.id, 'goal_complete', id, todayStr)
 
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))

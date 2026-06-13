@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap } from 'lucide-react'
 
 export default function Operations() {
-  const { tasks: { tasks, todayTasks, loading, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation } = useOS()
+  const { tasks: { tasks, todayTasks, loading, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation } = useOS()
 
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)
@@ -16,13 +17,13 @@ export default function Operations() {
   const [editForm, setEditForm] = useState({})
 
   // Deploy form
-  const [deployForm, setDeployForm] = useState({ title: '', description: '', due_date: new Date().toISOString().split('T')[0], difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '' })
+  const [deployForm, setDeployForm] = useState({ title: '', description: '', due_date: getLocalDateStr(), difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '' })
 
   // Proof state
   const [proofTask, setProofTask] = useState(null)
   const [proofUrl, setProofUrl] = useState('')
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateStr()
   const pending = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
   const overdue = pending.filter(t => t.due_date && t.due_date < today)
   const dueToday = pending.filter(t => t.due_date === today)
@@ -57,10 +58,16 @@ export default function Operations() {
   const pushToTomorrow = async (task) => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
-    await editTask(task.id, { due_date: tomorrow.toISOString().split('T')[0] })
+    await editTask(task.id, { due_date: getLocalDateStr(tomorrow) })
+  }
+
+  const handleDeleteOperation = async (id) => {
+    if (!window.confirm('Are you sure? This cannot be undone.')) return
+    await deleteOperation(id)
   }
 
   const failTask = async (task) => {
+    if (!window.confirm('Are you sure? This cannot be undone.')) return
     await editTask(task.id, { status: 'failed', completed_at: new Date().toISOString() })
   }
 
@@ -121,7 +128,7 @@ export default function Operations() {
             <h1 className="page-title flex items-center gap-3"><Target className="text-amber" /> OPERATIONS</h1>
             <p className="page-subtitle font-mono text-xs uppercase">Deploy morning work goals. Execute. Complete. Prove.</p>
           </div>
-          <button className="btn btn-primary flex items-center gap-2" onClick={() => setShowDeploy(true)}>
+          <button type='button' className="btn btn-primary flex items-center gap-2" onClick={() => setShowDeploy(true)}>
             <Plus size={18} /> DEPLOY OPERATION
           </button>
         </header>
@@ -154,7 +161,7 @@ export default function Operations() {
             { id: 'all', label: `ALL PENDING (${pending.length})` },
             { id: 'completed', label: `COMPLETED (${completed.length})` }
           ].map(tab => (
-            <button key={tab.id} className={`tab-item ${activeTab === tab.id ? 'tab-active' : ''}`}
+            <button type='button' key={tab.id} className={`tab-item ${activeTab === tab.id ? 'tab-active' : ''}`}
               onClick={() => setActiveTab(tab.id)}>
               {tab.label}
             </button>
@@ -207,8 +214,8 @@ export default function Operations() {
                           </div>
                         </div>
                         <div className="flex gap-2 justify-end mt-2">
-                          <button onClick={() => saveEdit(task.id)} className="btn btn-primary btn-sm">SAVE</button>
-                          <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
+                          <button type='button' onClick={() => saveEdit(task.id)} className="btn btn-primary btn-sm">SAVE</button>
+                          <button type='button' onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
                         </div>
                       </div>
                     </HudPanel>
@@ -243,8 +250,8 @@ export default function Operations() {
                         )}
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {!isCompleted && <button onClick={() => startEdit(task)} className="p-1.5 text-muted hover:text-amber transition-colors"><Edit2 size={13} /></button>}
-                        {isCompleted && <button onClick={() => undoCompleteTask(task.id)} className="p-1.5 text-muted hover:text-info transition-colors" title="Undo"><RotateCcw size={13} /></button>}
+                        {!isCompleted && <button type='button' onClick={() => startEdit(task)} className="p-1.5 text-muted hover:text-amber transition-colors"><Edit2 size={13} /></button>}
+                        {isCompleted && <button type='button' onClick={() => undoCompleteTask(task.id)} className="p-1.5 text-muted hover:text-info transition-colors" title="Undo"><RotateCcw size={13} /></button>}
                       </div>
                     </div>
 
@@ -276,19 +283,19 @@ export default function Operations() {
                       </div>
                       {!isCompleted && (
                         <div className="flex gap-2">
-                          <button className="btn btn-ghost btn-sm" onClick={() => setEditingId(task.id)} title="Edit">
+                          <button type='button' className="btn btn-ghost btn-sm" onClick={() => setEditingId(task.id)} title="Edit">
                             <Edit2 size={14} />
                           </button>
-                          <button className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
+                          <button type='button' className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
                             <RotateCcw size={14} />
                           </button>
-                          <button className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(task)} title="Fail Operation">
+                          <button type='button' className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(task)} title="Fail Operation">
                             <X size={14} />
                           </button>
-                          <button className="btn btn-ghost btn-sm text-danger" onClick={() => deleteTask(task.id)} title="Delete Operation">
+                          <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task.id)} title="Delete Operation">
                             <Trash2 size={14} />
                           </button>
-                          <button onClick={() => handleComplete(task)}
+                          <button type='button' onClick={() => handleComplete(task)}
                             className="btn btn-primary btn-sm flex items-center gap-1.5 px-4">
                             <Zap size={12} /> EXECUTE
                           </button>
@@ -296,7 +303,7 @@ export default function Operations() {
                       )}
                       {isCompleted && (
                         <div className="flex gap-2">
-                          <button className="btn btn-ghost btn-sm text-danger" onClick={() => deleteTask(task.id)} title="Delete Operation">
+                          <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task.id)} title="Delete Operation">
                             <Trash2 size={14} />
                           </button>
                           <span className="font-mono text-[10px] text-success flex items-center gap-1">
@@ -317,7 +324,7 @@ export default function Operations() {
             <div className="font-mono text-sm text-muted mb-4">
               {activeTab === 'completed' ? 'NO COMPLETED OPERATIONS YET.' : 'NO OPERATIONS IN THIS VIEW.'}
             </div>
-            <button onClick={() => setShowDeploy(true)} className="btn btn-primary btn-sm">DEPLOY OPERATION</button>
+            <button type='button' onClick={() => setShowDeploy(true)} className="btn btn-primary btn-sm">DEPLOY OPERATION</button>
           </div>
         )}
 
@@ -329,7 +336,7 @@ export default function Operations() {
                 <HudPanel className="modal-content border-amber" style={{ width: '520px', maxWidth: '95vw' }}>
                   <div className="flex-between mb-5 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber tracking-widest">DEPLOY OPERATION</span>
-                    <button onClick={() => setShowDeploy(false)} className="text-muted hover:text-danger"><X size={18} /></button>
+                    <button type='button' onClick={() => setShowDeploy(false)} className="text-muted hover:text-danger"><X size={18} /></button>
                   </div>
                   <form onSubmit={handleDeploy} className="flex-col gap-4">
                     <div>
@@ -398,7 +405,7 @@ export default function Operations() {
                 <HudPanel className="modal-content border-success" style={{ width: '440px', maxWidth: '95vw' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-success tracking-widest">OPERATION COMPLETE</span>
-                    <button onClick={() => setProofTask(null)} className="text-muted hover:text-danger"><X size={18} /></button>
+                    <button type='button' onClick={() => setProofTask(null)} className="text-muted hover:text-danger"><X size={18} /></button>
                   </div>
                   <p className="font-mono text-sm text-primary mb-4 truncate">{proofTask.title}</p>
                   <div className="flex-col gap-4">
@@ -409,17 +416,17 @@ export default function Operations() {
                     </div>
                     <div className="flex justify-between items-center mt-3">
                       <div className="flex gap-2">
-                        <button className="btn btn-ghost btn-sm" onClick={() => setEditingId(proofTask.id)}>
+                        <button type='button' className="btn btn-ghost btn-sm" onClick={() => setEditingId(proofTask.id)}>
                           <Edit2 size={14} /> EDIT
                         </button>
-                        <button className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(proofTask)}>
+                        <button type='button' className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(proofTask)}>
                           <RotateCcw size={14} /> PUSH TO TOMORROW
                         </button>
-                        <button className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(proofTask)}>
+                        <button type='button' className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(proofTask)}>
                           <X size={14} /> FAIL OPERATION
                         </button>
                       </div>
-                      <button className="btn btn-secondary btn-sm" onClick={() => submitCompletion(false)}>
+                      <button type='button' className="btn btn-secondary btn-sm" onClick={() => submitCompletion(false)}>
                         <Check size={14} /> EXECUTE
                       </button>
                     </div>

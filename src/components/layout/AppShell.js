@@ -52,6 +52,7 @@ export default function AppShell({ children }) {
       <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         {mobileMenuOpen && (
           <button
+            type="button"
             className="absolute top-4 right-4 text-muted hover:text-danger hidden-desktop"
             onClick={() => setMobileMenuOpen(false)}
           >

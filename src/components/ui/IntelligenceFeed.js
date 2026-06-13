@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useGoals } from '@/lib/hooks/useGoals'
 import { useTasks } from '@/lib/hooks/useTasks'
@@ -11,6 +11,7 @@ import { XP_RULES } from '@/lib/xpRules'
 import HudPanel from './HudPanel'
 import { AlertTriangle, Activity, Zap, Cpu, Skull, Crosshair } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { DIFFICULTY_LEVELS } from '@/lib/constants'
 
 export default function IntelligenceFeed() {
@@ -21,15 +22,26 @@ export default function IntelligenceFeed() {
   const { awardXP } = useXP()
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
+  const evaluatedTodayRef = useRef(false)
 
   useEffect(() => {
     if (!user) return
+    if (evaluatedTodayRef.current) return
+    evaluatedTodayRef.current = true
 
     async function evaluateConsequences() {
+      const today = new Date()
+      const todayStr = getLocalDateStr(today)
+      const cacheKey = `consequences_${user.id}_${todayStr}`
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) {
+        setAlerts(JSON.parse(cached))
+        setLoading(false)
+        return
+      }
+
       const newAlerts = []
       const supabase = createClient()
-      const today = new Date()
-      const todayStr = today.toISOString().split('T')[0]
       const currentHour = today.getHours()
       const isWeekday = today.getDay() >= 1 && today.getDay() <= 5
 
@@ -41,7 +53,7 @@ export default function IntelligenceFeed() {
           newAlerts.push({
             id: 'direction_penalty',
             type: 'critical',
-            icon: Skull,
+            iconName: 'Skull',
             message: `LACK OF DIRECTION: Only ${deployedToday.length}/3 operations deployed this morning. Immediate action required. (-25 XP PENALTY)`,
             actionable: true
           })
@@ -74,7 +86,7 @@ export default function IntelligenceFeed() {
       // Calculate yesterday's date
       const yesterday = new Date(today)
       yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().split('T')[0]
+      const yesterdayStr = getLocalDateStr(yesterday)
 
       // Fetch logs for yesterday
       const { data: yesterdayLogs } = await supabase
@@ -122,14 +134,14 @@ export default function IntelligenceFeed() {
               newAlerts.push({
                 id: `battle_heal_${battle.name}`,
                 type: 'warning',
-                icon: Activity,
+                iconName: 'Activity',
                 message: `BATTLE LOST GROUND: Missing counter-measures caused "${battle.name}" to heal +${hpChange} HP.`
               })
             } else {
               newAlerts.push({
                 id: `battle_dmg_${battle.name}`,
                 type: 'success',
-                icon: Zap,
+                iconName: 'Zap',
                 message: `DIRECT HIT: Counter-measures dealt -${Math.abs(hpChange)} HP damage to "${battle.name}".`
               })
             }
@@ -172,25 +184,26 @@ export default function IntelligenceFeed() {
           newAlerts.push({
             id: 'deadline_warning',
             type: 'warning',
-            icon: Crosshair,
+            iconName: 'Crosshair',
             message: `MISSION DEADLINE APPROACHING: "${mainQuest.title}" is due in ${daysLeft} days. Accelerate execution.`
           })
         } else if (daysLeft < 0 && mainQuest.status !== 'completed') {
           newAlerts.push({
             id: 'deadline_failed',
             type: 'critical',
-            icon: Skull,
+            iconName: 'Skull',
             message: `MISSION FAILED: Deadline passed for "${mainQuest.title}". Massive XP loss imminent.`
           })
         }
       }
       
       setAlerts(newAlerts)
+      sessionStorage.setItem(cacheKey, JSON.stringify(newAlerts))
       setLoading(false)
     }
 
     evaluateConsequences()
-  }, [user, mainQuest, tasks, habits])
+  }, [user])
 
   if (loading) return null
 
@@ -209,7 +222,8 @@ export default function IntelligenceFeed() {
     <div className="flex-col gap-3 mb-6">
       <AnimatePresence>
         {alerts.map((alert, i) => {
-          const Icon = alert.icon
+          const iconMap = { Skull, Activity, Zap, Crosshair }
+          const Icon = iconMap[alert.iconName] || AlertTriangle
           let colorClass, bgClass, borderColor;
           
           if (alert.type === 'critical') {

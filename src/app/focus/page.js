@@ -8,10 +8,16 @@ import { Play, Pause, Square, Clock, Target, CheckCircle, X } from 'lucide-react
 import { useUserConfig } from '@/lib/hooks/useUserConfig'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { getLocalDateStr } from '@/lib/utils/dates'
+import { useOS } from '@/lib/context/OSContext'
+import { XP_REWARDS } from '@/lib/constants'
 
 export default function FocusMode() {
+  const { auth: { user }, xp: { awardXP } } = useOS()
   const { config } = useUserConfig()
   const router = useRouter()
+  const [saving, setSaving] = useState(false)
   const [timeLeft, setTimeLeft] = useState(25 * 60) // 25 mins in seconds
   const [isActive, setIsActive] = useState(false)
   const [taskName, setTaskName] = useState('FOCUS SESSION')
@@ -38,9 +44,30 @@ export default function FocusMode() {
 
   const toggleTimer = () => setIsActive(!isActive)
   const resetTimer = () => { setIsActive(false); setTimeLeft(totalTime) }
-  const completeTask = () => {
-    // Would complete task in DB here
-    router.push('/dashboard')
+  const completeTask = async () => {
+    if (saving || !user) return
+    setSaving(true)
+    try {
+      const durationHours = (totalTime - timeLeft) / 3600
+      if (durationHours > 0) {
+        const supabase = createClient()
+        const payload = {
+          user_id: user.id,
+          title: taskName,
+          type: 'project_work',
+          description: 'Deep Focus Session',
+          date: getLocalDateStr(),
+          duration: durationHours.toFixed(2),
+          duration_unit: 'hours',
+        }
+        await supabase.from('work_logs').insert([payload])
+        await awardXP(Math.round(XP_REWARDS.FOCUS_HOUR * durationHours), 'focus', getLocalDateStr(), 'Deep Focus Completed', 'discipline')
+      }
+      router.push('/dashboard')
+    } catch (err) {
+      console.error('Focus save error:', err)
+      setSaving(false)
+    }
   }
 
   const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0')
@@ -101,8 +128,8 @@ export default function FocusMode() {
           </button>
         </div>
 
-        <button onClick={completeTask} className="btn btn-ghost text-success hover:text-success border border-success-subtle hover:bg-success-subtle w-full max-w-xs p-4 tracking-widest">
-          <CheckCircle size={18} className="mr-2" /> OPERATION COMPLETE
+        <button onClick={completeTask} disabled={saving} className="btn btn-ghost text-success hover:text-success border border-success-subtle hover:bg-success-subtle w-full max-w-xs p-4 tracking-widest">
+          <CheckCircle size={18} className="mr-2" /> {saving ? 'SAVING LOG...' : 'OPERATION COMPLETE'}
         </button>
 
       </motion.div>

@@ -56,6 +56,7 @@ export async function robustRemoveXP(userId, sourceType, sourceId, targetDateStr
     .eq('source_type', sourceType)
     .eq('source_id', sourceId)
     .gte('created_at', `${targetDateStr}T00:00:00`)
+    .lte('created_at', `${targetDateStr}T23:59:59`)
 
   if (!historyItems || historyItems.length === 0) return true
 

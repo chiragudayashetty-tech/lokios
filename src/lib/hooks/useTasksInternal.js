@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
+import { getLocalDateStr } from '@/lib/utils/dates'
 
 export function useTasksInternal() {
   const [tasks, setTasks] = useState([])
@@ -40,9 +41,9 @@ export function useTasksInternal() {
     fetchTasks()
   }, [fetchTasks])
 
-  const getTodayTasks = useCallback(() => {
+  const todayTasks = useMemo(() => {
     const today = new Date()
-    const todayStr = today.toISOString().split('T')[0]
+    const todayStr = getLocalDateStr(today)
     const dayOfWeek = today.getDay()
 
     return tasks.filter((task) => {
@@ -113,7 +114,7 @@ export function useTasksInternal() {
 
       // Check if overdue
       if (task?.due_date) {
-        const today = new Date().toISOString().split('T')[0]
+        const today = getLocalDateStr()
         const dueDate = task.due_date.split('T')[0]
         if (dueDate < today) {
           // Overdue: Only award 50% XP
@@ -153,7 +154,7 @@ export function useTasksInternal() {
       if (error) throw error
 
       // Remove XP
-      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStr = getLocalDateStr()
       await robustRemoveXP(user.id, 'task_complete', id, todayStr)
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
@@ -207,7 +208,7 @@ export function useTasksInternal() {
 
   return {
     tasks,
-    todayTasks: getTodayTasks(),
+    todayTasks,
     loading,
     addTask,
     editTask,

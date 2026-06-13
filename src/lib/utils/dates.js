@@ -2,31 +2,36 @@
  * Simple date formatter.
  * Supported format tokens: YYYY, MM, DD, HH, mm, ss, MMM, MMMM, ddd, dddd
  */
+export function getLocalDateStr(date = new Date()) {
+  const offset = date.getTimezoneOffset()
+  const local = new Date(date.getTime() - offset * 60 * 1000)
+  return local.toISOString().split('T')[0]
+}
+
 export function formatDate(date, format = 'YYYY-MM-DD') {
   const d = new Date(date)
   if (isNaN(d.getTime())) return ''
 
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ]
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
   const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
   const pad = (n) => String(n).padStart(2, '0')
 
-  return format
-    .replace('YYYY', d.getFullYear())
-    .replace('MMMM', months[d.getMonth()])
-    .replace('MMM', monthsShort[d.getMonth()])
-    .replace('MM', pad(d.getMonth() + 1))
-    .replace('dddd', days[d.getDay()])
-    .replace('ddd', daysShort[d.getDay()])
-    .replace('DD', pad(d.getDate()))
-    .replace('HH', pad(d.getHours()))
-    .replace('mm', pad(d.getMinutes()))
-    .replace('ss', pad(d.getSeconds()))
+  const tokensMap = {
+    YYYY: d.getFullYear(),
+    MMMM: months[d.getMonth()],
+    MMM: monthsShort[d.getMonth()],
+    MM: pad(d.getMonth() + 1),
+    dddd: days[d.getDay()],
+    ddd: daysShort[d.getDay()],
+    DD: pad(d.getDate()),
+    HH: pad(d.getHours()),
+    mm: pad(d.getMinutes()),
+    ss: pad(d.getSeconds())
+  }
+
+  return format.replace(/YYYY|MMMM|MMM|MM|dddd|ddd|DD|HH|mm|ss/g, token => tokensMap[token] || token)
 }
 
 /**

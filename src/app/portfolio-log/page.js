@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/hooks/useProfile'
@@ -70,7 +71,7 @@ export default function ProofOfWork() {
       description: newLog.description,
       type: newLog.type,
       duration_hours: duration_hours,
-      date: new Date().toISOString().split('T')[0]
+      date: getLocalDateStr()
     }
 
     if (newLog.mediaUrl.trim()) {

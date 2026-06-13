@@ -14,8 +14,13 @@ export default function ScreenIntel() {
   const { auth: { user }, xp: { awardXP }, goals: { mainQuest, updateProgress } } = useOS()
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [notes, setNotes] = useState('')
   const [xpAnim, setXpAnim] = useState(null)
+  
+  const [totalHours, setTotalHours] = useState(0)
+  const [focusHours, setFocusHours] = useState(0)
+  const [doomScroll, setDoomScroll] = useState(0)
   
   const getLocalDateStr = (d) => {
     const offset = d.getTimezoneOffset()
@@ -53,8 +58,10 @@ export default function ScreenIntel() {
 
   const handleSave = async (e) => {
     e.preventDefault()
-    if (!user) return
-    const supabase = createClient()
+    if (!user || saving) return
+    setSaving(true)
+    try {
+      const supabase = createClient()
     
     const parsedDoom = parseInt(doomScroll) || 0;
     
@@ -93,10 +100,13 @@ export default function ScreenIntel() {
       }
     }
 
-    if (xpAmount !== 0) {
-      await awardXP(xpAmount, 'screen_time', date, reason, 'discipline')
-      setXpAnim({ amount: xpAmount, reason })
-      setTimeout(() => setXpAnim(null), 4000)
+      if (xpAmount !== 0) {
+        await awardXP(xpAmount, 'screen_time', date, reason, 'discipline')
+        setXpAnim({ amount: xpAmount, reason })
+        setTimeout(() => setXpAnim(null), 4000)
+      }
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -163,7 +173,7 @@ export default function ScreenIntel() {
                 </p>
               </div>
               <div className="mt-auto">
-                <button type="submit" className="btn btn-primary w-full py-3">TRANSMIT DATA</button>
+                <button type="submit" disabled={saving} className="btn btn-primary w-full py-3">{saving ? 'TRANSMITTING...' : 'TRANSMIT DATA'}</button>
               </div>
             </form>
           </HudPanel>

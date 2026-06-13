@@ -56,6 +56,16 @@ export default function DailyOps() {
     toggleHabitForDate(habitId, dateStr)
   }
 
+  const handleFail = (habitId, dateStr) => {
+    if (!window.confirm('Are you sure? This cannot be undone.')) return
+    toggleHabitForDate(habitId, dateStr, 'failed')
+  }
+
+  const handleDelete = async (habitId) => {
+    if (!window.confirm('Are you sure you want to permanently delete this operation?')) return
+    await deleteHabit(habitId)
+  }
+
   // Stats for each habit
   const getHabitStats = (habitId) => {
     let completed = 0
@@ -233,7 +243,7 @@ export default function DailyOps() {
                         <button onClick={() => archiveHabit(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-amber p-1" title="Archive Routine">
                           <Archive size={12} />
                         </button>
-                        <button onClick={() => deleteHabit(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-danger p-1" title="Delete Routine">
+                        <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-danger p-1" title="Delete Routine">
                           <Trash2 size={12} />
                         </button>
                       </div>
@@ -364,7 +374,7 @@ export default function DailyOps() {
                           <Check size={14} color={isComplete ? "#fff" : "var(--muted)"} strokeWidth={isComplete ? 3 : 2} />
                         </button>
                         <button 
-                          onClick={() => toggleHabitForDate(h.id, todayStr, 'failed')}
+                          onClick={() => handleFail(h.id, todayStr)}
                           className="flex items-center justify-center transition-all hover:scale-110"
                           style={{
                             width: '22px', height: '22px',

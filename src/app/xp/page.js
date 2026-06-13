@@ -6,6 +6,7 @@ import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts'
@@ -65,7 +66,7 @@ export default function XPDashboard() {
   const last14Days = Array.from({length: 14}, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (13 - i))
-    return d.toISOString().split('T')[0]
+    return getLocalDateStr(d)
   })
 
   let runningTotal = 0

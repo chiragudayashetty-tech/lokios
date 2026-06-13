@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { XP_REWARDS } from '@/lib/constants'
 
 export function useBrainDumpInternal() {
@@ -129,7 +130,7 @@ export function useBrainDumpInternal() {
             user_id: user.id,
             title: item.content,
             type: 'custom',
-            due_date: new Date().toISOString().split('T')[0],
+            due_date: getLocalDateStr(),
             category: 'other',
             difficulty: 'MEDIUM'
           })

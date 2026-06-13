@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { XP_REWARDS } from '@/lib/constants'
 
 export function useJournalInternal() {
@@ -40,14 +41,14 @@ export function useJournalInternal() {
   }, [fetchEntries])
 
   const todayEntry = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0]
+    const todayStr = getLocalDateStr()
     return entries.find((e) => e.date === todayStr) || null
   }, [entries])
 
   const saveEntry = useCallback(async (data) => {
     if (!user) return null
 
-    const todayStr = new Date().toISOString().split('T')[0]
+    const todayStr = getLocalDateStr()
     const entryDate = data.date || todayStr
 
     try {

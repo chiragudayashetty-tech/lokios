@@ -3,28 +3,18 @@
 import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { useCalendar } from '@/lib/hooks/useCalendar'
-import { useTasks } from '@/lib/hooks/useTasks'
-import { useGoals } from '@/lib/hooks/useGoals'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Plus, MapPin, AlignLeft, Calendar as CalendarIcon, Clock, CheckSquare, Target } from 'lucide-react'
 
 export default function Calendar() {
-  const { user } = useAuth()
+  const { auth: { user }, profile: { profile }, tasks: { tasks, loading: tLoading }, goals: { goals: allGoals, loading: gLoading } } = useOS()
   const [currentDate, setCurrentDate] = useState(new Date())
   const { events, loading, addEvent } = useCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1)
-  const { tasks, loading: tLoading } = useTasks()
-  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, loading: gLoading } = useGoals()
-  
-  const allGoals = [
-    ...(mainQuest ? [mainQuest] : []),
-    ...(sideQuests || []),
-    ...(longTermGoals || []),
-    ...(weeklyGoals || [])
-  ]
 
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState(getLocalDateStr())
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({ title: '', description: '', location: '', start_time: '', end_time: '' })
 
@@ -51,14 +41,14 @@ export default function Calendar() {
 
   // Combine Events, Tasks, and Goals
   const getItemsForDate = (dateStr) => {
-    const dayEvents = events.filter(e => new Date(e.start_time).toISOString().split('T')[0] === dateStr).map(e => ({ ...e, _type: 'event' }))
+    const dayEvents = events.filter(e => getLocalDateStr(new Date(e.start_time)) === dateStr).map(e => ({ ...e, _type: 'event' }))
     const dayTasks = tasks.filter(t => t.due_date === dateStr).map(t => ({ ...t, _type: 'task', start_time: `${dateStr}T00:00:00` }))
     const dayGoals = allGoals.filter(g => g.deadline && g.deadline.split('T')[0] === dateStr).map(g => ({ ...g, _type: 'goal', start_time: g.deadline }))
     return [...dayEvents, ...dayTasks, ...dayGoals]
   }
 
   const selectedDateItems = getItemsForDate(selectedDate)
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = getLocalDateStr()
 
   if (loading || tLoading || gLoading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">SYNCING SATELLITES...</span></div></AppShell>
 
@@ -71,7 +61,7 @@ export default function Calendar() {
             <p className="page-subtitle font-mono uppercase text-xs">Temporal scheduling and event tracking.</p>
           </div>
           <div className="flex items-center gap-4">
-            <a href={`/api/calendar?user_id=${user?.id}`} target="_blank" className="text-info font-mono text-xs hover:text-primary transition-colors hover:underline">
+            <a href={`/api/calendar?username=${profile?.username}`} target="_blank" rel="noopener noreferrer" className="text-info font-mono text-xs hover:text-primary transition-colors hover:underline">
               .ICS SUBSCRIPTION
             </a>
             <button className="btn btn-primary" onClick={() => {

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { useHabitsInternal } from '@/lib/hooks/useHabitsInternal'
 import { useTasksInternal } from '@/lib/hooks/useTasksInternal'
 import { useGoalsInternal } from '@/lib/hooks/useGoalsInternal'
@@ -38,39 +39,40 @@ export function OSProvider({ children }) {
       
       // Temporal Sync: Check missed days and auto-fail habits
       if (auth.user && habits.habits.length > 0) {
-        try {
-          const today = new Date().toISOString().split('T')[0]
-          const lastSync = localStorage.getItem('lokios_last_sync')
-          
-          if (lastSync && lastSync < today) {
-            const missingDates = []
-            let curr = new Date(lastSync)
-            curr.setDate(curr.getDate() + 1)
-            const todayDate = new Date(today)
+        const runTemporalSync = async () => {
+          try {
+            const today = getLocalDateStr()
+            const lastSync = localStorage.getItem('lokios_last_sync')
             
-            while (curr < todayDate) {
-              missingDates.push(new Date(curr).toISOString().split('T')[0])
+            if (lastSync && lastSync < today) {
+              const missingDates = []
+              let curr = new Date(lastSync)
               curr.setDate(curr.getDate() + 1)
-            }
-            
-            if (missingDates.length > 0) {
-              console.log('Running Temporal Sync for missed dates:', missingDates)
-              // We just fire and forget the failures so boot isn't blocked
-              missingDates.forEach(dateStr => {
-                habits.habits.forEach(habit => {
-                  // Only fail if it doesn't already have a log
-                  const hasLog = habits.monthLogs.some(l => l.habit_id === habit.id && l.date === dateStr && l.status !== 'failed')
-                  if (!hasLog) {
-                    habits.toggleHabitForDate(habit.id, dateStr, 'failed')
+              const todayDate = new Date(today)
+              
+              while (curr < todayDate) {
+                missingDates.push(getLocalDateStr(new Date(curr)))
+                curr.setDate(curr.getDate() + 1)
+              }
+              
+              if (missingDates.length > 0) {
+                console.log('Running Temporal Sync for missed dates:', missingDates)
+                for (const dateStr of missingDates) {
+                  for (const habit of habits.habits) {
+                    const hasLog = habits.monthLogs.some(l => l.habit_id === habit.id && l.date === dateStr && l.status !== 'failed')
+                    if (!hasLog) {
+                      await habits.toggleHabitForDate(habit.id, dateStr, 'failed')
+                    }
                   }
-                })
-              })
+                }
+              }
             }
+            localStorage.setItem('lokios_last_sync', today)
+          } catch (e) {
+            console.error('Temporal sync failed', e)
           }
-          localStorage.setItem('lokios_last_sync', today)
-        } catch (e) {
-          console.error('Temporal sync failed', e)
         }
+        runTemporalSync()
       }
       
       setBooting(false)
@@ -95,6 +97,8 @@ export function OSProvider({ children }) {
       const task = tasks.tasks.find(t => t.id === taskId)
       if (!task) return null
 
+      const wasAlreadyCompleted = task.status === 'completed'
+
       // 1. Complete the underlying task
       const updatedTask = await tasks.completeTask(taskId, proofUrl)
 
@@ -112,25 +116,47 @@ export function OSProvider({ children }) {
 
           // 3. Automate Mission Completion if 100%
           if (newProgress >= 100) {
-            await goals.completeGoal(goal.id, proofUrl)
+            // Pass skipXp = wasAlreadyCompleted to avoid re-awarding goal XP if task was already completed and this is just a re-submission/proof update.
+            await goals.completeGoal(goal.id, proofUrl, wasAlreadyCompleted)
             
             // 4. If Mission is completed, Automate Battle Damage (Main Quest)
-            const mainQuest = goals.goals.find((g) => g.type === 'main_quest' && g.status !== 'completed')
-            if (mainQuest && mainQuest.progress !== undefined) {
-               // Deal 15% damage to the Main Battle for completing a Mission
-               const newBattleHealth = Math.max(0, mainQuest.progress - 15)
-               await goals.updateProgress(mainQuest.id, newBattleHealth)
-               
-               xp.awardXP(100, 'battle_damage', mainQuest.id, 'Dealt damage to active Battle by completing Mission', 'combat')
-               
-               if (newBattleHealth <= 0) {
-                 await goals.completeGoal(mainQuest.id)
-               }
+            if (!wasAlreadyCompleted) {
+              const mainQuest = goals.goals.find((g) => g.type === 'main_quest' && g.status !== 'completed')
+              if (mainQuest && mainQuest.progress !== undefined) {
+                 // Deal 15% damage to the Main Battle for completing a Mission
+                 const newBattleHealth = Math.max(0, mainQuest.progress - 15)
+                 await goals.updateProgress(mainQuest.id, newBattleHealth)
+                 
+                 xp.awardXP(100, 'battle_damage', mainQuest.id, 'Dealt damage to active Battle by completing Mission', 'combat')
+                 
+                 if (newBattleHealth <= 0) {
+                   await goals.completeGoal(mainQuest.id)
+                 }
+              }
             }
           }
         }
       }
       return updatedTask
+    },
+    
+    deleteOperation: async (taskId) => {
+      const task = tasks.tasks.find(t => t.id === taskId)
+      if (!task) return false
+      
+      const success = await tasks.deleteTask(taskId)
+      if (success && task.goal_id) {
+        const goal = goals.goals.find(g => g.id === task.goal_id)
+        if (goal && goal.status !== 'completed') {
+          const goalTasks = tasks.tasks.filter(t => t.goal_id === task.goal_id && t.id !== taskId)
+          const completedGoalTasks = goalTasks.filter(t => t.status === 'completed').length
+          const totalGoalTasks = goalTasks.length || 1
+          
+          const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
+          await goals.updateProgress(goal.id, newProgress)
+        }
+      }
+      return success
     }
   }
 

@@ -1,19 +1,21 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
+import { getLocalDateStr } from '@/lib/utils/dates'
 
 export function useHabitsInternal() {
   const [habits, setHabits] = useState([])
   const [monthLogs, setMonthLogs] = useState([])
   const [loading, setLoading] = useState(true)
+  const processingRef = useRef(new Set())
   const { user } = useAuth()
   const supabase = createClient()
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = getLocalDateStr()
 
   // Derive todayLogs from monthLogs for backward compat
   const todayLogs = useMemo(() => {
@@ -94,6 +96,10 @@ export function useHabitsInternal() {
       (l) => l.habit_id === habitId && l.date === targetDate
     )
 
+    const procKey = `${habitId}_${targetDate}_${newStatus}`
+    if (processingRef.current.has(procKey)) return null
+    processingRef.current.add(procKey)
+
     try {
       if (newStatus === 'failed') {
         // Mark as failed: delete any completed log, insert a negative XP event
@@ -115,7 +121,7 @@ export function useHabitsInternal() {
           )
           
           setMonthLogs((prev) => [...prev.filter(l => !(l.habit_id === habitId && l.date === targetDate)), {
-            id: `virtual_fail_${habitId}_${Date.now()}`,
+            id: `virtual_fail_${habitId}_${crypto.randomUUID()}`,
             habit_id: habitId,
             date: targetDate,
             status: 'failed'
@@ -172,8 +178,10 @@ export function useHabitsInternal() {
     } catch (error) {
       console.error('Error toggling habit:', error)
       return null
+    } finally {
+      processingRef.current.delete(procKey)
     }
-  }, [user, monthLogs, habits, todayStr])
+  }, [user, habits, monthLogs, todayStr])
 
   // Backward-compat wrapper
   const toggleHabit = useCallback(async (habitId) => {
