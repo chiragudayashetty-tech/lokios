@@ -185,6 +185,30 @@ export default function XPDashboard() {
           </div>
         </div>
 
+        {/* FULL ACTIVITY TIMELINE */}
+        <div className="mt-8">
+          <HudPanel label="FULL ACTIVITY LOG">
+            <div className="flex-col gap-0 max-h-[600px] overflow-y-auto pr-4">
+              {timeline.slice().reverse().map((item, i) => (
+                <div key={item.id} className="relative pl-6 py-4 border-l border-border-strong group hover:border-info transition-colors border-b border-border-color last:border-b-0">
+                  <div className="absolute left-[-4.5px] top-5 w-2 h-2 rounded-full bg-border-color group-hover:bg-info transition-colors" />
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="font-mono text-sm text-primary">{item.description}</div>
+                    <div className={`font-mono text-sm font-bold ${item.amount > 0 ? 'text-success' : 'text-danger'}`}>
+                      {item.amount > 0 ? '+' : ''}{item.amount} XP
+                    </div>
+                  </div>
+                  <div className="font-mono text-[10px] text-muted flex gap-3">
+                    <span>{new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString()}</span>
+                    <span className="uppercase text-amber">{item.stat_category || 'GENERAL'}</span>
+                  </div>
+                </div>
+              ))}
+              {timeline.length === 0 && <div className="font-mono text-sm text-muted py-8 text-center">NO ACTIVITY LOGS ARCHIVED.</div>}
+            </div>
+          </HudPanel>
+        </div>
+
       </div>
     </AppShell>
   )

@@ -281,7 +281,7 @@ export default function MissionControl() {
                 </AnimatePresence>
               </div>
               <div className="pt-4 mt-2 border-t border-border-color text-center">
-                <Link href="/portfolio-log" className="font-mono text-xs text-info hover:text-primary transition-colors hover:underline">VIEW FULL LOGS</Link>
+                <Link href="/xp" className="font-mono text-xs text-info hover:text-primary transition-colors hover:underline">VIEW FULL LOGS</Link>
               </div>
             </HudPanel>
 
