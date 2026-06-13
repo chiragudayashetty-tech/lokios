@@ -61,19 +61,22 @@ export default function ProofOfWork() {
     e.preventDefault()
     if (!newLog.title.trim()) return
     const supabase = createClient()
+    const parsedDuration = newLog.duration ? parseFloat(newLog.duration) : null
+    const duration_hours = parsedDuration ? (newLog.duration_unit === 'days' ? parsedDuration * 24 : parsedDuration) : null
+
     const { data, error } = await supabase.from('work_logs').insert([{
       user_id: user.id,
       title: newLog.title,
       description: newLog.description,
       type: newLog.type,
-      duration_hours: newLog.duration_hours ? parseFloat(newLog.duration_hours) : null,
+      duration_hours: duration_hours,
       date: new Date().toISOString().split('T')[0]
     }]).select()
     
     if (data) {
       setLogs([data[0], ...logs])
       setShowAddLog(false)
-      setNewLog({ title: '', description: '', type: 'feature', duration_hours: '' })
+      setNewLog({ title: '', description: '', type: 'project_work', duration: '', duration_unit: 'hours' })
     }
   }
 
@@ -154,8 +157,14 @@ export default function ProofOfWork() {
                         <textarea className="textarea font-mono text-sm h-20" value={newLog.description} onChange={e => setNewLog({...newLog, description: e.target.value})} />
                       </div>
                       <div>
-                        <label className="font-mono text-xs text-muted mb-1 block">DURATION (HOURS)</label>
-                        <input type="number" step="0.5" className="input font-mono text-sm" value={newLog.duration_hours} onChange={e => setNewLog({...newLog, duration_hours: e.target.value})} />
+                        <label className="font-mono text-xs text-muted mb-1 block">DURATION</label>
+                        <div className="flex gap-2">
+                          <input type="number" step="0.5" className="input font-mono text-sm flex-1" value={newLog.duration} onChange={e => setNewLog({...newLog, duration: e.target.value})} placeholder="0" />
+                          <select className="select font-mono text-sm w-24" value={newLog.duration_unit} onChange={e => setNewLog({...newLog, duration_unit: e.target.value})}>
+                            <option value="hours">HOURS</option>
+                            <option value="days">DAYS</option>
+                          </select>
+                        </div>
                       </div>
                       <div className="flex items-end justify-end">
                         <button type="submit" className="btn btn-primary w-full md:w-auto">SAVE LOG</button>
@@ -178,7 +187,12 @@ export default function ProofOfWork() {
                     </div>
                     
                     <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-2">{log.title}</h3>
-                    {log.description && <p className="font-mono text-sm text-secondary mb-4">{log.description}</p>}
+                    {log.description && <p className="font-mono text-sm text-secondary mb-3">{log.description}</p>}
+                    
+                    <div className="font-mono text-[10px] text-muted flex items-center gap-1 mb-4">
+                      <Clock size={10} />
+                      {log.duration_hours ? (log.duration_hours >= 24 && log.duration_hours % 24 === 0 ? `DURATION: ${log.duration_hours / 24} DAYS` : `DURATION: ${log.duration_hours} HOURS`) : 'NO DURATION LOGGED'}
+                    </div>
                     
                     {log.media_urls && log.media_urls.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-4">

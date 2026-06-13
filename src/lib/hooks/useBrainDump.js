@@ -129,6 +129,9 @@ export function useBrainDump() {
             user_id: user.id,
             title: item.content,
             type: 'custom',
+            due_date: new Date().toISOString().split('T')[0],
+            category: 'other',
+            difficulty: 'MEDIUM'
           })
           .select()
           .single()

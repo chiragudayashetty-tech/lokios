@@ -160,6 +160,28 @@ export default function ScreenIntel() {
           </HudPanel>
 
           <HudPanel label="7-DAY ANALYSIS" glow style={{ height: '400px' }}>
+            <div style={{ width: '100%', height: '350px', minHeight: '300px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip 
+                    cursor={{fill: 'var(--bg-tertiary)'}}
+                    contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '0' }}
+                    itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
+                    labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+                  />
+                  <Legend iconType="square" wrapperStyle={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }} />
+                  <Bar dataKey="total" name="Total (h)" fill="var(--border-strong)" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="focus" name="Focus (h)" fill="var(--amber)" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </HudPanel>
+        </div>
+
+        <HudPanel label="DOOMSCROLL TREND (MINUTES)" style={{ height: '300px' }}>
+          <div style={{ width: '100%', height: '250px', minHeight: '200px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                 <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
@@ -170,32 +192,14 @@ export default function ScreenIntel() {
                   itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
                   labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
                 />
-                <Legend iconType="square" wrapperStyle={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }} />
-                <Bar dataKey="total" name="Total (h)" fill="var(--border-strong)" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="focus" name="Focus (h)" fill="var(--amber)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="doom" name="Doomscroll (m)" radius={[2, 2, 0, 0]}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.doom >= 60 ? 'var(--danger)' : entry.doom > 0 ? 'var(--warning)' : 'var(--success)'} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </HudPanel>
-        </div>
-
-        <HudPanel label="DOOMSCROLL TREND (MINUTES)" style={{ height: '300px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-              <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-              <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-              <Tooltip 
-                cursor={{fill: 'var(--bg-tertiary)'}}
-                contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '0' }}
-                itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-                labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
-              />
-              <Bar dataKey="doom" name="Doomscroll (m)" radius={[2, 2, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.doom >= 60 ? 'var(--danger)' : entry.doom > 0 ? 'var(--warning)' : 'var(--success)'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          </div>
         </HudPanel>
 
       </div>

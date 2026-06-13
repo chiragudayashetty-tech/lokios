@@ -238,7 +238,6 @@ export default function Operations() {
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {!isCompleted && <button onClick={() => startEdit(task)} className="p-1.5 text-muted hover:text-amber transition-colors"><Edit2 size={13} /></button>}
                         {isCompleted && <button onClick={() => undoCompleteTask(task.id)} className="p-1.5 text-muted hover:text-info transition-colors" title="Undo"><RotateCcw size={13} /></button>}
-                        <button onClick={() => deleteTask(task.id)} className="p-1.5 text-muted hover:text-danger transition-colors"><Trash2 size={13} /></button>
                       </div>
                     </div>
 
@@ -279,6 +278,9 @@ export default function Operations() {
                           <button className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(task)} title="Fail Operation">
                             <X size={14} />
                           </button>
+                          <button className="btn btn-ghost btn-sm text-danger" onClick={() => deleteTask(task.id)} title="Delete Operation">
+                            <Trash2 size={14} />
+                          </button>
                           <button onClick={() => handleComplete(task)}
                             className="btn btn-primary btn-sm flex items-center gap-1.5 px-4">
                             <Zap size={12} /> EXECUTE
@@ -286,9 +288,14 @@ export default function Operations() {
                         </div>
                       )}
                       {isCompleted && (
-                        <span className="font-mono text-[10px] text-success flex items-center gap-1">
-                          <CheckCircle2 size={12} /> COMPLETED
-                        </span>
+                        <div className="flex gap-2">
+                          <button className="btn btn-ghost btn-sm text-danger" onClick={() => deleteTask(task.id)} title="Delete Operation">
+                            <Trash2 size={14} />
+                          </button>
+                          <span className="font-mono text-[10px] text-success flex items-center gap-1">
+                            <CheckCircle2 size={12} /> COMPLETED
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
