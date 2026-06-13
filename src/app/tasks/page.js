@@ -35,17 +35,12 @@ export default function Operations() {
     e.preventDefault()
     if (!deployForm.title.trim()) return
 
-    // DB workaround: Prepend category to title, and use a safe enum for category
-    const uiCategory = deployForm.category === 'other' ? (deployForm.customCategory || 'Other') : deployForm.category
-    const visualTag = `[${uiCategory.replace('_', ' ').toUpperCase()}] `
-    const finalTitle = visualTag + deployForm.title
-
     const result = await addTask({
-      title: finalTitle,
+      title: deployForm.title,
       description: deployForm.description || null,
       due_date: today, 
       difficulty: deployForm.difficulty,
-      category: 'discipline', // Safe enum fallback
+      category: deployForm.category === 'other' ? (deployForm.customCategory || 'Other') : deployForm.category,
       type: deployForm.recurrence_type ? 'recurring' : 'custom',
       recurrence_type: deployForm.recurrence_type || null,
     })
