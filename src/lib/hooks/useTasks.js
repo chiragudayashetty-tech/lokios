@@ -70,12 +70,15 @@ export function useTasks() {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error adding task:', error)
+        return { error }
+      }
       setTasks((prev) => [newTask, ...prev])
-      return newTask
+      return { data: newTask }
     } catch (error) {
-      console.error('Error adding task:', error)
-      return null
+      console.error('Exception adding task:', error)
+      return { error }
     }
   }, [user])
 

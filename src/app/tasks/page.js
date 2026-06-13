@@ -34,15 +34,27 @@ export default function Operations() {
   const handleDeploy = async (e) => {
     e.preventDefault()
     if (!deployForm.title.trim()) return
-    await addTask({
-      title: deployForm.title,
+
+    // DB workaround: Prepend category to title, and use a safe enum for category
+    const uiCategory = deployForm.category === 'other' ? (deployForm.customCategory || 'Other') : deployForm.category
+    const visualTag = `[${uiCategory.replace('_', ' ').toUpperCase()}] `
+    const finalTitle = visualTag + deployForm.title
+
+    const result = await addTask({
+      title: finalTitle,
       description: deployForm.description || null,
-      due_date: today, // Hardcode to today
+      due_date: today, 
       difficulty: deployForm.difficulty,
-      category: deployForm.category === 'other' ? (deployForm.customCategory || 'Other') : deployForm.category,
+      category: 'discipline', // Safe enum fallback
       type: deployForm.recurrence_type ? 'recurring' : 'custom',
       recurrence_type: deployForm.recurrence_type || null,
     })
+
+    if (result && result.error) {
+      alert(`DEPLOYMENT FAILED: ${result.error.message || result.error}\n\nPlease let the AI know what this error says!`)
+      return
+    }
+
     setDeployForm({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '' })
     setShowDeploy(false)
   }
