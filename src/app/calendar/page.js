@@ -100,7 +100,7 @@ export default function Calendar() {
             ))}
             
             {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="calendar-day opacity-50" />
+              <div key={`empty-${i}`} className="calendar-cell other-month" />
             ))}
             
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -114,7 +114,7 @@ export default function Calendar() {
                 <div 
                   key={day} 
                   onClick={() => setSelectedDate(dateStr)}
-                  className={`calendar-day overflow-hidden cursor-pointer transition-all hover:bg-hover ${isToday ? 'today' : ''} ${isSelected ? 'border-info shadow-[inset_0_0_10px_rgba(96,165,250,0.1)]' : ''}`}
+                  className={`calendar-cell overflow-hidden cursor-pointer transition-all hover:bg-hover ${isToday ? 'today' : ''} ${isSelected ? 'border-info shadow-[inset_0_0_10px_rgba(96,165,250,0.1)]' : ''}`}
                   style={isSelected ? { border: '1px solid var(--info)' } : {}}
                 >
                   <div className="flex-between">

@@ -6,10 +6,10 @@ import HudPanel from '@/components/ui/HudPanel'
 import { useHabits } from '@/lib/hooks/useHabits'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Check, Flame, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Plus, Check, Flame, Trash2, ChevronLeft, ChevronRight, X, Archive } from 'lucide-react'
 
 export default function DailyOps() {
-  const { habits, monthLogs, todayLogs, loading, toggleHabitForDate, addHabit, deleteHabit, fetchHabits } = useHabits()
+  const { habits, monthLogs, todayLogs, loading, toggleHabitForDate, addHabit, deleteHabit, archiveHabit, fetchHabits } = useHabits()
 
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth()) // 0-indexed
@@ -229,7 +229,10 @@ export default function DailyOps() {
                           <div className="font-mono text-xs text-primary truncate">{habit.title}</div>
                           <div className="font-mono text-[9px] text-muted uppercase">{cat.name}</div>
                         </div>
-                        <button onClick={() => deleteHabit(habit.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-muted hover:text-danger p-1" title="Delete">
+                        <button onClick={() => archiveHabit(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-amber p-1" title="Archive Routine">
+                          <Archive size={12} />
+                        </button>
+                        <button onClick={() => deleteHabit(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-danger p-1" title="Delete Routine">
                           <Trash2 size={12} />
                         </button>
                       </div>

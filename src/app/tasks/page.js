@@ -3,12 +3,12 @@
 import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
-import { useTasks } from '@/lib/hooks/useTasks'
+import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap } from 'lucide-react'
 
 export default function Operations() {
-  const { tasks, todayTasks, loading, addTask, editTask, completeTask, undoCompleteTask, deleteTask } = useTasks()
+  const { tasks: { tasks, todayTasks, loading, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation } = useOS()
 
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)
@@ -71,7 +71,7 @@ export default function Operations() {
 
   const submitCompletion = async (skipProof = false) => {
     if (!proofTask) return
-    await completeTask(proofTask.id, skipProof ? null : proofUrl)
+    await completeOperation(proofTask.id, skipProof ? null : proofUrl)
     setProofTask(null)
     setProofUrl('')
   }

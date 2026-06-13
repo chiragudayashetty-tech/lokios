@@ -25,10 +25,16 @@ export const viewport = {
   userScalable: false,
 }
 
+import { OSProvider } from '@/lib/context/OSContext'
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <OSProvider>
+          {children}
+        </OSProvider>
+      </body>
     </html>
   )
 }

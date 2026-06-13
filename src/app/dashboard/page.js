@@ -8,10 +8,7 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import IntelligenceFeed from '@/components/ui/IntelligenceFeed'
-import { useProfile } from '@/lib/hooks/useProfile'
-import { useTasks } from '@/lib/hooks/useTasks'
-import { useGoals } from '@/lib/hooks/useGoals'
-import { useHabits } from '@/lib/hooks/useHabits'
+import { useOS } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
 
 // Battle icon mapping
@@ -25,10 +22,7 @@ const BATTLE_ICONS = {
 }
 
 export default function MissionControl() {
-  const { profile } = useProfile()
-  const { mainQuest, sideQuests } = useGoals()
-  const { tasks, todayTasks, completeTask } = useTasks()
-  const { habits, todayLogs, toggleHabit } = useHabits()
+  const { profile: { profile }, goals: { mainQuest }, tasks: { tasks, todayTasks }, habits: { habits, todayLogs, toggleHabit }, completeOperation } = useOS()
   const [timeline, setTimeline] = useState([])
   const [battles, setBattles] = useState([])
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -164,7 +158,7 @@ export default function MissionControl() {
                     {pendingTasks.map(task => (
                       <motion.div key={task.id} layout initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0, height:0}}
                         className="flex items-center gap-3 p-3 bg-tertiary border border-info-subtle group hover:border-info transition-colors cursor-pointer rounded-md"
-                        onClick={() => completeTask(task.id)}>
+                        onClick={() => completeOperation(task.id)}>
                         <div className="w-4 h-4 border border-info flex-center shrink-0 rounded-sm" />
                         <span className="font-mono text-sm text-primary flex-1 truncate">{task.title}</span>
                         <span className="font-mono text-[9px] text-info">TASK</span>
@@ -193,25 +187,20 @@ export default function MissionControl() {
               </HudPanel>
 
               {/* SECTION 4: NEXT ACTION */}
-              <HudPanel label="NEXT ACTION">
-                {nextAction ? (
+              {nextAction && (
+                <HudPanel label="NEXT ACTION">
                   <div className="flex-col h-full justify-center py-4">
                     <div className="mb-4">
                       <span className="font-mono text-[10px] text-danger bg-danger-subtle px-2 py-1 uppercase border border-danger">HIGHEST PRIORITY</span>
                     </div>
                     <h3 className="font-display text-2xl uppercase tracking-wide text-primary mb-2">{nextAction.title}</h3>
                     <p className="font-mono text-xs text-secondary mb-6">{nextAction.description || 'Awaiting execution.'}</p>
-                    <button onClick={() => completeTask(nextAction.id)} className="btn btn-primary w-full flex-center gap-2">
+                    <button onClick={() => completeOperation(nextAction.id)} className="btn btn-primary w-full flex-center gap-2">
                       <Zap size={16} /> EXECUTE
                     </button>
                   </div>
-                ) : (
-                  <div className="flex-center flex-col h-full opacity-50 py-12">
-                    <CheckSquare size={32} className="text-success mb-2" />
-                    <span className="font-mono text-sm">NO PENDING ACTIONS</span>
-                  </div>
-                )}
-              </HudPanel>
+                </HudPanel>
+              )}
             </div>
           </div>
 
@@ -235,9 +224,10 @@ export default function MissionControl() {
             </HudPanel>
 
             {/* SECTION 2: ACTIVE BATTLES */}
+            {battles.length > 0 && (
             <HudPanel label="BATTLE STATUS" className="border-danger-subtle">
               <div className="flex-col gap-3">
-                {battles.length > 0 ? battles.map((battle, idx) => {
+                {battles.map((battle, idx) => {
                   const Icon = BATTLE_ICONS[battle.name] || Swords
                   const statusColor = STATUS_COLORS[battle.status] || 'var(--danger)'
                   const severityColor = SEVERITY_COLORS[battle.severity] || 'var(--info)'
@@ -258,28 +248,13 @@ export default function MissionControl() {
                       )}
                     </div>
                   )
-                }) : (
-                  <div className="flex-col gap-3">
-                    {/* Fallback: show default battles if blueprint not loaded */}
-                    {['Phone Addiction', 'Inconsistent Execution', 'Fear of Selling', 'Poor Sleep Discipline', 'Overthinking'].map(name => {
-                      const Icon = BATTLE_ICONS[name] || Swords
-                      return (
-                        <div key={name} className="relative p-3 bg-tertiary border border-border-color overflow-hidden">
-                          <div className="absolute top-0 left-0 w-1 h-full bg-danger" />
-                          <div className="flex items-center gap-2 pl-2">
-                            <Icon size={14} className="text-danger" />
-                            <span className="font-mono text-xs text-primary">{name}</span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+                })}
                 <Link href="/profile" className="font-mono text-[10px] text-muted hover:text-primary hover:underline text-center transition-colors mt-1">
                   MANAGE BATTLES →
                 </Link>
               </div>
             </HudPanel>
+            )}
 
             {/* SECTION 5: ACTIVITY TIMELINE */}
             <HudPanel label="ACTIVITY TIMELINE" className="flex-1 overflow-hidden flex flex-col">

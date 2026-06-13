@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { useProfile } from '@/lib/hooks/useProfile'
+import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
@@ -27,17 +26,8 @@ const NAV_ITEMS = [
 
 export default function AppShell({ children }) {
   const pathname = usePathname()
-  const { user, loading: authLoading } = useAuth()
-  const { profile, loading: profileLoading } = useProfile()
+  const { auth: { user }, profile: { profile } } = useOS()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
-  if (authLoading || profileLoading) {
-    return (
-      <div className="flex-center" style={{ height: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-        <div className="font-mono text-sm tracking-widest text-primary animate-pulse">LOADING WORKSPACE...</div>
-      </div>
-    )
-  }
 
   if (!user) return null
 

@@ -4,24 +4,26 @@ import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { useXP } from '@/lib/hooks/useXP'
+import { useOS } from '@/lib/context/OSContext'
 import { XP_RULES } from '@/lib/xpRules'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { Shield, Target, AlertTriangle } from 'lucide-react'
 
 export default function ScreenIntel() {
-  const { user } = useAuth()
-  const { awardXP } = useXP()
+  const { auth: { user }, xp: { awardXP }, goals: { mainQuest, updateProgress } } = useOS()
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [totalHours, setTotalHours] = useState(0)
-  const [focusHours, setFocusHours] = useState(0)
-  const [doomScroll, setDoomScroll] = useState(0)
   const [notes, setNotes] = useState('')
   const [xpAnim, setXpAnim] = useState(null)
+  
+  const getLocalDateStr = (d) => {
+    const offset = d.getTimezoneOffset()
+    const local = new Date(d.getTime() - (offset*60*1000))
+    return local.toISOString().split('T')[0]
+  }
+
+  const [date, setDate] = useState(getLocalDateStr(new Date()))
 
   useEffect(() => {
     if (!user) return
@@ -82,6 +84,13 @@ export default function ScreenIntel() {
     } else if (parsedDoom >= 60) {
       xpAmount = XP_RULES.SCREEN_TIME.PENALTY
       reason = 'Failed Screen Discipline (>60m Doomscroll)'
+      
+      // Damage Battle/Main Quest
+      if (mainQuest && typeof mainQuest.progress === 'number') {
+        const newProgress = Math.max(0, mainQuest.progress - 5)
+        await updateProgress(mainQuest.id, newProgress)
+        reason += ' (-5% Battle Health)'
+      }
     }
 
     if (xpAmount !== 0) {
@@ -97,7 +106,7 @@ export default function ScreenIntel() {
   const last7Days = Array.from({length: 7}, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (6 - i))
-    return d.toISOString().split('T')[0]
+    return getLocalDateStr(d)
   })
 
   const chartData = last7Days.map(d => {
