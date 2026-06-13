@@ -17,7 +17,7 @@ export default function Missions() {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
 
-  const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '' })
+  const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'beyond_tatva', customCategory: '' })
 
   const TABS = [
     { id: 'main', label: 'PRIMARY', icon: Flag, items: mainQuest ? [mainQuest] : [] },
@@ -41,9 +41,12 @@ export default function Missions() {
       alert("LONG RANGE MISSIONS REQUIRE A STRICT DEADLINE.")
       return
     }
-    await addGoal(formData)
+    await addGoal({
+      ...formData,
+      category: formData.category === 'other' ? (formData.customCategory || 'Other') : formData.category
+    })
     setShowForm(false)
-    setFormData({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '' })
+    setFormData({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'beyond_tatva', customCategory: '' })
   }
 
   const startEdit = (goal) => {
@@ -256,6 +259,23 @@ export default function Missions() {
                         <option value="HARD">HARD</option>
                         <option value="EXTREME">EXTREME</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
+                      <select className="select font-mono w-full" value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})}>
+                        <option value="beyond_tatva">BEYOND TATVA</option>
+                        <option value="personal_mission">PERSONAL MISSION</option>
+                        <option value="learning">LEARNING</option>
+                        <option value="other">OTHER</option>
+                      </select>
+                      {formData.category === 'other' && (
+                        <div className="mt-2">
+                          <input type="text" className="input font-mono text-xs w-full" 
+                            value={formData.customCategory} 
+                            onChange={e => setFormData({ ...formData, customCategory: e.target.value })}
+                            placeholder="Specify category..." required />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="font-mono text-xs text-muted mb-1 block">

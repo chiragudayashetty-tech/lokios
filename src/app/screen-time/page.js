@@ -159,7 +159,7 @@ export default function ScreenIntel() {
             </form>
           </HudPanel>
 
-          <HudPanel label="7-DAY ANALYSIS" glow className="h-[400px]">
+          <HudPanel label="7-DAY ANALYSIS" glow style={{ height: '400px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                 <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
@@ -178,7 +178,7 @@ export default function ScreenIntel() {
           </HudPanel>
         </div>
 
-        <HudPanel label="DOOMSCROLL TREND (MINUTES)" className="h-[300px]">
+        <HudPanel label="DOOMSCROLL TREND (MINUTES)" style={{ height: '300px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
               <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />

@@ -6,6 +6,8 @@ import { useGoals } from '@/lib/hooks/useGoals'
 import { useTasks } from '@/lib/hooks/useTasks'
 import { useHabits } from '@/lib/hooks/useHabits'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { useXP } from '@/lib/hooks/useXP'
+import { XP_RULES } from '@/lib/xpRules'
 import HudPanel from './HudPanel'
 import { AlertTriangle, Activity, Zap, Cpu, Skull, Crosshair } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -16,6 +18,7 @@ export default function IntelligenceFeed() {
   const { mainQuest } = useGoals()
   const { tasks, todayTasks } = useTasks()
   const { habits } = useHabits()
+  const { awardXP } = useXP()
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -136,18 +139,26 @@ export default function IntelligenceFeed() {
         })
 
         if (totalMissed > 0) {
+          const penalty = totalMissed * XP_RULES.HABIT.MISS
           newAlerts.push({
             id: 'missed_routines',
             type: 'danger',
             icon: Skull,
-            message: `DISCIPLINE BREACH: You missed ${totalMissed} critical routines yesterday. (-${totalMissed * 10} XP)`
+            message: `DISCIPLINE BREACH: You missed ${totalMissed} critical routines yesterday. (${penalty} XP)`
           })
+          
+          if (blueprint.last_evaluated_date !== todayStr) {
+            await awardXP(penalty, 'habit_miss_batch', todayStr, `Missed ${totalMissed} daily ops yesterday`, 'discipline')
+          }
         }
 
         // Persist the battle HP damage if not evaluated today yet
-        if (battleUpdatesNeeded && blueprint.last_evaluated_date !== todayStr) {
+        if (blueprint.last_evaluated_date !== todayStr) {
           await supabase.from('user_blueprints')
-            .update({ battles: updatedBattles, last_evaluated_date: todayStr })
+            .update({ 
+              battles: updatedBattles, 
+              last_evaluated_date: todayStr 
+            })
             .eq('id', blueprint.id)
         }
       }

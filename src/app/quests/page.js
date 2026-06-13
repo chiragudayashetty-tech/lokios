@@ -15,8 +15,9 @@ export default function DailyOps() {
   const [viewMonth, setViewMonth] = useState(new Date().getMonth()) // 0-indexed
   const [showAddForm, setShowAddForm] = useState(false)
   const [newTitle, setNewTitle] = useState('')
-  const [newCategory, setNewCategory] = useState('discipline')
-  const [newXp, setNewXp] = useState('25')
+  const [newCategory, setNewCategory] = useState('beyond_tatva')
+  const [customCategory, setCustomCategory] = useState('')
+  const [newXp, setNewXp] = useState(25)
 
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -87,12 +88,13 @@ export default function DailyOps() {
     if (!newTitle.trim()) return
     await addHabit({
       title: newTitle,
-      category: newCategory,
+      category: newCategory === 'other' ? (customCategory || 'Other') : newCategory,
       stat_category: QUEST_CATEGORIES.find(c => c.id === newCategory)?.stat_category || 'discipline',
       frequency: 'daily',
-      xp_per_completion: parseInt(newXp) || 25
+      xp_per_completion: newXp
     })
     setNewTitle('')
+    setCustomCategory('')
     setShowAddForm(false)
   }
 
@@ -400,9 +402,17 @@ export default function DailyOps() {
                     <div className="grid-2 gap-4">
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
-                        <select className="select font-mono" value={newCategory} onChange={e => setNewCategory(e.target.value)}>
+                        <select className="select font-mono w-full" value={newCategory} onChange={e => setNewCategory(e.target.value)}>
                           {QUEST_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
+                        {newCategory === 'other' && (
+                          <div className="mt-2">
+                            <input type="text" className="input font-mono text-xs w-full" 
+                              value={customCategory} 
+                              onChange={e => setCustomCategory(e.target.value)}
+                              placeholder="Specify category..." required />
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">XP PER DAY</label>

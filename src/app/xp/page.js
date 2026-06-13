@@ -141,9 +141,9 @@ export default function XPDashboard() {
           </HudPanel>
         </motion.div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2">
-            <HudPanel label="XP TIMELINE (14 DAYS)" glow className="h-[400px]">
+        <div className="grid-3 gap-6">
+          <div style={{ gridColumn: 'span 2 / span 2' }}>
+            <HudPanel label="XP TIMELINE (14 DAYS)" glow style={{ height: '400px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={areaData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                   <defs>
@@ -167,8 +167,8 @@ export default function XPDashboard() {
             </HudPanel>
           </div>
 
-          <div className="xl:col-span-1">
-            <HudPanel label="STAT DISTRIBUTION" className="h-[400px]">
+          <div>
+            <HudPanel label="STAT DISTRIBUTION" style={{ height: '400px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
                   <PolarGrid stroke="var(--border-strong)" />

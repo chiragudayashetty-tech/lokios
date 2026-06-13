@@ -1,9 +1,12 @@
 export const QUEST_CATEGORIES = [
-  { id: 'founder', name: 'Founder', icon: 'Rocket', color: '#d4a843', stat_category: 'founder' },
-  { id: 'discipline', name: 'Discipline', icon: 'Target', color: '#e74c3c', stat_category: 'discipline' },
+  { id: 'beyond_tatva', name: 'Beyond Tatva', icon: 'Rocket', color: '#d4a843', stat_category: 'founder' },
+  { id: 'personal_mission', name: 'Personal Mission', icon: 'Target', color: '#e74c3c', stat_category: 'discipline' },
   { id: 'learning', name: 'Learning', icon: 'BookOpen', color: '#3498db', stat_category: 'learning' },
-  { id: 'personal_care', name: 'Personal Care', icon: 'Sparkles', color: '#9b59b6', stat_category: 'creation' },
-  { id: 'fitness', name: 'Fitness', icon: 'Dumbbell', color: '#2ecc71', stat_category: 'fitness' }
+  { id: 'other', name: 'Other', icon: 'Sparkles', color: '#9b59b6', stat_category: 'creation' },
+  { id: 'founder', name: 'Founder (Legacy)', icon: 'Rocket', color: '#d4a843', stat_category: 'founder' },
+  { id: 'discipline', name: 'Discipline (Legacy)', icon: 'Target', color: '#e74c3c', stat_category: 'discipline' },
+  { id: 'personal_care', name: 'Personal Care (Legacy)', icon: 'Sparkles', color: '#9b59b6', stat_category: 'creation' },
+  { id: 'fitness', name: 'Fitness (Legacy)', icon: 'Dumbbell', color: '#2ecc71', stat_category: 'fitness' }
 ];
 
 export const STAT_CATEGORIES = [

@@ -16,10 +16,7 @@ export default function Operations() {
   const [editForm, setEditForm] = useState({})
 
   // Deploy form
-  const [deployForm, setDeployForm] = useState({
-    title: '', description: '', due_date: new Date().toISOString().split('T')[0],
-    difficulty: 'MEDIUM', category: 'personal', recurrence_type: ''
-  })
+  const [deployForm, setDeployForm] = useState({ title: '', description: '', due_date: new Date().toISOString().split('T')[0], difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '' })
 
   // Proof state
   const [proofTask, setProofTask] = useState(null)
@@ -42,11 +39,11 @@ export default function Operations() {
       description: deployForm.description || null,
       due_date: deployForm.due_date || null,
       difficulty: deployForm.difficulty,
-      category: deployForm.category,
+      category: deployForm.category === 'other' ? (deployForm.customCategory || 'Other') : deployForm.category,
       type: deployForm.recurrence_type ? 'recurring' : 'custom',
       recurrence_type: deployForm.recurrence_type || null,
     })
-    setDeployForm({ title: '', description: '', due_date: new Date().toISOString().split('T')[0], difficulty: 'MEDIUM', category: 'personal', recurrence_type: '' })
+    setDeployForm({ title: '', description: '', due_date: new Date().toISOString().split('T')[0], difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '' })
     setShowDeploy(false)
   }
 
@@ -332,13 +329,21 @@ export default function Operations() {
                     <div className="grid-2 gap-4">
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
-                        <select className="select font-mono" value={deployForm.category}
+                        <select className="select font-mono w-full" value={deployForm.category}
                           onChange={e => setDeployForm({ ...deployForm, category: e.target.value })}>
-                          <option value="personal">PERSONAL</option>
-                          <option value="business">BUSINESS</option>
-                          <option value="health">HEALTH</option>
+                          <option value="beyond_tatva">BEYOND TATVA</option>
+                          <option value="personal_mission">PERSONAL MISSION</option>
                           <option value="learning">LEARNING</option>
+                          <option value="other">OTHER</option>
                         </select>
+                        {deployForm.category === 'other' && (
+                          <div className="mt-2">
+                            <input type="text" className="input font-mono text-xs w-full" 
+                              value={deployForm.customCategory} 
+                              onChange={e => setDeployForm({ ...deployForm, customCategory: e.target.value })}
+                              placeholder="Specify category..." required />
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">RECURRENCE</label>
