@@ -71,7 +71,7 @@ export default function Calendar() {
             <p className="page-subtitle font-mono uppercase text-xs">Temporal scheduling and event tracking.</p>
           </div>
           <div className="flex items-center gap-4">
-            <a href={`/api/calendar?user_id=${user?.id}`} target="_blank" className="text-amber font-mono text-xs underline hover:text-primary">
+            <a href={`/api/calendar?user_id=${user?.id}`} target="_blank" className="text-info font-mono text-xs hover:text-primary transition-colors hover:underline">
               .ICS SUBSCRIPTION
             </a>
             <button className="btn btn-primary" onClick={() => {
@@ -86,7 +86,7 @@ export default function Calendar() {
         <HudPanel className="p-0 mb-8" style={{ padding: 0 }}>
           <div className="flex-between p-4 border-b border-border-color bg-secondary">
             <button onClick={prevMonth} className="btn btn-ghost p-2"><ChevronLeft /></button>
-            <h2 className="font-display text-xl tracking-widest text-amber uppercase glow-amber">
+            <h2 className="font-display text-xl font-bold tracking-widest text-primary uppercase">
               {monthNames[month]} {year}
             </h2>
             <button onClick={nextMonth} className="btn btn-ghost p-2"><ChevronRight /></button>
@@ -114,16 +114,16 @@ export default function Calendar() {
                 <div 
                   key={day} 
                   onClick={() => setSelectedDate(dateStr)}
-                  className={`calendar-day cursor-pointer transition-all hover:bg-hover ${isToday ? 'today' : ''} ${isSelected ? 'border-amber shadow-[inset_0_0_10px_rgba(212,168,67,0.2)]' : ''}`}
-                  style={isSelected ? { border: '1px solid var(--accent-primary)' } : {}}
+                  className={`calendar-day overflow-hidden cursor-pointer transition-all hover:bg-hover ${isToday ? 'today' : ''} ${isSelected ? 'border-info shadow-[inset_0_0_10px_rgba(96,165,250,0.1)]' : ''}`}
+                  style={isSelected ? { border: '1px solid var(--info)' } : {}}
                 >
                   <div className="flex-between">
-                    <span className={`font-mono text-sm ${isToday ? 'text-amber' : 'text-primary'}`}>{day}</span>
-                    {dayItems.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-amber" />}
+                    <span className={`font-mono text-sm ${isToday ? 'text-info font-bold' : 'text-primary'}`}>{day}</span>
+                    {dayItems.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-info" />}
                   </div>
                   <div className="mt-2 flex-col gap-1">
                     {dayItems.slice(0, 2).map((item, idx) => {
-                      const color = item._type === 'task' ? 'border-success' : item._type === 'goal' ? 'border-info' : 'border-amber'
+                      const color = item._type === 'task' ? 'border-success' : item._type === 'goal' ? 'border-primary' : 'border-info'
                       return (
                         <div key={idx} className={`text-[9px] font-mono truncate text-muted bg-primary px-1 border-l ${color}`}>
                           {item.title}
@@ -148,16 +148,16 @@ export default function Calendar() {
               {selectedDateItems.map((item, i) => {
                 const isTask = item._type === 'task'
                 const isGoal = item._type === 'goal'
-                const typeColor = isTask ? 'border-l-success' : isGoal ? 'border-l-info' : 'border-l-amber'
+                const typeColor = isTask ? 'border-l-success' : isGoal ? 'border-l-primary' : 'border-l-info'
                 const Icon = isTask ? CheckSquare : isGoal ? Target : CalendarIcon
-                const iconColor = isTask ? 'text-success' : isGoal ? 'text-info' : 'text-amber'
+                const iconColor = isTask ? 'text-success' : isGoal ? 'text-primary' : 'text-info'
 
                 return (
                   <motion.div key={`${item._type}-${item.id}`} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className={`flex gap-4 p-4 bg-tertiary border border-border-color border-l-2 ${typeColor}`}>
                     <div className="flex-col text-right shrink-0 w-20">
                       {item._type === 'event' ? (
                         <>
-                          <span className="font-mono text-amber">{new Date(item.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                          <span className="font-mono text-info font-bold">{new Date(item.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                           {item.end_time && <span className="font-mono text-xs text-muted mt-1">{new Date(item.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>}
                         </>
                       ) : isGoal ? (
@@ -185,7 +185,7 @@ export default function Calendar() {
         {showAddForm && (
           <div className="modal-overlay">
             <HudPanel className="modal-content">
-              <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2">Schedule Event</div>
+              <div className="font-display text-xl uppercase text-primary font-bold mb-4 border-b border-border-color pb-2">Schedule Event</div>
               <form onSubmit={handleAdd} className="flex-col gap-4">
                 <div>
                   <label className="font-mono text-xs text-muted mb-1 block">EVENT TITLE</label>

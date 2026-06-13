@@ -141,8 +141,8 @@ export default function ScreenIntel() {
                   <input type="number" step="0.5" min="0" className="input font-mono text-xl w-full" value={totalHours} onChange={e=>setTotalHours(e.target.value)} />
                 </div>
                 <div>
-                  <label className="font-mono text-[10px] text-amber mb-1 block uppercase tracking-widest flex items-center gap-1"><Target size={12}/> Focus Hours</label>
-                  <input type="number" step="0.5" min="0" className="input font-mono text-xl border-amber text-amber w-full" value={focusHours} onChange={e=>setFocusHours(e.target.value)} />
+                  <label className="font-mono text-[10px] text-info mb-1 block uppercase tracking-widest flex items-center gap-1"><Target size={12}/> Focus Hours</label>
+                  <input type="number" step="0.5" min="0" className="input font-mono text-xl border-info text-info w-full" value={focusHours} onChange={e=>setFocusHours(e.target.value)} />
                 </div>
               </div>
               <div className="p-4 border border-danger-subtle bg-bg-tertiary">
@@ -159,7 +159,7 @@ export default function ScreenIntel() {
             </form>
           </HudPanel>
 
-          <HudPanel label="7-DAY ANALYSIS" glow style={{ height: '400px' }}>
+          <HudPanel label="7-DAY ANALYSIS" style={{ height: '400px' }}>
             <div style={{ width: '100%', height: '350px', minHeight: '300px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
@@ -172,8 +172,8 @@ export default function ScreenIntel() {
                     labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
                   />
                   <Legend iconType="square" wrapperStyle={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }} />
-                  <Bar dataKey="total" name="Total (h)" fill="var(--border-strong)" radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="focus" name="Focus (h)" fill="var(--amber)" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="total" name="Total (h)" fill="var(--border-strong)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="focus" name="Focus (h)" fill="var(--info)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -192,7 +192,7 @@ export default function ScreenIntel() {
                   itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
                   labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
                 />
-                <Bar dataKey="doom" name="Doomscroll (m)" radius={[2, 2, 0, 0]}>
+                <Bar dataKey="doom" name="Doomscroll (m)" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.doom >= 60 ? 'var(--danger)' : entry.doom > 0 ? 'var(--warning)' : 'var(--success)'} />
                   ))}

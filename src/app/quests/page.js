@@ -132,7 +132,7 @@ export default function DailyOps() {
                   strokeLinecap="round" className="transition-all duration-700" />
               </svg>
               <div className="absolute inset-0 flex-center">
-                <span className="font-display text-lg text-amber">{todayPct}%</span>
+                <span className="font-display text-lg text-primary">{todayPct}%</span>
               </div>
             </div>
             <div>
@@ -178,7 +178,7 @@ export default function DailyOps() {
             <thead>
               <tr>
                 <th style={{ position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', minWidth: '200px' }}>
-                  <span className="font-display text-xs uppercase tracking-widest text-amber">DAILY HABITS</span>
+                  <span className="font-display text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
                 </th>
                 <th style={{ position: 'sticky', left: '200px', zIndex: 10, background: 'var(--bg-tertiary)', padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', minWidth: '50px' }}>
                   <span className="font-mono text-[10px] text-muted">XP</span>
@@ -193,7 +193,7 @@ export default function DailyOps() {
                       minWidth: '32px'
                     }}>
                       <div className="font-mono text-[9px] text-muted">{getDow(d)}</div>
-                      <div className={`font-mono text-xs ${isToday ? 'text-amber font-bold' : 'text-secondary'}`}>{d}</div>
+                      <div className={`font-mono text-xs ${isToday ? 'text-info font-bold' : 'text-secondary'}`}>{d}</div>
                     </th>
                   )
                 })}
@@ -205,7 +205,7 @@ export default function DailyOps() {
                   <span className="font-mono text-[9px] text-muted">LEFT</span>
                 </th>
                 <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', minWidth: '50px' }}>
-                  <span className="font-mono text-[9px] text-amber">%</span>
+                  <span className="font-mono text-[9px] text-info">%</span>
                 </th>
               </tr>
             </thead>
@@ -242,7 +242,7 @@ export default function DailyOps() {
                       borderRight: '2px solid var(--border-color)',
                       padding: '4px'
                     }}>
-                      <span className="font-mono text-[10px] text-amber">{habit.xp_per_completion || 25}</span>
+                      <span className="font-mono text-[10px] text-info font-bold">{habit.xp_per_completion || 25}</span>
                     </td>
                     {/* Day cells */}
                     {days.map((d) => {
@@ -317,7 +317,7 @@ export default function DailyOps() {
                     <span className="font-mono text-xs text-muted">{globalStats.goal - globalStats.completed}</span>
                   </td>
                   <td style={{ textAlign: 'center', background: 'var(--bg-tertiary)', padding: '6px' }}>
-                    <span className={`font-mono text-xs font-bold ${globalStats.pct >= 80 ? 'text-success' : 'text-amber'}`}>{globalStats.pct}%</span>
+                    <span className={`font-mono text-xs font-bold ${globalStats.pct >= 80 ? 'text-success' : 'text-primary'}`}>{globalStats.pct}%</span>
                   </td>
                 </tr>
               )}
@@ -351,9 +351,9 @@ export default function DailyOps() {
                           className="flex items-center justify-center transition-all hover:scale-110"
                           style={{
                             width: '22px', height: '22px',
-                            border: isComplete ? 'none' : '1.5px solid var(--border-strong)',
+                            border: isComplete ? 'none' : '1.5px solid var(--border-color)',
                             borderRadius: '3px',
-                            background: isComplete ? 'var(--success)' : 'transparent',
+                            background: isComplete ? 'var(--success)' : 'var(--bg-tertiary)',
                             opacity: isFailed ? 0.3 : 1
                           }}
                         >
@@ -364,9 +364,9 @@ export default function DailyOps() {
                           className="flex items-center justify-center transition-all hover:scale-110"
                           style={{
                             width: '22px', height: '22px',
-                            border: isFailed ? 'none' : '1.5px solid var(--border-strong)',
+                            border: isFailed ? 'none' : '1.5px solid var(--border-color)',
                             borderRadius: '3px',
-                            background: isFailed ? 'var(--danger)' : 'transparent',
+                            background: isFailed ? 'var(--danger)' : 'var(--bg-tertiary)',
                             opacity: isComplete ? 0.3 : 1
                           }}
                         >
@@ -376,7 +376,7 @@ export default function DailyOps() {
                       <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : 'text-primary'}`}>{h.title}</span>
                       {isComplete && <span className="font-mono text-[10px] text-success">+{h.xp_per_completion || 25} XP</span>}
                       {isFailed && <span className="font-mono text-[10px] text-danger">-15 XP</span>}
-                      {!isComplete && !isFailed && <span className="font-mono text-[10px] text-amber">+{h.xp_per_completion || 25} XP</span>}
+                      {!isComplete && !isFailed && <span className="font-mono text-[10px] text-info font-bold">+{h.xp_per_completion || 25} XP</span>}
                     </div>
                   )
                 })}
@@ -391,13 +391,13 @@ export default function DailyOps() {
                     <div key={h.id}>
                       <div className="flex-between mb-1">
                         <span className="font-mono text-xs text-primary">{h.title}</span>
-                        <span className="font-mono text-[10px] text-amber flex items-center gap-1">
+                        <span className="font-mono text-[10px] text-info font-bold flex items-center gap-1">
                           <Flame size={10} /> {h.current_streak || 0}d
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-bg-primary rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-tertiary rounded-full overflow-hidden border border-border-color">
                         <div className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${stats.pct}%`, background: stats.pct >= 80 ? 'var(--success)' : stats.pct >= 50 ? 'var(--accent-primary)' : 'var(--danger)' }} />
+                          style={{ width: `${stats.pct}%`, background: stats.pct >= 80 ? 'var(--success)' : stats.pct >= 50 ? 'var(--info)' : 'var(--danger)' }} />
                       </div>
                     </div>
                   )
