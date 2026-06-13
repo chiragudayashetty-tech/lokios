@@ -22,7 +22,7 @@ export default function ProofOfWork() {
 
   // New Log Form State
   const [showAddLog, setShowAddLog] = useState(false)
-  const [newLog, setNewLog] = useState({ title: '', description: '', type: 'feature', duration_hours: '' })
+  const [newLog, setNewLog] = useState({ title: '', description: '', type: 'project_work', duration: '', duration_unit: 'hours', mediaUrl: '' })
 
   // New Project Form State
   const [showAddProject, setShowAddProject] = useState(false)
@@ -64,19 +64,30 @@ export default function ProofOfWork() {
     const parsedDuration = newLog.duration ? parseFloat(newLog.duration) : null
     const duration_hours = parsedDuration ? (newLog.duration_unit === 'days' ? parsedDuration * 24 : parsedDuration) : null
 
-    const { data, error } = await supabase.from('work_logs').insert([{
+    const payload = {
       user_id: user.id,
       title: newLog.title,
       description: newLog.description,
       type: newLog.type,
       duration_hours: duration_hours,
       date: new Date().toISOString().split('T')[0]
-    }]).select()
+    }
+
+    if (newLog.mediaUrl.trim()) {
+      payload.media_urls = [newLog.mediaUrl.trim()]
+    }
+
+    const { data, error } = await supabase.from('work_logs').insert([payload]).select()
     
+    if (error) {
+      alert(`UPLOAD FAILED: ${error.message}\n\nPlease let the AI know what this error says!`)
+      return
+    }
+
     if (data) {
       setLogs([data[0], ...logs])
       setShowAddLog(false)
-      setNewLog({ title: '', description: '', type: 'project_work', duration: '', duration_unit: 'hours' })
+      setNewLog({ title: '', description: '', type: 'project_work', duration: '', duration_unit: 'hours', mediaUrl: '' })
     }
   }
 
@@ -166,7 +177,11 @@ export default function ProofOfWork() {
                           </select>
                         </div>
                       </div>
-                      <div className="flex items-end justify-end">
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">ATTACH LINK / IMAGE URL</label>
+                        <input type="url" className="input font-mono text-sm" value={newLog.mediaUrl} onChange={e => setNewLog({...newLog, mediaUrl: e.target.value})} placeholder="https://..." />
+                      </div>
+                      <div className="flex items-end justify-end md:col-span-2 mt-2">
                         <button type="submit" className="btn btn-primary w-full md:w-auto">SAVE LOG</button>
                       </div>
                     </form>
