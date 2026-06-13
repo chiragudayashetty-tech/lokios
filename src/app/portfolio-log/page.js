@@ -197,8 +197,8 @@ export default function ProofOfWork() {
                   
                   <div className="bg-tertiary border border-border-color p-4 hover:border-amber transition-colors">
                     <div className="flex-between mb-2">
-                      <span className="font-mono text-xs text-amber">{log.date || ''}</span>
-                      <span className="badge">{(log.type || 'OTHER').replace('_', ' ').toUpperCase()}</span>
+                      <span className="font-mono text-xs text-amber">{String(log.date || '')}</span>
+                      <span className="badge">{String(log.type || 'OTHER').replace('_', ' ').toUpperCase()}</span>
                     </div>
                     
                     <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-2">{log.title}</h3>
@@ -294,7 +294,7 @@ export default function ProofOfWork() {
                   <div className="flex-between mb-3">
                     <h3 className="font-display text-2xl uppercase tracking-wider text-primary group-hover:text-info transition-colors">{proj.title}</h3>
                     <span className={`badge ${proj.status === 'active' ? 'badge-amber' : proj.status === 'completed' ? 'badge-success' : ''}`}>
-                      {(proj.status || 'UNKNOWN').toUpperCase()}
+                      {String(proj.status || 'UNKNOWN').toUpperCase()}
                     </span>
                   </div>
                   <p className="font-mono text-sm text-secondary mb-4 flex-1">{proj.description}</p>
