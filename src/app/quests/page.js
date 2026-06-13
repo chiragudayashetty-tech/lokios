@@ -338,22 +338,45 @@ export default function DailyOps() {
             <HudPanel label="TOP 10 DAILY HABITS">
               <div className="flex-col gap-2">
                 {habits.slice(0, 10).map((h, i) => {
-                  const isComplete = todayLogs.some(l => l.habit_id === h.id)
+                  const log = todayLogs.find(l => l.habit_id === h.id)
+                  const isComplete = log && (!log.status || log.status === 'completed')
+                  const isFailed = log && log.status === 'failed'
+                  
                   return (
-                    <div key={h.id} className="flex items-center gap-3 p-2 hover:bg-hover transition-colors cursor-pointer"
-                      onClick={() => toggleHabitForDate(h.id, todayStr)}>
+                    <div key={h.id} className="flex items-center gap-3 p-2 hover:bg-hover transition-colors">
                       <span className="font-mono text-xs text-muted w-5 text-right">{i + 1}</span>
-                      <div style={{
-                        width: '18px', height: '18px',
-                        border: isComplete ? 'none' : '1.5px solid var(--border-strong)',
-                        borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: isComplete ? 'var(--success)' : 'transparent',
-                        transition: 'all 150ms'
-                      }}>
-                        {isComplete && <Check size={11} color="#fff" strokeWidth={3} />}
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={() => toggleHabitForDate(h.id, todayStr, 'completed')}
+                          className="flex items-center justify-center transition-all hover:scale-110"
+                          style={{
+                            width: '22px', height: '22px',
+                            border: isComplete ? 'none' : '1.5px solid var(--border-strong)',
+                            borderRadius: '3px',
+                            background: isComplete ? 'var(--success)' : 'transparent',
+                            opacity: isFailed ? 0.3 : 1
+                          }}
+                        >
+                          <Check size={14} color={isComplete ? "#fff" : "var(--muted)"} strokeWidth={isComplete ? 3 : 2} />
+                        </button>
+                        <button 
+                          onClick={() => toggleHabitForDate(h.id, todayStr, 'failed')}
+                          className="flex items-center justify-center transition-all hover:scale-110"
+                          style={{
+                            width: '22px', height: '22px',
+                            border: isFailed ? 'none' : '1.5px solid var(--border-strong)',
+                            borderRadius: '3px',
+                            background: isFailed ? 'var(--danger)' : 'transparent',
+                            opacity: isComplete ? 0.3 : 1
+                          }}
+                        >
+                          <X size={14} color={isFailed ? "#fff" : "var(--muted)"} strokeWidth={isFailed ? 3 : 2} />
+                        </button>
                       </div>
-                      <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : 'text-primary'}`}>{h.title}</span>
-                      <span className="font-mono text-[10px] text-amber">+{h.xp_per_completion || 25}</span>
+                      <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : 'text-primary'}`}>{h.title}</span>
+                      {isComplete && <span className="font-mono text-[10px] text-success">+{h.xp_per_completion || 25} XP</span>}
+                      {isFailed && <span className="font-mono text-[10px] text-danger">-15 XP</span>}
+                      {!isComplete && !isFailed && <span className="font-mono text-[10px] text-amber">+{h.xp_per_completion || 25} XP</span>}
                     </div>
                   )
                 })}

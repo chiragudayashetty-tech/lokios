@@ -70,7 +70,7 @@ export function useHabits() {
   }, [fetchHabits])
 
   // Toggle a habit for any date (defaults to today)
-  const toggleHabitForDate = useCallback(async (habitId, dateStr) => {
+  const toggleHabitForDate = useCallback(async (habitId, dateStr, newStatus = 'completed') => {
     if (!user) return null
     const targetDate = dateStr || todayStr
 
@@ -80,22 +80,49 @@ export function useHabits() {
 
     try {
       if (existingLog) {
-        // Un-complete: delete the log
-        const { error } = await supabase
-          .from('habit_logs')
-          .delete()
-          .eq('id', existingLog.id)
+        if (existingLog.status === newStatus || (!existingLog.status && newStatus === 'completed')) {
+          // Un-toggle: delete the log
+          const { error } = await supabase
+            .from('habit_logs')
+            .delete()
+            .eq('id', existingLog.id)
 
-        if (error) throw error
-        setMonthLogs((prev) => prev.filter((l) => l.id !== existingLog.id))
+          if (error) throw error
+          setMonthLogs((prev) => prev.filter((l) => l.id !== existingLog.id))
+        } else {
+          // Switch status
+          const { data: updatedLog, error } = await supabase
+            .from('habit_logs')
+            .update({ status: newStatus })
+            .eq('id', existingLog.id)
+            .select()
+            .single()
+            
+          if (error) throw error
+          setMonthLogs((prev) => prev.map(l => l.id === existingLog.id ? updatedLog : l))
+          
+          if (targetDate === todayStr) {
+            const habit = habits.find((h) => h.id === habitId)
+            const amt = newStatus === 'failed' ? -15 : (habit?.xp_per_completion || 25)
+            await supabase.rpc('award_xp', {
+              p_user_id: user.id,
+              p_amount: amt,
+              p_source_type: newStatus === 'failed' ? 'habit_failed' : 'habit_complete',
+              p_source_id: habitId,
+              p_description: newStatus === 'failed' ? `Failed habit: ${habit?.title}` : `Completed habit: ${habit?.title}`,
+              p_stat_category: habit?.stat_category || 'discipline',
+            })
+          }
+        }
       } else {
-        // Complete: create log
+        // Create log with status
         const { data: newLog, error } = await supabase
           .from('habit_logs')
           .insert({
             user_id: user.id,
             habit_id: habitId,
             date: targetDate,
+            status: newStatus
           })
           .select()
           .single()
@@ -103,15 +130,17 @@ export function useHabits() {
         if (error) throw error
         setMonthLogs((prev) => [...prev, newLog])
 
-        // Award XP only if toggling today
+        // Award/Deduct XP only if toggling today
         if (targetDate === todayStr) {
           const habit = habits.find((h) => h.id === habitId)
+          const amt = newStatus === 'failed' ? -15 : (habit?.xp_per_completion || 25)
+          
           await supabase.rpc('award_xp', {
             p_user_id: user.id,
-            p_amount: XP_REWARDS.habit_complete,
-            p_source_type: 'habit_complete',
+            p_amount: amt,
+            p_source_type: newStatus === 'failed' ? 'habit_failed' : 'habit_complete',
             p_source_id: habitId,
-            p_description: `Completed habit: ${habit?.title || 'Unknown'}`,
+            p_description: newStatus === 'failed' ? `Failed habit: ${habit?.title}` : `Completed habit: ${habit?.title}`,
             p_stat_category: habit?.stat_category || 'discipline',
           })
 

@@ -5,11 +5,11 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
-import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
-  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, loading, addGoal, completeGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
+  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, loading, addGoal, completeGoal, failGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
@@ -55,6 +55,8 @@ export default function Missions() {
       title: goal.title,
       description: goal.description || '',
       difficulty: goal.difficulty || 'HARD',
+      type: goal.type || 'side_quest',
+      category: goal.category || 'beyond_tatva',
       deadline: goal.deadline ? goal.deadline.split('T')[0] : ''
     })
   }
@@ -162,6 +164,26 @@ export default function Missions() {
                             <input type="date" className="input font-mono text-sm py-1" value={editForm.deadline || ''} onChange={e=>setEditForm({...editForm, deadline: e.target.value})} />
                           </div>
                         </div>
+                        <div className="grid-2 gap-3 mt-3">
+                          <div>
+                            <label className="font-mono text-xs text-muted mb-1 block">CLASSIFICATION</label>
+                            <select className="select font-mono text-sm py-1" value={editForm.type} onChange={e=>setEditForm({...editForm, type: e.target.value})}>
+                              <option value="main_quest">PRIMARY MISSION</option>
+                              <option value="side_quest">SIDE OPERATION</option>
+                              <option value="weekly">WEEKLY TARGET</option>
+                              <option value="long_term">LONG RANGE GOAL</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
+                            <select className="select font-mono text-sm py-1" value={editForm.category} onChange={e=>setEditForm({...editForm, category: e.target.value})}>
+                              <option value="beyond_tatva">BEYOND TATVA</option>
+                              <option value="personal_mission">PERSONAL MISSION</option>
+                              <option value="learning">LEARNING</option>
+                              <option value="other">OTHER</option>
+                            </select>
+                          </div>
+                        </div>
                         <div className="flex justify-end gap-2 mt-2">
                           <button onClick={() => saveEdit(goal.id)} className="btn btn-primary btn-sm">SAVE</button>
                           <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
@@ -209,8 +231,11 @@ export default function Missions() {
                       <TacticalProgress value={goal.progress} color={isPaused ? 'var(--text-muted)' : 'var(--accent-primary)'} label="COMPLETION" />
                     </div>
                     
-                    {goal.status !== 'completed' && (
-                      <div className="mt-4 flex justify-end">
+                    {goal.status !== 'completed' && goal.status !== 'failed' && (
+                      <div className="mt-4 flex justify-end gap-2">
+                        <button onClick={() => failGoal(goal.id)} className="btn btn-ghost text-danger btn-sm" disabled={isPaused}>
+                          <X size={14} /> MISSION FAILED
+                        </button>
                         <button onClick={() => completeGoal(goal.id)} className="btn btn-secondary btn-sm" disabled={isPaused}>
                           <Check size={14} /> COMPLETE MISSION
                         </button>

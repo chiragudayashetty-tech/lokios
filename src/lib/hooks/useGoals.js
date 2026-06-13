@@ -143,6 +143,49 @@ export function useGoals() {
     }
   }, [user, goals])
 
+  const failGoal = useCallback(async (id) => {
+    if (!user) return null
+
+    const goal = goals.find((g) => g.id === id)
+    if (!goal) return null
+
+    try {
+      const { data: updated, error } = await supabase
+        .from('goals')
+        .update({ status: 'failed' })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Determine XP penalty based on goal type
+      const xpMap = {
+        main_quest: XP_REWARDS.goal_complete_main,
+        side_quest: XP_REWARDS.goal_complete_side,
+        weekly: XP_REWARDS.goal_complete_weekly,
+        long_term: XP_REWARDS.goal_complete_long_term,
+      }
+      const xpAmount = xpMap[goal.type] || XP_REWARDS.goal_complete_side
+
+      await supabase.rpc('award_xp', {
+        p_user_id: user.id,
+        p_amount: -xpAmount, // Negative XP
+        p_source_type: 'goal_failed',
+        p_source_id: id,
+        p_description: `Failed ${goal.type}: ${goal.title}`,
+        p_stat_category: goal.category || 'discipline',
+      })
+
+      setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
+      return updated
+    } catch (error) {
+      console.error('Error failing goal:', error)
+      return null
+    }
+  }, [user, goals])
+
   const deleteGoal = useCallback(async (id) => {
     if (!user) return false
 
@@ -216,6 +259,7 @@ export function useGoals() {
     addGoal,
     updateGoal,
     completeGoal,
+    failGoal,
     deleteGoal,
     togglePauseGoal,
     updateProgress,
