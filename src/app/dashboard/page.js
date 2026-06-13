@@ -213,7 +213,6 @@ export default function MissionControl() {
                 )}
               </HudPanel>
             </div>
-            </div>
           </div>
 
           {/* RIGHT BENTO AREA (4 cols) */}
