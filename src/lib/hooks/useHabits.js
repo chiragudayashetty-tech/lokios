@@ -38,7 +38,7 @@ export function useHabits() {
       const lastDay = new Date(y, m + 1, 0) // last day of month
       const lastDayStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
 
-      const [habitsRes, logsRes] = await Promise.all([
+      const [habitsRes, logsRes, xpRes] = await Promise.all([
         supabase
           .from('habits')
           .select('*')
@@ -51,13 +51,28 @@ export function useHabits() {
           .eq('user_id', user.id)
           .gte('date', firstDay)
           .lte('date', lastDayStr),
+        supabase
+          .from('xp_history')
+          .select('source_id, created_at')
+          .eq('user_id', user.id)
+          .eq('source_type', 'habit_failed')
+          .gte('created_at', firstDay)
       ])
 
       if (habitsRes.error) throw habitsRes.error
       if (logsRes.error) throw logsRes.error
 
+      // Merge real logs with virtual failed logs from xp_history
+      const realLogs = logsRes.data || []
+      const virtualFailedLogs = (xpRes.data || []).map(xp => ({
+        id: `virtual_fail_${xp.source_id}_${xp.created_at}`,
+        habit_id: xp.source_id,
+        date: xp.created_at.split('T')[0],
+        status: 'failed'
+      }))
+
       setHabits(habitsRes.data || [])
-      setMonthLogs(logsRes.data || [])
+      setMonthLogs([...realLogs, ...virtualFailedLogs])
     } catch (error) {
       console.error('Error fetching habits:', error)
     } finally {
@@ -79,78 +94,74 @@ export function useHabits() {
     )
 
     try {
-      if (existingLog) {
-        if (existingLog.status === newStatus || (!existingLog.status && newStatus === 'completed')) {
-          // Un-toggle: delete the log
-          const { error } = await supabase
-            .from('habit_logs')
-            .delete()
-            .eq('id', existingLog.id)
-
+      if (newStatus === 'failed') {
+        // Mark as failed: delete any completed log, insert a negative XP event
+        if (existingLog && existingLog.status !== 'failed') {
+          await supabase.from('habit_logs').delete().eq('id', existingLog.id)
+        }
+        
+        // Prevent duplicate penalty on same day
+        const alreadyFailed = monthLogs.some(l => l.habit_id === habitId && l.date === targetDate && l.status === 'failed')
+        if (!alreadyFailed) {
+          const habit = habits.find((h) => h.id === habitId)
+          await supabase.rpc('award_xp', {
+            p_user_id: user.id,
+            p_amount: -15,
+            p_source_type: 'habit_failed',
+            p_source_id: habitId,
+            p_description: `Failed habit: ${habit?.title || 'Unknown'}`,
+            p_stat_category: habit?.stat_category || 'discipline',
+          })
+          
+          setMonthLogs((prev) => [...prev.filter(l => !(l.habit_id === habitId && l.date === targetDate)), {
+            id: `virtual_fail_${habitId}_${Date.now()}`,
+            habit_id: habitId,
+            date: targetDate,
+            status: 'failed'
+          }])
+        }
+      } else if (newStatus === 'completed') {
+        if (existingLog && existingLog.status === 'failed') {
+          // You can't easily delete an XP log, so we just add the completion XP on top, 
+          // but we insert the real log so it shows as completed.
+          const { data: newLog, error } = await supabase.from('habit_logs').insert({ user_id: user.id, habit_id: habitId, date: targetDate }).select().single()
           if (error) throw error
-          setMonthLogs((prev) => prev.filter((l) => l.id !== existingLog.id))
-        } else {
-          // Switch status
-          const { data: updatedLog, error } = await supabase
-            .from('habit_logs')
-            .update({ status: newStatus })
-            .eq('id', existingLog.id)
-            .select()
-            .single()
-            
-          if (error) throw error
-          setMonthLogs((prev) => prev.map(l => l.id === existingLog.id ? updatedLog : l))
+          
+          setMonthLogs((prev) => [...prev.filter(l => !(l.habit_id === habitId && l.date === targetDate)), newLog])
           
           if (targetDate === todayStr) {
             const habit = habits.find((h) => h.id === habitId)
-            const amt = newStatus === 'failed' ? -15 : (habit?.xp_per_completion || 25)
             await supabase.rpc('award_xp', {
-              p_user_id: user.id,
-              p_amount: amt,
-              p_source_type: newStatus === 'failed' ? 'habit_failed' : 'habit_complete',
-              p_source_id: habitId,
-              p_description: newStatus === 'failed' ? `Failed habit: ${habit?.title}` : `Completed habit: ${habit?.title}`,
-              p_stat_category: habit?.stat_category || 'discipline',
+              p_user_id: user.id, p_amount: habit?.xp_per_completion || 25, p_source_type: 'habit_complete',
+              p_source_id: habitId, p_description: `Completed habit: ${habit?.title || 'Unknown'}`, p_stat_category: habit?.stat_category || 'discipline',
+            })
+          }
+        } else if (existingLog && (!existingLog.status || existingLog.status === 'completed')) {
+          // Un-complete
+          await supabase.from('habit_logs').delete().eq('id', existingLog.id)
+          setMonthLogs((prev) => prev.filter((l) => l.id !== existingLog.id))
+        } else {
+          // Normal complete
+          const { data: newLog, error } = await supabase.from('habit_logs').insert({ user_id: user.id, habit_id: habitId, date: targetDate }).select().single()
+          if (error) throw error
+          
+          setMonthLogs((prev) => [...prev, newLog])
+          
+          if (targetDate === todayStr) {
+            const habit = habits.find((h) => h.id === habitId)
+            await supabase.rpc('award_xp', {
+              p_user_id: user.id, p_amount: habit?.xp_per_completion || 25, p_source_type: 'habit_complete',
+              p_source_id: habitId, p_description: `Completed habit: ${habit?.title || 'Unknown'}`, p_stat_category: habit?.stat_category || 'discipline',
             })
           }
         }
-      } else {
-        // Create log with status
-        const { data: newLog, error } = await supabase
-          .from('habit_logs')
-          .insert({
-            user_id: user.id,
-            habit_id: habitId,
-            date: targetDate,
-            status: newStatus
-          })
-          .select()
-          .single()
-
-        if (error) throw error
-        setMonthLogs((prev) => [...prev, newLog])
-
-        // Award/Deduct XP only if toggling today
-        if (targetDate === todayStr) {
-          const habit = habits.find((h) => h.id === habitId)
-          const amt = newStatus === 'failed' ? -15 : (habit?.xp_per_completion || 25)
-          
-          await supabase.rpc('award_xp', {
-            p_user_id: user.id,
-            p_amount: amt,
-            p_source_type: newStatus === 'failed' ? 'habit_failed' : 'habit_complete',
-            p_source_id: habitId,
-            p_description: newStatus === 'failed' ? `Failed habit: ${habit?.title}` : `Completed habit: ${habit?.title}`,
-            p_stat_category: habit?.stat_category || 'discipline',
-          })
-
-          // Update streak
-          try {
-            await supabase.rpc('update_streak', { p_user_id: user.id })
-          } catch (e) {
-            // Streak function might expect different params
-          }
-        }
+      }
+      
+      // Update streak
+      try {
+        await supabase.rpc('update_streak', { p_user_id: user.id })
+      } catch (e) {
+        // Streak function might expect different params
       }
 
       return true

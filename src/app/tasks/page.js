@@ -37,14 +37,24 @@ export default function Operations() {
     await addTask({
       title: deployForm.title,
       description: deployForm.description || null,
-      due_date: deployForm.due_date || null,
+      due_date: today, // Hardcode to today
       difficulty: deployForm.difficulty,
       category: deployForm.category === 'other' ? (deployForm.customCategory || 'Other') : deployForm.category,
       type: deployForm.recurrence_type ? 'recurring' : 'custom',
       recurrence_type: deployForm.recurrence_type || null,
     })
-    setDeployForm({ title: '', description: '', due_date: new Date().toISOString().split('T')[0], difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '' })
+    setDeployForm({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '' })
     setShowDeploy(false)
+  }
+
+  const pushToTomorrow = async (task) => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    await editTask(task.id, { due_date: tomorrow.toISOString().split('T')[0] })
+  }
+
+  const failTask = async (task) => {
+    await editTask(task.id, { status: 'failed', completed_at: new Date().toISOString() })
   }
 
   const handleComplete = (task) => {
@@ -259,10 +269,21 @@ export default function Operations() {
                         )}
                       </div>
                       {!isCompleted && (
-                        <button onClick={() => handleComplete(task)}
-                          className="btn btn-primary btn-sm flex items-center gap-1.5 px-4">
-                          <Zap size={12} /> EXECUTE
-                        </button>
+                        <div className="flex gap-2">
+                          <button className="btn btn-ghost btn-sm" onClick={() => setEditingId(task.id)} title="Edit">
+                            <Edit2 size={14} />
+                          </button>
+                          <button className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
+                            <RotateCcw size={14} />
+                          </button>
+                          <button className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(task)} title="Fail Operation">
+                            <X size={14} />
+                          </button>
+                          <button onClick={() => handleComplete(task)}
+                            className="btn btn-primary btn-sm flex items-center gap-1.5 px-4">
+                            <Zap size={12} /> EXECUTE
+                          </button>
+                        </div>
                       )}
                       {isCompleted && (
                         <span className="font-mono text-[10px] text-success flex items-center gap-1">
@@ -309,51 +330,40 @@ export default function Operations() {
                         onChange={e => setDeployForm({ ...deployForm, description: e.target.value })}
                         placeholder="What needs to be done..." />
                     </div>
-                    <div className="grid-2 gap-4">
-                      <div>
-                        <label className="font-mono text-xs text-muted mb-1 block">DUE DATE</label>
-                        <input type="date" className="input font-mono" value={deployForm.due_date}
-                          onChange={e => setDeployForm({ ...deployForm, due_date: e.target.value })} />
-                      </div>
+                    <div className="grid-2 gap-3 mt-3">
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">DIFFICULTY</label>
-                        <select className="select font-mono" value={deployForm.difficulty}
-                          onChange={e => setDeployForm({ ...deployForm, difficulty: e.target.value })}>
-                          <option value="EASY">EASY (+15 XP)</option>
-                          <option value="MEDIUM">MEDIUM (+30 XP)</option>
-                          <option value="HARD">HARD (+60 XP)</option>
-                          <option value="EXTREME">EXTREME (+120 XP)</option>
+                        <select className="select font-mono text-sm py-1" value={deployForm.difficulty} onChange={e=>setDeployForm({...deployForm, difficulty: e.target.value})}>
+                          <option value="EASY">EASY</option>
+                          <option value="MEDIUM">MEDIUM</option>
+                          <option value="HARD">HARD</option>
+                          <option value="EXTREME">EXTREME</option>
                         </select>
                       </div>
-                    </div>
-                    <div className="grid-2 gap-4">
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
-                        <select className="select font-mono w-full" value={deployForm.category}
-                          onChange={e => setDeployForm({ ...deployForm, category: e.target.value })}>
+                        <select className="select font-mono text-sm py-1" value={deployForm.category} onChange={e=>setDeployForm({...deployForm, category: e.target.value})}>
                           <option value="beyond_tatva">BEYOND TATVA</option>
                           <option value="personal_mission">PERSONAL MISSION</option>
                           <option value="learning">LEARNING</option>
                           <option value="other">OTHER</option>
                         </select>
-                        {deployForm.category === 'other' && (
-                          <div className="mt-2">
-                            <input type="text" className="input font-mono text-xs w-full" 
-                              value={deployForm.customCategory} 
-                              onChange={e => setDeployForm({ ...deployForm, customCategory: e.target.value })}
-                              placeholder="Specify category..." required />
-                          </div>
-                        )}
                       </div>
-                      <div>
-                        <label className="font-mono text-xs text-muted mb-1 block">RECURRENCE</label>
-                        <select className="select font-mono" value={deployForm.recurrence_type}
-                          onChange={e => setDeployForm({ ...deployForm, recurrence_type: e.target.value })}>
-                          <option value="">ONE TIME</option>
-                          <option value="daily">DAILY</option>
-                          <option value="weekly">WEEKLY</option>
-                        </select>
+                    </div>
+                    {deployForm.category === 'other' && (
+                      <div className="mt-3">
+                        <label className="font-mono text-xs text-muted mb-1 block">CUSTOM CATEGORY</label>
+                        <input type="text" className="input font-mono text-sm py-1" placeholder="e.g. Finance, Family" value={deployForm.customCategory} onChange={e=>setDeployForm({...deployForm, customCategory: e.target.value})} />
                       </div>
+                    )}
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">RECURRENCE</label>
+                      <select className="select font-mono" value={deployForm.recurrence_type}
+                        onChange={e => setDeployForm({ ...deployForm, recurrence_type: e.target.value })}>
+                        <option value="">ONE TIME</option>
+                        <option value="daily">DAILY</option>
+                        <option value="weekly">WEEKLY</option>
+                      </select>
                     </div>
                     <div className="flex gap-2 mt-3">
                       <button type="submit" className="btn btn-primary flex-1 py-3">DEPLOY</button>
@@ -383,12 +393,20 @@ export default function Operations() {
                       <input type="url" className="input font-mono text-sm w-full" placeholder="https://screenshot.link or drive.google.com/..."
                         value={proofUrl} onChange={e => setProofUrl(e.target.value)} autoFocus />
                     </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => submitCompletion(false)} className="btn btn-primary flex-1" disabled={!proofUrl.trim()}>
-                        UPLOAD & COMPLETE
-                      </button>
-                      <button onClick={() => submitCompletion(true)} className="btn btn-ghost">
-                        SKIP PROOF
+                    <div className="flex justify-between items-center mt-3">
+                      <div className="flex gap-2">
+                        <button className="btn btn-ghost btn-sm" onClick={() => setEditingId(proofTask.id)}>
+                          <Edit2 size={14} /> EDIT
+                        </button>
+                        <button className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(proofTask)}>
+                          <RotateCcw size={14} /> PUSH TO TOMORROW
+                        </button>
+                        <button className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(proofTask)}>
+                          <X size={14} /> FAIL OPERATION
+                        </button>
+                      </div>
+                      <button className="btn btn-secondary btn-sm" onClick={() => submitCompletion(false)}>
+                        <Check size={14} /> EXECUTE
                       </button>
                     </div>
                   </div>
