@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
+import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 
 export function useTasksInternal() {
   const [tasks, setTasks] = useState([])
@@ -151,6 +151,10 @@ export function useTasksInternal() {
         .single()
 
       if (error) throw error
+
+      // Remove XP
+      const todayStr = new Date().toISOString().split('T')[0]
+      await robustRemoveXP(user.id, 'task_complete', id, todayStr)
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       return updated

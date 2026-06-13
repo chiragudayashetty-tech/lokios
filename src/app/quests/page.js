@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
+import TacticalProgress from '@/components/ui/ProgressBar'
 import { useHabits } from '@/lib/hooks/useHabits'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -398,9 +399,13 @@ export default function DailyOps() {
                           <Flame size={10} /> {h.current_streak || 0}d
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-tertiary rounded-full overflow-hidden border border-border-color">
-                        <div className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${stats.pct}%`, background: stats.pct >= 80 ? 'var(--success)' : stats.pct >= 50 ? 'var(--info)' : 'var(--danger)' }} />
+                      <div className="mt-2">
+                        <TacticalProgress 
+                          value={stats.pct} 
+                          color={stats.pct >= 80 ? 'var(--success)' : stats.pct >= 50 ? 'var(--info)' : 'var(--danger)'} 
+                          height={6} 
+                          showValue={false} 
+                        />
                       </div>
                     </div>
                   )

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
+import TacticalProgress from '@/components/ui/ProgressBar'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
@@ -115,13 +116,7 @@ export default function XPDashboard() {
                 <span className="font-mono text-xs text-amber uppercase tracking-widest flex items-center gap-2"><Star size={12}/> TOTAL XP: {totalXp}</span>
                 <span className="font-mono text-xs text-muted uppercase tracking-widest">{current} / {required} TO LV.{currentLevel + 1}</span>
               </div>
-              <div className="w-full h-4 bg-bg-primary border border-border-color p-[2px] mb-4">
-                <motion.div className="h-full relative overflow-hidden" 
-                  initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
-                  style={{ background: currentRank.color }}>
-                  <div className="absolute inset-0 w-full h-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)', animation: 'shimmer 2s infinite' }} />
-                </motion.div>
-              </div>
+              <TacticalProgress value={progressPct} height={8} showValue={false} color={currentRank.color} />
               
               <div className="grid-3 gap-4 mt-6">
                 <div className="bg-bg-tertiary border border-border-color p-4 flex-col text-center">

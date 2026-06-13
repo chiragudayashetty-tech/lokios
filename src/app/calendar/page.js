@@ -143,7 +143,7 @@ export default function Calendar() {
             {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
           </h3>
           
-          <div className="flex-col gap-4">
+          <div className="flex-col gap-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
             <AnimatePresence>
               {selectedDateItems.map((item, i) => {
                 const isTask = item._type === 'task'

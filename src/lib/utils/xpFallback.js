@@ -45,3 +45,33 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
   
   return true
 }
+
+export async function robustRemoveXP(userId, sourceType, sourceId, targetDateStr) {
+  const supabase = createClient()
+  
+  // First find the xp_history entry to know how much to deduct
+  const { data: historyItems } = await supabase.from('xp_history')
+    .select('id, amount')
+    .eq('user_id', userId)
+    .eq('source_type', sourceType)
+    .eq('source_id', sourceId)
+    .gte('created_at', `${targetDateStr}T00:00:00`)
+
+  if (!historyItems || historyItems.length === 0) return true
+
+  let totalDeduction = 0
+  for (const item of historyItems) {
+    totalDeduction += item.amount
+    await supabase.from('xp_history').delete().eq('id', item.id)
+  }
+
+  // Deduct from profile
+  if (totalDeduction !== 0) {
+    const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
+    if (prof) {
+      await supabase.from('profiles').update({ total_xp: Math.max(0, (prof.total_xp || 0) - totalDeduction) }).eq('id', userId)
+    }
+  }
+
+  return true
+}

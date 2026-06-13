@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS } from '@/lib/constants'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
+import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 
 export function useHabitsInternal() {
   const [habits, setHabits] = useState([])
@@ -141,12 +141,7 @@ export function useHabitsInternal() {
           // Un-complete
           await supabase.from('habit_logs').delete().eq('id', existingLog.id)
           if (targetDate === todayStr) {
-            await supabase.from('xp_history')
-              .delete()
-              .eq('user_id', user.id)
-              .eq('source_type', 'habit_complete')
-              .eq('source_id', habitId)
-              .gte('created_at', `${targetDate}T00:00:00`)
+            await robustRemoveXP(user.id, 'habit_complete', habitId, targetDate)
           }
           setMonthLogs((prev) => prev.filter((l) => l.id !== existingLog.id))
         } else {

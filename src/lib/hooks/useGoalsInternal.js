@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS } from '@/lib/constants'
+import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 
 export function useGoalsInternal() {
   const [goals, setGoals] = useState([])
@@ -143,14 +144,14 @@ export function useGoalsInternal() {
       }
       const xpAmount = xpMap[goal.type] || XP_REWARDS.goal_complete_side
 
-      await supabase.rpc('award_xp', {
-        p_user_id: user.id,
-        p_amount: xpAmount,
-        p_source_type: 'goal_complete',
-        p_source_id: id,
-        p_description: `Completed ${goal.type}: ${goal.title}`,
-        p_stat_category: goal.category || 'discipline',
-      })
+      await robustAwardXP(
+        user.id,
+        xpAmount,
+        'goal_complete',
+        id,
+        `Completed ${goal.type}: ${goal.title}`,
+        goal.category || 'discipline'
+      )
 
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
       return updated
@@ -173,6 +174,10 @@ export function useGoalsInternal() {
         .single()
 
       if (error) throw error
+
+      const todayStr = new Date().toISOString().split('T')[0]
+      await robustRemoveXP(user.id, 'goal_complete', id, todayStr)
+
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
       return updated
     } catch (error) {
@@ -207,14 +212,14 @@ export function useGoalsInternal() {
       }
       const xpAmount = xpMap[goal.type] || XP_REWARDS.goal_complete_side
 
-      await supabase.rpc('award_xp', {
-        p_user_id: user.id,
-        p_amount: -xpAmount, // Negative XP
-        p_source_type: 'goal_failed',
-        p_source_id: id,
-        p_description: `Failed ${goal.type}: ${goal.title}`,
-        p_stat_category: goal.category || 'discipline',
-      })
+      await robustAwardXP(
+        user.id,
+        -50,
+        'goal_failed',
+        id,
+        `Failed ${goal.type}: ${goal.title}`,
+        goal.category || 'discipline'
+      )
 
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
       return updated

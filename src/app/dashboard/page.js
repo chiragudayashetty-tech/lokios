@@ -223,11 +223,8 @@ export default function MissionControl() {
                <div className="font-mono text-[10px] text-muted">
                  {completedTodayItems} / {totalTodayItems} OBJECTIVES
                </div>
-               <div className="w-full h-4 bg-bg-tertiary rounded-full overflow-hidden mt-6 border border-border-color">
-                 <div className="h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r from-success-subtle to-success relative"
-                   style={{ width: `${todayPct}%` }}>
-                   <div className="absolute inset-0 bg-white opacity-20" style={{ backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent)', backgroundSize: '1rem 1rem' }} />
-                 </div>
+               <div className="mt-6">
+                 <TacticalProgress value={todayPct} height={8} showValue={false} color="var(--success)" />
                </div>
             </HudPanel>
 

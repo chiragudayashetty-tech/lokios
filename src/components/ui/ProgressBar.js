@@ -6,27 +6,27 @@ export default function TacticalProgress({ value = 0, max = 100, color = '#d4a84
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
 
   return (
-    <div className="tactical-progress">
+    <div className="flex-col w-full">
       {(label || showValue) && (
-        <div className="tactical-progress-header">
-          {label && <span className="tactical-progress-label">{label}</span>}
+        <div className="flex-between mb-2">
+          {label && <span className="font-mono text-xs text-muted uppercase tracking-widest">{label}</span>}
           {showValue && (
-            <span className="tactical-progress-value" style={{ fontFamily: 'var(--font-mono)', color }}>
+            <span className="font-mono text-xs font-bold" style={{ color }}>
               {Math.round(pct)}%
             </span>
           )}
         </div>
       )}
-      <div className="tactical-progress-track" style={{ height: `${height}px` }}>
+      <div className="w-full bg-bg-primary border border-border-color p-[2px]" style={{ height: `${height + 4}px` }}>
         <motion.div
-          className="tactical-progress-fill"
+          className="h-full relative overflow-hidden"
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 1, ease: 'easeOut' }}
-          style={{ background: `linear-gradient(90deg, ${color}44, ${color})`, height: '100%' }}
-        />
-        {/* Scan effect on fill */}
-        <div className="tactical-progress-scan" style={{ width: `${pct}%` }} />
+          style={{ background: color }}
+        >
+          <div className="absolute inset-0 w-full h-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', animation: 'shimmer 2s infinite' }} />
+        </motion.div>
       </div>
     </div>
   )
