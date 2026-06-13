@@ -5,14 +5,16 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
-import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
-  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, loading, addGoal, completeGoal, failGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
+  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, loading, addGoal, completeGoal, undoCompleteGoal, failGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
+  
+  const [proofModal, setProofModal] = useState({ show: false, goal: null, url: '' })
   
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
@@ -24,6 +26,7 @@ export default function Missions() {
     { id: 'side', label: 'SIDE OPS', icon: Target, items: sideQuests },
     { id: 'long', label: 'LONG RANGE', icon: Star, items: longTermGoals },
     { id: 'weekly', label: 'WEEKLY', icon: Clock, items: weeklyGoals },
+    { id: 'completed', label: 'COMPLETED', icon: Check, items: completedGoals },
   ]
 
   const activeData = TABS.find(t => t.id === activeTab)?.items || []
@@ -236,8 +239,16 @@ export default function Missions() {
                         <button onClick={() => failGoal(goal.id)} className="btn btn-ghost text-danger btn-sm" disabled={isPaused}>
                           <X size={14} /> MISSION FAILED
                         </button>
-                        <button onClick={() => completeGoal(goal.id)} className="btn btn-secondary btn-sm" disabled={isPaused}>
+                        <button onClick={() => setProofModal({ show: true, goal, url: '' })} className="btn btn-secondary btn-sm" disabled={isPaused}>
                           <Check size={14} /> COMPLETE MISSION
+                        </button>
+                      </div>
+                    )}
+                    
+                    {goal.status === 'completed' && (
+                      <div className="mt-4 flex justify-end gap-2">
+                        <button onClick={() => undoCompleteGoal(goal.id)} className="btn btn-ghost text-amber btn-sm">
+                          <RotateCcw size={14} /> UNDO COMPLETION
                         </button>
                       </div>
                     )}
@@ -259,7 +270,7 @@ export default function Missions() {
         <AnimatePresence>
           {showForm && (
             <div className="modal-overlay">
-              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}>
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="modal-content">
                 <HudPanel className="modal-content">
                   <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2"><Target size={18} /> Initialize Mission</div>
                   <form onSubmit={handleAdd} className="flex-col gap-4">
@@ -314,7 +325,7 @@ export default function Missions() {
                     </div>
                     <div className="flex gap-2 mt-4">
                       <button type="submit" className="btn btn-primary flex-1">DEPLOY</button>
-                      <button type="button" className="btn btn-ghost" onClick={()=>setShowForm(false)}>ABORT</button>
+                      <button type="submit" className="btn btn-primary">DEPLOY MISSION</button>
                     </div>
                   </form>
                 </HudPanel>
@@ -322,6 +333,32 @@ export default function Missions() {
             </div>
           )}
         </AnimatePresence>
+
+        {/* Proof of Work Modal */}
+        <AnimatePresence>
+          {proofModal.show && (
+            <div className="modal-overlay">
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="modal-content">
+                <HudPanel glow label="MISSION ACCOMPLISHED" className="w-full max-w-md">
+                  <div className="p-4">
+                    <p className="font-mono text-sm text-secondary mb-4">Would you like to attach Proof of Work? This will automatically log to your Portfolio Engine.</p>
+                    <label className="font-mono text-xs text-muted mb-1 block">ATTACH LINK / IMAGE URL (OPTIONAL)</label>
+                    <input type="url" className="input font-mono text-sm mb-6 w-full" value={proofModal.url} onChange={(e) => setProofModal({ ...proofModal, url: e.target.value })} placeholder="https://..." />
+                    
+                    <div className="flex justify-end gap-3">
+                      <button className="btn btn-ghost" onClick={() => setProofModal({ show: false, goal: null, url: '' })}>CANCEL</button>
+                      <button className="btn btn-primary" onClick={async () => {
+                        await completeGoal(proofModal.goal.id, proofModal.url)
+                        setProofModal({ show: false, goal: null, url: '' })
+                      }}>CONFIRM COMPLETION</button>
+                    </div>
+                  </div>
+                </HudPanel>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
       </div>
     </AppShell>
   )

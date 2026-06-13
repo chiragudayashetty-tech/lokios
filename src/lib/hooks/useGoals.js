@@ -60,6 +60,11 @@ export function useGoals() {
     [goals]
   )
 
+  const completedGoals = useMemo(
+    () => goals.filter((g) => g.status === 'completed'),
+    [goals]
+  )
+
   const addGoal = useCallback(async (data) => {
     if (!user) return null
 
@@ -100,7 +105,7 @@ export function useGoals() {
     }
   }, [user])
 
-  const completeGoal = useCallback(async (id) => {
+  const completeGoal = useCallback(async (id, proofUrl = null) => {
     if (!user) return null
 
     try {
@@ -116,6 +121,18 @@ export function useGoals() {
         .single()
 
       if (error) throw error
+
+      if (proofUrl) {
+        // Auto-create Portfolio Log
+        await supabase.from('work_logs').insert([{
+          user_id: user.id,
+          title: `Mission Accomplished: ${goal.title}`,
+          description: goal.description || 'Completed Mission.',
+          type: 'other', // safe enum fallback
+          date: new Date().toISOString().split('T')[0],
+          media_urls: [proofUrl]
+        }])
+      }
 
       // Determine XP based on goal type
       const xpMap = {
@@ -142,6 +159,27 @@ export function useGoals() {
       return null
     }
   }, [user, goals])
+
+  const undoCompleteGoal = useCallback(async (id) => {
+    if (!user) return null
+
+    try {
+      const { data: updated, error } = await supabase
+        .from('goals')
+        .update({ completed_at: null, status: 'active' })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+      setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
+      return updated
+    } catch (error) {
+      console.error('Error undoing goal:', error)
+      return null
+    }
+  }, [user])
 
   const failGoal = useCallback(async (id) => {
     if (!user) return null
@@ -255,10 +293,12 @@ export function useGoals() {
     sideQuests,
     longTermGoals,
     weeklyGoals,
+    completedGoals,
     loading,
     addGoal,
     updateGoal,
     completeGoal,
+    undoCompleteGoal,
     failGoal,
     deleteGoal,
     togglePauseGoal,
