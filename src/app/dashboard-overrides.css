@@ -1,0 +1,34 @@
+/* Dashboard-specific presentation tweaks. */
+
+.main-content .page-container > header {
+  padding: 6px 0 18px;
+  margin-bottom: clamp(18px, 2vw, 28px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.main-content .page-container > header h1 {
+  font-size: clamp(2rem, 4vw, 2.9rem);
+  letter-spacing: 0.14em;
+}
+
+.main-content .page-container > header p {
+  color: rgba(176, 180, 191, 0.82);
+}
+
+.main-content .page-container .dashboard-grid {
+  gap: clamp(18px, 2vw, 24px);
+}
+
+.main-content .page-container .dashboard-inner-grid {
+  gap: clamp(18px, 2vw, 24px);
+}
+
+.main-content .page-container .hud-panel {
+  min-height: 0;
+}
+
+@media (min-width: 1280px) {
+  .main-content .page-container > header {
+    align-items: end;
+  }
+}
