@@ -6,9 +6,9 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Home, Crosshair, Target, CheckSquare, Lightbulb, 
-  BookOpen, Briefcase, CalendarDays, Monitor, User, 
+import {
+  Home, Crosshair, Target, CheckSquare, Lightbulb,
+  BookOpen, Briefcase, CalendarDays, Monitor, User,
   Menu, X, Shield, Trophy
 } from 'lucide-react'
 
@@ -48,12 +48,11 @@ export default function AppShell({ children }) {
     NAV_ITEMS[9], // Operator Profile
   ]
 
-
   return (
     <div className="app-shell">
       {/* Mobile Sidebar Overlay */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 z-40 hidden-desktop"
           onClick={() => setMobileMenuOpen(false)}
         />
@@ -62,7 +61,7 @@ export default function AppShell({ children }) {
       {/* Desktop & Mobile Sidebar */}
       <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         {mobileMenuOpen && (
-          <button 
+          <button
             className="absolute top-4 right-4 text-muted hover:text-danger hidden-desktop"
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -70,19 +69,22 @@ export default function AppShell({ children }) {
           </button>
         )}
         <div className="sidebar-header">
-          <Shield size={24} color="var(--accent-primary)" />
-          <span className="sidebar-brand">CHIRAGOS</span>
+          <div className="sidebar-logo">C</div>
+          <div className="flex-col" style={{ minWidth: 0 }}>
+            <span className="sidebar-title">CHIRAGOS</span>
+            <span className="sidebar-version">PRIVATE OS</span>
+          </div>
         </div>
-        
-        <div className="nav-section-title">SYSTEMS</div>
-        
+
+        <div className="sidebar-section-label">Systems</div>
+
         <nav className="sidebar-nav">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
             return (
               <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                <motion.div 
+                <motion.div
                   className={`nav-item ${isActive ? 'active' : ''}`}
                   whileHover={{ x: 4 }}
                   transition={{ duration: 0.2 }}
@@ -96,10 +98,12 @@ export default function AppShell({ children }) {
         </nav>
 
         <div className="sidebar-footer">
-          <Shield size={24} color="var(--accent-primary)" opacity={0.5} />
-          <div className="flex-col">
-            <span className="font-display uppercase text-xs tracking-wide">{profile?.rank || 'OPERATOR'}</span>
-            <span className="font-mono text-sm text-amber">LV.{profile?.level || 1}</span>
+          <div className="sidebar-user">
+            <Shield size={24} color="var(--accent-primary)" opacity={0.5} />
+            <div className="flex-col">
+              <span className="sidebar-username">{profile?.rank || 'OPERATOR'}</span>
+              <span className="sidebar-rank">LV.{profile?.level || 1}</span>
+            </div>
           </div>
         </div>
       </aside>
