@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText } from 'lucide-react'
+import { Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText, Clock } from 'lucide-react'
 
 export default function ProofOfWork() {
   const { user } = useAuth()
@@ -361,7 +361,7 @@ export default function ProofOfWork() {
                       <h3 className="font-mono text-sm text-primary uppercase mb-2">{proj.title}</h3>
                       <p className="font-mono text-[10px] text-secondary mb-3">{proj.description}</p>
                       <div className="flex flex-wrap gap-1">
-                        {proj.tech_stack?.map((t, i) => (
+                        {Array.isArray(proj.tech_stack) && proj.tech_stack.map((t, i) => (
                           <span key={i} className="font-mono text-[8px] border border-border-strong px-1 text-muted">{t}</span>
                         ))}
                       </div>
