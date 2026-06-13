@@ -1,8 +1,9 @@
 import './globals.css'
+import './design-overrides.css'
 
 export const metadata = {
-  title: 'ChiragOS — Tactical Command Center',
-  description: 'Personal operating system for founders. Track missions, battles, and operations.',
+  title: 'ChiragOS',
+  description: 'A private operating system for focus, execution, and discipline.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
