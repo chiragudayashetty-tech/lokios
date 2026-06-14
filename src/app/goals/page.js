@@ -50,7 +50,7 @@ export default function Missions() {
       type: formData.type,
       difficulty: formData.difficulty,
       deadline: formData.deadline || null,
-      category: formData.category === 'other' ? (formData.customCategory || 'Other') : formData.category
+      category: formData.category
     }
     const result = await addGoal(payload)
     if (result && result.error) {
@@ -203,10 +203,12 @@ export default function Missions() {
                           <div>
                             <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
                             <select className="select font-mono text-sm py-1" value={editForm.category} onChange={e=>setEditForm({...editForm, category: e.target.value})}>
-                              <option value="beyond_tatva">BEYOND TATVA</option>
-                              <option value="personal_mission">PERSONAL MISSION</option>
-                              <option value="learning">LEARNING</option>
-                              <option value="other">OTHER</option>
+                              <option value="founder">FOUNDER / LEADERSHIP</option>
+                              <option value="discipline">DISCIPLINE / HABITS</option>
+                              <option value="learning">LEARNING / SKILLS</option>
+                              <option value="creation">CREATION / PROJECTS</option>
+                              <option value="strength">STRENGTH / FITNESS</option>
+                              <option value="communication">COMMUNICATION</option>
                             </select>
                           </div>
                         </div>
@@ -322,19 +324,13 @@ export default function Missions() {
                     <div>
                       <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
                       <select className="select font-mono w-full" value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})}>
-                        <option value="beyond_tatva">BEYOND TATVA</option>
-                        <option value="personal_mission">PERSONAL MISSION</option>
-                        <option value="learning">LEARNING</option>
-                        <option value="other">OTHER</option>
+                        <option value="founder">FOUNDER / LEADERSHIP</option>
+                        <option value="discipline">DISCIPLINE / HABITS</option>
+                        <option value="learning">LEARNING / SKILLS</option>
+                        <option value="creation">CREATION / PROJECTS</option>
+                        <option value="strength">STRENGTH / FITNESS</option>
+                        <option value="communication">COMMUNICATION</option>
                       </select>
-                      {formData.category === 'other' && (
-                        <div className="mt-2">
-                          <input type="text" className="input font-mono text-xs w-full" 
-                            value={formData.customCategory} 
-                            onChange={e => setFormData({ ...formData, customCategory: e.target.value })}
-                            placeholder="Specify category..." required />
-                        </div>
-                      )}
                     </div>
                     <div>
                       <label className="font-mono text-xs text-muted mb-1 block">
