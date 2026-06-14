@@ -78,7 +78,11 @@ export default function OperatorDashboard() {
           linked_habits: b.linked_habits || []
         }))
         setBattles(migratedBattles)
+      } else {
+        setBattles([]) // If data.battles is null or undefined or empty in a weird way, reset it.
       }
+    } else {
+      setBattles(DEFAULT_BATTLES) // Fallback if no blueprint
     }
     setLoading(false)
   }
@@ -111,10 +115,11 @@ export default function OperatorDashboard() {
 
   const saveBattlesToDB = async (newBattles) => {
     const supabase = createClient()
+    let result
     if (blueprint) {
-      await supabase.from('user_blueprints').update({ battles: newBattles }).eq('id', blueprint.id)
+      result = await supabase.from('user_blueprints').update({ battles: newBattles }).eq('id', blueprint.id)
     } else {
-      await supabase.from('user_blueprints').insert([{
+      result = await supabase.from('user_blueprints').insert([{
         user_id: user.id,
         identity: form.identity,
         mission: form.mission,
@@ -126,7 +131,13 @@ export default function OperatorDashboard() {
         battles: newBattles
       }])
     }
-    await fetchBlueprint()
+
+    if (result.error) {
+      console.error('Error saving battles:', result.error)
+      alert('Error saving war room updates: ' + result.error.message)
+    } else {
+      await fetchBlueprint()
+    }
   }
 
   const addBattle = async () => {
