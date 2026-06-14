@@ -114,22 +114,28 @@ export default function AppShell({ children }) {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="mobile-nav">
+      <nav className="mobile-nav" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {mainItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
           return (
             <Link key={item.href} href={item.href} style={{ flex: 1 }}>
-              <div className="flex-col flex-center p-4" style={{ color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
-                <Icon size={20} strokeWidth={1.5} />
-                <span className="text-xs mt-1 font-display uppercase tracking-wide" style={{ fontSize: '10px' }}>{item.label}</span>
+              <div 
+                className={`flex-col flex-center p-3 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
+                style={{ 
+                  color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  minHeight: '56px', /* 44px min touch target + padding */
+                }}
+              >
+                <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
+                <span className="text-xs mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.7 }}>{item.label}</span>
               </div>
             </Link>
           )
         })}
-        <button type="button" style={{ flex: 1 }} className="flex-col flex-center p-4 text-muted" onClick={() => setMobileMenuOpen(true)}>
-          <Menu size={20} strokeWidth={1.5} />
-          <span className="text-xs mt-1 font-display uppercase tracking-wide" style={{ fontSize: '10px' }}>More</span>
+        <button type="button" style={{ flex: 1, minHeight: '56px' }} className="flex-col flex-center p-3 text-muted inactive-nav-item" onClick={() => setMobileMenuOpen(true)}>
+          <Menu size={22} strokeWidth={1.5} />
+          <span className="text-xs mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: 0.7 }}>More</span>
         </button>
       </nav>
 
