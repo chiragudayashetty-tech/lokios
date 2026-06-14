@@ -176,11 +176,11 @@ export function useTasksInternal() {
 
     try {
       const task = tasks.find((t) => t.id === id)
-      if (!task || task.status === 'failed') return null
+      if (!task || task.status === 'cancelled') return null
 
       const { data: updated, error } = await supabase
         .from('tasks')
-        .update({ status: 'failed', completed_at: new Date().toISOString() })
+        .update({ status: 'cancelled', completed_at: new Date().toISOString() })
         .eq('id', id)
         .eq('user_id', user.id)
         .select()

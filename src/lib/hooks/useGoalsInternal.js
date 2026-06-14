@@ -201,7 +201,7 @@ export function useGoalsInternal() {
     try {
       const { data: updated, error } = await supabase
         .from('goals')
-        .update({ status: 'failed' })
+        .update({ status: 'cancelled' })
         .eq('id', id)
         .eq('user_id', user.id)
         .select()

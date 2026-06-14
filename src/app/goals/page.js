@@ -257,7 +257,7 @@ export default function Missions() {
                       <TacticalProgress value={goal.progress} color={isPaused ? 'var(--text-muted)' : 'var(--accent-primary)'} label="COMPLETION" />
                     </div>
                     
-                    {goal.status !== 'completed' && goal.status !== 'failed' && (
+                    {goal.status !== 'completed' && goal.status !== 'cancelled' && (
                       <div className="mt-4 flex justify-end gap-2">
                         <button onClick={() => failGoal(goal.id)} className="btn btn-ghost text-danger btn-sm" disabled={isPaused}>
                           <X size={14} /> MISSION FAILED
