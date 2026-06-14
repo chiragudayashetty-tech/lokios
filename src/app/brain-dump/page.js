@@ -113,11 +113,17 @@ export default function IntelDrop() {
                     
                     {item.status === 'inbox' && (
                       <div className="flex gap-2 mt-2 pt-2 border-t border-border-color">
-                        <button onClick={() => organizeItem(item.id)} className="btn btn-secondary btn-sm flex-1">
+                        <button onClick={async () => {
+                          const res = await organizeItem(item.id);
+                          if (res?.error) alert(`Error: ${res.error.message || res.error}`);
+                        }} className="btn btn-secondary btn-sm flex-1">
                           ORGANIZE
                         </button>
                         <div className="flex gap-2">
-                          <button onClick={() => convertItem(item.id, 'task')} className="btn btn-ghost btn-sm" title="Convert to Task"><CheckSquare size={14} /></button>
+                          <button onClick={async () => {
+                            const res = await convertItem(item.id, 'task');
+                            if (res?.error) alert(`Error: ${res.error.message || res.error}`);
+                          }} className="btn btn-ghost btn-sm" title="Convert to Task"><CheckSquare size={14} /></button>
                           <button onClick={() => discardItem(item.id)} className="btn btn-ghost btn-sm text-danger" title="Discard"><Trash2 size={14} /></button>
                         </div>
                       </div>

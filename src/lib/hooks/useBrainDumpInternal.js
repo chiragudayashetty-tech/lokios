@@ -80,7 +80,7 @@ export function useBrainDumpInternal() {
     try {
       const { data: updated, error } = await supabase
         .from('brain_dump')
-        .update({ status: 'organized', organized_at: new Date().toISOString() })
+        .update({ status: 'organized' })
         .eq('id', id)
         .eq('user_id', user.id)
         .select()
@@ -88,10 +88,10 @@ export function useBrainDumpInternal() {
 
       if (error) throw error
       setItems((prev) => prev.map((item) => (item.id === id ? updated : item)))
-      return updated
+      return { data: updated }
     } catch (error) {
       console.error('Error organizing brain dump item:', error)
-      return null
+      return { error }
     }
   }, [user])
 
@@ -155,12 +155,13 @@ export function useBrainDumpInternal() {
       }
 
       // Mark the brain dump item as organized
-      await organizeItem(id)
+      const orgResult = await organizeItem(id)
+      if (orgResult?.error) throw orgResult.error
 
-      return newEntity
+      return { data: newEntity }
     } catch (error) {
       console.error('Error converting brain dump item:', error)
-      return null
+      return { error }
     }
   }, [user, items, organizeItem])
 

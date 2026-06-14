@@ -427,21 +427,21 @@ export default function Operations() {
                       <input type="url" className="input font-mono text-sm w-full" placeholder="https://screenshot.link or drive.google.com/..."
                         value={proofUrl} onChange={e => setProofUrl(e.target.value)} autoFocus />
                     </div>
-                    <div className="flex justify-between items-center mt-3">
-                      <div className="flex gap-2">
+                    <div className="flex-col gap-3 mt-4">
+                      <button type='button' className="btn btn-primary w-full py-2 flex items-center justify-center gap-2" onClick={() => submitCompletion(false)}>
+                        <Check size={16} /> CONFIRM EXECUTION
+                      </button>
+                      <div className="flex flex-wrap justify-center gap-2">
                         <button type='button' className="btn btn-ghost btn-sm" onClick={() => setEditingId(proofTask.id)}>
                           <Edit2 size={14} /> EDIT
                         </button>
                         <button type='button' className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(proofTask)}>
-                          <RotateCcw size={14} /> PUSH TO TOMORROW
+                          <RotateCcw size={14} /> PUSH
                         </button>
                         <button type='button' className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(proofTask)}>
-                          <X size={14} /> FAIL OPERATION
+                          <X size={14} /> FAIL
                         </button>
                       </div>
-                      <button type='button' className="btn btn-secondary btn-sm" onClick={() => submitCompletion(false)}>
-                        <Check size={14} /> EXECUTE
-                      </button>
                     </div>
                   </div>
                 </HudPanel>
