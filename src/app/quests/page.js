@@ -41,6 +41,8 @@ export default function DailyOps() {
   const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth()
 
   const mobileDays = Array.from({ length: 7 }, (_, i) => mobileWeekStart + i).filter(d => d <= daysInMonth)
+  
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
   // Navigate months
   const prevMonth = () => {

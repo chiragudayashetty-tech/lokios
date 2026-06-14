@@ -91,7 +91,7 @@ export function useHabitsInternal() {
 
     } catch (err) {
       console.error('Error fetching habits:', err)
-      setError('Failed to load data. Please refresh and try again.')
+      setError(err.message || JSON.stringify(err) || 'Failed to load data. Please refresh and try again.')
     } finally {
       setLoading(false)
       setInitialized(true)
