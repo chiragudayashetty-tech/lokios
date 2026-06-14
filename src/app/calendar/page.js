@@ -61,9 +61,15 @@ export default function Calendar() {
             <p className="page-subtitle font-mono uppercase text-xs">Temporal scheduling and event tracking.</p>
           </div>
           <div className="flex items-center gap-4">
-            <a href={`/api/calendar?username=${profile?.username}`} target="_blank" rel="noopener noreferrer" className="text-info font-mono text-xs hover:text-primary transition-colors hover:underline">
-              .ICS SUBSCRIPTION
-            </a>
+            {profile?.calendar_token ? (
+              <a href={`/api/calendar?token=${profile.calendar_token}`} target="_blank" rel="noopener noreferrer" className="text-info font-mono text-xs hover:text-primary transition-colors hover:underline">
+                .ICS SUBSCRIPTION
+              </a>
+            ) : (
+              <span className="text-muted font-mono text-xs cursor-not-allowed" title="Calendar token not generated">
+                .ICS (UNAVAILABLE)
+              </span>
+            )}
             <button className="btn btn-primary" onClick={() => {
               setFormData({...formData, start_time: `${selectedDate}T09:00`, end_time: `${selectedDate}T10:00`})
               setShowAddForm(true)

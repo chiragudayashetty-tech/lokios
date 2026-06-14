@@ -129,7 +129,7 @@
   /* ── Typography Scale ── */
   --text-xs:   0.625rem;   /* 10px */
   --text-sm:   0.75rem;    /* 12px */
-  --text-base: 0.875rem;   /* 14px */
+  --text-base: 1rem;       /* 16px */
   --text-md:   1rem;       /* 16px */
   --text-lg:   1.125rem;   /* 18px */
   --text-xl:   1.25rem;    /* 20px */
@@ -639,11 +639,11 @@ p:last-child {
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--mobile-nav-height);
+  height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   z-index: var(--z-fixed);
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-2) env(safe-area-inset-bottom, 0px);
   align-items: center;
   justify-content: space-around;
   backdrop-filter: blur(var(--glass-blur));
@@ -857,6 +857,11 @@ p:last-child {
   opacity: 0.3;
   animation: scan 4s linear infinite;
   pointer-events: none;
+}
+
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 @keyframes scan {
@@ -3116,9 +3121,21 @@ select:focus {
     padding: var(--space-3);
   }
 
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
   .modal-content {
-    padding: var(--space-4);
-    margin: var(--space-2);
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--space-4) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   .battle-card-metrics {
@@ -3182,7 +3199,7 @@ select:focus {
 
   .main-content {
     grid-column: 1;
-    padding-bottom: calc(var(--mobile-nav-height) + var(--space-6));
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-6));
   }
 }
 

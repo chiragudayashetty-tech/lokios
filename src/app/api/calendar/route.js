@@ -3,10 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
-  const username = searchParams.get('username')
+  const token = searchParams.get('token')
 
-  if (!username) {
-    return new NextResponse("Missing username parameter. Add ?username=YOUR_USERNAME", { status: 400 })
+  if (!token) {
+    return new NextResponse("Missing token parameter. Add ?token=YOUR_TOKEN", { status: 400 })
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -15,8 +15,8 @@ export async function GET(request) {
   // Using service role key if available to bypass RLS for background sync, otherwise falls back to anon
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  // Look up user_id from profiles table using username
-  const { data: profile } = await supabase.from('profiles').select('id').eq('username', username).single()
+  // Look up user_id from profiles table using calendar_token
+  const { data: profile } = await supabase.from('profiles').select('id').eq('calendar_token', token).single()
   
   if (!profile) {
     return new NextResponse("User not found.", { status: 404 })

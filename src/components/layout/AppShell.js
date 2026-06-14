@@ -118,7 +118,7 @@ export default function AppShell({ children }) {
             </Link>
           )
         })}
-        <button style={{ flex: 1 }} className="flex-col flex-center p-4 text-muted" onClick={() => setMobileMenuOpen(true)}>
+        <button type="button" style={{ flex: 1 }} className="flex-col flex-center p-4 text-muted" onClick={() => setMobileMenuOpen(true)}>
           <Menu size={20} strokeWidth={1.5} />
           <span className="text-xs mt-1 font-display uppercase tracking-wide" style={{ fontSize: '10px' }}>More</span>
         </button>

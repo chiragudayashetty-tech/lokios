@@ -1,19 +1,20 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useHabits } from '@/lib/hooks/useHabits'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Check, Flame, Trash2, ChevronLeft, ChevronRight, X, Archive } from 'lucide-react'
+import { Plus, Check, Flame, Trash2, ChevronLeft, ChevronRight, X, Archive, AlertTriangle } from 'lucide-react'
 
 export default function DailyOps() {
-  const { habits, monthLogs, todayLogs, loading, toggleHabitForDate, addHabit, deleteHabit, archiveHabit, fetchHabits } = useHabits()
+  const { habits, monthLogs, todayLogs, loading, error, fetchHabits, toggleHabitForDate, addHabit, deleteHabit, archiveHabit } = useHabits()
 
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth()) // 0-indexed
+  const [mobileWeekStart, setMobileWeekStart] = useState(1)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newCategory, setNewCategory] = useState('beyond_tatva')
@@ -29,15 +30,30 @@ export default function DailyOps() {
   const todayDay = today.getDate()
   const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth()
 
+  const mobileDays = Array.from({ length: 7 }, (_, i) => mobileWeekStart + i).filter(d => d <= daysInMonth)
+
   // Navigate months
   const prevMonth = () => {
+    setMobileWeekStart(1)
     if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1); fetchHabits(viewYear - 1, 11) }
     else { setViewMonth(viewMonth - 1); fetchHabits(viewYear, viewMonth - 1) }
   }
   const nextMonth = () => {
+    setMobileWeekStart(1)
     if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1); fetchHabits(viewYear + 1, 0) }
     else { setViewMonth(viewMonth + 1); fetchHabits(viewYear, viewMonth + 1) }
   }
+
+  const prevWeek = () => setMobileWeekStart(prev => Math.max(1, prev - 7))
+  const nextWeek = () => setMobileWeekStart(prev => Math.min(daysInMonth, prev + 7))
+
+  useEffect(() => {
+    if (isCurrentMonth) {
+      setMobileWeekStart(Math.max(1, todayDay - today.getDay()))
+    } else {
+      setMobileWeekStart(1)
+    }
+  }, [viewMonth, viewYear, isCurrentMonth, todayDay])
 
   // Build a lookup set: "habitId::YYYY-MM-DD" for O(1) checks
   const logSet = useMemo(() => {
@@ -107,6 +123,19 @@ export default function DailyOps() {
     setNewTitle('')
     setCustomCategory('')
     setShowAddForm(false)
+  }
+
+  if (error) {
+    return (
+      <AppShell>
+        <div className="flex-center h-full flex-col gap-4 text-center">
+          <AlertTriangle size={48} className="text-danger mb-2" />
+          <h2 className="font-display text-xl text-danger uppercase tracking-widest">SYSTEM ERROR</h2>
+          <p className="font-mono text-sm text-muted max-w-md">{error}</p>
+          <button type="button" onClick={() => fetchHabits()} className="btn btn-primary mt-4">RETRY CONNECTION</button>
+        </div>
+      </AppShell>
+    )
   }
 
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING HABIT TRACKER...</span></div></AppShell>
@@ -183,8 +212,8 @@ export default function DailyOps() {
           </HudPanel>
         </div>
 
-        {/* The Spreadsheet Grid */}
-        <HudPanel className="overflow-x-auto p-0">
+        {/* The Spreadsheet Grid (Desktop) */}
+        <HudPanel className="overflow-x-auto p-0 hidden-mobile">
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
             <thead>
               <tr>
@@ -345,6 +374,91 @@ export default function DailyOps() {
             </div>
           )}
         </HudPanel>
+
+        {/* Mobile Week Grid */}
+        <div className="hidden-desktop">
+          <div className="flex-between mb-2 px-2">
+            <button onClick={prevWeek} className="btn btn-ghost p-2"><ChevronLeft size={20} /></button>
+            <div className="font-display text-sm tracking-widest text-primary">WEEK VIEW</div>
+            <button onClick={nextWeek} className="btn btn-ghost p-2"><ChevronRight size={20} /></button>
+          </div>
+          <HudPanel className="p-0 overflow-hidden">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ background: 'var(--bg-tertiary)', padding: '12px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)' }}>
+                    <span className="font-display text-[10px] uppercase tracking-widest text-primary">HABIT</span>
+                  </th>
+                  {mobileDays.map((d) => {
+                    const isToday = isCurrentMonth && d === todayDay
+                    return (
+                      <th key={d} style={{
+                        padding: '8px 4px', textAlign: 'center',
+                        borderBottom: '1px solid var(--border-color)',
+                        background: isToday ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
+                        minWidth: '44px'
+                      }}>
+                        <div className="font-mono text-[9px] text-muted">{getDow(d)}</div>
+                        <div className={`font-mono text-sm ${isToday ? 'text-info font-bold' : 'text-secondary'}`}>{d}</div>
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {habits.map((habit) => {
+                  const cat = QUEST_CATEGORIES.find(c => c.id === habit.category) || QUEST_CATEGORIES[0]
+                  return (
+                    <tr key={habit.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{
+                        background: 'var(--bg-secondary)',
+                        padding: '12px 8px',
+                        borderRight: '1px solid var(--border-color)',
+                        maxWidth: '120px'
+                      }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-1 h-8 rounded-full shrink-0" style={{ background: cat.color }} />
+                          <div className="font-mono text-[10px] text-primary truncate">{habit.title}</div>
+                        </div>
+                      </td>
+                      {mobileDays.map((d) => {
+                        const checked = isChecked(habit.id, d)
+                        const isToday = isCurrentMonth && d === todayDay
+                        return (
+                          <td key={d}
+                            onClick={() => handleToggle(habit.id, d)}
+                            style={{
+                              textAlign: 'center', padding: '4px', cursor: 'pointer',
+                              background: isToday ? 'var(--accent-subtle)' : 'transparent',
+                            }}
+                          >
+                            <div style={{
+                              width: '32px', height: '32px', margin: '0 auto',
+                              border: checked ? 'none' : '1.5px solid var(--border-strong)',
+                              borderRadius: '4px',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: checked ? cat.color : 'transparent',
+                              transition: 'all 150ms ease',
+                              opacity: checked ? 1 : 0.5,
+                            }}>
+                              {checked && <Check size={16} color="#fff" strokeWidth={3} />}
+                            </div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            {habits.length === 0 && (
+              <div className="p-8 text-center">
+                <div className="font-mono text-xs text-muted mb-4">NO ROUTINES</div>
+                <button onClick={() => setShowAddForm(true)} className="btn btn-primary btn-sm">ADD ROUTINE</button>
+              </div>
+            )}
+          </HudPanel>
+        </div>
 
         {/* Top 10 Daily Habits Sidebar */}
         {habits.length > 0 && (

@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap } from 'lucide-react'
 
 export default function Operations() {
-  const { tasks: { tasks, todayTasks, loading, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation } = useOS()
+  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation } = useOS()
 
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)
@@ -114,6 +114,19 @@ export default function Operations() {
     MEDIUM: { label: 'MEDIUM', color: 'var(--accent-primary)', xp: 30 },
     HARD: { label: 'HARD', color: 'var(--warning)', xp: 60 },
     EXTREME: { label: 'EXTREME', color: 'var(--danger)', xp: 120 }
+  }
+
+  if (error) {
+    return (
+      <AppShell>
+        <div className="flex-center h-full flex-col gap-4 text-center">
+          <AlertTriangle size={48} className="text-danger mb-2" />
+          <h2 className="font-display text-xl text-danger uppercase tracking-widest">SYSTEM ERROR</h2>
+          <p className="font-mono text-sm text-muted max-w-md">{error}</p>
+          <button type="button" onClick={fetchTasks} className="btn btn-primary mt-4">RETRY CONNECTION</button>
+        </div>
+      </AppShell>
+    )
   }
 
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING OPERATIONS...</span></div></AppShell>

@@ -10,6 +10,7 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 export function useTasksInternal() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const { user } = useAuth()
   const supabase = createClient()
 
@@ -22,6 +23,7 @@ export function useTasksInternal() {
 
     try {
       setLoading(true)
+      setError(null)
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -30,8 +32,9 @@ export function useTasksInternal() {
 
       if (error) throw error
       setTasks(data || [])
-    } catch (error) {
-      console.error('Error fetching tasks:', error)
+    } catch (err) {
+      console.error('Error fetching tasks:', err)
+      setError('Failed to load data. Please refresh and try again.')
     } finally {
       setLoading(false)
     }
@@ -210,6 +213,8 @@ export function useTasksInternal() {
     tasks,
     todayTasks,
     loading,
+    error,
+    fetchTasks,
     addTask,
     editTask,
     completeTask,

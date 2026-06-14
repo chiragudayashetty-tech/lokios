@@ -11,6 +11,7 @@ export function useHabitsInternal() {
   const [habits, setHabits] = useState([])
   const [monthLogs, setMonthLogs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const processingRef = useRef(new Set())
   const { user } = useAuth()
   const supabase = createClient()
@@ -32,6 +33,7 @@ export function useHabitsInternal() {
 
     try {
       setLoading(true)
+      setError(null)
 
       // Calculate month range
       const now = new Date()
@@ -76,8 +78,9 @@ export function useHabitsInternal() {
 
       setHabits(habitsRes.data || [])
       setMonthLogs([...realLogs, ...virtualFailedLogs])
-    } catch (error) {
-      console.error('Error fetching habits:', error)
+    } catch (err) {
+      console.error('Error fetching habits:', err)
+      setError('Failed to load data. Please refresh and try again.')
     } finally {
       setLoading(false)
     }
@@ -246,6 +249,8 @@ export function useHabitsInternal() {
     todayLogs,
     monthLogs,
     loading,
+    error,
+    fetchHabits,
     toggleHabit,
     toggleHabitForDate,
     addHabit,

@@ -5,11 +5,11 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
-import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw } from 'lucide-react'
+import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
-  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, loading, addGoal, completeGoal, undoCompleteGoal, failGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
+  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, failGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
@@ -67,6 +67,19 @@ export default function Missions() {
   const saveEdit = async (id) => {
     await updateGoal(id, editForm)
     setEditingId(null)
+  }
+
+  if (error) {
+    return (
+      <AppShell>
+        <div className="flex-center h-full flex-col gap-4 text-center">
+          <AlertTriangle size={48} className="text-danger mb-2" />
+          <h2 className="font-display text-xl text-danger uppercase tracking-widest">SYSTEM ERROR</h2>
+          <p className="font-mono text-sm text-muted max-w-md">{error}</p>
+          <button type="button" onClick={() => fetchGoals()} className="btn btn-primary mt-4">RETRY CONNECTION</button>
+        </div>
+      </AppShell>
+    )
   }
 
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING MISSIONS...</span></div></AppShell>

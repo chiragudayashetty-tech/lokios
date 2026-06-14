@@ -78,8 +78,8 @@ export default function FocusMode() {
     <div className="flex-center tactical-grid" style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
       {isActive && <div className="radar-pulse" style={{ position: 'absolute', inset: 0, opacity: 0.1, background: 'radial-gradient(circle, var(--accent-primary) 0%, transparent 70%)', animation: 'pulse 4s infinite' }} />}
       
-      <Link href="/dashboard" className="absolute top-8 left-8 btn btn-ghost text-muted">
-        <X size={20} /> ABORT SESSION
+      <Link href="/dashboard" className="absolute btn btn-ghost text-muted z-20" style={{ top: 'max(1rem, env(safe-area-inset-top, 1rem))', left: 'max(0.5rem, env(safe-area-inset-left, 0.5rem))' }}>
+        <X size={20} /> <span className="hidden sm:inline ml-2">ABORT SESSION</span>
       </Link>
 
       <motion.div 
@@ -95,9 +95,9 @@ export default function FocusMode() {
         )}
 
         {/* Circular Timer Display */}
-        <div className="relative flex-center mb-12" style={{ width: '320px', height: '320px' }}>
+        <div className="relative flex-center mb-12" style={{ width: 'min(320px, 80vw)', height: 'min(320px, 80vw)' }}>
           {/* Progress Ring */}
-          <svg className="absolute inset-0 w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 320" style={{ transform: 'rotate(-90deg)' }}>
             <circle cx="160" cy="160" r="150" fill="none" stroke="var(--bg-tertiary)" strokeWidth="4" />
             <motion.circle 
               cx="160" cy="160" r="150" fill="none" 
@@ -109,21 +109,21 @@ export default function FocusMode() {
           </svg>
           
           <div className="flex-col flex-center">
-            <span className="font-mono text-amber glow-amber" style={{ fontSize: '6rem', lineHeight: 1 }}>{mins}:{secs}</span>
+            <span className="font-mono text-amber glow-amber" style={{ fontSize: 'clamp(4rem, 16vw, 6rem)', lineHeight: 1 }}>{mins}:{secs}</span>
             <span className="font-mono text-muted text-sm tracking-widest mt-2">{isActive ? 'ENGAGED' : 'STANDBY'}</span>
           </div>
         </div>
 
         {/* Controls */}
-        <div className="flex gap-4 mb-8">
+        <div className="flex flex-wrap justify-center items-center gap-4 mb-8 w-full px-4">
           <button 
             onClick={toggleTimer}
-            className={`btn ${isActive ? 'btn-secondary text-amber' : 'btn-primary'} btn-lg flex items-center gap-2`}
-            style={{ width: '160px' }}
+            className={`btn ${isActive ? 'btn-secondary text-amber' : 'btn-primary'} btn-lg flex items-center justify-center gap-2 flex-1`}
+            style={{ minWidth: '160px', maxWidth: '240px' }}
           >
             {isActive ? <><Pause size={20} /> SUSPEND</> : <><Play size={20} /> EXECUTE</>}
           </button>
-          <button onClick={resetTimer} className="btn btn-ghost p-3" title="Reset">
+          <button onClick={resetTimer} className="btn btn-ghost p-3 shrink-0" title="Reset">
             <Square size={20} />
           </button>
         </div>
