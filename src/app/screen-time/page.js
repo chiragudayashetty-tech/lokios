@@ -71,8 +71,7 @@ export default function ScreenIntel() {
       total_hours: parseFloat(totalHours),
       focus_hours: parseFloat(focusHours),
       doom_scroll_minutes: parsedDoom,
-      notes,
-      updated_at: new Date().toISOString()
+      notes
     }
 
     const { data: upsertData, error: upsertError } = await supabase.from('screen_time_logs').upsert(payload, { onConflict: 'user_id,date' }).select()
