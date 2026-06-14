@@ -260,15 +260,15 @@ export default function DailyOps() {
           </HudPanel>
         </div>
 
-        {/* The Spreadsheet Grid (Desktop) */}
-        <HudPanel className="overflow-x-auto p-0 hidden-mobile">
+        {/* The Spreadsheet Grid */}
+        <HudPanel className="overflow-x-auto p-0">
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
             <thead>
               <tr>
-                <th style={{ position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', width: '260px', minWidth: '260px', maxWidth: '260px', borderTopLeftRadius: 'var(--radius-lg)' }}>
-                  <span className="font-display text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
+                <th className="sticky left-0 z-10 w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
+                  <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
                 </th>
-                <th style={{ position: 'sticky', left: '260px', zIndex: 10, background: 'var(--bg-tertiary)', padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', width: '50px', minWidth: '50px', maxWidth: '50px' }}>
+                <th className="sticky left-[140px] md:left-[260px] z-10 w-[40px] md:w-[50px] min-w-[40px] md:min-w-[50px] max-w-[40px] md:max-w-[50px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 4px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)' }}>
                   <span className="font-mono text-[10px] text-muted">XP</span>
                 </th>
                 {days.map((d) => {
@@ -276,9 +276,9 @@ export default function DailyOps() {
                   return (
                     <th key={d} style={{
                       padding: '6px 2px', textAlign: 'center',
-                      borderBottom: '1px solid var(--border-color)',
+                      borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-subtle)',
                       background: isToday ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
-                      minWidth: '32px'
+                      minWidth: '36px'
                     }}>
                       <div className="font-mono text-[9px] text-muted">{getDow(d)}</div>
                       <div className={`font-mono text-xs ${isToday ? 'text-info font-bold' : 'text-secondary'}`}>{d}</div>
@@ -305,40 +305,34 @@ export default function DailyOps() {
                   <tr key={habit.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}
                     className="group hover:bg-hover transition-colors">
                     {/* Habit Name */}
-                    <td style={{
-                      position: 'sticky', left: 0, zIndex: 5,
+                    <td className="sticky left-0 z-[5] w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{
                       background: 'var(--bg-secondary)',
-                      padding: '8px 12px',
+                      padding: '8px',
                       borderRight: '2px solid var(--border-color)',
-                      width: '260px', minWidth: '260px', maxWidth: '260px'
                     }}>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 md:gap-2">
                         <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)]">
                           <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted" title="Move Up"><ArrowUp size={10} /></button>
                           <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 hover:opacity-100 text-muted" title="Move Down"><ArrowDown size={10} /></button>
                         </div>
-                        <div className="w-1.5 h-8 rounded-full shrink-0" style={{ background: cat.color }} />
+                        <div className="w-1 md:w-1.5 h-8 rounded-full shrink-0" style={{ background: cat.color }} />
                         <div className="flex-1 min-w-0" onClick={() => openEditModal(habit)} style={{ cursor: 'pointer' }}>
-                          <div className="font-mono text-xs text-primary truncate hover:text-amber transition-colors">{habit.title}</div>
-                          <div className="font-mono text-[9px] text-muted uppercase">{cat.name}</div>
+                          <div className="font-mono text-[10px] md:text-xs text-primary truncate hover:text-amber transition-colors">{habit.title}</div>
+                          <div className="font-mono text-[8px] md:text-[9px] text-muted uppercase hidden md:block">{cat.name}</div>
                         </div>
-                        <button onClick={() => archiveHabit(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-amber p-1" title="Archive Routine">
-                          <Archive size={12} />
-                        </button>
-                        <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-danger p-1" title="Delete Routine">
+                        <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-danger p-1 hidden md:block" title="Delete Routine">
                           <Trash2 size={12} />
                         </button>
                       </div>
                     </td>
                     {/* XP */}
-                    <td style={{
-                      position: 'sticky', left: '260px', zIndex: 5,
+                    <td className="sticky left-[140px] md:left-[260px] z-[5] w-[40px] md:w-[50px] min-w-[40px] md:min-w-[50px] max-w-[40px] md:max-w-[50px]" style={{
                       background: 'var(--bg-secondary)',
                       textAlign: 'center',
                       borderRight: '2px solid var(--border-color)',
-                      padding: '4px',
-                      width: '50px', minWidth: '50px', maxWidth: '50px'
+                      padding: '4px'
                     }}>
+                      <span className="font-mono text-[9px] md:text-[10px] text-info font-bold">{habit.xp_per_completion || 25}</span>
                       <span className="font-mono text-[10px] text-info font-bold">{habit.xp_per_completion || 25}</span>
                     </td>
                     {/* Day cells */}
@@ -349,19 +343,19 @@ export default function DailyOps() {
                         <td key={d}
                           onClick={() => handleToggle(habit.id, d)}
                           style={{
-                            textAlign: 'center', padding: '4px 2px', cursor: 'pointer',
+                            textAlign: 'center', padding: '0', cursor: 'pointer', borderRight: '1px solid var(--border-subtle)',
                             background: isToday ? 'var(--accent-subtle)' : 'transparent',
                           }}
-                          className="hover:bg-hover transition-colors"
+                          className="hover:bg-hover transition-colors min-w-[36px]"
                         >
                           <div style={{
-                            width: '20px', height: '20px', margin: '0 auto',
-                            border: status === 'none' ? '1.5px solid var(--border-strong)' : 'none',
-                            borderRadius: '3px',
+                            width: '26px', height: '26px', margin: '4px auto',
+                            border: status === 'none' ? '1px solid var(--border-color)' : 'none',
+                            borderRadius: '4px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : 'transparent',
                             transition: 'all 150ms ease',
-                            opacity: status !== 'none' ? 1 : 0.5,
+                            opacity: status !== 'none' ? 1 : 0.4,
                           }}>
                             {status === 'completed' && <Check size={12} color="#fff" strokeWidth={3} />}
                             {status === 'failed' && <X size={12} color="#fff" strokeWidth={3} />}
@@ -388,10 +382,10 @@ export default function DailyOps() {
               {/* Global Progress Row */}
               {habits.length > 0 && (
                 <tr style={{ borderTop: '2px solid var(--accent-primary)' }}>
-                  <td style={{ position: 'sticky', left: 0, zIndex: 5, background: 'var(--bg-tertiary)', padding: '10px 12px', borderRight: '2px solid var(--border-color)', width: '260px', minWidth: '260px', maxWidth: '260px' }}>
-                    <span className="font-display text-xs uppercase tracking-widest text-amber">GLOBAL PROGRESS</span>
+                  <td className="sticky left-0 z-[5] w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 12px', borderRight: '2px solid var(--border-color)' }}>
+                    <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-amber truncate block">GLOBAL PROGRESS</span>
                   </td>
-                  <td style={{ position: 'sticky', left: '260px', zIndex: 5, background: 'var(--bg-tertiary)', borderRight: '2px solid var(--border-color)', width: '50px', minWidth: '50px', maxWidth: '50px' }}></td>
+                  <td className="sticky left-[140px] md:left-[260px] z-[5] w-[40px] md:w-[50px] min-w-[40px] md:min-w-[50px] max-w-[40px] md:max-w-[50px]" style={{ background: 'var(--bg-tertiary)', borderRight: '2px solid var(--border-color)' }}></td>
                   {days.map((d) => {
                     const dayDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
                     const dayDone = habits.filter(h => logMap.get(`${h.id}::${dayDate}`) === 'completed').length
@@ -430,98 +424,7 @@ export default function DailyOps() {
           )}
         </HudPanel>
 
-        {/* Mobile Week Grid */}
-        <div className="hidden-desktop">
-          <div className="flex-between mb-2 px-2">
-            <button onClick={prevWeek} className="btn btn-ghost p-2"><ChevronLeft size={20} /></button>
-            <div className="font-display text-sm tracking-widest text-primary">WEEK VIEW</div>
-            <button onClick={nextWeek} className="btn btn-ghost p-2"><ChevronRight size={20} /></button>
-          </div>
-          <HudPanel className="p-0 overflow-x-auto">
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '450px' }}>
-              <thead>
-                <tr>
-                  <th style={{ position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-tertiary)', padding: '12px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
-                    <span className="font-display text-[10px] uppercase tracking-widest text-primary">HABIT</span>
-                  </th>
-                  {mobileDays.map((d) => {
-                    const isToday = isCurrentMonth && d === todayDay
-                    return (
-                      <th key={d} style={{
-                        padding: '8px 4px', textAlign: 'center',
-                        borderBottom: '1px solid var(--border-color)',
-                        background: isToday ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
-                        minWidth: '44px'
-                      }}>
-                        <div className="font-mono text-[9px] text-muted">{getDow(d)}</div>
-                        <div className={`font-mono text-sm ${isToday ? 'text-info font-bold' : 'text-secondary'}`}>{d}</div>
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {habits.map((habit) => {
-                  const cat = QUEST_CATEGORIES.find(c => c.id === habit.category) || QUEST_CATEGORIES[0]
-                  return (
-                    <tr key={habit.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{
-                        position: 'sticky', left: 0, zIndex: 5,
-                        background: 'var(--bg-secondary)',
-                        padding: '12px 8px',
-                        borderRight: '1px solid var(--border-color)',
-                        width: '140px', minWidth: '140px', maxWidth: '140px'
-                      }}>
-                        <div className="flex items-center gap-2">
-                          <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)]">
-                            <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted" title="Move Up"><ArrowUp size={10} /></button>
-                            <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 hover:opacity-100 text-muted" title="Move Down"><ArrowDown size={10} /></button>
-                          </div>
-                          <div className="w-1 h-8 rounded-full shrink-0" style={{ background: cat.color }} />
-                          <div className="font-mono text-[10px] text-primary truncate hover:text-amber transition-colors cursor-pointer" onClick={() => openEditModal(habit)}>
-                            {habit.title}
-                          </div>
-                        </div>
-                      </td>
-                      {mobileDays.map((d) => {
-                        const status = getStatus(habit.id, d)
-                        const isToday = isCurrentMonth && d === todayDay
-                        return (
-                          <td key={d}
-                            onClick={() => handleToggle(habit.id, d)}
-                            style={{
-                              textAlign: 'center', padding: '4px', cursor: 'pointer',
-                              background: isToday ? 'var(--accent-subtle)' : 'transparent',
-                            }}
-                          >
-                            <div style={{
-                              width: '32px', height: '32px', margin: '0 auto',
-                              border: status === 'none' ? '1.5px solid var(--border-strong)' : 'none',
-                              borderRadius: '4px',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : 'transparent',
-                              transition: 'all 150ms ease',
-                              opacity: status !== 'none' ? 1 : 0.5,
-                            }}>
-                              {status === 'completed' && <Check size={16} color="#fff" strokeWidth={3} />}
-                              {status === 'failed' && <X size={16} color="#fff" strokeWidth={3} />}
-                            </div>
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {habits.length === 0 && (
-              <div className="p-8 text-center">
-                <div className="font-mono text-xs text-muted mb-4">NO ROUTINES</div>
-                <button onClick={() => setShowAddForm(true)} className="btn btn-primary btn-sm">ADD ROUTINE</button>
-              </div>
-            )}
-          </HudPanel>
-        </div>
+
 
         {/* Top 10 Daily Habits Sidebar */}
         {topHabits.length > 0 && (
