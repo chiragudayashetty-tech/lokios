@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
   const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
-  const { failMission } = useOS()
+  const { failMission, undoFailMission } = useOS()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
@@ -287,10 +287,13 @@ export default function Missions() {
                     )}
                     
                     {goal.status === 'cancelled' && (
-                      <div className="mt-4 flex justify-start gap-2">
+                      <div className="mt-4 flex justify-between gap-2">
                         <div className="text-danger font-mono text-xs uppercase tracking-widest flex items-center gap-1">
                           <AlertTriangle size={14} /> MISSION FAILED
                         </div>
+                        <button onClick={() => undoFailMission(goal.id)} className="btn btn-ghost text-info btn-sm">
+                          <RotateCcw size={14} /> RESTORE MISSION
+                        </button>
                       </div>
                     )}
                   </HudPanel>

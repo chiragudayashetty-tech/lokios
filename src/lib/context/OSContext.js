@@ -131,11 +131,21 @@ export function OSProvider({ children }) {
       return result
     },
 
+    undoFailOperation: async (taskId) => {
+      const result = await tasks.undoFailTask(taskId)
+      return result
+    },
+
     failMission: async (goalId) => {
       const result = await goals.failGoal(goalId)
       if (result) {
         await xp.fetchProfile() // Refresh XP immediately
       }
+      return result
+    },
+
+    undoFailMission: async (goalId) => {
+      const result = await goals.undoFailGoal(goalId)
       return result
     }
   }

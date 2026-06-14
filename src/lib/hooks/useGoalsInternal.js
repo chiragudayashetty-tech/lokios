@@ -241,6 +241,28 @@ export function useGoalsInternal() {
     }
   }, [user, goals])
 
+  const undoFailGoal = useCallback(async (id) => {
+    if (!user) return null
+
+    try {
+      const { data: updated, error } = await supabase
+        .from('goals')
+        .update({ status: 'active' })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
+      return updated
+    } catch (error) {
+      console.error('Error undoing failed goal:', error)
+      return null
+    }
+  }, [user])
+
   const deleteGoal = useCallback(async (id) => {
     if (!user) return false
 
@@ -320,6 +342,7 @@ export function useGoalsInternal() {
     completeGoal,
     undoCompleteGoal,
     failGoal,
+    undoFailGoal,
     deleteGoal,
     togglePauseGoal,
     updateProgress,

@@ -212,6 +212,28 @@ export function useTasksInternal() {
     }
   }, [user, tasks])
 
+  const undoFailTask = useCallback(async (id) => {
+    if (!user) return null
+
+    try {
+      const { data: updated, error } = await supabase
+        .from('tasks')
+        .update({ status: 'pending', completed_at: null })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      return updated
+    } catch (error) {
+      console.error('Error undoing failed task:', error)
+      return null
+    }
+  }, [user])
+
   const editTask = useCallback(async (id, updates) => {
     if (!user) return null
 
@@ -264,6 +286,7 @@ export function useTasksInternal() {
     completeTask,
     undoCompleteTask,
     deleteTask,
-    failTask
+    failTask,
+    undoFailTask
   }
 }

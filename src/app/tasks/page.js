@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle } from 'lucide-react'
 
 export default function Operations() {
-  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation } = useOS()
+  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation, undoFailOperation } = useOS()
 
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)
@@ -332,9 +332,14 @@ export default function Operations() {
                               </span>
                             )}
                             {isFailed && (
-                              <span className="font-mono text-[10px] text-danger flex items-center gap-1">
-                                <XCircle size={12} /> FAILED
-                              </span>
+                              <>
+                                <span className="font-mono text-[10px] text-danger flex items-center gap-1">
+                                  <XCircle size={12} /> FAILED
+                                </span>
+                                <button type='button' className="btn btn-ghost btn-sm text-info ml-2" onClick={() => undoFailOperation(task.id)} title="Restore Operation">
+                                  <RotateCcw size={14} /> RESTORE
+                                </button>
+                              </>
                             )}
                           </div>
                         )}
