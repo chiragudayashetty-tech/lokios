@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle } from 'lucide-react'
 
 export default function Operations() {
-  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask, failTask: osFailTask }, completeOperation, deleteOperation } = useOS()
+  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation } = useOS()
 
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)
@@ -72,7 +72,7 @@ export default function Operations() {
 
   const failTask = async (task) => {
     if (!window.confirm('Are you sure? This will permanently fail the operation and apply a negative XP penalty based on difficulty.')) return
-    await osFailTask(task.id)
+    await failOperation(task.id)
   }
 
   const handleComplete = (task) => {

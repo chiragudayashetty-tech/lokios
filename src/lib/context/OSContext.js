@@ -121,6 +121,22 @@ export function OSProvider({ children }) {
         }
       }
       return success
+    },
+
+    failOperation: async (taskId) => {
+      const result = await tasks.failTask(taskId)
+      if (result) {
+        await xp.fetchProfile() // Refresh XP immediately
+      }
+      return result
+    },
+
+    failMission: async (goalId) => {
+      const result = await goals.failGoal(goalId)
+      if (result) {
+        await xp.fetchProfile() // Refresh XP immediately
+      }
+      return result
     }
   }
 

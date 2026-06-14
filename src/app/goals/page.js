@@ -5,11 +5,13 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
+import { useOS } from '@/lib/context/OSContext'
 import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
-  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, failGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
+  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
+  const { failMission } = useOS()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
@@ -260,7 +262,11 @@ export default function Missions() {
                     
                     {goal.status !== 'completed' && goal.status !== 'cancelled' && (
                       <div className="mt-4 flex justify-end gap-2">
-                        <button onClick={() => failGoal(goal.id)} className="btn btn-ghost text-danger btn-sm" disabled={isPaused}>
+                        <button onClick={async () => {
+                          if (window.confirm('Are you sure? This will permanently fail the mission and apply a massive negative XP penalty based on difficulty.')) {
+                            await failMission(goal.id)
+                          }
+                        }} className="btn btn-ghost text-danger btn-sm" disabled={isPaused}>
                           <X size={14} /> MISSION FAILED
                         </button>
                         <button onClick={() => setProofModal({ show: true, goal, url: '' })} className="btn btn-secondary btn-sm" disabled={isPaused}>

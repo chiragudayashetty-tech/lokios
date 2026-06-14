@@ -225,7 +225,7 @@ export function useGoalsInternal() {
 
       await robustAwardXP(
         user.id,
-        -50,
+        -xpAmount,
         'goal_failed',
         id,
         `Failed ${goal.type}: ${goal.title}`,
