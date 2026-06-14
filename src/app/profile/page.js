@@ -109,19 +109,43 @@ export default function OperatorDashboard() {
     setEditMode(false)
   }
 
-  const addBattle = () => {
+  const saveBattlesToDB = async (newBattles) => {
+    const supabase = createClient()
+    if (blueprint) {
+      await supabase.from('user_blueprints').update({ battles: newBattles }).eq('id', blueprint.id)
+    } else {
+      await supabase.from('user_blueprints').insert([{
+        user_id: user.id,
+        identity: form.identity,
+        mission: form.mission,
+        motives: form.motives,
+        values_list: form.values_list.split('\n').filter(Boolean),
+        weaknesses: form.weaknesses.split('\n').filter(Boolean),
+        strengths: form.strengths.split('\n').filter(Boolean),
+        future_vision: form.future_vision,
+        battles: newBattles
+      }])
+    }
+    await fetchBlueprint()
+  }
+
+  const addBattle = async () => {
     if (!newBattle.name.trim()) return
-    setBattles(prev => [...prev, { ...newBattle }])
+    const updatedBattles = [...battles, { ...newBattle }]
+    setBattles(updatedBattles)
     setNewBattle({ name: '', severity: 'medium', notes: '', linked_habits: [], hp: 100 })
     setShowAddBattle(false)
+    await saveBattlesToDB(updatedBattles)
   }
 
-  const removeBattle = (idx) => {
-    setBattles(prev => prev.filter((_, i) => i !== idx))
+  const removeBattle = async (idx) => {
+    const updatedBattles = battles.filter((_, i) => i !== idx)
+    setBattles(updatedBattles)
+    await saveBattlesToDB(updatedBattles)
   }
 
-  const toggleLinkedHabit = (battleIdx, habitId) => {
-    setBattles(prev => prev.map((b, i) => {
+  const toggleLinkedHabit = async (battleIdx, habitId) => {
+    const updatedBattles = battles.map((b, i) => {
       if (i !== battleIdx) return b
       const isLinked = b.linked_habits?.includes(habitId)
       return {
@@ -130,7 +154,9 @@ export default function OperatorDashboard() {
           ? b.linked_habits.filter(id => id !== habitId)
           : [...(b.linked_habits || []), habitId]
       }
-    }))
+    })
+    setBattles(updatedBattles)
+    await saveBattlesToDB(updatedBattles)
   }
 
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING IDENTITY MATRIX...</span></div></AppShell>
