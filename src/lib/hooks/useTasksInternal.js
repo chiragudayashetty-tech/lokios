@@ -226,6 +226,9 @@ export function useTasksInternal() {
 
       if (error) throw error
 
+      const todayStr = getLocalDateStr()
+      await robustRemoveXP(user.id, 'task_failed', id, todayStr)
+
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       return updated
     } catch (error) {

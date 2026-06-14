@@ -133,6 +133,9 @@ export function OSProvider({ children }) {
 
     undoFailOperation: async (taskId) => {
       const result = await tasks.undoFailTask(taskId)
+      if (result) {
+        await xp.fetchProfile() // Refresh XP immediately
+      }
       return result
     },
 
@@ -146,6 +149,9 @@ export function OSProvider({ children }) {
 
     undoFailMission: async (goalId) => {
       const result = await goals.undoFailGoal(goalId)
+      if (result) {
+        await xp.fetchProfile() // Refresh XP immediately
+      }
       return result
     }
   }
