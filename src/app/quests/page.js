@@ -582,7 +582,7 @@ export default function DailyOps() {
           </div>
         )}
       </AnimatePresence>
-
+      </div>
     </AppShell>
   )
 }
