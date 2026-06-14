@@ -214,6 +214,8 @@ html {
 }
 
 body {
+  overflow-x: hidden;
+  max-width: 100vw;
   font-family: var(--font-body);
   font-size: var(--text-base);
   font-weight: 400;
@@ -639,7 +641,8 @@ p:last-child {
   bottom: 0;
   left: 0;
   right: 0;
-  height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 20px));
+  padding-bottom: env(safe-area-inset-bottom, 20px);
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   z-index: var(--z-fixed);
@@ -3199,7 +3202,7 @@ select:focus {
 
   .main-content {
     grid-column: 1;
-    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-6));
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 20px) + var(--space-12));
   }
 }
 

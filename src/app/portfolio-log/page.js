@@ -202,8 +202,8 @@ export default function ProofOfWork() {
                       <span className="badge">{String(log.type || 'OTHER').replace('_', ' ').toUpperCase()}</span>
                     </div>
                     
-                    <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-2">{log.title}</h3>
-                    {log.description && <p className="font-mono text-sm text-secondary mb-3">{log.description}</p>}
+                    <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-2 break-words">{log.title}</h3>
+                    {log.description && <p className="font-mono text-sm text-secondary mb-3 break-words whitespace-pre-wrap">{log.description}</p>}
                     
                     <div className="font-mono text-[10px] text-muted flex items-center gap-1 mb-4">
                       <Clock size={10} />

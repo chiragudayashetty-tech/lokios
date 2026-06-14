@@ -282,8 +282,8 @@ export default function Operations() {
                     {task.description && <p className="font-mono text-xs text-secondary mb-3 line-clamp-2">{task.description}</p>}
 
                     {/* Bottom row */}
-                    <div className="flex-between mt-4 pt-3 border-t border-border-subtle">
-                      <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 pt-3 border-t border-border-subtle gap-3">
+                      <div className="flex flex-wrap items-center gap-3 mb-2 sm:mb-0">
                         {task.due_date && (
                           <span className="font-mono text-[10px] text-muted flex items-center gap-1">
                             <Calendar size={10} /> {task.due_date}
@@ -301,8 +301,10 @@ export default function Operations() {
                           <span className="font-mono text-[10px] text-danger">+{dynamicXp} XP (PENALTY)</span>
                         )}
                       </div>
+                      
+                      <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end">
                         {!isCompleted && !isFailed && (
-                          <div className="flex gap-2">
+                          <>
                             <button type='button' className="btn btn-ghost btn-sm" onClick={() => setEditingId(task.id)} title="Edit">
                               <Edit2 size={14} />
                             </button>
@@ -316,13 +318,13 @@ export default function Operations() {
                               <Trash2 size={14} />
                             </button>
                             <button type='button' onClick={() => handleComplete(task)}
-                              className="btn btn-primary btn-sm flex items-center gap-1.5 px-4">
+                              className="btn btn-primary btn-sm flex items-center gap-1.5 px-4 flex-1 sm:flex-none justify-center">
                               <Zap size={12} /> EXECUTE
                             </button>
-                          </div>
+                          </>
                         )}
                         {(isCompleted || isFailed) && (
-                          <div className="flex gap-2">
+                          <>
                             <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task.id)} title="Delete Operation">
                               <Trash2 size={14} />
                             </button>
@@ -341,8 +343,9 @@ export default function Operations() {
                                 </button>
                               </>
                             )}
-                          </div>
+                          </>
                         )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>

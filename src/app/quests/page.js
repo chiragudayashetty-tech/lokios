@@ -286,7 +286,7 @@ export default function DailyOps() {
             .col-global { width: 260px; min-width: 260px; max-width: 260px; }
           }
         `}} />
-        <HudPanel className="overflow-x-auto p-0" id="quests-scroll-container">
+        <HudPanel className="p-0" id="quests-scroll-container" style={{ width: '100%', maxWidth: 'calc(100vw - var(--space-6))', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
             <thead>
               <tr>

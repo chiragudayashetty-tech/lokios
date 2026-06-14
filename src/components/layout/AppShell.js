@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useOS } from '@/lib/context/OSContext'
@@ -29,13 +29,22 @@ export default function AppShell({ children }) {
   const { auth: { user }, profile: { profile } } = useOS()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // Close mobile menu on Escape key
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false)
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [])
+
   if (!user) return null
 
   const mainItems = [
     NAV_ITEMS[0], // Command Center
     NAV_ITEMS[1], // Daily Ops
     NAV_ITEMS[3], // Operations
-    NAV_ITEMS[9], // Operator Profile
+    NAV_ITEMS[2], // Missions
   ]
 
   return (

@@ -75,7 +75,7 @@ export default function IntelDrop() {
                     key={type}
                     type="button"
                     onClick={() => setSelectedType(type)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-sm text-xs font-mono transition-all ${selectedType === type ? 'bg-amber-subtle text-amber border border-amber' : 'bg-black text-muted hover:text-secondary border border-border-color'}`}
+                    className={`flex items-center justify-center flex-1 sm:flex-none whitespace-nowrap gap-2 px-3 py-2 rounded-sm text-[10px] sm:text-xs font-mono transition-all ${selectedType === type ? 'bg-amber-subtle text-amber border border-amber' : 'bg-black text-muted hover:text-secondary border border-border-color'}`}
                   >
                     <Icon size={14} /> {TYPE_LABELS[type]}
                   </button>
