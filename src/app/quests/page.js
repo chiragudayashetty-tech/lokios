@@ -241,10 +241,10 @@ export default function DailyOps() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
             <thead>
               <tr>
-                <th style={{ position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', minWidth: '200px' }}>
+                <th style={{ position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', width: '260px', minWidth: '260px', maxWidth: '260px', borderTopLeftRadius: 'var(--radius-lg)' }}>
                   <span className="font-display text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
                 </th>
-                <th style={{ position: 'sticky', left: '200px', zIndex: 10, background: 'var(--bg-tertiary)', padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', minWidth: '50px' }}>
+                <th style={{ position: 'sticky', left: '260px', zIndex: 10, background: 'var(--bg-tertiary)', padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', width: '50px', minWidth: '50px', maxWidth: '50px' }}>
                   <span className="font-mono text-[10px] text-muted">XP</span>
                 </th>
                 {days.map((d) => {
@@ -268,7 +268,7 @@ export default function DailyOps() {
                 <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', minWidth: '45px' }}>
                   <span className="font-mono text-[9px] text-muted">LEFT</span>
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', minWidth: '50px' }}>
+                <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', minWidth: '50px', borderTopRightRadius: 'var(--radius-lg)' }}>
                   <span className="font-mono text-[9px] text-info">%</span>
                 </th>
               </tr>
@@ -286,6 +286,7 @@ export default function DailyOps() {
                       background: 'var(--bg-secondary)',
                       padding: '8px 12px',
                       borderRight: '2px solid var(--border-color)',
+                      width: '260px', minWidth: '260px', maxWidth: '260px'
                     }}>
                       <div className="flex items-center gap-2">
                         <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)]">
@@ -307,11 +308,12 @@ export default function DailyOps() {
                     </td>
                     {/* XP */}
                     <td style={{
-                      position: 'sticky', left: '200px', zIndex: 5,
+                      position: 'sticky', left: '260px', zIndex: 5,
                       background: 'var(--bg-secondary)',
                       textAlign: 'center',
                       borderRight: '2px solid var(--border-color)',
-                      padding: '4px'
+                      padding: '4px',
+                      width: '50px', minWidth: '50px', maxWidth: '50px'
                     }}>
                       <span className="font-mono text-[10px] text-info font-bold">{habit.xp_per_completion || 25}</span>
                     </td>
@@ -362,10 +364,10 @@ export default function DailyOps() {
               {/* Global Progress Row */}
               {habits.length > 0 && (
                 <tr style={{ borderTop: '2px solid var(--accent-primary)' }}>
-                  <td style={{ position: 'sticky', left: 0, zIndex: 5, background: 'var(--bg-tertiary)', padding: '10px 12px', borderRight: '2px solid var(--border-color)' }}>
+                  <td style={{ position: 'sticky', left: 0, zIndex: 5, background: 'var(--bg-tertiary)', padding: '10px 12px', borderRight: '2px solid var(--border-color)', width: '260px', minWidth: '260px', maxWidth: '260px' }}>
                     <span className="font-display text-xs uppercase tracking-widest text-amber">GLOBAL PROGRESS</span>
                   </td>
-                  <td style={{ position: 'sticky', left: '200px', zIndex: 5, background: 'var(--bg-tertiary)', borderRight: '2px solid var(--border-color)' }}></td>
+                  <td style={{ position: 'sticky', left: '260px', zIndex: 5, background: 'var(--bg-tertiary)', borderRight: '2px solid var(--border-color)', width: '50px', minWidth: '50px', maxWidth: '50px' }}></td>
                   {days.map((d) => {
                     const dayDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
                     const dayDone = habits.filter(h => logMap.get(`${h.id}::${dayDate}`) === 'completed').length
@@ -411,11 +413,11 @@ export default function DailyOps() {
             <div className="font-display text-sm tracking-widest text-primary">WEEK VIEW</div>
             <button onClick={nextWeek} className="btn btn-ghost p-2"><ChevronRight size={20} /></button>
           </div>
-          <HudPanel className="p-0 overflow-hidden">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <HudPanel className="p-0 overflow-x-auto">
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '450px' }}>
               <thead>
                 <tr>
-                  <th style={{ background: 'var(--bg-tertiary)', padding: '12px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)' }}>
+                  <th style={{ position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-tertiary)', padding: '12px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
                     <span className="font-display text-[10px] uppercase tracking-widest text-primary">HABIT</span>
                   </th>
                   {mobileDays.map((d) => {
@@ -440,10 +442,11 @@ export default function DailyOps() {
                   return (
                     <tr key={habit.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td style={{
+                        position: 'sticky', left: 0, zIndex: 5,
                         background: 'var(--bg-secondary)',
                         padding: '12px 8px',
                         borderRight: '1px solid var(--border-color)',
-                        maxWidth: '120px'
+                        width: '140px', minWidth: '140px', maxWidth: '140px'
                       }}>
                         <div className="flex items-center gap-2">
                           <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)]">

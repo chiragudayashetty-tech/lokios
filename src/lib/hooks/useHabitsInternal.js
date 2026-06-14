@@ -142,7 +142,11 @@ export function useHabitsInternal() {
         setMonthLogs((prev) => prev.filter(l => !(l.habit_id === habitId && l.date === targetDate)))
       }
 
-      try { await supabase.rpc('update_streak', { p_user_id: user.id }) } catch (e) {}
+      try { 
+        await supabase.rpc('update_streak', { p_user_id: user.id }) 
+        const { data } = await supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: true })
+        if (data) setHabits(data)
+      } catch (e) {}
       return true
     } catch (error) {
       console.error('Error cycling habit:', error)
