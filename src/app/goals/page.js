@@ -44,10 +44,15 @@ export default function Missions() {
       alert("LONG RANGE MISSIONS REQUIRE A STRICT DEADLINE.")
       return
     }
-    await addGoal({
-      ...formData,
+    const payload = {
+      title: formData.title,
+      description: formData.description,
+      type: formData.type,
+      difficulty: formData.difficulty,
+      deadline: formData.deadline || null,
       category: formData.category === 'other' ? (formData.customCategory || 'Other') : formData.category
-    })
+    }
+    await addGoal(payload)
     setShowForm(false)
     setFormData({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'beyond_tatva', customCategory: '' })
   }
@@ -338,7 +343,7 @@ export default function Missions() {
                     </div>
                     <div className="flex gap-2 mt-4">
                       <button type="submit" className="btn btn-primary flex-1">DEPLOY</button>
-                      <button type="submit" className="btn btn-primary">DEPLOY MISSION</button>
+                      <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>ABORT</button>
                     </div>
                   </form>
                 </HudPanel>
