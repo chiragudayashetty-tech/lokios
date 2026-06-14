@@ -628,9 +628,9 @@ export default function DailyOps() {
         {/* Add Form Modal */}
         <AnimatePresence>
           {showAddForm && (
-            <div className="modal-overlay">
-              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}>
-                <HudPanel className="modal-content" style={{ width: '420px', maxWidth: '95vw' }}>
+            <div className="modal-overlay bottom-sheet-mobile">
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+                <HudPanel className="modal-content bottom-sheet-content" style={{ width: '420px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber">Add Routine</span>
                     <button onClick={() => setShowAddForm(false)} className="text-muted hover:text-danger"><X size={18} /></button>
@@ -674,12 +674,12 @@ export default function DailyOps() {
       {/* Edit Routine Modal */}
       <AnimatePresence>
         {editingHabit && (
-          <div className="modal-overlay">
+          <div className="modal-overlay bottom-sheet-mobile">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="modal-content"
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="modal-content bottom-sheet-content w-full sm:max-w-[420px]"
             >
               <div className="modal-header">
                 <h3 className="font-display text-lg text-primary tracking-widest">EDIT ROUTINE</h3>

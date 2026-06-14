@@ -21,19 +21,7 @@ body {
     linear-gradient(180deg, #040507 0%, #07090d 52%, #030406 100%);
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 92%);
-  opacity: 0.35;
-  z-index: 0;
-}
+/* Removed body grid lines per user request */
 
 body > * {
   position: relative;
@@ -43,9 +31,8 @@ body > * {
 .app-shell {
   background:
     radial-gradient(circle at 50% 0%, rgba(212, 168, 67, 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 48px 48px;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%);
+  background-size: 100% 100%, 100% 100%;
 }
 
 .sidebar {
