@@ -368,7 +368,7 @@ export default function DailyOps() {
                   <td style={{ position: 'sticky', left: '200px', zIndex: 5, background: 'var(--bg-tertiary)', borderRight: '2px solid var(--border-color)' }}></td>
                   {days.map((d) => {
                     const dayDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-                    const dayDone = habits.filter(h => logSet.has(`${h.id}::${dayDate}`)).length
+                    const dayDone = habits.filter(h => logMap.get(`${h.id}::${dayDate}`) === 'completed').length
                     const dayPct = habits.length === 0 ? 0 : Math.round((dayDone / habits.length) * 100)
                     const isToday = isCurrentMonth && d === todayDay
                     return (
