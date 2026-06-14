@@ -268,6 +268,13 @@ export function useGoalsInternal() {
     if (!user) return false
 
     try {
+      const goal = goals.find((g) => g.id === id)
+      if (goal?.status === 'completed') {
+        await robustRemoveXP(user.id, 'goal_complete', id)
+      } else if (goal?.status === 'cancelled') {
+        await robustRemoveXP(user.id, 'goal_failed', id)
+      }
+
       const { error } = await supabase
         .from('goals')
         .delete()
