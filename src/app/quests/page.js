@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
-import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp } from 'lucide-react'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame } from 'lucide-react'
 import { useHabitsInternal } from '@/lib/hooks/useHabitsInternal'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -262,7 +262,7 @@ export default function DailyOps() {
 
         {/* The Spreadsheet Grid */}
         <HudPanel className="overflow-x-auto p-0">
-          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
             <thead>
               <tr>
                 <th className="sticky left-0 z-20 w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
@@ -311,10 +311,9 @@ export default function DailyOps() {
                       borderRight: '2px solid var(--border-color)',
                     }}>
                       <div className="flex items-center gap-1 md:gap-2">
-                        <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)] shrink-0">
-                          <button onClick={() => reorderHabits(habit.id, 'top')} className="opacity-40 hover:opacity-100 text-info transition-opacity" title="Move to Top"><ChevronsUp size={10} /></button>
-                          <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted transition-opacity" title="Move Up"><ArrowUp size={10} /></button>
-                          <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 hover:opacity-100 text-muted transition-opacity" title="Move Down"><ArrowDown size={10} /></button>
+                        <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)]">
+                          <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted" title="Move Up"><ArrowUp size={10} /></button>
+                          <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 hover:opacity-100 text-muted" title="Move Down"><ArrowDown size={10} /></button>
                         </div>
                         <div className="w-1 md:w-1.5 h-8 rounded-full shrink-0" style={{ background: cat.color }} />
                         <div className="flex-1 min-w-0" onClick={() => openEditModal(habit)} style={{ cursor: 'pointer' }}>
