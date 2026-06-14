@@ -82,10 +82,10 @@ export function useGoalsInternal() {
 
       if (error) throw error
       setGoals((prev) => [newGoal, ...prev])
-      return newGoal
+      return { data: newGoal }
     } catch (error) {
       console.error('Error adding goal:', error)
-      return null
+      return { error }
     }
   }, [user])
 

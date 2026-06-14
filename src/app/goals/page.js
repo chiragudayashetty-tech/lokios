@@ -52,7 +52,12 @@ export default function Missions() {
       deadline: formData.deadline || null,
       category: formData.category === 'other' ? (formData.customCategory || 'Other') : formData.category
     }
-    await addGoal(payload)
+    const result = await addGoal(payload)
+    if (result && result.error) {
+      alert(`DEPLOYMENT FAILED: ${result.error.message || result.error}\n\nPlease let the AI know what this error says!`)
+      return
+    }
+    
     setShowForm(false)
     setFormData({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'beyond_tatva', customCategory: '' })
   }
