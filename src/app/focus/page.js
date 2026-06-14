@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
 import { XP_REWARDS } from '@/lib/constants'
+import ParticlesBackground from '@/components/ui/ParticlesBackground'
 
 export default function FocusMode() {
   const { auth: { user }, xp: { awardXP } } = useOS()
@@ -75,8 +76,9 @@ export default function FocusMode() {
   const progressPct = ((totalTime - timeLeft) / totalTime) * 100
 
   return (
-    <div className="flex-center tactical-grid" style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
-      {isActive && <div className="radar-pulse" style={{ position: 'absolute', inset: 0, opacity: 0.1, background: 'radial-gradient(circle, var(--accent-primary) 0%, transparent 70%)', animation: 'pulse 4s infinite' }} />}
+    <div className="flex-center relative overflow-hidden" style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
+      <ParticlesBackground />
+      {isActive && <div className="radar-pulse" style={{ position: 'absolute', inset: 0, opacity: 0.1, background: 'radial-gradient(circle, var(--accent-primary) 0%, transparent 70%)', animation: 'pulse 4s infinite', pointerEvents: 'none' }} />}
       
       <Link href="/dashboard" className="absolute btn btn-ghost text-muted z-20" style={{ top: 'max(1rem, env(safe-area-inset-top, 1rem))', left: 'max(0.5rem, env(safe-area-inset-left, 0.5rem))' }}>
         <X size={20} /> <span className="hidden sm:inline ml-2">ABORT SESSION</span>
