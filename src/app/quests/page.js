@@ -262,13 +262,13 @@ export default function DailyOps() {
 
         {/* The Spreadsheet Grid */}
         <HudPanel className="overflow-x-auto p-0">
-          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
             <thead>
               <tr>
-                <th className="sticky left-0 z-20 w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
+                <th className="sticky z-20" style={{ left: 0, background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)', width: '200px', minWidth: '200px', maxWidth: '200px' }}>
                   <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
                 </th>
-                <th className="sticky left-[140px] md:left-[260px] z-20 w-[40px] md:w-[50px] min-w-[40px] md:min-w-[50px] max-w-[40px] md:max-w-[50px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 4px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)' }}>
+                <th className="sticky z-20" style={{ left: '200px', background: 'var(--bg-tertiary)', padding: '10px 4px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', width: '45px', minWidth: '45px', maxWidth: '45px' }}>
                   <span className="font-mono text-[10px] text-muted">XP</span>
                 </th>
                 {days.map((d) => {
@@ -304,16 +304,19 @@ export default function DailyOps() {
                 return (
                   <tr key={habit.id} className="group hover:bg-hover transition-colors">
                     {/* Habit Name */}
-                    <td className="sticky left-0 z-10 w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{
+                    <td className="sticky z-10" style={{
+                      left: 0,
                       background: 'var(--bg-secondary)',
                       padding: '8px',
                       borderBottom: '1px solid var(--border-subtle)',
                       borderRight: '2px solid var(--border-color)',
+                      width: '200px', minWidth: '200px', maxWidth: '200px'
                     }}>
                       <div className="flex items-center gap-1 md:gap-2">
-                        <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)]">
-                          <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted" title="Move Up"><ArrowUp size={10} /></button>
-                          <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 hover:opacity-100 text-muted" title="Move Down"><ArrowDown size={10} /></button>
+                        <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)] shrink-0">
+                          <button onClick={() => reorderHabits(habit.id, 'top')} className="opacity-40 hover:opacity-100 text-info transition-opacity" title="Move to Top"><ChevronsUp size={10} /></button>
+                          <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted transition-opacity" title="Move Up"><ArrowUp size={10} /></button>
+                          <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 hover:opacity-100 text-muted transition-opacity" title="Move Down"><ArrowDown size={10} /></button>
                         </div>
                         <div className="w-1 md:w-1.5 h-8 rounded-full shrink-0" style={{ background: cat.color }} />
                         <div className="flex-1 min-w-0" onClick={() => openEditModal(habit)} style={{ cursor: 'pointer' }}>
@@ -326,12 +329,14 @@ export default function DailyOps() {
                       </div>
                     </td>
                     {/* XP */}
-                    <td className="sticky left-[140px] md:left-[260px] z-[5] w-[40px] md:w-[50px] min-w-[40px] md:min-w-[50px] max-w-[40px] md:max-w-[50px]" style={{
+                    <td className="sticky z-[5]" style={{
+                      left: '200px',
                       background: 'var(--bg-secondary)',
                       textAlign: 'center',
                       borderBottom: '1px solid var(--border-subtle)',
                       borderRight: '2px solid var(--border-color)',
-                      padding: '4px'
+                      padding: '4px',
+                      width: '45px', minWidth: '45px', maxWidth: '45px'
                     }}>
                       <span className="font-mono text-[9px] md:text-[10px] text-info font-bold">{habit.xp_per_completion || 25}</span>
                     </td>
@@ -382,10 +387,10 @@ export default function DailyOps() {
               {/* Global Progress Row */}
               {habits.length > 0 && (
                 <tr style={{ borderTop: '2px solid var(--accent-primary)' }}>
-                  <td className="sticky left-0 z-[5] w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 12px', borderRight: '2px solid var(--border-color)' }}>
+                  <td className="sticky z-[5]" style={{ left: 0, width: '200px', minWidth: '200px', maxWidth: '200px', background: 'var(--bg-tertiary)', padding: '10px 12px', borderRight: '2px solid var(--border-color)' }}>
                     <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-amber truncate block">GLOBAL PROGRESS</span>
                   </td>
-                  <td className="sticky left-[140px] md:left-[260px] z-[5] w-[40px] md:w-[50px] min-w-[40px] md:min-w-[50px] max-w-[40px] md:max-w-[50px]" style={{ background: 'var(--bg-tertiary)', borderRight: '2px solid var(--border-color)' }}></td>
+                  <td className="sticky z-[5]" style={{ left: '200px', width: '45px', minWidth: '45px', maxWidth: '45px', background: 'var(--bg-tertiary)', borderRight: '2px solid var(--border-color)' }}></td>
                   {days.map((d) => {
                     const dayDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
                     const dayDone = habits.filter(h => logMap.get(`${h.id}::${dayDate}`) === 'completed').length
