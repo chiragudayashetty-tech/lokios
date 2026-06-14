@@ -81,7 +81,7 @@ export default function ParticlesBackground() {
         },
         detectRetina: true,
       }}
-      className="absolute inset-0 z-0 pointer-events-auto"
+      className="fixed inset-0 z-0 pointer-events-auto"
     />
   )
 }

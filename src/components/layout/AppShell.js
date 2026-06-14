@@ -49,25 +49,57 @@ export default function AppShell({ children }) {
 
   return (
     <div className="app-shell">
-      {/* Mobile Sidebar Overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-40 hidden-desktop"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Desktop & Mobile Sidebar */}
-      <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+      {/* Mobile Full-Screen Takeover Menu */}
+      <AnimatePresence>
         {mobileMenuOpen && (
-          <button
-            type="button"
-            className="absolute top-4 right-4 text-muted hover:text-danger hidden-desktop"
-            onClick={() => setMobileMenuOpen(false)}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed inset-0 hidden-desktop flex-col px-6 overflow-y-auto"
+            style={{ 
+              zIndex: 90, 
+              background: 'rgba(var(--bg-primary-rgb), 0.98)', 
+              backdropFilter: 'blur(20px)',
+              paddingTop: 'max(48px, env(safe-area-inset-top))',
+              paddingBottom: 'calc(100px + env(safe-area-inset-bottom))' 
+            }}
+            onClick={(e) => { if(e.target === e.currentTarget) setMobileMenuOpen(false) }}
           >
-            <X size={20} />
-          </button>
+            <div className="flex-col gap-6 mt-4 mb-auto max-w-md mx-auto w-full">
+              <div className="font-display text-4xl tracking-widest uppercase text-primary mb-2 opacity-50">Systems</div>
+              <nav className="flex-col gap-3">
+                {NAV_ITEMS.map((item) => {
+                  const isActive = pathname === item.href
+                  const Icon = item.icon
+                  return (
+                    <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
+                      <div className={`flex items-center gap-4 p-4 rounded-xl transition-transform active:scale-95 ${isActive ? 'bg-amber text-bg-primary shadow-lg shadow-amber/20' : 'bg-tertiary text-primary border border-border-color'}`}>
+                        <Icon size={24} strokeWidth={isActive ? 2 : 1.5} />
+                        <span className="font-display text-xl uppercase tracking-wider">{item.label}</span>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </nav>
+            </div>
+            
+            <div className="mt-8 max-w-md mx-auto w-full flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
+              <div className="flex items-center gap-3">
+                <Shield size={24} color="var(--accent-primary)" />
+                <div className="flex-col">
+                  <span className="font-display uppercase text-xs tracking-wide text-muted">{profile?.rank || 'OPERATOR'}</span>
+                  <span className="font-mono text-sm text-primary font-bold">LV.{profile?.level || 1}</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Desktop Sidebar */}
+      <aside className="sidebar hidden-mobile">
         <div className="sidebar-header">
           <div className="sidebar-logo">C</div>
           <div className="flex-col" style={{ minWidth: 0 }}>
@@ -114,14 +146,14 @@ export default function AppShell({ children }) {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="mobile-nav" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <nav className="mobile-nav" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', zIndex: 100 }}>
         {mainItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
           return (
             <Link key={item.href} href={item.href} style={{ flex: 1 }}>
               <div 
-                className={`flex-col flex-center p-3 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
+                className={`flex-col flex-center p-3 transition-transform active:scale-90 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
                 style={{ 
                   color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
                   minHeight: '56px', /* 44px min touch target + padding */
@@ -133,9 +165,9 @@ export default function AppShell({ children }) {
             </Link>
           )
         })}
-        <button type="button" style={{ flex: 1, minHeight: '56px' }} className="flex-col flex-center p-3 text-muted inactive-nav-item" onClick={() => setMobileMenuOpen(true)}>
-          <Menu size={22} strokeWidth={1.5} />
-          <span className="text-xs mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: 0.7 }}>More</span>
+        <button type="button" style={{ flex: 1, minHeight: '56px' }} className={`flex-col flex-center p-3 transition-transform active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={1.5} />}
+          <span className="text-xs mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.7 }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
         </button>
       </nav>
 

@@ -27,11 +27,13 @@ export const viewport = {
 }
 
 import { OSProvider } from '@/lib/context/OSContext'
+import ParticlesBackground from '@/components/ui/ParticlesBackground'
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <ParticlesBackground />
         <OSProvider>
           {children}
         </OSProvider>

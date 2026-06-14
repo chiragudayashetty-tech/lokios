@@ -285,11 +285,11 @@ export default function Operations() {
                     <h3 className={`font-display text-xl uppercase tracking-wider mb-1 ${isCompleted ? 'line-through text-muted' : 'text-primary'}`}>
                       {task.title}
                     </h3>
-                    {task.description && <p className="font-mono text-xs text-secondary mb-3 line-clamp-2">{task.description}</p>}
+                    {task.description && <p className="font-mono text-xs text-secondary mb-3 line-clamp-2 truncate-mobile-wrap">{task.description}</p>}
 
                     {/* Bottom row */}
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 pt-3 border-t border-border-subtle gap-3">
-                      <div className="flex flex-wrap items-center gap-3 mb-2 sm:mb-0">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 pt-3 border-t border-border-subtle gap-4 sm:gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         {task.due_date && (
                           <span className="font-mono text-[10px] text-muted flex items-center gap-1">
                             <Calendar size={10} /> {task.due_date}
@@ -308,51 +308,48 @@ export default function Operations() {
                         )}
                       </div>
                       
-                      <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end">
+                      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                         {!isCompleted && !isFailed && (
                           <>
-                            <button type='button' className="btn btn-ghost btn-sm" onClick={() => setEditingId(task.id)} title="Edit">
-                              <Edit2 size={14} />
-                            </button>
-                            <button type='button' className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
-                              <RotateCcw size={14} />
-                            </button>
-                            <button type='button' className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(task)} title="Fail Operation">
-                              <X size={14} />
-                            </button>
-                            <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
-                              <Trash2 size={14} />
-                            </button>
                             <button type='button' onClick={() => handleComplete(task)}
-                              className="btn btn-primary btn-sm flex items-center gap-1.5 px-4 flex-1 sm:flex-none justify-center">
-                              <Zap size={12} /> EXECUTE
+                              className="btn btn-primary flex-1 sm:flex-none py-3 sm:py-2 flex items-center justify-center gap-1.5 px-4 touch-ripple">
+                              <Zap size={14} /> EXECUTE
+                            </button>
+                            <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm touch-ripple bg-bg-secondary" onClick={() => setEditingId(task.id)} title="Edit">
+                              <Edit2 size={16} className="sm:w-[14px] sm:h-[14px]" />
+                            </button>
+                            <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-amber touch-ripple bg-bg-secondary" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
+                              <RotateCcw size={16} className="sm:w-[14px] sm:h-[14px]" />
+                            </button>
+                            <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-danger touch-ripple bg-bg-secondary" onClick={() => failTask(task)} title="Fail Operation">
+                              <X size={16} className="sm:w-[14px] sm:h-[14px]" />
                             </button>
                           </>
                         )}
                         {(isCompleted || isFailed) && (
                           <>
-                            <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
-                              <Trash2 size={14} />
+                            <button type="button" className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-danger touch-ripple bg-bg-secondary" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
+                              <Trash2 size={16} className="sm:w-[14px] sm:h-[14px]" />
                             </button>
                             {isCompleted && (
-                              <>
+                              <div className="flex-1 flex items-center justify-between ml-2">
                                 <span className="font-mono text-[10px] text-success flex items-center gap-1">
                                   <CheckCircle2 size={12} /> COMPLETED
                                 </span>
-                                <button type='button' className="btn btn-ghost btn-sm text-info ml-2" onClick={() => undoCompleteTask(task.id)} title="Undo Operation">
+                                <button type='button' className="btn btn-ghost btn-sm text-info touch-ripple" onClick={() => undoCompleteTask(task.id)} title="Undo Operation">
                                   <RotateCcw size={14} /> UNDO
                                 </button>
-                              </>
+                              </div>
                             )}
                             {isFailed && (
-                              <>
+                              <div className="flex-1 flex items-center justify-between ml-2">
                                 <span className="font-mono text-[10px] text-danger flex items-center gap-1">
                                   <XCircle size={12} /> FAILED
                                 </span>
-                                <button type='button' className="btn btn-ghost btn-sm text-info ml-2" onClick={() => undoFailOperation(task.id)} title="Restore Operation">
+                                <button type='button' className="btn btn-ghost btn-sm text-info touch-ripple" onClick={() => undoFailOperation(task.id)} title="Restore Operation">
                                   <RotateCcw size={14} /> RESTORE
                                 </button>
-                              </>
+                              </div>
                             )}
                           </>
                         )}
@@ -377,9 +374,9 @@ export default function Operations() {
         {/* DEPLOY MODAL */}
         <AnimatePresence>
           {showDeploy && (
-            <div className="modal-overlay">
-              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}>
-                <HudPanel className="modal-content border-amber" style={{ width: '520px', maxWidth: '95vw' }}>
+            <div className="modal-overlay bottom-sheet-mobile">
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+                <HudPanel className="modal-content bottom-sheet-content border-amber" style={{ width: '520px', maxWidth: '100%' }}>
                   <div className="flex-between mb-5 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber tracking-widest">DEPLOY OPERATION</span>
                     <button type='button' onClick={() => setShowDeploy(false)} className="text-muted hover:text-danger"><X size={18} /></button>
@@ -450,9 +447,9 @@ export default function Operations() {
         {/* PROOF MODAL */}
         <AnimatePresence>
           {proofTask && (
-            <div className="modal-overlay">
-              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}>
-                <HudPanel className="modal-content border-success" style={{ width: '440px', maxWidth: '95vw' }}>
+            <div className="modal-overlay bottom-sheet-mobile">
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+                <HudPanel className="modal-content bottom-sheet-content border-success" style={{ width: '440px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-success tracking-widest">OPERATION COMPLETE</span>
                     <button type='button' onClick={() => setProofTask(null)} className="text-muted hover:text-danger"><X size={18} /></button>
