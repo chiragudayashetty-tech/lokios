@@ -73,7 +73,7 @@ export function useHabitsInternal() {
       const virtualFailedLogs = (xpRes.data || []).map(xp => ({
         id: `virtual_fail_${xp.source_id}_${xp.created_at}`,
         habit_id: xp.source_id,
-        date: xp.created_at.split('T')[0],
+        date: getLocalDateStr(new Date(xp.created_at)),
         status: 'failed'
       }))
 
@@ -138,7 +138,12 @@ export function useHabitsInternal() {
         await robustAwardXP(user.id, -15, 'habit_failed', habitId, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
         setMonthLogs((prev) => [...prev.filter(l => l.id !== existingLog?.id), { id: `virtual_fail_${habitId}_${crypto.randomUUID()}`, habit_id: habitId, date: targetDate, status: 'failed' }])
       } else if (nextStatus === 'none') {
-        await robustRemoveXP(user.id, 'habit_failed', habitId, targetDate)
+        if (existingLog && existingLog.status !== 'failed') {
+          await supabase.from('habit_logs').delete().eq('id', existingLog.id)
+          await robustRemoveXP(user.id, 'habit_complete', habitId, targetDate)
+        } else {
+          await robustRemoveXP(user.id, 'habit_failed', habitId, targetDate)
+        }
         setMonthLogs((prev) => prev.filter(l => !(l.habit_id === habitId && l.date === targetDate)))
       }
 
@@ -146,7 +151,9 @@ export function useHabitsInternal() {
         await supabase.rpc('update_streak', { p_user_id: user.id }) 
         const { data } = await supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: true })
         if (data) setHabits(data)
-      } catch (e) {}
+      } catch (e) {
+        console.error('Streak update failed:', e)
+      }
       return true
     } catch (error) {
       console.error('Error cycling habit:', error)
@@ -161,10 +168,13 @@ export function useHabitsInternal() {
     return cycleHabitState(habitId, dateStr, newStatus)
   }, [cycleHabitState])
 
-  // Backward-compat wrapper
+  // Simple toggle checking/unchecking for UI elements
   const toggleHabit = useCallback(async (habitId) => {
-    return toggleHabitForDate(habitId, todayStr)
-  }, [toggleHabitForDate, todayStr])
+    const existingLog = monthLogs.find((l) => l.habit_id === habitId && l.date === todayStr)
+    const currentStatus = existingLog ? (existingLog.status || 'completed') : 'none'
+    const nextStatus = currentStatus === 'completed' ? 'none' : 'completed'
+    return cycleHabitState(habitId, todayStr, nextStatus)
+  }, [monthLogs, todayStr, cycleHabitState])
 
   const addHabit = useCallback(async (data) => {
     if (!user) return null
@@ -203,18 +213,20 @@ export function useHabitsInternal() {
   }, [user])
 
   const archiveHabit = useCallback(async (habitId) => {
+    if (!user) return
     try {
-      const { error } = await supabase.from('habits').update({ is_active: false }).eq('id', habitId)
+      const { error } = await supabase.from('habits').update({ is_active: false }).eq('id', habitId).eq('user_id', user.id)
       if (error) throw error
       setHabits((prev) => prev.filter((h) => h.id !== habitId))
     } catch (error) {
       console.error('Error archiving habit:', error)
     }
-  }, [])
+  }, [user])
 
   const updateHabit = useCallback(async (habitId, updates) => {
+    if (!user) return null
     try {
-      const { data, error } = await supabase.from('habits').update(updates).eq('id', habitId).select().single()
+      const { data, error } = await supabase.from('habits').update(updates).eq('id', habitId).eq('user_id', user.id).select().single()
       if (error) throw error
       setHabits((prev) => prev.map(h => h.id === habitId ? data : h))
       return data
@@ -222,7 +234,7 @@ export function useHabitsInternal() {
       console.error('Error updating habit:', error)
       return null
     }
-  }, [])
+  }, [user])
 
   const reorderHabits = useCallback(async (habitId, direction) => {
     const sorted = [...habits].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
@@ -232,20 +244,23 @@ export function useHabitsInternal() {
     let swapIndex = direction === 'up' ? index - 1 : index + 1
     if (swapIndex < 0 || swapIndex >= sorted.length) return
     
-    const habitA = sorted[index]
-    const habitB = sorted[swapIndex]
+    const habitA = { ...sorted[index] }
+    const habitB = { ...sorted[swapIndex] }
     const tempTime = habitA.created_at
     habitA.created_at = habitB.created_at
     habitB.created_at = tempTime
+    
+    sorted[index] = habitA
+    sorted[swapIndex] = habitB
     
     const newSorted = [...sorted].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
     setHabits(newSorted)
     
     await Promise.all([
-      supabase.from('habits').update({ created_at: habitA.created_at }).eq('id', habitA.id),
-      supabase.from('habits').update({ created_at: habitB.created_at }).eq('id', habitB.id)
+      supabase.from('habits').update({ created_at: habitA.created_at }).eq('id', habitA.id).eq('user_id', user.id),
+      supabase.from('habits').update({ created_at: habitB.created_at }).eq('id', habitB.id).eq('user_id', user.id)
     ])
-  }, [habits])
+  }, [habits, user])
 
   // Auto-fail untouched habits
   useEffect(() => {
@@ -259,10 +274,18 @@ export function useHabitsInternal() {
       const yesterday = new Date(now)
       yesterday.setDate(yesterday.getDate() - 1)
       
+      // Determine the earliest date we have logs for based on monthLogs
+      let firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      
       let createdAny = false
-      for (let d = new Date(RESET_DATE); d <= yesterday; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().split('T')[0]
-        for (const h of habits) {
+      
+      for (const h of habits) {
+        const habitCreatedDate = new Date(h.created_at)
+        // Bound loop to max(RESET_DATE, habitCreatedDate, firstDayOfMonth) to prevent infinite past loop
+        let startDate = new Date(Math.max(RESET_DATE.getTime(), habitCreatedDate.getTime(), firstDayOfMonth.getTime()))
+        
+        for (let d = new Date(startDate); d <= yesterday; d.setDate(d.getDate() + 1)) {
+          const dateStr = getLocalDateStr(d)
           const hasLog = monthLogs.some(l => l.habit_id === h.id && l.date === dateStr)
           if (!hasLog) {
             const procKey = `${h.id}_${dateStr}_autofail`
@@ -277,7 +300,7 @@ export function useHabitsInternal() {
       }
       
       if (createdAny) {
-        try { await supabase.rpc('update_streak', { p_user_id: user.id }) } catch (e) {}
+        try { await supabase.rpc('update_streak', { p_user_id: user.id }) } catch (e) { console.error('Streak update failed:', e) }
       }
       localStorage.setItem('daily_ops_autofail_ran_today', todayStr)
     }

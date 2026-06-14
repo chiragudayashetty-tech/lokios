@@ -21,7 +21,10 @@ const BATTLE_ICONS = {
   'Overthinking': Brain,
 }
 
+import { useAuth } from '@/lib/hooks/useAuth'
+
 export default function MissionControl() {
+  const { user } = useAuth()
   const { profile: { profile }, goals: { mainQuest }, tasks: { tasks, todayTasks }, habits: { habits, todayLogs, toggleHabit }, completeOperation } = useOS()
   const [timeline, setTimeline] = useState([])
   const [battles, setBattles] = useState([])
@@ -38,9 +41,11 @@ export default function MissionControl() {
       const supabase = createClient()
       
       // Fetch timeline
+      if (!user) return
       const { data: timelineData } = await supabase
         .from('xp_history')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(8)
       if (timelineData) setTimeline(timelineData)
@@ -64,8 +69,8 @@ export default function MissionControl() {
   }, [])
 
   // Today's Battle Plan
-  const activeHabits = habits.filter(h => !todayLogs.some(log => log.habit_id === h.id))
-  const completedHabits = habits.filter(h => todayLogs.some(log => log.habit_id === h.id))
+  const activeHabits = habits.filter(h => !todayLogs.some(log => log.habit_id === h.id && log.status === 'completed'))
+  const completedHabits = habits.filter(h => todayLogs.some(log => log.habit_id === h.id && log.status === 'completed'))
   const pendingTasks = todayTasks.filter(t => t.status !== 'completed')
   const totalTodayItems = habits.length + todayTasks.length
   const completedTodayItems = completedHabits.length + todayTasks.filter(t => t.status === 'completed').length
@@ -155,10 +160,11 @@ export default function MissionControl() {
                   <AnimatePresence>
                     {activeHabits.map(habit => (
                       <motion.div key={habit.id} layout initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0, height:0}}
-                        className="flex items-center gap-3 p-3 bg-tertiary border border-border-color group hover:border-info transition-colors cursor-pointer rounded-md">
+                        className="flex items-center gap-3 p-3 bg-tertiary border border-border-color group hover:border-info transition-colors cursor-pointer rounded-md"
+                        onClick={() => toggleHabit(habit.id)}>
                         <div className="w-4 h-4 border border-border-strong group-hover:border-info flex-center shrink-0 rounded-sm" />
                         <span className="font-mono text-sm text-primary flex-1 truncate">{habit.title}</span>
-                        <span className="font-mono text-[9px] text-info font-bold">+{habit.xp_per_completion || 5} XP</span>
+                        <span className="font-mono text-[9px] text-info font-bold">+{habit.xp_per_completion || 25} XP</span>
                       </motion.div>
                     ))}
                     {pendingTasks.map(task => (

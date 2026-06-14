@@ -57,7 +57,7 @@ export default function XPDashboard() {
   // Timeline Area Chart Data (aggregate by day)
   const timelineMap = {}
   timeline.forEach(item => {
-    const d = item.created_at.split('T')[0]
+    const d = getLocalDateStr(new Date(item.created_at))
     if (!timelineMap[d]) timelineMap[d] = 0
     timelineMap[d] += item.amount
   })

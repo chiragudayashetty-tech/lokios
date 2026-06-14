@@ -42,6 +42,15 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/habits',
+        destination: '/quests',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 export default nextConfig;

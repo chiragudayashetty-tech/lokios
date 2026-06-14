@@ -43,7 +43,7 @@ export default function Calendar() {
   const getItemsForDate = (dateStr) => {
     const dayEvents = events.filter(e => getLocalDateStr(new Date(e.start_time)) === dateStr).map(e => ({ ...e, _type: 'event' }))
     const dayTasks = tasks.filter(t => t.due_date === dateStr).map(t => ({ ...t, _type: 'task', start_time: `${dateStr}T00:00:00` }))
-    const dayGoals = allGoals.filter(g => g.deadline && g.deadline.split('T')[0] === dateStr).map(g => ({ ...g, _type: 'goal', start_time: g.deadline }))
+    const dayGoals = allGoals.filter(g => g.deadline && getLocalDateStr(new Date(g.deadline)) === dateStr).map(g => ({ ...g, _type: 'goal', start_time: g.deadline }))
     return [...dayEvents, ...dayTasks, ...dayGoals]
   }
 

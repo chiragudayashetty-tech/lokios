@@ -51,7 +51,7 @@ export function useTasksInternal() {
 
     return tasks.filter((task) => {
       // Match tasks due today
-      if (task.due_date && task.due_date.split('T')[0] === todayStr) return true
+      if (task.due_date && getLocalDateStr(new Date(task.due_date)) === todayStr) return true
 
       // Match recurring tasks that apply to today
       if (task.type === 'recurring' && task.recurrence_days) {
@@ -98,7 +98,7 @@ export function useTasksInternal() {
       const updates = { completed_at: new Date().toISOString(), status: 'completed' }
       if (proofUrl) {
         // Fetch current media_urls first
-        const { data: curr } = await supabase.from('tasks').select('media_urls').eq('id', id).single()
+        const { data: curr } = await supabase.from('tasks').select('media_urls').eq('id', id).eq('user_id', user.id).single()
         updates.media_urls = curr?.media_urls ? [...curr.media_urls, proofUrl] : [proofUrl]
       }
 
@@ -121,7 +121,7 @@ export function useTasksInternal() {
       // Check if overdue
       if (task?.due_date) {
         const today = getLocalDateStr()
-        const dueDate = task.due_date.split('T')[0]
+        const dueDate = getLocalDateStr(new Date(task.due_date))
         if (dueDate < today) {
           // Overdue: Only award 50% XP
           xpAward = Math.floor(xpAward * 0.5)
@@ -160,8 +160,9 @@ export function useTasksInternal() {
       if (error) throw error
 
       // Remove XP
-      const todayStr = getLocalDateStr()
-      await robustRemoveXP(user.id, 'task_complete', id, todayStr)
+      const task = tasks.find(t => t.id === id)
+      const completionDate = task && task.completed_at ? getLocalDateStr(new Date(task.completed_at)) : getLocalDateStr()
+      await robustRemoveXP(user.id, 'task_complete', id, completionDate)
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       return updated

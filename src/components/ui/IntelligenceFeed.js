@@ -48,7 +48,7 @@ export default function IntelligenceFeed() {
       // ── 1. THE LACK OF DIRECTION PENALTY ──
       // Founder must deploy at least 3 operations on weekday mornings.
       if (isWeekday && currentHour >= 8 && currentHour < 12) {
-        const deployedToday = tasks.filter(t => t.due_date?.split('T')[0] === todayStr || (t.created_at?.split('T')[0] === todayStr && !t.due_date))
+        const deployedToday = tasks.filter(t => (t.due_date && getLocalDateStr(new Date(t.due_date)) === todayStr) || (t.created_at && getLocalDateStr(new Date(t.created_at)) === todayStr && !t.due_date))
         if (deployedToday.length < 3) {
           newAlerts.push({
             id: 'direction_penalty',

@@ -5,6 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
 import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -73,7 +74,7 @@ export default function Missions() {
       difficulty: goal.difficulty || 'HARD',
       type: goal.type || 'side_quest',
       category: goal.category || 'personal',
-      deadline: goal.deadline ? goal.deadline.split('T')[0] : ''
+      deadline: goal.deadline ? getLocalDateStr(new Date(goal.deadline)) : ''
     })
   }
 
