@@ -3484,10 +3484,10 @@ select:focus {
 .inset-0  { inset: 0; }
 
 /* ── Overflow ── */
-.overflow-hidden  { overflow: hidden; }
-.overflow-auto    { overflow: auto; }
-.overflow-x-auto  { overflow-x: auto; }
-.overflow-y-auto  { overflow-y: auto; }
+.overflow-hidden  { overflow: hidden !important; }
+.overflow-auto    { overflow: auto !important; }
+.overflow-x-auto  { overflow-x: auto !important; }
+.overflow-y-auto  { overflow-y: auto !important; }
 
 /* ── Border ── */
 .border       { border: 1px solid var(--border-color); }
