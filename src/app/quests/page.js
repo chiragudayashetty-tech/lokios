@@ -67,6 +67,21 @@ export default function DailyOps() {
     }
   }, [viewMonth, viewYear, isCurrentMonth, todayDay])
 
+  // Auto-scroll grid to today
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const container = document.getElementById('quests-scroll-container')
+      const todayCol = document.getElementById('today-column')
+      if (container && todayCol) {
+        container.scrollTo({
+          left: Math.max(0, todayCol.offsetLeft - 245),
+          behavior: 'smooth'
+        })
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [viewMonth, viewYear, habits.length])
+
   // Build a lookup map: "habitId::YYYY-MM-DD" -> status
   const logMap = useMemo(() => {
     const m = new Map()
@@ -261,7 +276,7 @@ export default function DailyOps() {
         </div>
 
         {/* The Spreadsheet Grid */}
-        <HudPanel className="overflow-x-auto p-0">
+        <HudPanel className="overflow-x-auto p-0" id="quests-scroll-container">
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
             <thead>
               <tr>
@@ -274,7 +289,7 @@ export default function DailyOps() {
                 {days.map((d) => {
                   const isToday = isCurrentMonth && d === todayDay
                   return (
-                    <th key={d} style={{
+                    <th key={d} id={isToday ? 'today-column' : undefined} style={{
                       padding: '6px 2px', textAlign: 'center',
                       borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-subtle)',
                       background: isToday ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
@@ -312,7 +327,7 @@ export default function DailyOps() {
                       borderRight: '2px solid var(--border-color)',
                       width: '200px', minWidth: '200px', maxWidth: '200px'
                     }}>
-                      <div className="flex items-center gap-1 md:gap-2">
+                      <div className="flex items-center gap-1 md:gap-2 w-full overflow-hidden">
                         <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)] shrink-0">
                           <button onClick={() => reorderHabits(habit.id, 'top')} className="opacity-40 hover:opacity-100 text-info transition-opacity" title="Move to Top"><ChevronsUp size={10} /></button>
                           <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted transition-opacity" title="Move Up"><ArrowUp size={10} /></button>
