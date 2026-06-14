@@ -17,7 +17,7 @@ export default function Operations() {
   const [editForm, setEditForm] = useState({})
 
   // Deploy form
-  const [deployForm, setDeployForm] = useState({ title: '', description: '', due_date: getLocalDateStr(), difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '' })
+  const [deployForm, setDeployForm] = useState({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '', due_date: getLocalDateStr() })
 
   // Proof state
   const [proofTask, setProofTask] = useState(null)
@@ -39,11 +39,14 @@ export default function Operations() {
     const result = await addTask({
       title: deployForm.title,
       description: deployForm.description || null,
-      due_date: today, 
+      due_date: deployForm.due_date || today, 
       difficulty: deployForm.difficulty,
       category: deployForm.category === 'other' ? (deployForm.customCategory || 'Other') : deployForm.category,
       type: deployForm.recurrence_type ? 'recurring' : 'custom',
       recurrence_type: deployForm.recurrence_type || null,
+      recurrence_days: deployForm.recurrence_type === 'daily' 
+        ? [0, 1, 2, 3, 4, 5, 6] 
+        : (deployForm.recurrence_type === 'weekly' ? [new Date().getDay()] : null),
     })
 
     if (result && result.error) {
@@ -51,7 +54,7 @@ export default function Operations() {
       return
     }
 
-    setDeployForm({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '' })
+    setDeployForm({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '', due_date: today })
     setShowDeploy(false)
   }
 
@@ -363,6 +366,10 @@ export default function Operations() {
                       <textarea className="textarea font-mono text-sm h-20" value={deployForm.description}
                         onChange={e => setDeployForm({ ...deployForm, description: e.target.value })}
                         placeholder="What needs to be done..." />
+                    </div>
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">DUE DATE</label>
+                      <input type="date" className="input font-mono text-sm py-1 w-full" value={deployForm.due_date} onChange={e=>setDeployForm({...deployForm, due_date: e.target.value})} />
                     </div>
                     <div className="grid-2 gap-3 mt-3">
                       <div>

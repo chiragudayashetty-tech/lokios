@@ -160,7 +160,8 @@ export default function IntelligenceFeed() {
           })
           
           if (blueprint.last_evaluated_date !== todayStr) {
-            await awardXP(penalty, 'habit_miss_batch', todayStr, `Missed ${totalMissed} daily ops yesterday`, 'discipline')
+            // XP penalty removed here to prevent double-penalizing. Handled safely by useHabitsInternal.
+            // await awardXP(penalty, 'habit_miss_batch', todayStr, `Missed ${totalMissed} daily ops yesterday`, 'discipline')
           }
         }
 

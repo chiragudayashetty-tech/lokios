@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical } from 'lucide-react'
-import { useHabitsInternal } from '@/lib/hooks/useHabitsInternal'
+import { useOS } from '@/lib/context/OSContext'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -13,7 +13,7 @@ export default function DailyOps() {
   const {
     habits, monthLogs, todayLogs, loading, error,
     fetchHabits, cycleHabitState, addHabit, deleteHabit, archiveHabit, reorderHabits, updateHabit
-  } = useHabitsInternal()
+  } = useOS().habits
 
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth()) // 0-indexed

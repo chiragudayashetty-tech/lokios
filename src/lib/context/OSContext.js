@@ -37,43 +37,7 @@ export function OSProvider({ children }) {
   useEffect(() => {
     if (!auth.loading && !profile.loading && !habits.loading && !tasks.loading) {
       
-      // Temporal Sync: Check missed days and auto-fail habits
-      if (auth.user && habits.habits.length > 0) {
-        const runTemporalSync = async () => {
-          try {
-            const today = getLocalDateStr()
-            const lastSync = localStorage.getItem('lokios_last_sync')
-            
-            if (lastSync && lastSync < today) {
-              const missingDates = []
-              let curr = new Date(lastSync)
-              curr.setDate(curr.getDate() + 1)
-              const todayDate = new Date(today)
-              
-              while (curr < todayDate) {
-                missingDates.push(getLocalDateStr(new Date(curr)))
-                curr.setDate(curr.getDate() + 1)
-              }
-              
-              if (missingDates.length > 0) {
-                console.log('Running Temporal Sync for missed dates:', missingDates)
-                for (const dateStr of missingDates) {
-                  for (const habit of habits.habits) {
-                    const hasLog = habits.monthLogs.some(l => l.habit_id === habit.id && l.date === dateStr && l.status !== 'failed')
-                    if (!hasLog) {
-                      await habits.toggleHabitForDate(habit.id, dateStr, 'failed')
-                    }
-                  }
-                }
-              }
-            }
-            localStorage.setItem('lokios_last_sync', today)
-          } catch (e) {
-            console.error('Temporal sync failed', e)
-          }
-        }
-        runTemporalSync()
-      }
+      // Temporal Sync removed: Penalties are now strictly handled by useHabitsInternal.js runAutoFail
       
       setBooting(false)
     }

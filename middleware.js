@@ -46,6 +46,7 @@ export async function middleware(request) {
     pathname.startsWith('/auth/callback') ||
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/api/public') ||
+    pathname.startsWith('/api/calendar') ||
     pathname === '/favicon.ico'
 
   // If user is not authenticated and trying to access protected route

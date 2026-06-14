@@ -97,16 +97,22 @@ export function useHabitsInternal() {
   }, [fetchHabits])
 
   // Cycle habit state: none -> completed -> failed -> none
-  const cycleHabitState = useCallback(async (habitId, dateStr) => {
+  const cycleHabitState = useCallback(async (habitId, dateStr, forceStatus = null) => {
     if (!user) return null
     const targetDate = dateStr || todayStr
 
     const existingLog = monthLogs.find((l) => l.habit_id === habitId && l.date === targetDate)
     const currentStatus = existingLog ? (existingLog.status || 'completed') : 'none'
     
-    let nextStatus = 'completed'
-    if (currentStatus === 'completed') nextStatus = 'failed'
-    if (currentStatus === 'failed') nextStatus = 'none'
+    let nextStatus = forceStatus
+    if (!nextStatus) {
+      nextStatus = 'completed'
+      if (currentStatus === 'completed') nextStatus = 'failed'
+      if (currentStatus === 'failed') nextStatus = 'none'
+    }
+
+    // Skip if we are trying to force a status that is already the current status
+    if (forceStatus && currentStatus === forceStatus) return true;
 
     const procKey = `${habitId}_${targetDate}_cycle`
     if (processingRef.current.has(procKey)) return null
@@ -152,8 +158,7 @@ export function useHabitsInternal() {
 
   // Backward-compat wrapper
   const toggleHabitForDate = useCallback(async (habitId, dateStr, newStatus) => {
-    // Use the cycle if forced, or just call cycle
-    return cycleHabitState(habitId, dateStr)
+    return cycleHabitState(habitId, dateStr, newStatus)
   }, [cycleHabitState])
 
   // Backward-compat wrapper
@@ -289,6 +294,7 @@ export function useHabitsInternal() {
     fetchHabits,
     cycleHabitState,
     toggleHabit,
+    toggleHabitForDate,
     addHabit,
     deleteHabit,
     archiveHabit,
