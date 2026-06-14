@@ -19,7 +19,7 @@ export default function Missions() {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
 
-  const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'beyond_tatva', customCategory: '' })
+  const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'personal', customCategory: '' })
 
   const TABS = [
     { id: 'main', label: 'PRIMARY', icon: Flag, items: mainQuest ? [mainQuest] : [] },
@@ -59,7 +59,7 @@ export default function Missions() {
     }
     
     setShowForm(false)
-    setFormData({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'beyond_tatva', customCategory: '' })
+    setFormData({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'personal', customCategory: '' })
   }
 
   const startEdit = (goal) => {
@@ -69,7 +69,7 @@ export default function Missions() {
       description: goal.description || '',
       difficulty: goal.difficulty || 'HARD',
       type: goal.type || 'side_quest',
-      category: goal.category || 'beyond_tatva',
+      category: goal.category || 'personal',
       deadline: goal.deadline ? goal.deadline.split('T')[0] : ''
     })
   }
@@ -203,12 +203,10 @@ export default function Missions() {
                           <div>
                             <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
                             <select className="select font-mono text-sm py-1" value={editForm.category} onChange={e=>setEditForm({...editForm, category: e.target.value})}>
-                              <option value="founder">FOUNDER / LEADERSHIP</option>
-                              <option value="discipline">DISCIPLINE / HABITS</option>
+                              <option value="personal">PERSONAL MISSION</option>
+                              <option value="business">BEYOND TATVA (BUSINESS)</option>
+                              <option value="health">FITNESS / HEALTH</option>
                               <option value="learning">LEARNING / SKILLS</option>
-                              <option value="creation">CREATION / PROJECTS</option>
-                              <option value="strength">STRENGTH / FITNESS</option>
-                              <option value="communication">COMMUNICATION</option>
                             </select>
                           </div>
                         </div>
@@ -324,12 +322,10 @@ export default function Missions() {
                     <div>
                       <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
                       <select className="select font-mono w-full" value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})}>
-                        <option value="founder">FOUNDER / LEADERSHIP</option>
-                        <option value="discipline">DISCIPLINE / HABITS</option>
+                        <option value="personal">PERSONAL MISSION</option>
+                        <option value="business">BEYOND TATVA (BUSINESS)</option>
+                        <option value="health">FITNESS / HEALTH</option>
                         <option value="learning">LEARNING / SKILLS</option>
-                        <option value="creation">CREATION / PROJECTS</option>
-                        <option value="strength">STRENGTH / FITNESS</option>
-                        <option value="communication">COMMUNICATION</option>
                       </select>
                     </div>
                     <div>
