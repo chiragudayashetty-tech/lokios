@@ -286,7 +286,7 @@ export default function DailyOps() {
             .col-global { width: 260px; min-width: 260px; max-width: 260px; }
           }
         `}} />
-        <HudPanel className="p-0" id="quests-scroll-container" style={{ width: '100%', maxWidth: 'calc(100vw - var(--space-6))', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <HudPanel className="p-0 hidden-mobile" id="quests-scroll-container" style={{ width: '100%', maxWidth: 'calc(100vw - var(--space-6))', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
             <thead>
               <tr>
@@ -477,6 +477,51 @@ export default function DailyOps() {
             </div>
           )}
         </HudPanel>
+
+        {/* Mobile View: Cards for Today's Routine */}
+        <div className="hidden-desktop flex flex-col gap-3">
+          <div className="flex-between mb-1 mt-2">
+            <span className="font-display text-sm uppercase tracking-widest text-amber">TODAY'S OPERATIONS</span>
+            <span className="font-mono text-[10px] text-muted">{todayStr}</span>
+          </div>
+          {habits.map((habit) => {
+            const stats = getHabitStats(habit.id)
+            const cat = QUEST_CATEGORIES.find(c => c.id === habit.category) || QUEST_CATEGORIES[0]
+            const todayStatus = getStatus(habit.id, todayDay)
+            return (
+              <HudPanel key={habit.id} className="p-4 flex-between relative overflow-hidden">
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: cat.color }} />
+                <div className="flex-col gap-1 pl-2 truncate" style={{ flex: 1, minWidth: 0 }}>
+                  <div className="font-display text-base text-primary truncate" onClick={() => openEditModal(habit)}>{habit.title}</div>
+                  <div className="font-mono text-[10px] text-muted uppercase truncate">{cat.name} • {stats.pct}% WIN RATE</div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="font-mono text-[10px] text-info font-bold">+{habit.xp_per_completion || 25} XP</span>
+                  <button 
+                    onClick={() => cycleHabitState(habit.id, todayDay)}
+                    className="flex items-center justify-center transition-all active:scale-95"
+                    style={{
+                      width: '42px', height: '42px',
+                      border: todayStatus === 'none' ? '2px solid var(--border-color)' : 'none',
+                      borderRadius: '12px',
+                      background: todayStatus === 'completed' ? cat.color : todayStatus === 'failed' ? 'var(--danger)' : 'var(--bg-tertiary)',
+                      boxShadow: todayStatus !== 'none' ? '0 4px 12px rgba(0,0,0,0.2)' : 'none'
+                    }}
+                  >
+                    {todayStatus === 'completed' && <Check size={24} color="#fff" strokeWidth={3} />}
+                    {todayStatus === 'failed' && <X size={24} color="#fff" strokeWidth={3} />}
+                  </button>
+                </div>
+              </HudPanel>
+            )
+          })}
+          {habits.length === 0 && (
+            <div className="p-8 text-center border border-border-color rounded-2xl border-dashed">
+              <div className="font-mono text-sm text-muted mb-4">NO ROUTINES DEPLOYED</div>
+              <button onClick={() => setShowAddForm(true)} className="btn btn-primary btn-sm w-full">ADD ROUTINE</button>
+            </div>
+          )}
+        </div>
 
 
 

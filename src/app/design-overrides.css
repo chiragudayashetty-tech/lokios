@@ -602,12 +602,12 @@ body > * {
   }
 
   .main-content {
-    padding: 16px;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(24px, calc(env(safe-area-inset-bottom) + 16px));
   }
 
   .hud-panel {
     border-radius: 18px;
-    padding: 18px;
+    padding: 16px;
   }
 
   .auth-shell {
@@ -617,5 +617,10 @@ body > * {
   .auth-intro,
   .auth-card {
     border-radius: 22px;
+  }
+  
+  .truncate-mobile-wrap {
+    white-space: normal !important;
+    overflow: visible !important;
   }
 }
