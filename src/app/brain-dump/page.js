@@ -15,6 +15,14 @@ const TYPE_ICONS = {
   random: Shuffle
 }
 
+const TYPE_LABELS = {
+  idea: 'STARTUP / BIG IDEA',
+  task: 'SMALL CHORE (e.g. Bills)',
+  goal: 'LONG TERM GOAL',
+  note: 'QUICK NOTE',
+  random: 'RANDOM THOUGHT'
+}
+
 export default function IntelDrop() {
   const { items, loading, addItem, organizeItem, discardItem, convertItem } = useBrainDump()
   const [content, setContent] = useState('')
@@ -60,21 +68,20 @@ export default function IntelDrop() {
               onChange={e => setContent(e.target.value)}
               autoFocus
             />
-            <div className="flex-between p-4 border-t border-border-color bg-secondary">
-              <div className="flex gap-2">
+            <div className="p-4 border-t border-border-color bg-secondary flex-col gap-3">
+              <div className="flex flex-wrap gap-2">
                 {Object.entries(TYPE_ICONS).map(([type, Icon]) => (
                   <button 
                     key={type}
                     type="button"
                     onClick={() => setSelectedType(type)}
-                    className={`p-2 rounded-sm transition-all ${selectedType === type ? 'bg-amber-subtle text-amber border border-amber' : 'text-muted hover:text-secondary'}`}
-                    title={type.toUpperCase()}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-sm text-xs font-mono transition-all ${selectedType === type ? 'bg-amber-subtle text-amber border border-amber' : 'bg-black text-muted hover:text-secondary border border-border-color'}`}
                   >
-                    <Icon size={18} />
+                    <Icon size={14} /> {TYPE_LABELS[type]}
                   </button>
                 ))}
               </div>
-              <button type="submit" className="btn btn-primary" disabled={!content.trim()}>
+              <button type="submit" className="btn btn-primary w-full flex justify-center items-center gap-2" disabled={!content.trim()}>
                 CAPTURE INTEL <Plus size={16} />
               </button>
             </div>
@@ -104,9 +111,12 @@ export default function IntelDrop() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                 >
-                  <HudPanel className="flex-col gap-3">
-                    <div className="flex-between">
-                      <span className="badge badge-amber flex items-center gap-1"><Icon size={10} /> {item.type}</span>
+                  <HudPanel glow={item.status === 'inbox'} className={item.status === 'discarded' ? 'opacity-50' : ''}>
+                    <div className="flex-between mb-2">
+                      <div className="flex items-center gap-2 text-amber">
+                        <Icon size={16} />
+                        <span className="font-mono text-xs font-bold">{TYPE_LABELS[item.type] || item.type.toUpperCase()}</span>
+                      </div>
                       <span className="font-mono text-xs text-muted">{new Date(item.created_at).toLocaleString()}</span>
                     </div>
                     <p className="font-mono text-sm whitespace-pre-wrap">{item.content}</p>
