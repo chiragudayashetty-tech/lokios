@@ -4,13 +4,16 @@ import { useState, useMemo, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
-import { useHabits } from '@/lib/hooks/useHabits'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react'
+import { useHabitsInternal } from '@/lib/hooks/useHabitsInternal'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Check, Flame, Trash2, ChevronLeft, ChevronRight, X, Archive, AlertTriangle } from 'lucide-react'
 
 export default function DailyOps() {
-  const { habits, monthLogs, todayLogs, loading, error, fetchHabits, toggleHabitForDate, addHabit, deleteHabit, archiveHabit } = useHabits()
+  const {
+    habits, monthLogs, todayLogs, loading, error,
+    fetchHabits, cycleHabitState, addHabit, deleteHabit, archiveHabit, reorderHabits, updateHabit
+  } = useHabitsInternal()
 
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth()) // 0-indexed
@@ -20,6 +23,13 @@ export default function DailyOps() {
   const [newCategory, setNewCategory] = useState('beyond_tatva')
   const [customCategory, setCustomCategory] = useState('')
   const [newXp, setNewXp] = useState(25)
+
+  // Edit State
+  const [editingHabit, setEditingHabit] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editCategory, setEditCategory] = useState('')
+  const [editCustomCategory, setEditCustomCategory] = useState('')
+  const [editXp, setEditXp] = useState(25)
 
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -55,26 +65,21 @@ export default function DailyOps() {
     }
   }, [viewMonth, viewYear, isCurrentMonth, todayDay])
 
-  // Build a lookup set: "habitId::YYYY-MM-DD" for O(1) checks
-  const logSet = useMemo(() => {
-    const s = new Set()
-    monthLogs.forEach((l) => s.add(`${l.habit_id}::${l.date}`))
-    return s
+  // Build a lookup map: "habitId::YYYY-MM-DD" -> status
+  const logMap = useMemo(() => {
+    const m = new Map()
+    monthLogs.forEach((l) => m.set(`${l.habit_id}::${l.date}`, l.status || 'completed'))
+    return m
   }, [monthLogs])
 
-  const isChecked = (habitId, day) => {
+  const getStatus = (habitId, day) => {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    return logSet.has(`${habitId}::${dateStr}`)
+    return logMap.get(`${habitId}::${dateStr}`) || 'none'
   }
 
   const handleToggle = (habitId, day) => {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    toggleHabitForDate(habitId, dateStr)
-  }
-
-  const handleFail = (habitId, dateStr) => {
-    if (!window.confirm('Are you sure? This cannot be undone.')) return
-    toggleHabitForDate(habitId, dateStr, 'failed')
+    cycleHabitState(habitId, dateStr)
   }
 
   const handleDelete = async (habitId) => {
@@ -85,30 +90,44 @@ export default function DailyOps() {
   // Stats for each habit
   const getHabitStats = (habitId) => {
     let completed = 0
-    days.forEach((d) => { if (isChecked(habitId, d)) completed++ })
+    let failed = 0
+    days.forEach((d) => {
+      const status = getStatus(habitId, d)
+      if (status === 'completed') completed++
+      if (status === 'failed') failed++
+    })
     const goal = daysInMonth
-    const left = goal - completed
+    const left = goal - completed - failed // Not totally accurate if left implies days left, but works
     const pct = goal === 0 ? 0 : Math.round((completed / goal) * 100)
-    return { completed, goal, left, pct }
+    return { completed, failed, left: Math.max(0, left), pct }
   }
 
-  // Global stats
+  // Global month stats
   const globalStats = useMemo(() => {
-    if (habits.length === 0) return { completed: 0, goal: 0, pct: 0 }
-    let total = 0, done = 0
+    let done = 0
+    let total = 0
     habits.forEach((h) => {
       days.forEach((d) => {
         total++
-        if (isChecked(h.id, d)) done++
+        if (getStatus(h.id, d) === 'completed') done++
       })
     })
     return { completed: done, goal: total, pct: total === 0 ? 0 : Math.round((done / total) * 100) }
-  }, [habits, logSet, days])
+  }, [habits, logMap, days])
 
   // Today's completion stats
-  const todayComplete = habits.filter(h => todayLogs.some(l => l.habit_id === h.id)).length
+  const todayComplete = habits.filter(h => todayLogs.some(l => l.habit_id === h.id && (!l.status || l.status === 'completed'))).length
+  const todayFailed = habits.filter(h => todayLogs.some(l => l.habit_id === h.id && l.status === 'failed')).length
   const todayTotal = habits.length
   const todayPct = todayTotal === 0 ? 0 : Math.round((todayComplete / todayTotal) * 100)
+
+  // Top Consistent Habits
+  const topHabits = useMemo(() => {
+    return [...habits]
+      .map(h => ({ ...h, stats: getHabitStats(h.id) }))
+      .sort((a, b) => b.stats.completed - a.stats.completed)
+      .slice(0, 10)
+  }, [habits, logMap, days])
 
   const handleAdd = async (e) => {
     e.preventDefault()
@@ -123,6 +142,32 @@ export default function DailyOps() {
     setNewTitle('')
     setCustomCategory('')
     setShowAddForm(false)
+  }
+
+  const handleEditSave = async (e) => {
+    e.preventDefault()
+    if (!editTitle.trim() || !editingHabit) return
+    await updateHabit(editingHabit.id, {
+      title: editTitle,
+      category: editCategory === 'other' ? (editCustomCategory || 'Other') : editCategory,
+      stat_category: QUEST_CATEGORIES.find(c => c.id === editCategory)?.stat_category || 'discipline',
+      xp_per_completion: editXp
+    })
+    setEditingHabit(null)
+  }
+
+  const openEditModal = (h) => {
+    setEditingHabit(h)
+    setEditTitle(h.title)
+    const isCustom = !QUEST_CATEGORIES.some(c => c.id === h.category)
+    if (isCustom) {
+      setEditCategory('other')
+      setEditCustomCategory(h.category)
+    } else {
+      setEditCategory(h.category)
+      setEditCustomCategory('')
+    }
+    setEditXp(h.xp_per_completion || 25)
   }
 
   if (error) {
@@ -159,49 +204,26 @@ export default function DailyOps() {
           </button>
         </header>
 
-        {/* Top Stats Row */}
+        {/* DailyOpsIntel - Smart Performance HUD */}
         <div className="grid-3 gap-4 mb-6">
-          {/* Today's Progress */}
-          <HudPanel glow className="flex items-center gap-5 p-5">
-            <div className="relative w-16 h-16 shrink-0 flex-center">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-strong)" strokeWidth="7" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--accent-primary)" strokeWidth="7"
-                  strokeDasharray={`${2 * Math.PI * 42}`}
-                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - todayPct / 100)}`}
-                  strokeLinecap="round" className="transition-all duration-700" />
-              </svg>
-              <div className="absolute inset-0 flex-center">
-                <span className="font-display text-lg text-primary">{todayPct}%</span>
-              </div>
-            </div>
-            <div>
-              <div className="font-display text-lg uppercase tracking-wider text-primary">TODAY</div>
-              <div className="font-mono text-sm text-secondary">{todayComplete} / {todayTotal} completed</div>
-            </div>
+          <HudPanel glow className="p-5 flex-center flex-col text-center">
+            <div className="font-display text-4xl text-primary">{globalStats.pct}%</div>
+            <div className="font-mono text-xs text-muted mt-2">WIN RATE</div>
           </HudPanel>
-
-          {/* Monthly Progress */}
-          <HudPanel className="flex items-center gap-5 p-5">
-            <div className="relative w-16 h-16 shrink-0 flex-center">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-strong)" strokeWidth="7" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--info)" strokeWidth="7"
-                  strokeDasharray={`${2 * Math.PI * 42}`}
-                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - globalStats.pct / 100)}`}
-                  strokeLinecap="round" className="transition-all duration-700" />
-              </svg>
-              <div className="absolute inset-0 flex-center">
-                <span className="font-display text-lg text-info">{globalStats.pct}%</span>
-              </div>
+          <HudPanel className="p-5 flex-center flex-col text-center">
+            {/* Compute global failure rate dynamically */}
+            <div className="font-display text-4xl text-danger">
+              {habits.length === 0 ? 0 : Math.round((Array.from(logMap.values()).filter(s => s === 'failed').length / (habits.length * daysInMonth)) * 100)}%
             </div>
-            <div>
-              <div className="font-display text-lg uppercase tracking-wider text-primary">MONTHLY</div>
-              <div className="font-mono text-sm text-secondary">{globalStats.completed} / {globalStats.goal} total</div>
-            </div>
+            <div className="font-mono text-xs text-muted mt-2">FAILURE RATE</div>
           </HudPanel>
+          <HudPanel className="p-5 flex-center flex-col text-center">
+            <div className="font-display text-4xl text-success">{globalStats.completed}</div>
+            <div className="font-mono text-xs text-muted mt-2">ROUTINES EXECUTED</div>
+          </HudPanel>
+        </div>
 
-          {/* Month Navigation */}
+        {/* Month Navigation */}
           <HudPanel className="flex-center gap-6 p-5">
             <button onClick={prevMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronLeft size={20} /></button>
             <div className="text-center">
@@ -264,9 +286,13 @@ export default function DailyOps() {
                       borderRight: '2px solid var(--border-color)',
                     }}>
                       <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)]">
+                          <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted" title="Move Up"><ArrowUp size={10} /></button>
+                          <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 hover:opacity-100 text-muted" title="Move Down"><ArrowDown size={10} /></button>
+                        </div>
                         <div className="w-1.5 h-8 rounded-full shrink-0" style={{ background: cat.color }} />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-mono text-xs text-primary truncate">{habit.title}</div>
+                        <div className="flex-1 min-w-0" onClick={() => openEditModal(habit)} style={{ cursor: 'pointer' }}>
+                          <div className="font-mono text-xs text-primary truncate hover:text-amber transition-colors">{habit.title}</div>
                           <div className="font-mono text-[9px] text-muted uppercase">{cat.name}</div>
                         </div>
                         <button onClick={() => archiveHabit(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-amber p-1" title="Archive Routine">
@@ -289,7 +315,7 @@ export default function DailyOps() {
                     </td>
                     {/* Day cells */}
                     {days.map((d) => {
-                      const checked = isChecked(habit.id, d)
+                      const status = getStatus(habit.id, d)
                       const isToday = isCurrentMonth && d === todayDay
                       return (
                         <td key={d}
@@ -302,14 +328,15 @@ export default function DailyOps() {
                         >
                           <div style={{
                             width: '20px', height: '20px', margin: '0 auto',
-                            border: checked ? 'none' : '1.5px solid var(--border-strong)',
+                            border: status === 'none' ? '1.5px solid var(--border-strong)' : 'none',
                             borderRadius: '3px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: checked ? cat.color : 'transparent',
+                            background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : 'transparent',
                             transition: 'all 150ms ease',
-                            opacity: checked ? 1 : 0.5,
+                            opacity: status !== 'none' ? 1 : 0.5,
                           }}>
-                            {checked && <Check size={12} color="#fff" strokeWidth={3} />}
+                            {status === 'completed' && <Check size={12} color="#fff" strokeWidth={3} />}
+                            {status === 'failed' && <X size={12} color="#fff" strokeWidth={3} />}
                           </div>
                         </td>
                       )
@@ -417,12 +444,18 @@ export default function DailyOps() {
                         maxWidth: '120px'
                       }}>
                         <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1 pr-1 border-r border-[var(--border-subtle)]">
+                            <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted" title="Move Up"><ArrowUp size={10} /></button>
+                            <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 hover:opacity-100 text-muted" title="Move Down"><ArrowDown size={10} /></button>
+                          </div>
                           <div className="w-1 h-8 rounded-full shrink-0" style={{ background: cat.color }} />
-                          <div className="font-mono text-[10px] text-primary truncate">{habit.title}</div>
+                          <div className="font-mono text-[10px] text-primary truncate hover:text-amber transition-colors cursor-pointer" onClick={() => openEditModal(habit)}>
+                            {habit.title}
+                          </div>
                         </div>
                       </td>
                       {mobileDays.map((d) => {
-                        const checked = isChecked(habit.id, d)
+                        const status = getStatus(habit.id, d)
                         const isToday = isCurrentMonth && d === todayDay
                         return (
                           <td key={d}
@@ -434,14 +467,15 @@ export default function DailyOps() {
                           >
                             <div style={{
                               width: '32px', height: '32px', margin: '0 auto',
-                              border: checked ? 'none' : '1.5px solid var(--border-strong)',
+                              border: status === 'none' ? '1.5px solid var(--border-strong)' : 'none',
                               borderRadius: '4px',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              background: checked ? cat.color : 'transparent',
+                              background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : 'transparent',
                               transition: 'all 150ms ease',
-                              opacity: checked ? 1 : 0.5,
+                              opacity: status !== 'none' ? 1 : 0.5,
                             }}>
-                              {checked && <Check size={16} color="#fff" strokeWidth={3} />}
+                              {status === 'completed' && <Check size={16} color="#fff" strokeWidth={3} />}
+                              {status === 'failed' && <X size={16} color="#fff" strokeWidth={3} />}
                             </div>
                           </td>
                         )
@@ -461,11 +495,11 @@ export default function DailyOps() {
         </div>
 
         {/* Top 10 Daily Habits Sidebar */}
-        {habits.length > 0 && (
+        {topHabits.length > 0 && (
           <div className="grid-2 gap-6 mt-6">
-            <HudPanel label="TOP 10 DAILY HABITS">
+            <HudPanel label="TOP 10 CONSISTENT ROUTINES">
               <div className="flex-col gap-2">
-                {habits.slice(0, 10).map((h, i) => {
+                {topHabits.map((h, i) => {
                   const log = todayLogs.find(l => l.habit_id === h.id)
                   const isComplete = log && (!log.status || log.status === 'completed')
                   const isFailed = log && log.status === 'failed'
@@ -473,34 +507,19 @@ export default function DailyOps() {
                   return (
                     <div key={h.id} className="flex items-center gap-3 p-2 hover:bg-hover transition-colors">
                       <span className="font-mono text-xs text-muted w-5 text-right">{i + 1}</span>
-                      <div className="flex gap-1">
-                        <button 
-                          onClick={() => toggleHabitForDate(h.id, todayStr, 'completed')}
-                          className="flex items-center justify-center transition-all hover:scale-110"
-                          style={{
-                            width: '22px', height: '22px',
-                            border: isComplete ? 'none' : '1.5px solid var(--border-color)',
-                            borderRadius: '3px',
-                            background: isComplete ? 'var(--success)' : 'var(--bg-tertiary)',
-                            opacity: isFailed ? 0.3 : 1
-                          }}
-                        >
-                          <Check size={14} color={isComplete ? "#fff" : "var(--muted)"} strokeWidth={isComplete ? 3 : 2} />
-                        </button>
-                        <button 
-                          onClick={() => handleFail(h.id, todayStr)}
-                          className="flex items-center justify-center transition-all hover:scale-110"
-                          style={{
-                            width: '22px', height: '22px',
-                            border: isFailed ? 'none' : '1.5px solid var(--border-color)',
-                            borderRadius: '3px',
-                            background: isFailed ? 'var(--danger)' : 'var(--bg-tertiary)',
-                            opacity: isComplete ? 0.3 : 1
-                          }}
-                        >
-                          <X size={14} color={isFailed ? "#fff" : "var(--muted)"} strokeWidth={isFailed ? 3 : 2} />
-                        </button>
-                      </div>
+                      <button 
+                        onClick={() => cycleHabitState(h.id, todayStr)}
+                        className="flex items-center justify-center transition-all hover:scale-110"
+                        style={{
+                          width: '24px', height: '24px',
+                          border: isComplete || isFailed ? 'none' : '1.5px solid var(--border-color)',
+                          borderRadius: '4px',
+                          background: isComplete ? 'var(--success)' : isFailed ? 'var(--danger)' : 'var(--bg-tertiary)',
+                        }}
+                      >
+                        {isComplete && <Check size={14} color="#fff" strokeWidth={3} />}
+                        {isFailed && <X size={14} color="#fff" strokeWidth={3} />}
+                      </button>
                       <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : 'text-primary'}`}>{h.title}</span>
                       {isComplete && <span className="font-mono text-[10px] text-success">+{h.xp_per_completion || 25} XP</span>}
                       {isFailed && <span className="font-mono text-[10px] text-danger">-15 XP</span>}
@@ -584,7 +603,54 @@ export default function DailyOps() {
             </div>
           )}
         </AnimatePresence>
-      </div>
+
+      {/* Edit Routine Modal */}
+      <AnimatePresence>
+        {editingHabit && (
+          <div className="modal-overlay">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="modal-content"
+            >
+              <div className="modal-header">
+                <h3 className="font-display text-lg text-primary tracking-widest">EDIT ROUTINE</h3>
+                <button onClick={() => setEditingHabit(null)} className="text-muted hover:text-primary"><X size={20} /></button>
+              </div>
+              <form onSubmit={handleEditSave} className="flex flex-col gap-4">
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">ROUTINE TITLE</label>
+                  <input type="text" className="input" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required autoFocus />
+                </div>
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
+                  <select className="select" value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
+                    {QUEST_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                {editCategory === 'other' && (
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">CUSTOM CATEGORY</label>
+                    <input type="text" className="input" value={editCustomCategory} onChange={(e) => setEditCustomCategory(e.target.value)} required placeholder="e.g. Finance" />
+                  </div>
+                )}
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">XP REWARD / PENALTY</label>
+                  <input type="number" className="input" value={editXp} onChange={(e) => setEditXp(Number(e.target.value))} required min="5" max="100" step="5" />
+                  <p className="font-mono text-[10px] text-muted mt-1">XP earned when complete. Penalty for failing is currently fixed at -15 XP.</p>
+                </div>
+                <div className="flex gap-3 mt-2">
+                  <button type="button" onClick={() => setEditingHabit(null)} className="btn btn-ghost flex-1">CANCEL</button>
+                  <button type="submit" className="btn btn-primary flex-1">SAVE CHANGES</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </AppShell>
   )
 }
