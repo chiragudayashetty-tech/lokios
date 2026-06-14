@@ -6,7 +6,7 @@ import HudPanel from '@/components/ui/HudPanel'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap } from 'lucide-react'
+import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle } from 'lucide-react'
 
 export default function Operations() {
   const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask, failTask: osFailTask }, completeOperation, deleteOperation } = useOS()
@@ -29,6 +29,7 @@ export default function Operations() {
   const dueToday = pending.filter(t => t.due_date === today)
   const upcoming = pending.filter(t => !t.due_date || t.due_date > today)
   const completed = tasks.filter(t => t.status === 'completed')
+  const failedOps = tasks.filter(t => t.status === 'cancelled' || t.status === 'failed')
 
   const completionRate = tasks.length === 0 ? 0 : Math.round((completed.length / tasks.length) * 100)
 
@@ -105,6 +106,7 @@ export default function Operations() {
       case 'today': return [...overdue, ...dueToday]
       case 'upcoming': return upcoming
       case 'completed': return completed.slice(0, 20)
+      case 'failed': return failedOps.slice(0, 20)
       case 'all': return pending
       default: return dueToday
     }
@@ -170,14 +172,15 @@ export default function Operations() {
         </div>
 
         {/* TABS */}
-        <div className="tabs mb-6">
+        <div className="tabs mb-6 flex-wrap">
           {[
             { id: 'today', label: `TODAY (${overdue.length + dueToday.length})` },
             { id: 'upcoming', label: `UPCOMING (${upcoming.length})` },
             { id: 'all', label: `ALL PENDING (${pending.length})` },
-            { id: 'completed', label: `COMPLETED (${completed.length})` }
+            { id: 'completed', label: `COMPLETED (${completed.length})` },
+            { id: 'failed', label: `FAILED (${failedOps.length})` }
           ].map(tab => (
-            <button type='button' key={tab.id} className={`tab-item ${activeTab === tab.id ? 'tab-active' : ''}`}
+            <button type='button' key={tab.id} className={`tab-item ${activeTab === tab.id ? 'tab-active' : ''} ${tab.id === 'failed' ? 'text-danger' : ''}`}
               onClick={() => setActiveTab(tab.id)}>
               {tab.label}
             </button>
@@ -189,8 +192,9 @@ export default function Operations() {
           <AnimatePresence mode="popLayout">
             {activeList.map((task) => {
               const isCompleted = task.status === 'completed'
+              const isFailed = task.status === 'cancelled' || task.status === 'failed'
               const isEditing = editingId === task.id
-              const isOverdue = !isCompleted && task.due_date && task.due_date < today
+              const isOverdue = !isCompleted && !isFailed && task.due_date && task.due_date < today
               const diffConfig = DIFFICULTY_CONFIG[task.difficulty] || DIFFICULTY_CONFIG.MEDIUM
               const dynamicXp = isOverdue ? Math.floor(diffConfig.xp * 0.5) : diffConfig.xp
 
@@ -244,7 +248,7 @@ export default function Operations() {
                   animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
                   className="col-span-1"
                 >
-                  <div className={`relative bg-tertiary border p-5 transition-all duration-200 group ${isOverdue ? 'border-danger hover:border-danger' : isCompleted ? 'border-border-color opacity-60' : 'border-border-color hover:border-amber'}`}
+                  <div className={`relative bg-tertiary border p-5 transition-all duration-200 group ${isFailed ? 'border-danger opacity-50' : isOverdue ? 'border-danger hover:border-danger' : isCompleted ? 'border-border-color opacity-60' : 'border-border-color hover:border-amber'}`}
                     style={{ borderLeftWidth: '3px', borderLeftColor: diffConfig.color }}>
 
                     {/* Top row: Difficulty + Actions */}
@@ -297,36 +301,43 @@ export default function Operations() {
                           <span className="font-mono text-[10px] text-danger">+{dynamicXp} XP (PENALTY)</span>
                         )}
                       </div>
-                      {!isCompleted && (
-                        <div className="flex gap-2">
-                          <button type='button' className="btn btn-ghost btn-sm" onClick={() => setEditingId(task.id)} title="Edit">
-                            <Edit2 size={14} />
-                          </button>
-                          <button type='button' className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
-                            <RotateCcw size={14} />
-                          </button>
-                          <button type='button' className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(task)} title="Fail Operation">
-                            <X size={14} />
-                          </button>
-                          <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task.id)} title="Delete Operation">
-                            <Trash2 size={14} />
-                          </button>
-                          <button type='button' onClick={() => handleComplete(task)}
-                            className="btn btn-primary btn-sm flex items-center gap-1.5 px-4">
-                            <Zap size={12} /> EXECUTE
-                          </button>
-                        </div>
-                      )}
-                      {isCompleted && (
-                        <div className="flex gap-2">
-                          <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task.id)} title="Delete Operation">
-                            <Trash2 size={14} />
-                          </button>
-                          <span className="font-mono text-[10px] text-success flex items-center gap-1">
-                            <CheckCircle2 size={12} /> COMPLETED
-                          </span>
-                        </div>
-                      )}
+                        {!isCompleted && !isFailed && (
+                          <div className="flex gap-2">
+                            <button type='button' className="btn btn-ghost btn-sm" onClick={() => setEditingId(task.id)} title="Edit">
+                              <Edit2 size={14} />
+                            </button>
+                            <button type='button' className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
+                              <RotateCcw size={14} />
+                            </button>
+                            <button type='button' className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(task)} title="Fail Operation">
+                              <X size={14} />
+                            </button>
+                            <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task.id)} title="Delete Operation">
+                              <Trash2 size={14} />
+                            </button>
+                            <button type='button' onClick={() => handleComplete(task)}
+                              className="btn btn-primary btn-sm flex items-center gap-1.5 px-4">
+                              <Zap size={12} /> EXECUTE
+                            </button>
+                          </div>
+                        )}
+                        {(isCompleted || isFailed) && (
+                          <div className="flex gap-2">
+                            <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task.id)} title="Delete Operation">
+                              <Trash2 size={14} />
+                            </button>
+                            {isCompleted && (
+                              <span className="font-mono text-[10px] text-success flex items-center gap-1">
+                                <CheckCircle2 size={12} /> COMPLETED
+                              </span>
+                            )}
+                            {isFailed && (
+                              <span className="font-mono text-[10px] text-danger flex items-center gap-1">
+                                <XCircle size={12} /> FAILED
+                              </span>
+                            )}
+                          </div>
+                        )}
                     </div>
                   </div>
                 </motion.div>

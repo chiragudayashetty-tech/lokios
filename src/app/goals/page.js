@@ -9,7 +9,7 @@ import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, Che
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
-  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, failGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
+  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, failGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
@@ -27,6 +27,7 @@ export default function Missions() {
     { id: 'long', label: 'LONG RANGE', icon: Star, items: longTermGoals },
     { id: 'weekly', label: 'WEEKLY', icon: Clock, items: weeklyGoals },
     { id: 'completed', label: 'COMPLETED', icon: Check, items: completedGoals },
+    { id: 'failed', label: 'FAILED', icon: AlertTriangle, items: failedGoals }
   ]
 
   const activeData = TABS.find(t => t.id === activeTab)?.items || []
@@ -269,10 +270,21 @@ export default function Missions() {
                     )}
                     
                     {goal.status === 'completed' && (
-                      <div className="mt-4 flex justify-end gap-2">
+                      <div className="mt-4 flex justify-between gap-2">
+                        <div className="text-success font-mono text-xs uppercase tracking-widest flex items-center gap-1">
+                          <Check size={14} /> COMPLETED
+                        </div>
                         <button onClick={() => undoCompleteGoal(goal.id)} className="btn btn-ghost text-amber btn-sm">
                           <RotateCcw size={14} /> UNDO COMPLETION
                         </button>
+                      </div>
+                    )}
+                    
+                    {goal.status === 'cancelled' && (
+                      <div className="mt-4 flex justify-start gap-2">
+                        <div className="text-danger font-mono text-xs uppercase tracking-widest flex items-center gap-1">
+                          <AlertTriangle size={14} /> MISSION FAILED
+                        </div>
                       </div>
                     )}
                   </HudPanel>

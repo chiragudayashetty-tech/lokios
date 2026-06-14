@@ -46,27 +46,32 @@ export function useGoalsInternal() {
 
   // Grouped goal views
   const mainQuest = useMemo(
-    () => goals.find((g) => g.type === 'main_quest' && g.status !== 'completed'),
+    () => goals.find((g) => g.type === 'main_quest' && g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed'),
     [goals]
   )
 
   const sideQuests = useMemo(
-    () => goals.filter((g) => g.type === 'side_quest' && g.status !== 'completed'),
+    () => goals.filter((g) => g.type === 'side_quest' && g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed'),
     [goals]
   )
 
   const longTermGoals = useMemo(
-    () => goals.filter((g) => g.type === 'long_term' && g.status !== 'completed'),
+    () => goals.filter((g) => g.type === 'long_term' && g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed'),
     [goals]
   )
 
   const weeklyGoals = useMemo(
-    () => goals.filter((g) => g.type === 'weekly' && g.status !== 'completed'),
+    () => goals.filter((g) => g.type === 'weekly' && g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed'),
     [goals]
   )
 
   const completedGoals = useMemo(
     () => goals.filter((g) => g.status === 'completed'),
+    [goals]
+  )
+
+  const failedGoals = useMemo(
+    () => goals.filter((g) => g.status === 'cancelled' || g.status === 'failed'),
     [goals]
   )
 
@@ -306,6 +311,7 @@ export function useGoalsInternal() {
     longTermGoals,
     weeklyGoals,
     completedGoals,
+    failedGoals,
     loading,
     error,
     fetchGoals,
