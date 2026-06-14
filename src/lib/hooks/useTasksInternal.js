@@ -258,15 +258,17 @@ export function useTasksInternal() {
     }
   }, [user])
 
-  const deleteTask = useCallback(async (id) => {
+  const deleteTask = useCallback(async (id, revokeXp = true) => {
     if (!user) return false
 
     try {
       const task = tasks.find((t) => t.id === id)
-      if (task?.status === 'completed') {
-        await robustRemoveXP(user.id, 'task_complete', id)
-      } else if (task?.status === 'cancelled') {
-        await robustRemoveXP(user.id, 'task_failed', id)
+      if (revokeXp) {
+        if (task?.status === 'completed') {
+          await robustRemoveXP(user.id, 'task_complete', id)
+        } else if (task?.status === 'cancelled') {
+          await robustRemoveXP(user.id, 'task_failed', id)
+        }
       }
 
       const { error } = await supabase

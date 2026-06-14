@@ -83,6 +83,15 @@ export default function Missions() {
     setEditingId(null)
   }
 
+  const handleDeleteGoal = async (goal) => {
+    if (!window.confirm('Are you sure you want to permanently delete this mission?')) return
+    let revokeXp = true
+    if (goal.status === 'completed' || goal.status === 'cancelled') {
+      revokeXp = window.confirm('Do you want to revoke/refund the XP associated with this mission?\n\nOK = Revoke XP\nCancel = Keep XP')
+    }
+    await deleteGoal(goal.id, revokeXp)
+  }
+
   if (error) {
     return (
       <AppShell>
@@ -168,7 +177,7 @@ export default function Missions() {
                         <button onClick={() => startEdit(goal)} className="btn btn-ghost p-1.5 hover:text-amber" title="Edit">
                           <Edit2 size={14} />
                         </button>
-                        <button onClick={() => deleteGoal(goal.id)} className="btn btn-ghost p-1.5 hover:text-danger" title="Delete">
+                        <button onClick={() => handleDeleteGoal(goal)} className="btn btn-ghost p-1.5 hover:text-danger" title="Delete">
                           <Trash2 size={14} />
                         </button>
                       </div>

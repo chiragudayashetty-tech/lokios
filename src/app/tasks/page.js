@@ -65,9 +65,15 @@ export default function Operations() {
     await editTask(task.id, { due_date: getLocalDateStr(tomorrow) })
   }
 
-  const handleDeleteOperation = async (id) => {
-    if (!window.confirm('Are you sure? This cannot be undone.')) return
-    await deleteOperation(id)
+  const handleDeleteOperation = async (task) => {
+    if (!window.confirm('Are you sure you want to permanently delete this operation?')) return
+    
+    let revokeXp = true
+    if (task.status === 'completed' || task.status === 'cancelled') {
+      revokeXp = window.confirm('Do you want to revoke/refund the XP associated with this operation?\n\nOK = Revoke XP\nCancel = Keep XP')
+    }
+    
+    await deleteOperation(task.id, revokeXp)
   }
 
   const failTask = async (task) => {
@@ -314,7 +320,7 @@ export default function Operations() {
                             <button type='button' className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(task)} title="Fail Operation">
                               <X size={14} />
                             </button>
-                            <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task.id)} title="Delete Operation">
+                            <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
                               <Trash2 size={14} />
                             </button>
                             <button type='button' onClick={() => handleComplete(task)}
@@ -325,7 +331,7 @@ export default function Operations() {
                         )}
                         {(isCompleted || isFailed) && (
                           <>
-                            <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task.id)} title="Delete Operation">
+                            <button type="button" className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
                               <Trash2 size={14} />
                             </button>
                             {isCompleted && (
