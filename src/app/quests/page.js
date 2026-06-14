@@ -205,27 +205,51 @@ export default function DailyOps() {
             <Plus size={16} /> ADD ROUTINE
           </button>
         </header>
-
-        {/* DailyOpsIntel - Smart Performance HUD */}
-        <div className="grid-3 gap-4 mb-6">
-          <HudPanel glow className="p-5 flex-center flex-col text-center">
-            <div className="font-display text-4xl text-primary">{globalStats.pct}%</div>
-            <div className="font-mono text-xs text-muted mt-2">WIN RATE</div>
-          </HudPanel>
-          <HudPanel className="p-5 flex-center flex-col text-center">
-            {/* Compute global failure rate dynamically */}
-            <div className="font-display text-4xl text-danger">
-              {habits.length === 0 ? 0 : Math.round((Array.from(logMap.values()).filter(s => s === 'failed').length / (habits.length * daysInMonth)) * 100)}%
+        {/* Top Stats Row */}
+        <div className="grid-2 gap-4 mb-6">
+          {/* Today's Progress */}
+          <HudPanel glow className="flex items-center gap-5 p-5">
+            <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-strong)" strokeWidth="7" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--accent-primary)" strokeWidth="7"
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - todayPct / 100)}`}
+                  strokeLinecap="round" className="transition-all duration-700" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="font-display text-lg text-primary">{todayPct}%</span>
+              </div>
             </div>
-            <div className="font-mono text-xs text-muted mt-2">FAILURE RATE</div>
+            <div>
+              <div className="font-display text-lg uppercase tracking-wider text-primary">TODAY</div>
+              <div className="font-mono text-sm text-secondary">{todayComplete} / {todayTotal} completed</div>
+            </div>
           </HudPanel>
-          <HudPanel className="p-5 flex-center flex-col text-center">
-            <div className="font-display text-4xl text-success">{globalStats.completed}</div>
-            <div className="font-mono text-xs text-muted mt-2">ROUTINES EXECUTED</div>
+          
+          {/* Monthly Progress */}
+          <HudPanel className="flex items-center gap-5 p-5">
+            <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-strong)" strokeWidth="7" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--info)" strokeWidth="7"
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - globalStats.pct / 100)}`}
+                  strokeLinecap="round" className="transition-all duration-700" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="font-display text-lg text-info">{globalStats.pct}%</span>
+              </div>
+            </div>
+            <div>
+              <div className="font-display text-lg uppercase tracking-wider text-info">MONTH TOTAL</div>
+              <div className="font-mono text-sm text-secondary">{globalStats.completed} / {globalStats.goal} total</div>
+            </div>
           </HudPanel>
         </div>
 
         {/* Month Navigation */}
+        <div className="flex items-center justify-center mb-6">
           <HudPanel className="flex-center gap-6 p-5">
             <button onClick={prevMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronLeft size={20} /></button>
             <div className="text-center">
