@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lokios-v2';
+const CACHE_NAME = 'lokios-v3';
 const STATIC_ASSETS = [
   '/',
   '/dashboard',
