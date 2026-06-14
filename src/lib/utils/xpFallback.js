@@ -49,14 +49,20 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
 export async function robustRemoveXP(userId, sourceType, sourceId, targetDateStr) {
   const supabase = createClient()
   
+  // Convert local date string to UTC bounds for accurate querying
+  const localStart = new Date(`${targetDateStr}T00:00:00`)
+  const localEnd = new Date(`${targetDateStr}T23:59:59.999`)
+  const startUTC = localStart.toISOString()
+  const endUTC = localEnd.toISOString()
+
   // First find the xp_history entry to know how much to deduct
   const { data: historyItems } = await supabase.from('xp_history')
     .select('id, amount')
     .eq('user_id', userId)
     .eq('source_type', sourceType)
     .eq('source_id', sourceId)
-    .gte('created_at', `${targetDateStr}T00:00:00`)
-    .lte('created_at', `${targetDateStr}T23:59:59`)
+    .gte('created_at', startUTC)
+    .lte('created_at', endUTC)
 
   if (!historyItems || historyItems.length === 0) return true
 
