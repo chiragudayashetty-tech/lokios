@@ -55,9 +55,14 @@ export default function OperatorDashboard() {
 
   const fetchBlueprint = async () => {
     const supabase = createClient()
-    const { data, error } = await supabase.from('user_blueprints').select('*').eq('user_id', user.id).single()
+    const { data: rows, error } = await supabase.from('user_blueprints').select('*').eq('user_id', user.id)
     
-    if (data) {
+    if (error) {
+      console.error('Error fetching blueprint:', error)
+    }
+
+    if (rows && rows.length > 0) {
+      const data = rows[0] // take the first one if multiple exist
       setBlueprint(data)
       setForm({
         identity: data.identity || DEFAULT_BLUEPRINT.identity,
@@ -142,32 +147,47 @@ export default function OperatorDashboard() {
 
   const addBattle = async () => {
     if (!newBattle.name.trim()) return
-    const updatedBattles = [...battles, { ...newBattle }]
-    setBattles(updatedBattles)
+    const currentBattles = await new Promise(resolve => {
+      setBattles(prev => {
+        const next = [...prev, { ...newBattle }]
+        resolve(next)
+        return next
+      })
+    })
     setNewBattle({ name: '', severity: 'medium', notes: '', linked_habits: [], hp: 100 })
     setShowAddBattle(false)
-    await saveBattlesToDB(updatedBattles)
+    await saveBattlesToDB(currentBattles)
   }
 
   const removeBattle = async (idx) => {
-    const updatedBattles = battles.filter((_, i) => i !== idx)
-    setBattles(updatedBattles)
-    await saveBattlesToDB(updatedBattles)
+    const currentBattles = await new Promise(resolve => {
+      setBattles(prev => {
+        const next = prev.filter((_, i) => i !== idx)
+        resolve(next)
+        return next
+      })
+    })
+    await saveBattlesToDB(currentBattles)
   }
 
   const toggleLinkedHabit = async (battleIdx, habitId) => {
-    const updatedBattles = battles.map((b, i) => {
-      if (i !== battleIdx) return b
-      const isLinked = b.linked_habits?.includes(habitId)
-      return {
-        ...b,
-        linked_habits: isLinked 
-          ? b.linked_habits.filter(id => id !== habitId)
-          : [...(b.linked_habits || []), habitId]
-      }
+    const currentBattles = await new Promise(resolve => {
+      setBattles(prev => {
+        const next = prev.map((b, i) => {
+          if (i !== battleIdx) return b
+          const isLinked = b.linked_habits?.includes(habitId)
+          return {
+            ...b,
+            linked_habits: isLinked 
+              ? b.linked_habits.filter(id => id !== habitId)
+              : [...(b.linked_habits || []), habitId]
+          }
+        })
+        resolve(next)
+        return next
+      })
     })
-    setBattles(updatedBattles)
-    await saveBattlesToDB(updatedBattles)
+    await saveBattlesToDB(currentBattles)
   }
 
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING IDENTITY MATRIX...</span></div></AppShell>
