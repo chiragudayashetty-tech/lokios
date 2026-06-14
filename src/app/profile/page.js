@@ -108,14 +108,21 @@ export default function OperatorDashboard() {
       battles: battles
     }
 
+    let result
     if (blueprint) {
-      await supabase.from('user_blueprints').update(payload).eq('id', blueprint.id)
+      result = await supabase.from('user_blueprints').update(payload).eq('id', blueprint.id)
     } else {
-      await supabase.from('user_blueprints').insert([payload])
+      result = await supabase.from('user_blueprints').insert([payload])
     }
-    await fetchBlueprint()
+
+    if (result.error) {
+      console.error('Error saving blueprint:', result.error)
+      alert('Error saving directives: ' + result.error.message)
+    } else {
+      await fetchBlueprint()
+      setEditMode(false)
+    }
     setSaving(false)
-    setEditMode(false)
   }
 
   const saveBattlesToDB = async (newBattles) => {
