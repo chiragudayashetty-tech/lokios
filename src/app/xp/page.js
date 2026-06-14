@@ -10,7 +10,7 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts'
-import { Flame, Star, Activity, Trophy, ArrowUp } from 'lucide-react'
+import { Flame, Star, Activity, Trophy, ArrowUp, RotateCcw } from 'lucide-react'
 import { RANK_CONFIG } from '@/lib/constants'
 
 export default function XPDashboard() {
@@ -34,6 +34,19 @@ export default function XPDashboard() {
     }
     fetchData()
   }, [user])
+
+  const handleResetXP = async () => {
+    if (!confirm('WARNING: PROTOCOL OVERRIDE. This will permanently wipe all XP history, timeline events, and reset your total XP to 0. Proceed?')) return
+    
+    setLoading(true)
+    const supabase = createClient()
+    
+    await supabase.from('profiles').update({ total_xp: 0 }).eq('id', user.id)
+    await supabase.from('xp_history').delete().eq('user_id', user.id)
+    await supabase.from('habit_logs').delete().eq('user_id', user.id)
+    
+    window.location.reload()
+  }
 
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING NEURAL NETWORK...</span></div></AppShell>
 
@@ -82,9 +95,17 @@ export default function XPDashboard() {
   return (
     <AppShell>
       <div className="page-container" style={{ maxWidth: '1400px' }}>
-        <header className="page-header mb-8">
-          <h1 className="page-title flex items-center gap-3"><Trophy className="text-amber" /> EXPERIENCE METRICS</h1>
-          <p className="page-subtitle font-mono uppercase text-xs">Visualize your character progression and stat distribution.</p>
+        <header className="page-header mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="page-title flex items-center gap-3"><Trophy className="text-amber" /> EXPERIENCE METRICS</h1>
+            <p className="page-subtitle font-mono uppercase text-xs">Visualize your character progression and stat distribution.</p>
+          </div>
+          <button 
+            onClick={handleResetXP}
+            className="px-3 py-1.5 border border-danger text-danger text-xs font-mono uppercase tracking-widest hover:bg-danger/10 rounded flex items-center gap-2 transition-colors mt-1"
+          >
+            <RotateCcw size={14} /> Full Reset
+          </button>
         </header>
 
         {/* Level Up Banner / Core Stats */}
