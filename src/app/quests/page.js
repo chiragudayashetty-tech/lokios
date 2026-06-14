@@ -262,13 +262,13 @@ export default function DailyOps() {
 
         {/* The Spreadsheet Grid */}
         <HudPanel className="overflow-x-auto p-0">
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
+                <th className="sticky left-0 z-20 w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
                   <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
                 </th>
-                <th className="sticky left-[140px] md:left-[260px] z-10 w-[40px] md:w-[50px] min-w-[40px] md:min-w-[50px] max-w-[40px] md:max-w-[50px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 4px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)' }}>
+                <th className="sticky left-[140px] md:left-[260px] z-20 w-[40px] md:w-[50px] min-w-[40px] md:min-w-[50px] max-w-[40px] md:max-w-[50px]" style={{ background: 'var(--bg-tertiary)', padding: '10px 4px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)' }}>
                   <span className="font-mono text-[10px] text-muted">XP</span>
                 </th>
                 {days.map((d) => {
@@ -302,12 +302,12 @@ export default function DailyOps() {
                 const stats = getHabitStats(habit.id)
                 const cat = QUEST_CATEGORIES.find(c => c.id === habit.category) || QUEST_CATEGORIES[0]
                 return (
-                  <tr key={habit.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}
-                    className="group hover:bg-hover transition-colors">
+                  <tr key={habit.id} className="group hover:bg-hover transition-colors">
                     {/* Habit Name */}
-                    <td className="sticky left-0 z-[5] w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{
+                    <td className="sticky left-0 z-10 w-[140px] md:w-[260px] min-w-[140px] md:min-w-[260px] max-w-[140px] md:max-w-[260px]" style={{
                       background: 'var(--bg-secondary)',
                       padding: '8px',
+                      borderBottom: '1px solid var(--border-subtle)',
                       borderRight: '2px solid var(--border-color)',
                     }}>
                       <div className="flex items-center gap-1 md:gap-2">
@@ -320,7 +320,7 @@ export default function DailyOps() {
                           <div className="font-mono text-[10px] md:text-xs text-primary truncate hover:text-amber transition-colors">{habit.title}</div>
                           <div className="font-mono text-[8px] md:text-[9px] text-muted uppercase hidden md:block">{cat.name}</div>
                         </div>
-                        <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-danger p-1 hidden md:block" title="Delete Routine">
+                        <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-danger p-1 shrink-0" title="Delete Routine">
                           <Trash2 size={12} />
                         </button>
                       </div>
@@ -329,11 +329,11 @@ export default function DailyOps() {
                     <td className="sticky left-[140px] md:left-[260px] z-[5] w-[40px] md:w-[50px] min-w-[40px] md:min-w-[50px] max-w-[40px] md:max-w-[50px]" style={{
                       background: 'var(--bg-secondary)',
                       textAlign: 'center',
+                      borderBottom: '1px solid var(--border-subtle)',
                       borderRight: '2px solid var(--border-color)',
                       padding: '4px'
                     }}>
                       <span className="font-mono text-[9px] md:text-[10px] text-info font-bold">{habit.xp_per_completion || 25}</span>
-                      <span className="font-mono text-[10px] text-info font-bold">{habit.xp_per_completion || 25}</span>
                     </td>
                     {/* Day cells */}
                     {days.map((d) => {
@@ -343,7 +343,7 @@ export default function DailyOps() {
                         <td key={d}
                           onClick={() => handleToggle(habit.id, d)}
                           style={{
-                            textAlign: 'center', padding: '0', cursor: 'pointer', borderRight: '1px solid var(--border-subtle)',
+                            textAlign: 'center', padding: '0', cursor: 'pointer', borderRight: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)',
                             background: isToday ? 'var(--accent-subtle)' : 'transparent',
                           }}
                           className="hover:bg-hover transition-colors min-w-[36px]"
@@ -364,13 +364,13 @@ export default function DailyOps() {
                       )
                     })}
                     {/* Stats cells */}
-                    <td style={{ textAlign: 'center', borderLeft: '2px solid var(--border-color)', padding: '4px' }}>
-                      <span className="font-mono text-xs text-success font-bold">{stats.completed}</span>
+                    <td style={{ textAlign: 'center', borderLeft: '2px solid var(--border-color)', borderBottom: '1px solid var(--border-subtle)', padding: '6px' }}>
+                      <span className="font-mono text-[10px] text-success font-bold">{stats.completed}</span>
                     </td>
-                    <td style={{ textAlign: 'center', padding: '4px' }}>
-                      <span className="font-mono text-xs text-muted">{stats.left}</span>
+                    <td style={{ textAlign: 'center', borderBottom: '1px solid var(--border-subtle)', padding: '6px' }}>
+                      <span className="font-mono text-[10px] text-muted">{stats.left}</span>
                     </td>
-                    <td style={{ textAlign: 'center', padding: '4px' }}>
+                    <td style={{ textAlign: 'center', borderBottom: '1px solid var(--border-subtle)', padding: '6px' }}>
                       <span className={`font-mono text-xs font-bold ${stats.pct >= 80 ? 'text-success' : stats.pct >= 50 ? 'text-amber' : 'text-danger'}`}>
                         {stats.pct}%
                       </span>
