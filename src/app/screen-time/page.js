@@ -75,9 +75,23 @@ export default function ScreenIntel() {
       updated_at: new Date().toISOString()
     }
 
-    await supabase.from('screen_time_logs').upsert(payload, { onConflict: 'user_id,date' })
+    const { data: upsertData, error: upsertError } = await supabase.from('screen_time_logs').upsert(payload, { onConflict: 'user_id,date' }).select()
+    if (upsertError) {
+      console.error("Supabase upsert error:", upsertError)
+      alert("Failed to save screen time: " + upsertError.message)
+      return
+    }
+
     const { data } = await supabase.from('screen_time_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
     if (data) setLogs(data)
+
+    // Check if we already awarded XP for this exact date to prevent idempotency bugs
+    const existingLog = logs.find(l => l.date === date)
+    const alreadyAwarded = existingLog && existingLog.doom_scroll_minutes !== undefined
+
+    if (alreadyAwarded) {
+      return // Prevent double XP if they just click save again
+    }
 
     // Calculate XP
     let xpAmount = 0
