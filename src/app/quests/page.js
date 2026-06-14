@@ -23,6 +23,7 @@ export default function DailyOps() {
   const [newCategory, setNewCategory] = useState('beyond_tatva')
   const [customCategory, setCustomCategory] = useState('')
   const [newXp, setNewXp] = useState(25)
+  const [activeTool, setActiveTool] = useState('cycle')
 
   // Edit State
   const [editingHabit, setEditingHabit] = useState(null)
@@ -96,7 +97,11 @@ export default function DailyOps() {
 
   const handleToggle = (habitId, day) => {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    cycleHabitState(habitId, dateStr)
+    if (activeTool === 'cycle') {
+      cycleHabitState(habitId, dateStr)
+    } else {
+      cycleHabitState(habitId, dateStr, activeTool)
+    }
   }
 
   const handleDelete = async (habitId) => {
@@ -273,6 +278,37 @@ export default function DailyOps() {
             </div>
             <button onClick={nextMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronRight size={20} /></button>
           </HudPanel>
+        </div>
+
+        {/* Paint Tool Selector */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+          <span className="font-display text-[10px] uppercase tracking-widest text-muted">PAINT MODE</span>
+          <div className="flex items-center bg-tertiary border border-border-color rounded overflow-hidden">
+            <button 
+              className={`px-4 py-1.5 font-mono text-[10px] flex items-center gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'hover:bg-hover text-primary'}`}
+              onClick={() => setActiveTool('cycle')}
+            >
+              <RotateCcw size={12} /> CYCLE
+            </button>
+            <button 
+              className={`px-4 py-1.5 font-mono text-[10px] flex items-center gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'hover:bg-hover text-success'}`}
+              onClick={() => setActiveTool('completed')}
+            >
+              <Check size={12} /> DONE
+            </button>
+            <button 
+              className={`px-4 py-1.5 font-mono text-[10px] flex items-center gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'hover:bg-hover text-danger'}`}
+              onClick={() => setActiveTool('failed')}
+            >
+              <X size={12} /> FAIL
+            </button>
+            <button 
+              className={`px-4 py-1.5 font-mono text-[10px] flex items-center gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'hover:bg-hover text-muted'}`}
+              onClick={() => setActiveTool('none')}
+            >
+              <Crosshair size={12} /> CLEAR
+            </button>
+          </div>
         </div>
 
         {/* The Spreadsheet Grid */}
