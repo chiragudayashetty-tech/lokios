@@ -48,7 +48,7 @@ export default function XPDashboard() {
   const currentRank = getRankForXp(totalXp)
 
   // Radar Chart Data
-  const categories = ['discipline', 'focus', 'health', 'business', 'learning']
+  const categories = ['founder', 'discipline', 'communication', 'learning', 'creation', 'strength']
   const radarData = categories.map(cat => {
     const amount = timeline.filter(t => t.stat_category === cat && t.amount > 0).reduce((acc, curr) => acc + curr.amount, 0)
     return { subject: cat.toUpperCase(), A: amount, fullMark: 1000 }

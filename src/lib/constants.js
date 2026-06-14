@@ -19,8 +19,9 @@ export const STAT_CATEGORIES = [
 ];
 
 export const RANK_CONFIG = {
-  E: { code: 'E', name: 'E-Rank', minXp: 0, maxXp: 999, icon: '◻', color: '#9CA3AF' },
-  D: { code: 'D', name: 'D-Rank', minXp: 1000, maxXp: 4999, icon: '◈', color: '#60A5FA' },
+  F: { code: 'F', name: 'F-Rank (Deserter)', minXp: -999999, maxXp: -1, icon: '💀', color: '#EF4444' },
+  E: { code: 'E', name: 'E-Rank', minXp: 0, maxXp: 999, icon: '🛡️', color: '#9CA3AF' },
+  D: { code: 'D', name: 'D-Rank', minXp: 1000, maxXp: 4999, icon: '🗡️', color: '#60A5FA' },
   C: { code: 'C', name: 'C-Rank', minXp: 5000, maxXp: 14999, icon: '◆', color: '#818CF8' },
   B: { code: 'B', name: 'B-Rank', minXp: 15000, maxXp: 34999, icon: '⬡', color: '#A78BFA' },
   A: { code: 'A', name: 'A-Rank', minXp: 35000, maxXp: 74999, icon: '✦', color: '#C084FC' },

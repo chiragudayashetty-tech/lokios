@@ -271,7 +271,7 @@ export default function MissionControl() {
                       <div className="absolute left-[-4px] top-4 w-2 h-2 rounded-full bg-border-color group-hover:bg-info transition-colors" />
                       <div className="font-mono text-[9px] text-muted mb-1">{new Date(item.created_at).toLocaleTimeString()}</div>
                       <div className="font-mono text-xs text-primary leading-relaxed">{item.description}</div>
-                      <div className="font-mono text-[10px] text-info mt-1 font-bold">+{item.amount} XP</div>
+                      <div className={`font-mono text-[10px] mt-1 font-bold ${item.amount > 0 ? 'text-info' : 'text-danger'}`}>{item.amount > 0 ? '+' : ''}{item.amount} XP</div>
                     </motion.div>
                   ))}
                   {timeline.length === 0 && <div className="font-mono text-xs text-muted py-4">NO RECENT ACTIVITY DETECTED.</div>}

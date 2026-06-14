@@ -47,5 +47,5 @@ export function getRankForXp(totalXp) {
       return { code, ...config }
     }
   }
-  return { code: 'E', ...RANK_CONFIG.E }
+  return { code: 'F', ...RANK_CONFIG.F }
 }
