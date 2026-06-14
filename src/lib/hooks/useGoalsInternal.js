@@ -231,6 +231,7 @@ export function useGoalsInternal() {
       return updated
     } catch (error) {
       console.error('Error failing goal:', error)
+      alert('Error failing goal: ' + (error?.message || error))
       return null
     }
   }, [user, goals])

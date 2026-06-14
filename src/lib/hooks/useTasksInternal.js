@@ -207,6 +207,7 @@ export function useTasksInternal() {
       return updated
     } catch (error) {
       console.error('Error failing task:', error)
+      alert('Error failing task: ' + (error?.message || error))
       return null
     }
   }, [user, tasks])
