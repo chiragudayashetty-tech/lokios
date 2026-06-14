@@ -627,9 +627,23 @@ export default function DailyOps() {
                   <input type="number" className="input" value={editXp} onChange={(e) => setEditXp(Number(e.target.value))} required min="5" max="100" step="5" />
                   <p className="font-mono text-[10px] text-muted mt-1">XP earned when complete. Penalty for failing is currently fixed at -15 XP.</p>
                 </div>
-                <div className="flex gap-3 mt-2">
-                  <button type="button" onClick={() => setEditingHabit(null)} className="btn btn-ghost flex-1">CANCEL</button>
-                  <button type="submit" className="btn btn-primary flex-1">SAVE CHANGES</button>
+                <div className="flex flex-col gap-3 mt-2">
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setEditingHabit(null)} className="btn btn-ghost flex-1">CANCEL</button>
+                    <button type="submit" className="btn btn-primary flex-1">SAVE CHANGES</button>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      if (window.confirm('Are you sure you want to permanently delete this operation?')) {
+                        await deleteHabit(editingHabit.id);
+                        setEditingHabit(null);
+                      }
+                    }} 
+                    className="btn border border-danger text-danger hover:bg-danger/20 transition-colors w-full flex justify-center items-center gap-2 mt-2"
+                  >
+                    <Trash2 size={16} /> DELETE ROUTINE
+                  </button>
                 </div>
               </form>
             </motion.div>
