@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
-import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp } from 'lucide-react'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical } from 'lucide-react'
 import { useHabitsInternal } from '@/lib/hooks/useHabitsInternal'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -276,17 +276,27 @@ export default function DailyOps() {
         </div>
 
         {/* The Spreadsheet Grid */}
+        <style dangerouslySetInnerHTML={{__html: `
+          .col-habit { width: 150px; min-width: 150px; max-width: 150px; }
+          .col-xp { width: 40px; min-width: 40px; max-width: 40px; left: 150px; }
+          .col-global { width: 150px; min-width: 150px; max-width: 150px; }
+          @media (min-width: 768px) {
+            .col-habit { width: 260px; min-width: 260px; max-width: 260px; }
+            .col-xp { width: 50px; min-width: 50px; max-width: 50px; left: 260px; }
+            .col-global { width: 260px; min-width: 260px; max-width: 260px; }
+          }
+        `}} />
         <HudPanel className="overflow-x-auto p-0" id="quests-scroll-container">
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
             <thead>
               <tr>
-                <th className="sticky z-20" style={{ left: 0, background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)', width: '200px', minWidth: '200px', maxWidth: '200px' }}>
-                  <div style={{ width: '200px', padding: '10px 16px', textAlign: 'left' }}>
+                <th className="sticky z-20 col-habit" style={{ left: 0, background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
+                  <div className="w-full" style={{ padding: '10px 16px', textAlign: 'left' }}>
                     <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
                   </div>
                 </th>
-                <th className="sticky z-20" style={{ left: '200px', background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', width: '45px', minWidth: '45px', maxWidth: '45px' }}>
-                  <div style={{ width: '45px', padding: '10px 4px', textAlign: 'center' }}>
+                <th className="sticky z-20 col-xp" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)' }}>
+                  <div className="w-full" style={{ padding: '10px 4px', textAlign: 'center' }}>
                     <span className="font-mono text-[10px] text-muted">XP</span>
                   </div>
                 </th>
@@ -323,21 +333,25 @@ export default function DailyOps() {
                 return (
                   <tr key={habit.id} className="group hover:bg-hover transition-colors">
                     {/* Habit Name */}
-                    <td className="sticky z-10" style={{
+                    <td className="sticky z-10 col-habit group" style={{
                       left: 0,
                       background: 'var(--bg-secondary)',
                       padding: 0,
                       borderBottom: '1px solid var(--border-subtle)',
                       borderRight: '2px solid var(--border-color)',
-                      width: '200px', minWidth: '200px', maxWidth: '200px'
                     }}>
-                      <div style={{ width: '200px', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="w-full" style={{ padding: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         
-                        {/* Left Icons */}
-                        <div style={{ width: '16px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '4px', borderRight: '1px solid var(--border-subtle)', paddingRight: '4px' }}>
-                          <button onClick={() => reorderHabits(habit.id, 'top')} className="opacity-40 hover:opacity-100 text-info transition-opacity" title="Move to Top" style={{ display: 'flex', justifyContent: 'center' }}><ChevronsUp size={12} /></button>
-                          <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 hover:opacity-100 text-muted transition-opacity" title="Move Up" style={{ display: 'flex', justifyContent: 'center' }}><ArrowUp size={12} /></button>
-                          <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 hover:opacity-100 text-muted transition-opacity" title="Move Down" style={{ display: 'flex', justifyContent: 'center' }}><ArrowDown size={12} /></button>
+                        {/* Left Icons - Always reserve space, invisible until hover/mobile */}
+                        <div style={{ width: '20px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '4px', borderRight: '1px solid var(--border-subtle)', paddingRight: '4px' }}>
+                          <button onClick={() => reorderHabits(habit.id, 'top')} className="opacity-0 md:opacity-20 hover:!opacity-100 group-hover:opacity-100 text-info transition-opacity" title="Move to Top" style={{ display: 'flex', justifyContent: 'center' }}><ChevronsUp size={14} /></button>
+                          <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 md:opacity-20 hover:!opacity-100 group-hover:opacity-100 text-muted transition-opacity" title="Move Up" style={{ display: 'flex', justifyContent: 'center' }}><ArrowUp size={14} /></button>
+                          <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 md:opacity-20 hover:!opacity-100 group-hover:opacity-100 text-muted transition-opacity" title="Move Down" style={{ display: 'flex', justifyContent: 'center' }}><ArrowDown size={14} /></button>
+                        </div>
+                        
+                        {/* Grip Icon Overlay (Visual only, matches reference image) */}
+                        <div className="absolute left-[8px] pointer-events-none opacity-40 md:opacity-20 group-hover:opacity-0 transition-opacity hidden md:flex" style={{ width: '20px', height: '100%', alignItems: 'center', justifyContent: 'center', top: 0 }}>
+                          <GripVertical size={14} />
                         </div>
                         
                         {/* Color Line */}
@@ -353,23 +367,21 @@ export default function DailyOps() {
                           </div>
                         </div>
                         
-                        {/* Right Icon */}
-                        <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-40 hover:opacity-100 transition-opacity text-danger" title="Delete Routine" style={{ width: '16px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+                        {/* Right Icon - Always reserve space, slightly visible, bright on hover */}
+                        <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-0 md:opacity-20 group-hover:opacity-100 hover:!opacity-100 transition-opacity text-danger" title="Delete Routine" style={{ width: '16px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
                           <Trash2 size={12} />
                         </button>
                         
                       </div>
                     </td>
                     {/* XP */}
-                    <td className="sticky z-[5]" style={{
-                      left: '200px',
+                    <td className="sticky z-[5] col-xp" style={{
                       background: 'var(--bg-secondary)',
                       padding: 0,
                       borderBottom: '1px solid var(--border-subtle)',
                       borderRight: '2px solid var(--border-color)',
-                      width: '45px', minWidth: '45px', maxWidth: '45px'
                     }}>
-                      <div style={{ width: '45px', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <div className="w-full" style={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <span className="font-mono text-[10px] text-info font-bold">{habit.xp_per_completion || 25}</span>
                       </div>
                     </td>
@@ -420,13 +432,13 @@ export default function DailyOps() {
               {/* Global Progress Row */}
               {habits.length > 0 && (
                 <tr style={{ borderTop: '2px solid var(--accent-primary)' }}>
-                  <td className="sticky z-[5]" style={{ left: 0, width: '200px', minWidth: '200px', maxWidth: '200px', background: 'var(--bg-tertiary)', padding: 0, borderRight: '2px solid var(--border-color)' }}>
-                    <div style={{ width: '200px', padding: '10px 12px' }}>
+                  <td className="sticky z-[5] col-habit" style={{ left: 0, background: 'var(--bg-tertiary)', padding: 0, borderRight: '2px solid var(--border-color)' }}>
+                    <div className="w-full" style={{ padding: '10px 12px' }}>
                       <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-amber block" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>GLOBAL PROGRESS</span>
                     </div>
                   </td>
-                  <td className="sticky z-[5]" style={{ left: '200px', width: '45px', minWidth: '45px', maxWidth: '45px', background: 'var(--bg-tertiary)', padding: 0, borderRight: '2px solid var(--border-color)' }}>
-                    <div style={{ width: '45px' }}></div>
+                  <td className="sticky z-[5] col-xp" style={{ background: 'var(--bg-tertiary)', padding: 0, borderRight: '2px solid var(--border-color)' }}>
+                    <div className="w-full"></div>
                   </td>
                   {days.map((d) => {
                     const dayDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
