@@ -464,7 +464,7 @@ export default function DailyOps() {
 
             <HudPanel label="STREAK & CONSISTENCY">
               <div className="flex-col gap-4">
-                {habits.slice(0, 5).map(h => {
+                {habits.map(h => {
                   const stats = getHabitStats(h.id)
                   return (
                     <div key={h.id}>
