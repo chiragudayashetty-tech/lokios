@@ -230,6 +230,15 @@ export function useHabitsInternal() {
     const index = sorted.findIndex(h => h.id === habitId)
     if (index === -1) return
     
+    if (direction === 'top') {
+      if (index === 0) return
+      const newTime = new Date(new Date(sorted[0].created_at).getTime() - 1000).toISOString()
+      const updatedHabits = sorted.map(h => h.id === habitId ? { ...h, created_at: newTime } : h)
+      setHabits(updatedHabits.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)))
+      await supabase.from('habits').update({ created_at: newTime }).eq('id', habitId)
+      return
+    }
+    
     let swapIndex = direction === 'up' ? index - 1 : index + 1
     if (swapIndex < 0 || swapIndex >= sorted.length) return
     
