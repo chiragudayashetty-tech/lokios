@@ -121,7 +121,7 @@ export default function IntelDrop() {
                     </div>
                     <p className="font-mono text-sm whitespace-pre-wrap">{item.content}</p>
                     
-                    {item.status === 'inbox' && (
+                    {item.status === 'inbox' ? (
                       <div className="flex gap-2 mt-2 pt-2 border-t border-border-color">
                         <button onClick={async () => {
                           const res = await organizeItem(item.id);
@@ -136,6 +136,12 @@ export default function IntelDrop() {
                           }} className="btn btn-ghost btn-sm" title="Convert to Task"><CheckSquare size={14} /></button>
                           <button onClick={() => discardItem(item.id)} className="btn btn-ghost btn-sm text-danger" title="Discard"><Trash2 size={14} /></button>
                         </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end mt-2 pt-2 border-t border-border-color">
+                        <button onClick={() => discardItem(item.id)} className="btn btn-ghost btn-sm text-danger" title="Delete Forever">
+                          <Trash2 size={14} /> DELETE
+                        </button>
                       </div>
                     )}
                   </HudPanel>
