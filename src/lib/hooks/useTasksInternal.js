@@ -171,6 +171,46 @@ export function useTasksInternal() {
     }
   }, [user])
 
+  const failTask = useCallback(async (id) => {
+    if (!user) return null
+
+    try {
+      const task = tasks.find((t) => t.id === id)
+      if (!task || task.status === 'failed') return null
+
+      const { data: updated, error } = await supabase
+        .from('tasks')
+        .update({ status: 'failed', completed_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Dynamic XP Penalty based on Difficulty
+      const difficultyData = DIFFICULTY_LEVELS[task?.difficulty] || DIFFICULTY_LEVELS.MEDIUM
+      const penalty = difficultyData.penalty
+
+      if (penalty > 0) {
+        await robustAwardXP(
+          user.id,
+          -penalty,
+          'task_failed',
+          id,
+          `Failed task: ${task?.title || 'Unknown'}`,
+          task?.category || 'discipline'
+        )
+      }
+
+      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      return updated
+    } catch (error) {
+      console.error('Error failing task:', error)
+      return null
+    }
+  }, [user, tasks])
+
   const editTask = useCallback(async (id, updates) => {
     if (!user) return null
 
@@ -223,5 +263,6 @@ export function useTasksInternal() {
     completeTask,
     undoCompleteTask,
     deleteTask,
+    failTask
   }
 }

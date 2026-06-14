@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap } from 'lucide-react'
 
 export default function Operations() {
-  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation } = useOS()
+  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask, failTask: osFailTask }, completeOperation, deleteOperation } = useOS()
 
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)
@@ -24,7 +24,7 @@ export default function Operations() {
   const [proofUrl, setProofUrl] = useState('')
 
   const today = getLocalDateStr()
-  const pending = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
+  const pending = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled' && t.status !== 'failed')
   const overdue = pending.filter(t => t.due_date && t.due_date < today)
   const dueToday = pending.filter(t => t.due_date === today)
   const upcoming = pending.filter(t => !t.due_date || t.due_date > today)
@@ -70,8 +70,8 @@ export default function Operations() {
   }
 
   const failTask = async (task) => {
-    if (!window.confirm('Are you sure? This cannot be undone.')) return
-    await editTask(task.id, { status: 'failed', completed_at: new Date().toISOString() })
+    if (!window.confirm('Are you sure? This will permanently fail the operation and apply a negative XP penalty based on difficulty.')) return
+    await osFailTask(task.id)
   }
 
   const handleComplete = (task) => {

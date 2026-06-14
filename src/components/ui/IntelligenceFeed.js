@@ -64,7 +64,7 @@ export default function IntelligenceFeed() {
       }
 
       // ── 2. OVERDUE OPERATIONS PENALTY ──
-      const pendingTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
+      const pendingTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled' && t.status !== 'failed')
       const overdueTasks = pendingTasks.filter(t => t.due_date && t.due_date < todayStr)
       
       if (overdueTasks.length > 0) {
