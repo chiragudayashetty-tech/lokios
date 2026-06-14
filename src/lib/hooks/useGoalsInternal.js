@@ -186,8 +186,7 @@ export function useGoalsInternal() {
 
       if (error) throw error
 
-      const todayStr = getLocalDateStr()
-      await robustRemoveXP(user.id, 'goal_complete', id, todayStr)
+      await robustRemoveXP(user.id, 'goal_complete', id)
 
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
       return updated
@@ -255,8 +254,7 @@ export function useGoalsInternal() {
 
       if (error) throw error
 
-      const todayStr = getLocalDateStr()
-      await robustRemoveXP(user.id, 'goal_failed', id, todayStr)
+      await robustRemoveXP(user.id, 'goal_failed', id)
 
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
       return updated

@@ -161,8 +161,7 @@ export function useTasksInternal() {
 
       // Remove XP
       const task = tasks.find(t => t.id === id)
-      const completionDate = task && task.completed_at ? getLocalDateStr(new Date(task.completed_at)) : getLocalDateStr()
-      await robustRemoveXP(user.id, 'task_complete', id, completionDate)
+      await robustRemoveXP(user.id, 'task_complete', id)
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       return updated
@@ -227,8 +226,7 @@ export function useTasksInternal() {
 
       if (error) throw error
 
-      const todayStr = getLocalDateStr()
-      await robustRemoveXP(user.id, 'task_failed', id, todayStr)
+      await robustRemoveXP(user.id, 'task_failed', id)
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       return updated
