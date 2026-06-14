@@ -91,6 +91,10 @@ export function useTasksInternal() {
     if (!user) return null
 
     try {
+      const task = tasks.find((t) => t.id === id)
+      if (!task) throw new Error("Task not found")
+      if (task.status === 'completed') return task // Idempotency guard
+
       const updates = { completed_at: new Date().toISOString(), status: 'completed' }
       if (proofUrl) {
         // Fetch current media_urls first
@@ -109,7 +113,6 @@ export function useTasksInternal() {
       if (error) throw error
 
       // Dynamic XP Calculation based on Difficulty and Deadlines
-      const task = tasks.find((t) => t.id === id)
       
       // Default to MEDIUM if no difficulty set
       const difficultyData = DIFFICULTY_LEVELS[task?.difficulty] || DIFFICULTY_LEVELS.MEDIUM

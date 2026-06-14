@@ -60,7 +60,7 @@ export function useBrainDumpInternal() {
       // Award small XP for brain dump
       await supabase.rpc('award_xp', {
         p_user_id: user.id,
-        p_amount: XP_REWARDS.brain_dump,
+        p_amount: XP_REWARDS.brain_dump_capture,
         p_source_type: 'brain_dump',
         p_source_id: newItem.id,
         p_description: 'Brain dump entry',

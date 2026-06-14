@@ -81,13 +81,7 @@ export function useHabitsInternal() {
       setMonthLogs([...realLogs, ...virtualFailedLogs])
       
       // Admin one-time DB clear script if flag not found (Reset tracking from Jun 15)
-      if (typeof window !== 'undefined' && !localStorage.getItem('daily_ops_reset_v3')) {
-        await supabase.from('habit_logs').delete().lt('date', '2026-06-15')
-        await supabase.from('xp_history').delete().in('source_type', ['habit_complete', 'habit_failed']).lt('created_at', '2026-06-15T00:00:00Z')
-        localStorage.setItem('daily_ops_reset_v3', 'done')
-        // Filter out locally immediately
-        setMonthLogs(prev => prev.filter(l => l.date >= '2026-06-15'))
-      }
+      // Removed destructive DB reset to prevent accidental data loss.
 
     } catch (err) {
       console.error('Error fetching habits:', err)
