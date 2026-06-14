@@ -329,9 +329,14 @@ export default function Operations() {
                               <Trash2 size={14} />
                             </button>
                             {isCompleted && (
-                              <span className="font-mono text-[10px] text-success flex items-center gap-1">
-                                <CheckCircle2 size={12} /> COMPLETED
-                              </span>
+                              <>
+                                <span className="font-mono text-[10px] text-success flex items-center gap-1">
+                                  <CheckCircle2 size={12} /> COMPLETED
+                                </span>
+                                <button type='button' className="btn btn-ghost btn-sm text-info ml-2" onClick={() => undoCompleteTask(task.id)} title="Undo Operation">
+                                  <RotateCcw size={14} /> UNDO
+                                </button>
+                              </>
                             )}
                             {isFailed && (
                               <>
