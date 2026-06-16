@@ -23,6 +23,14 @@ export default function Operations() {
   const [proofTask, setProofTask] = useState(null)
   const [proofUrl, setProofUrl] = useState('')
 
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 640)
+    const handleResize = () => setIsMobile(window.innerWidth < 640)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const today = getLocalDateStr()
   const pending = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled' && t.status !== 'failed')
   const overdue = pending.filter(t => t.due_date && t.due_date < today)
@@ -375,7 +383,7 @@ export default function Operations() {
         <AnimatePresence>
           {showDeploy && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div drag dragMomentum={false} dragConstraints={{ left: -300, right: 300, top: -300, bottom: 300 }} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+              <motion.div drag={isMobile ? false : true} dragMomentum={false} dragConstraints={{ left: -300, right: 300, top: -300, bottom: 300 }} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
                 <HudPanel className="modal-content bottom-sheet-content border-amber cursor-move" style={{ width: '520px', maxWidth: '100%' }}>
                   <div className="flex-between mb-5 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber tracking-widest">DEPLOY OPERATION</span>
@@ -448,8 +456,8 @@ export default function Operations() {
         <AnimatePresence>
           {proofTask && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
-                <HudPanel className="modal-content bottom-sheet-content border-success" style={{ width: '440px', maxWidth: '100%' }}>
+              <motion.div drag={isMobile ? false : true} dragMomentum={false} dragConstraints={{ left: -300, right: 300, top: -300, bottom: 300 }} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+                <HudPanel className="modal-content bottom-sheet-content border-success cursor-move" style={{ width: '440px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-success tracking-widest">OPERATION COMPLETE</span>
                     <button type='button' onClick={() => setProofTask(null)} className="text-muted hover:text-danger"><X size={18} /></button>

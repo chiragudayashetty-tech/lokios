@@ -783,8 +783,25 @@ body > * {
     width: min(84vw, 320px);
   }
 
+  .app-shell {
+    height: 100dvh;
+    width: 100vw;
+    display: block;
+    overflow: hidden;
+  }
+
   .main-content {
-    padding: max(16px, env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));
+    height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: max(16px, env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
   }
 
   .hud-panel {
@@ -806,8 +823,12 @@ body > * {
     overflow: visible !important;
   }
 
-  /* Prevent web bounce on mobile */
+  /* Prevent web bounce on mobile and fix iOS Safari jump */
   html, body {
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
+    position: fixed;
     overscroll-behavior-y: none;
   }
 
@@ -838,6 +859,8 @@ body > * {
   .bottom-sheet-content {
     width: 100% !important;
     max-width: 100% !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
     border-top-left-radius: 24px !important;
