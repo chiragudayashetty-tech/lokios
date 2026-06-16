@@ -1,4 +1,3 @@
-
 import { createClient } from '@/lib/supabase/client'
 
 export async function calculateAndUpdateStreak(userId) {
@@ -11,11 +10,11 @@ export async function calculateAndUpdateStreak(userId) {
     let streak = 0
     
     const today = new Date()
-    const todayStr = ${today.getFullYear()}--
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = ${yesterday.getFullYear()}--
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
     
     let checkDate = new Date(today)
     
@@ -29,7 +28,7 @@ export async function calculateAndUpdateStreak(userId) {
     }
     
     while (streak > 0) {
-      const checkStr = ${checkDate.getFullYear()}--
+      const checkStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
       if (uniqueDates.includes(checkStr)) {
         streak++
         checkDate.setDate(checkDate.getDate() - 1)
@@ -50,4 +49,3 @@ export async function calculateAndUpdateStreak(userId) {
     return null
   }
 }
-
