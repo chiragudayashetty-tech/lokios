@@ -534,7 +534,7 @@ export default function DailyOps() {
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="font-mono text-[10px] text-info font-bold">+{habit.xp_per_completion || 25} XP</span>
                   <button 
-                    onClick={() => cycleHabitState(habit.id, todayDay)}
+                    onClick={() => cycleHabitState(habit.id, todayStr)}
                     className="flex items-center justify-center transition-all active:scale-95"
                     style={{
                       width: '42px', height: '42px',
