@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
+import { calculateAndUpdateStreak } from '@/lib/utils/streakCalc'
 
 export function useHabitsInternal() {
   const [habits, setHabits] = useState([])
@@ -169,7 +170,7 @@ export function useHabitsInternal() {
       }
 
       try { 
-        await supabase.rpc('update_streak', { p_user_id: user.id }) 
+        await calculateAndUpdateStreak(user.id)
         const { data } = await supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: true })
         if (data) setHabits(data)
       } catch (e) {
