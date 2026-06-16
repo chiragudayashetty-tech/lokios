@@ -383,7 +383,7 @@ export default function Operations() {
         <AnimatePresence>
           {showDeploy && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div drag dragListener={!isMobile} dragMomentum={false} dragConstraints={{ left: -300, right: 300, top: -300, bottom: 300 }} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+              <motion.div drag={!isMobile} dragMomentum={false} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
                 <HudPanel className="modal-content bottom-sheet-content border-amber cursor-move" style={{ width: '520px', maxWidth: '100%' }}>
                   <div className="flex-between mb-5 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber tracking-widest">DEPLOY OPERATION</span>
@@ -456,7 +456,7 @@ export default function Operations() {
         <AnimatePresence>
           {proofTask && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div drag dragListener={!isMobile} dragMomentum={false} dragConstraints={{ left: -300, right: 300, top: -300, bottom: 300 }} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+              <motion.div drag={!isMobile} dragMomentum={false} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
                 <HudPanel className="modal-content bottom-sheet-content border-success cursor-move" style={{ width: '440px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-success tracking-widest">OPERATION COMPLETE</span>
