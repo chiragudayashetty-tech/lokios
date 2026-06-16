@@ -114,6 +114,18 @@ export function useHabitsInternal() {
     // Skip if we are trying to force a status that is already the current status
     if (forceStatus && currentStatus === forceStatus) return true;
 
+    // Optimistic UI Update
+    const optimisticId = `opt_${habitId}_${crypto.randomUUID()}`
+    setMonthLogs(prev => {
+      const filtered = prev.filter(l => !(l.habit_id === habitId && l.date === targetDate))
+      if (nextStatus === 'completed') {
+        return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: 'completed' }]
+      } else if (nextStatus === 'failed') {
+        return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: 'failed' }]
+      }
+      return filtered
+    })
+
     const procKey = `${habitId}_${targetDate}_cycle`
     if (processingRef.current.has(procKey)) return null
     processingRef.current.add(procKey)
@@ -122,29 +134,33 @@ export function useHabitsInternal() {
       if (nextStatus === 'completed') {
         const { data: newLog, error } = await supabase.from('habit_logs').insert({ user_id: user.id, habit_id: habitId, date: targetDate }).select().single()
         if (error) throw error
-        setMonthLogs(prev => [...prev, newLog])
+        // Replace optimistic ID with real ID
+        setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
         if (targetDate === todayStr) {
           const habit = habits.find((h) => h.id === habitId)
           await robustAwardXP(user.id, habit?.xp_per_completion || 25, 'habit_complete', habitId, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
         }
       } else if (nextStatus === 'failed') {
         if (existingLog && existingLog.status !== 'failed') {
-          await supabase.from('habit_logs').delete().eq('id', existingLog.id)
+          // If the existing log is optimistic, it doesn't exist in DB, but we should handle DB deletion using original id if it's real
+          if (!String(existingLog.id).startsWith('opt_') && !String(existingLog.id).startsWith('virtual_')) {
+            await supabase.from('habit_logs').delete().eq('id', existingLog.id)
+          }
           if (targetDate === todayStr) {
             await robustRemoveXP(user.id, 'habit_complete', habitId, targetDate)
           }
         }
         const habit = habits.find((h) => h.id === habitId)
         await robustAwardXP(user.id, -15, 'habit_failed', habitId, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
-        setMonthLogs((prev) => [...prev.filter(l => l.id !== existingLog?.id), { id: `virtual_fail_${habitId}_${crypto.randomUUID()}`, habit_id: habitId, date: targetDate, status: 'failed' }])
       } else if (nextStatus === 'none') {
         if (existingLog && existingLog.status !== 'failed') {
-          await supabase.from('habit_logs').delete().eq('id', existingLog.id)
+          if (!String(existingLog.id).startsWith('opt_') && !String(existingLog.id).startsWith('virtual_')) {
+            await supabase.from('habit_logs').delete().eq('id', existingLog.id)
+          }
           await robustRemoveXP(user.id, 'habit_complete', habitId, targetDate)
         } else {
           await robustRemoveXP(user.id, 'habit_failed', habitId, targetDate)
         }
-        setMonthLogs((prev) => prev.filter(l => !(l.habit_id === habitId && l.date === targetDate)))
       }
 
       try { 
@@ -157,6 +173,14 @@ export function useHabitsInternal() {
       return true
     } catch (error) {
       console.error('Error cycling habit:', error)
+      // Rollback optimistic update
+      setMonthLogs(prev => {
+        const filtered = prev.filter(l => l.id !== optimisticId)
+        if (existingLog) {
+          return [...filtered, existingLog]
+        }
+        return filtered
+      })
       return null
     } finally {
       processingRef.current.delete(procKey)
