@@ -118,10 +118,9 @@ export default function Calendar() {
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {dayItems.map((item, idx) => {
-                      const colorVar = item._type === 'task' ? 'var(--success)' : item._type === 'goal' ? 'var(--amber)' : 'var(--info)'
-                      return (
-                        <div key={idx} className="w-2 h-2 rounded-full" style={{ backgroundColor: colorVar }} title={item.title} />
-                      )
+                      if (item._type === 'task') return <CheckSquare key={idx} size={10} className="text-success" title={item.title} />
+                      if (item._type === 'goal') return <Target key={idx} size={10} className="text-amber" title={item.title} />
+                      return <CalendarIcon key={idx} size={10} className="text-info" title={item.title} />
                     })}
                   </div>
                 </div>
