@@ -792,6 +792,9 @@ body > * {
     bottom: 0;
     left: 0;
     right: 0;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    z-index: 1000;
   }
 
   .hud-panel {
@@ -812,12 +815,15 @@ body > * {
     white-space: normal !important;
     overflow: visible !important;
   }
-
-
+  /* Prevent web bounce rubber-banding on mobile */
+  html, body {
+    overscroll-behavior-y: none;
+  }
 
   /* Instant tap feedback for buttons and cards */
-  button, .btn, .touch-ripple, a {
+  button, .btn, .touch-ripple, a, input, select, td {
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   /* Hide scrollbars for horizontal lists on mobile */

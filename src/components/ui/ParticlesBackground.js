@@ -8,6 +8,8 @@ export default function ParticlesBackground() {
     await loadSlim(engine)
   }, [])
 
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
+
   return (
     <Particles
       id="tsparticles"
@@ -23,11 +25,11 @@ export default function ParticlesBackground() {
           detectsOn: "window",
           events: {
             onClick: {
-              enable: true,
+              enable: !isMobile,
               mode: "push",
             },
             onHover: {
-              enable: true,
+              enable: !isMobile,
               mode: "repulse",
             },
             resize: true,
