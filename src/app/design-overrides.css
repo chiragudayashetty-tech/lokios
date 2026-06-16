@@ -783,7 +783,19 @@ body > * {
     width: min(84vw, 320px);
   }
 
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
   .main-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    height: auto;
     padding: max(16px, env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom)) !important;
   }
 
@@ -815,9 +827,13 @@ body > * {
     white-space: normal !important;
     overflow: visible !important;
   }
-  /* Prevent web bounce rubber-banding on mobile */
+  /* Lock iOS Safari Address Bar and prevent bounce */
   html, body {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
     overscroll-behavior-y: none;
+    background-color: #040507; /* Fallback if gradient fails */
   }
 
   /* Instant tap feedback for buttons and cards */
