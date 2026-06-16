@@ -54,13 +54,7 @@ export async function robustRemoveXP(userId, sourceType, sourceId, targetDateStr
     .eq('source_type', sourceType)
     .eq('source_id', sourceId)
 
-  if (targetDateStr) {
-    const localStart = new Date(`${targetDateStr}T00:00:00`)
-    const localEnd = new Date(`${targetDateStr}T23:59:59.999`)
-    query = query.gte('created_at', localStart.toISOString()).lte('created_at', localEnd.toISOString())
-  } else {
-    query = query.order('created_at', { ascending: false }).limit(1)
-  }
+  query = query.order('created_at', { ascending: false }).limit(1)
 
   const { data: historyItems } = await query
 

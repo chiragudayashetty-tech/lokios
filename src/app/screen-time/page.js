@@ -186,19 +186,24 @@ export default function ScreenIntel() {
               <div className="grid-2 gap-4">
                 <div>
                   <label className="font-mono text-[10px] text-muted mb-1 block uppercase tracking-widest">Total Hours</label>
-                  <input type="number" step="0.5" min="0" className="input font-mono text-xl w-full" value={totalHours} onChange={e=>setTotalHours(e.target.value)} />
+                  <input type="number" step="0.5" min="0" className="input font-mono text-xl w-full mb-2" value={totalHours} onChange={e=>setTotalHours(e.target.value)} />
+                  <p className="font-mono text-[9px] text-muted">
+                    &lt; 6 hrs = <span className="text-success">+10 XP/hr</span> | &gt; 6 hrs = <span className="text-danger">-10 XP/hr</span>
+                  </p>
                 </div>
                 <div>
                   <label className="font-mono text-[10px] text-info mb-1 block uppercase tracking-widest flex items-center gap-1"><Target size={12}/> Focus Hours</label>
-                  <input type="number" step="0.5" min="0" className="input font-mono text-xl border-info text-info w-full" value={focusHours} onChange={e=>setFocusHours(e.target.value)} />
+                  <input type="number" step="0.5" min="0" className="input font-mono text-xl border-info text-info w-full mb-2" value={focusHours} onChange={e=>setFocusHours(e.target.value)} />
+                  <p className="font-mono text-[9px] text-muted">
+                    &gt; 3 hrs = <span className="text-success">+15 XP/hr</span> | &lt; 3 hrs = <span className="text-danger">-15 XP/hr</span>
+                  </p>
                 </div>
               </div>
               <div className="p-4 border border-danger-subtle bg-bg-tertiary">
                 <label className="font-mono text-[10px] text-danger mb-2 block uppercase tracking-widest flex items-center gap-1"><AlertTriangle size={12}/> Doom Scroll (Minutes)</label>
                 <input type="number" min="0" className="input font-mono text-2xl border-danger text-danger w-full mb-2" value={doomScroll} onChange={e=>setDoomScroll(e.target.value)} />
                 <p className="font-mono text-[9px] text-muted">
-                  0 mins = <span className="text-success">+{XP_RULES.SCREEN_TIME.PERFECT_DAY} XP</span> |
-                  &gt;60 mins = <span className="text-danger">{XP_RULES.SCREEN_TIME.PENALTY} XP</span>
+                  &lt; 60 mins = <span className="text-success">+0.5 XP/min</span> | &gt; 60 mins = <span className="text-danger">-0.5 XP/min</span>
                 </p>
               </div>
               <div className="mt-auto">
