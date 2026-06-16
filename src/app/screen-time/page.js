@@ -6,6 +6,7 @@ import HudPanel from '@/components/ui/HudPanel'
 import { createClient } from '@/lib/supabase/client'
 import { useOS } from '@/lib/context/OSContext'
 import { XP_RULES } from '@/lib/xpRules'
+import { robustRemoveXP } from '@/lib/utils/xpFallback'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { Shield, Target, AlertTriangle } from 'lucide-react'
@@ -84,40 +85,55 @@ export default function ScreenIntel() {
     const { data } = await supabase.from('screen_time_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
     if (data) setLogs(data)
 
-    // Check if we already awarded XP for this exact date to prevent idempotency bugs
-    const existingLog = logs.find(l => l.date === date)
-    const alreadyAwarded = existingLog && existingLog.doom_scroll_minutes !== undefined
+    // Remove any previously awarded XP for this date so we can recalculate and update it dynamically
+    await robustRemoveXP(user.id, 'screen_time', date)
 
-    if (alreadyAwarded) {
-      return // Prevent double XP if they just click save again
-    }
-
-    // Calculate XP
+    // Calculate dynamic XP
     let xpAmount = 0
-    let reason = ''
-    if (parsedDoom === 0) {
-      xpAmount = XP_RULES.SCREEN_TIME.PERFECT_DAY
-      reason = 'Perfect Screen Discipline (0 Doomscroll)'
-    } else if (parsedDoom <= 30) {
-      xpAmount = XP_RULES.SCREEN_TIME.MODERATE
-      reason = 'Maintained Acceptable Screen Discipline'
-    } else if (parsedDoom >= 60) {
-      xpAmount = XP_RULES.SCREEN_TIME.PENALTY
-      reason = 'Failed Screen Discipline (>60m Doomscroll)'
-      
-      // Damage Battle/Main Quest
-      if (mainQuest && typeof mainQuest.progress === 'number') {
-        const newProgress = Math.max(0, mainQuest.progress - 5)
-        await updateProgress(mainQuest.id, newProgress)
-        reason += ' (-5% Battle Health)'
-      }
+    let reasons = []
+
+    const tHours = parseFloat(totalHours) || 0
+    const fHours = parseFloat(focusHours) || 0
+    const dMins = parsedDoom
+
+    // 1. Total Hours: Target 6
+    const totalDiff = 6 - tHours
+    const totalXp = Math.round(totalDiff * 10)
+    if (totalXp !== 0) {
+      xpAmount += totalXp
+      reasons.push(`Total Time: ${totalXp > 0 ? '+' : ''}${totalXp}`)
     }
 
-      if (xpAmount !== 0) {
-        await awardXP(xpAmount, 'screen_time', date, reason, 'discipline')
-        setXpAnim({ amount: xpAmount, reason })
-        setTimeout(() => setXpAnim(null), 4000)
-      }
+    // 2. Doom Scroll: Target 60 mins (1 hr)
+    const doomDiff = 60 - dMins
+    const doomXp = Math.round(doomDiff * 0.5)
+    if (doomXp !== 0) {
+      xpAmount += doomXp
+      reasons.push(`Doomscroll: ${doomXp > 0 ? '+' : ''}${doomXp}`)
+    }
+
+    // 3. Focus Hours: Target 3
+    const focusDiff = fHours - 3
+    const focusXp = Math.round(focusDiff * 15)
+    if (focusXp !== 0) {
+      xpAmount += focusXp
+      reasons.push(`Focus: ${focusXp > 0 ? '+' : ''}${focusXp}`)
+    }
+
+    let finalReason = reasons.join(' | ') || 'Screen Time logged'
+
+    // Damage Battle/Main Quest
+    if (dMins > 60 && mainQuest && typeof mainQuest.progress === 'number') {
+      const newProgress = Math.max(0, mainQuest.progress - 5)
+      await updateProgress(mainQuest.id, newProgress)
+      finalReason += ' (-5% Battle Health)'
+    }
+
+    if (xpAmount !== 0) {
+      await awardXP(xpAmount, 'screen_time', date, finalReason, 'discipline')
+      setXpAnim({ amount: xpAmount, reason: finalReason })
+      setTimeout(() => setXpAnim(null), 4000)
+    }
     } finally {
       setSaving(false)
     }
