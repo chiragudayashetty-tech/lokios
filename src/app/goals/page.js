@@ -24,6 +24,14 @@ export default function Missions() {
 
   const [formData, setFormData] = useState({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'personal', customCategory: '' })
 
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 640)
+    const handleResize = () => setIsMobile(window.innerWidth < 640)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const TABS = [
     { id: 'main', label: 'PRIMARY', icon: Flag, items: mainQuest ? [mainQuest] : [] },
     { id: 'side', label: 'SIDE OPS', icon: Target, items: sideQuests },
