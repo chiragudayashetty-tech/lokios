@@ -115,18 +115,14 @@ export default function Calendar() {
                 >
                   <div className="flex-between">
                     <span className={`font-mono text-sm ${isToday ? 'text-info font-bold' : 'text-primary'}`}>{day}</span>
-                    {dayItems.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-info" />}
                   </div>
-                  <div className="mt-2 flex-col gap-1">
-                    {dayItems.slice(0, 2).map((item, idx) => {
-                      const color = item._type === 'task' ? 'border-success' : item._type === 'goal' ? 'border-primary' : 'border-info'
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {dayItems.map((item, idx) => {
+                      const bgColor = item._type === 'task' ? 'bg-success' : item._type === 'goal' ? 'bg-amber' : 'bg-info'
                       return (
-                        <div key={idx} className={`text-[9px] font-mono truncate text-muted bg-primary px-1 border-l ${color}`}>
-                          {item.title}
-                        </div>
+                        <div key={idx} className={`w-2 h-2 rounded-full ${bgColor}`} title={item.title} />
                       )
                     })}
-                    {dayItems.length > 2 && <div className="text-[9px] text-muted text-center">+{dayItems.length - 2}</div>}
                   </div>
                 </div>
               )
