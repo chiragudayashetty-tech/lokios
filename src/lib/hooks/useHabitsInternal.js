@@ -132,6 +132,11 @@ export function useHabitsInternal() {
 
     try {
       if (nextStatus === 'completed') {
+        if (existingLog && existingLog.status === 'failed') {
+          if (targetDate === todayStr) {
+            await robustRemoveXP(user.id, 'habit_failed', habitId, targetDate)
+          }
+        }
         const { data: newLog, error } = await supabase.from('habit_logs').insert({ user_id: user.id, habit_id: habitId, date: targetDate }).select().single()
         if (error) throw error
         // Replace optimistic ID with real ID

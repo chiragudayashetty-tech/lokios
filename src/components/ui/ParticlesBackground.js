@@ -25,7 +25,7 @@ export default function ParticlesBackground() {
           detectsOn: "window",
           events: {
             onClick: {
-              enable: !isMobile,
+              enable: false,
               mode: "push",
             },
             onHover: {
