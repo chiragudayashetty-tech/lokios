@@ -121,7 +121,7 @@ export function OSProvider({ children }) {
         }
       }
       if (success) {
-        await xp.fetchProfile() // Refresh XP immediately
+        await profile.fetchProfile() // Refresh XP immediately
       }
       return success
     },
@@ -129,7 +129,7 @@ export function OSProvider({ children }) {
     failOperation: async (taskId) => {
       const result = await tasks.failTask(taskId)
       if (result) {
-        await xp.fetchProfile() // Refresh XP immediately
+        await profile.fetchProfile() // Refresh XP immediately
       }
       return result
     },
@@ -137,7 +137,7 @@ export function OSProvider({ children }) {
     undoFailOperation: async (taskId) => {
       const result = await tasks.undoFailTask(taskId)
       if (result) {
-        await xp.fetchProfile() // Refresh XP immediately
+        await profile.fetchProfile() // Refresh XP immediately
       }
       return result
     },
@@ -145,7 +145,7 @@ export function OSProvider({ children }) {
     failMission: async (goalId) => {
       const result = await goals.failGoal(goalId)
       if (result) {
-        await xp.fetchProfile() // Refresh XP immediately
+        await profile.fetchProfile() // Refresh XP immediately
       }
       return result
     },
@@ -153,7 +153,7 @@ export function OSProvider({ children }) {
     deleteMission: async (goalId, revokeXp = true) => {
       const result = await goals.deleteGoal(goalId, revokeXp)
       if (result) {
-        await xp.fetchProfile() // Refresh XP immediately
+        await profile.fetchProfile() // Refresh XP immediately
       }
       return result
     },
@@ -161,7 +161,7 @@ export function OSProvider({ children }) {
     undoFailMission: async (goalId) => {
       const result = await goals.undoFailGoal(goalId)
       if (result) {
-        await xp.fetchProfile() // Refresh XP immediately
+        await profile.fetchProfile() // Refresh XP immediately
       }
       return result
     }

@@ -59,5 +59,5 @@ export function useProfileInternal() {
     }
   }, [user])
 
-  return { profile, loading, updateProfile }
+  return { profile, loading, updateProfile, fetchProfile }
 }

@@ -118,9 +118,9 @@ export default function Calendar() {
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {dayItems.map((item, idx) => {
-                      const bgColor = item._type === 'task' ? 'bg-success' : item._type === 'goal' ? 'bg-amber' : 'bg-info'
+                      const colorVar = item._type === 'task' ? 'var(--success)' : item._type === 'goal' ? 'var(--amber)' : 'var(--info)'
                       return (
-                        <div key={idx} className={`w-2 h-2 rounded-full ${bgColor}`} title={item.title} />
+                        <div key={idx} className="w-2 h-2 rounded-full" style={{ backgroundColor: colorVar }} title={item.title} />
                       )
                     })}
                   </div>
