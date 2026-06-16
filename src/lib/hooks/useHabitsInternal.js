@@ -284,8 +284,11 @@ export function useHabitsInternal() {
         // Bound loop to max(RESET_DATE, habitCreatedDate, firstDayOfMonth) to prevent infinite past loop
         let startDate = new Date(Math.max(RESET_DATE.getTime(), habitCreatedDate.getTime(), firstDayOfMonth.getTime()))
         
-        for (let d = new Date(startDate); d <= yesterday; d.setDate(d.getDate() + 1)) {
+        // Ensure we iterate until we hit today, then stop.
+        for (let d = new Date(startDate); ; d.setDate(d.getDate() + 1)) {
           const dateStr = getLocalDateStr(d)
+          if (dateStr >= todayStr) break // NEVER auto-fail today or future dates!
+
           const hasLog = monthLogs.some(l => l.habit_id === h.id && l.date === dateStr)
           if (!hasLog) {
             const procKey = `${h.id}_${dateStr}_autofail`
