@@ -104,11 +104,11 @@ export function OSProvider({ children }) {
       return updatedTask
     },
     
-    deleteOperation: async (taskId) => {
+    deleteOperation: async (taskId, revokeXp = true) => {
       const task = tasks.tasks.find(t => t.id === taskId)
       if (!task) return false
       
-      const success = await tasks.deleteTask(taskId)
+      const success = await tasks.deleteTask(taskId, revokeXp)
       if (success && task.goal_id) {
         const goal = goals.goals.find(g => g.id === task.goal_id)
         if (goal && goal.status !== 'completed') {
@@ -119,6 +119,9 @@ export function OSProvider({ children }) {
           const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
           await goals.updateProgress(goal.id, newProgress)
         }
+      }
+      if (success) {
+        await xp.fetchProfile() // Refresh XP immediately
       }
       return success
     },
@@ -141,6 +144,14 @@ export function OSProvider({ children }) {
 
     failMission: async (goalId) => {
       const result = await goals.failGoal(goalId)
+      if (result) {
+        await xp.fetchProfile() // Refresh XP immediately
+      }
+      return result
+    },
+
+    deleteMission: async (goalId, revokeXp = true) => {
+      const result = await goals.deleteGoal(goalId, revokeXp)
       if (result) {
         await xp.fetchProfile() // Refresh XP immediately
       }

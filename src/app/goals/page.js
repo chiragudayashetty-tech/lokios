@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
   const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
-  const { failMission, undoFailMission } = useOS()
+  const { failMission, undoFailMission, deleteMission } = useOS()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
@@ -97,7 +97,7 @@ export default function Missions() {
     if (goal.status === 'completed' || goal.status === 'cancelled') {
       revokeXp = window.confirm('Do you want to revoke/refund the XP associated with this mission?\n\nOK = Revoke XP\nCancel = Keep XP')
     }
-    await deleteGoal(goal.id, revokeXp)
+    await deleteMission(goal.id, revokeXp)
   }
 
   if (error) {
