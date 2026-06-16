@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy
+  Menu, X, Shield, Trophy, RefreshCw
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -85,12 +85,26 @@ export default function AppShell({ children }) {
               </nav>
             </div>
             
-            <div className="mt-8 max-w-md mx-auto w-full flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
-              <div className="flex items-center gap-3">
-                <Shield size={24} color="var(--accent-primary)" />
-                <div className="flex-col">
-                  <span className="font-display uppercase text-xs tracking-wide text-muted">{profile?.rank || 'OPERATOR'}</span>
-                  <span className="font-mono text-sm text-primary font-bold">LV.{profile?.level || 1}</span>
+            <div className="mt-8 max-w-md mx-auto w-full flex flex-col gap-3">
+              <button 
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.reload();
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-3 p-4 bg-tertiary border border-border-color rounded-xl text-primary active:scale-95 transition-transform"
+              >
+                <RefreshCw size={20} />
+                <span className="font-display tracking-wider uppercase text-sm">Force Sync / Reload</span>
+              </button>
+
+              <div className="flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
+                <div className="flex items-center gap-3">
+                  <Shield size={24} color="var(--accent-primary)" />
+                  <div className="flex-col">
+                    <span className="font-display uppercase text-xs tracking-wide text-muted">{profile?.rank || 'OPERATOR'}</span>
+                    <span className="font-mono text-sm text-primary font-bold">LV.{profile?.level || 1}</span>
+                  </div>
                 </div>
               </div>
             </div>
