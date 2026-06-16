@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import { getLocalDateStr } from '@/lib/utils/dates'
