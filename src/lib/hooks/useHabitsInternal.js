@@ -170,7 +170,7 @@ export function useHabitsInternal() {
       }
 
       try { 
-        await calculateAndUpdateStreak(user.id)
+        await calculateAndUpdateStreak(user.id, habitId)
         const { data } = await supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: true })
         if (data) setHabits(data)
       } catch (e) {
