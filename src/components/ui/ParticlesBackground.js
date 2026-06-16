@@ -20,6 +20,7 @@ export default function ParticlesBackground() {
         },
         fpsLimit: 60,
         interactivity: {
+          detectsOn: "window",
           events: {
             onClick: {
               enable: true,
@@ -81,7 +82,7 @@ export default function ParticlesBackground() {
         },
         detectRetina: true,
       }}
-      className="fixed inset-0 z-0 pointer-events-auto"
+      className="fixed inset-0 z-0 pointer-events-none"
     />
   )
 }

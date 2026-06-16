@@ -169,7 +169,7 @@ export function useTasksInternal() {
       console.error('Error undoing task completion:', error)
       return null
     }
-  }, [user])
+  }, [user, tasks])
 
   const failTask = useCallback(async (id) => {
     if (!user) return null
@@ -284,7 +284,7 @@ export function useTasksInternal() {
       console.error('Error deleting task:', error)
       return false
     }
-  }, [user])
+  }, [user, tasks])
 
   return {
     tasks,

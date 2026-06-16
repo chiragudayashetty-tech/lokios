@@ -290,7 +290,7 @@ export function useGoalsInternal() {
       console.error('Error deleting goal:', error)
       return false
     }
-  }, [user])
+  }, [user, goals])
 
   const togglePauseGoal = useCallback(async (id, currentStatus) => {
     if (!user) return null
