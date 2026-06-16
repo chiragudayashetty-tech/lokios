@@ -324,7 +324,7 @@ export default function Missions() {
         <AnimatePresence>
           {showForm && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div drag={isMobile ? false : true} dragMomentum={false} dragConstraints={{ left: -300, right: 300, top: -300, bottom: 300 }} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+              <motion.div drag dragListener={!isMobile} dragMomentum={false} dragConstraints={{ left: -300, right: 300, top: -300, bottom: 300 }} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
                 <HudPanel className="modal-content bottom-sheet-content cursor-move">
                   <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2"><Target size={18} /> Initialize Mission</div>
                   <form onSubmit={handleAdd} className="flex-col gap-4">
