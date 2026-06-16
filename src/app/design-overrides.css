@@ -783,18 +783,8 @@ body > * {
     width: min(84vw, 320px);
   }
 
-  .app-shell {
-    height: 100dvh;
-    width: 100vw;
-    display: block;
-    overflow: hidden;
-  }
-
   .main-content {
-    height: 100dvh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: max(16px, env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom));
+    padding: max(16px, env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom)) !important;
   }
 
   .mobile-nav {
@@ -823,14 +813,7 @@ body > * {
     overflow: visible !important;
   }
 
-  /* Prevent web bounce on mobile and fix iOS Safari jump */
-  html, body {
-    height: 100dvh;
-    width: 100vw;
-    overflow: hidden;
-    position: fixed;
-    overscroll-behavior-y: none;
-  }
+
 
   /* Instant tap feedback for buttons and cards */
   button, .btn, .touch-ripple, a {
@@ -859,13 +842,13 @@ body > * {
   .bottom-sheet-content {
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 85vh !important;
+    max-height: calc(100dvh - 40px) !important;
     overflow-y: auto !important;
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
     border-top-left-radius: 24px !important;
     border-top-right-radius: 24px !important;
-    padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: max(40vh, calc(24px + env(safe-area-inset-bottom))) !important;
     margin-bottom: 0 !important;
     border-bottom: none !important;
   }
