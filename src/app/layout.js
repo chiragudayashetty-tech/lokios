@@ -27,12 +27,7 @@ export const viewport = {
 }
 
 import { OSProvider } from '@/lib/context/OSContext'
-import dynamic from 'next/dynamic'
-
-const ParticlesBackground = dynamic(
-  () => import('@/components/ui/ParticlesBackground'),
-  { ssr: false }
-)
+import ParticlesWrapper from '@/components/ui/ParticlesWrapper'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function RootLayout({ children }) {
@@ -40,7 +35,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <ErrorBoundary>
-          <ParticlesBackground />
+          <ParticlesWrapper />
           <OSProvider>
             {children}
           </OSProvider>

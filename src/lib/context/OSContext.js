@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useHabitsInternal } from '@/lib/hooks/useHabitsInternal'
@@ -140,7 +140,7 @@ export function OSProvider({ children }) {
         await profile.fetchProfile() // Refresh XP immediately
       }
       return result
-    },
+    }, [tasks, profile]),
 
     failMission: async (goalId) => {
       const result = await goals.failGoal(goalId)
@@ -164,7 +164,7 @@ export function OSProvider({ children }) {
         await profile.fetchProfile() // Refresh XP immediately
       }
       return result
-    }, [tasks, profile])
+    }
   }
 
   if (booting) {
