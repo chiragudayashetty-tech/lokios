@@ -87,13 +87,13 @@ export function OSProvider({ children }) {
             if (!wasAlreadyCompleted) {
               const mainQuest = goals.goals.find((g) => g.type === 'main_quest' && g.status !== 'completed')
               if (mainQuest && mainQuest.progress !== undefined) {
-                 // Deal 15% damage to the Main Battle for completing a Mission
-                 const newBattleHealth = Math.max(0, mainQuest.progress - 15)
-                 await goals.updateProgress(mainQuest.id, newBattleHealth)
+                 // Add 15% progress to the Main Battle for completing a Mission
+                 const newProgress = Math.min(100, (mainQuest.progress || 0) + 15)
+                 await goals.updateProgress(mainQuest.id, newProgress)
                  
                  xp.awardXP(100, 'battle_damage', mainQuest.id, 'Dealt damage to active Battle by completing Mission', 'combat')
                  
-                 if (newBattleHealth <= 0) {
+                 if (newProgress >= 100) {
                    await goals.completeGoal(mainQuest.id)
                  }
               }

@@ -101,7 +101,8 @@ export function useHabitsInternal() {
   // Cycle habit state: none -> completed -> failed -> none
   const cycleHabitState = useCallback(async (habitId, dateStr, forceStatus = null) => {
     if (!user) return null
-    const targetDate = dateStr || todayStr
+    const currentTodayStr = getLocalDateStr()
+    const targetDate = dateStr || currentTodayStr
 
     const existingLog = monthLogs.find((l) => l.habit_id === habitId && l.date === targetDate)
     const currentStatus = existingLog ? (existingLog.status || 'completed') : 'none'
@@ -135,7 +136,7 @@ export function useHabitsInternal() {
     try {
       if (nextStatus === 'completed') {
         if (existingLog && existingLog.status === 'failed') {
-          if (targetDate === todayStr) {
+          if (targetDate === currentTodayStr) {
             await robustRemoveXP(user.id, 'habit_failed', habitId, targetDate)
           }
         }
@@ -143,7 +144,7 @@ export function useHabitsInternal() {
         if (error) throw error
         // Replace optimistic ID with real ID
         setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
-        if (targetDate === todayStr) {
+        if (targetDate === currentTodayStr) {
           const habit = habits.find((h) => h.id === habitId)
           await robustAwardXP(user.id, habit?.xp_per_completion || 25, 'habit_complete', habitId, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
         }
@@ -153,7 +154,7 @@ export function useHabitsInternal() {
           if (!String(existingLog.id).startsWith('opt_') && !String(existingLog.id).startsWith('virtual_')) {
             await supabase.from('habit_logs').delete().eq('id', existingLog.id)
           }
-          if (targetDate === todayStr) {
+          if (targetDate === currentTodayStr) {
             await robustRemoveXP(user.id, 'habit_complete', habitId, targetDate)
           }
         }
@@ -164,7 +165,9 @@ export function useHabitsInternal() {
           if (!String(existingLog.id).startsWith('opt_') && !String(existingLog.id).startsWith('virtual_')) {
             await supabase.from('habit_logs').delete().eq('id', existingLog.id)
           }
-          await robustRemoveXP(user.id, 'habit_complete', habitId, targetDate)
+          if (targetDate === currentTodayStr) {
+            await robustRemoveXP(user.id, 'habit_complete', habitId, targetDate)
+          }
         } else {
           await robustRemoveXP(user.id, 'habit_failed', habitId, targetDate)
         }

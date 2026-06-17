@@ -50,6 +50,8 @@ export function useTasksInternal() {
     const dayOfWeek = today.getDay()
 
     return tasks.filter((task) => {
+      if (task.status === 'completed' || task.status === 'cancelled') return false
+
       // Match tasks due today
       if (task.due_date && getLocalDateStr(new Date(task.due_date)) === todayStr) return true
 

@@ -176,9 +176,17 @@ export function useGoalsInternal() {
     if (!user) return null
 
     try {
+      // Fetch tasks to calculate true progress
+      const { data: goalTasks } = await supabase.from('tasks').select('status').eq('goal_id', id).eq('user_id', user.id)
+      let calculatedProgress = 0
+      if (goalTasks && goalTasks.length > 0) {
+        const completed = goalTasks.filter(t => t.status === 'completed').length
+        calculatedProgress = Math.min(99, Math.round((completed / goalTasks.length) * 100))
+      }
+
       const { data: updated, error } = await supabase
         .from('goals')
-        .update({ completed_at: null, status: 'active' })
+        .update({ completed_at: null, status: 'active', progress: calculatedProgress })
         .eq('id', id)
         .eq('user_id', user.id)
         .select()

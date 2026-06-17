@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { getLocalDateStr } from '@/lib/utils/dates'
 
 export async function calculateAndUpdateStreak(userId, habitId = null) {
   const supabase = createClient()
@@ -10,11 +11,11 @@ export async function calculateAndUpdateStreak(userId, habitId = null) {
       let streak = 0
       
       const today = new Date()
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      const todayStr = getLocalDateStr(today)
       
       const yesterday = new Date(today)
       yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+      const yesterdayStr = getLocalDateStr(yesterday)
       
       let checkDate = new Date(today)
       
@@ -28,7 +29,7 @@ export async function calculateAndUpdateStreak(userId, habitId = null) {
       }
       
       while (streak > 0) {
-        const checkStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
+        const checkStr = getLocalDateStr(checkDate)
         if (uniqueDates.includes(checkStr)) {
           streak++
           checkDate.setDate(checkDate.getDate() - 1)
@@ -52,11 +53,11 @@ export async function calculateAndUpdateStreak(userId, habitId = null) {
         let habitStreak = 0
         
         const today = new Date()
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+        const todayStr = getLocalDateStr(today)
         
         const yesterday = new Date(today)
         yesterday.setDate(yesterday.getDate() - 1)
-        const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+        const yesterdayStr = getLocalDateStr(yesterday)
         
         let checkDate = new Date(today)
         
@@ -70,7 +71,7 @@ export async function calculateAndUpdateStreak(userId, habitId = null) {
         }
         
         while (habitStreak > 0) {
-          const checkStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
+          const checkStr = getLocalDateStr(checkDate)
           if (uniqueDates.includes(checkStr)) {
             habitStreak++
             checkDate.setDate(checkDate.getDate() - 1)
