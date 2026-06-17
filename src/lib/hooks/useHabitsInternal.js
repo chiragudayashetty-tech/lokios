@@ -15,6 +15,7 @@ export function useHabitsInternal() {
   const [error, setError] = useState(null)
   const [initialized, setInitialized] = useState(false)
   const processingRef = useRef(new Set())
+  const autoFailRanRef = useRef(false)
   const { user } = useAuth()
   const supabase = createClient()
 
@@ -294,10 +295,13 @@ export function useHabitsInternal() {
 
   // Auto-fail untouched habits
   useEffect(() => {
-    if (!initialized || !user || habits.length === 0) return
+    if (!initialized || !user || habits.length === 0 || autoFailRanRef.current) return
     
     const runAutoFail = async () => {
-      if (localStorage.getItem('daily_ops_autofail_ran_today') === todayStr) return
+      if (localStorage.getItem('daily_ops_autofail_ran_today') === todayStr) {
+        autoFailRanRef.current = true
+        return
+      }
       
       const RESET_DATE = new Date('2026-06-15T00:00:00Z')
       const now = new Date()
@@ -308,6 +312,7 @@ export function useHabitsInternal() {
       let firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
       
       let createdAny = false
+      let newVirtualLogs = []
       
       for (const h of habits) {
         const habitCreatedDate = new Date(h.created_at)
@@ -325,21 +330,26 @@ export function useHabitsInternal() {
             if (!processingRef.current.has(procKey)) {
               processingRef.current.add(procKey)
               await robustAwardXP(user.id, -15, 'habit_failed', h.id, `Missed routine: ${h.title}`, h.stat_category || 'discipline')
-              setMonthLogs(prev => [...prev, { id: `virtual_fail_${h.id}_auto_${Date.now()}`, habit_id: h.id, date: dateStr, status: 'failed' }])
+              newVirtualLogs.push({ id: `virtual_fail_${h.id}_auto_${Date.now()}_${Math.random()}`, habit_id: h.id, date: dateStr, status: 'failed' })
               createdAny = true
             }
           }
         }
       }
       
+      if (newVirtualLogs.length > 0) {
+        setMonthLogs(prev => [...prev, ...newVirtualLogs])
+      }
+      
       if (createdAny) {
-        try { await supabase.rpc('update_streak', { p_user_id: user.id }) } catch (e) { console.error('Streak update failed:', e) }
+        try { await calculateAndUpdateStreak(user.id) } catch (e) { console.error('Streak update failed:', e) }
       }
       localStorage.setItem('daily_ops_autofail_ran_today', todayStr)
+      autoFailRanRef.current = true
     }
     
     runAutoFail()
-  }, [initialized, user, habits, monthLogs, todayStr])
+  }, [initialized, user, habits, todayStr]) // Omitted monthLogs from deps to prevent loop
 
   return {
     habits,

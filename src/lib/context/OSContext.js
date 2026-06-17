@@ -57,7 +57,7 @@ export function OSProvider({ children }) {
     userConfig,
     
     // Cross-Domain Orchestration Methods
-    completeOperation: async (taskId, proofUrl = null) => {
+    completeOperation: useCallback(async (taskId, proofUrl = null) => {
       const task = tasks.tasks.find(t => t.id === taskId)
       if (!task) return null
 
@@ -102,9 +102,9 @@ export function OSProvider({ children }) {
         }
       }
       return updatedTask
-    },
+    }, [tasks, goals, xp]),
     
-    deleteOperation: async (taskId, revokeXp = true) => {
+    deleteOperation: useCallback(async (taskId, revokeXp = true) => {
       const task = tasks.tasks.find(t => t.id === taskId)
       if (!task) return false
       
@@ -124,17 +124,17 @@ export function OSProvider({ children }) {
         await profile.fetchProfile() // Refresh XP immediately
       }
       return success
-    },
+    }, [tasks, goals, profile]),
 
-    failOperation: async (taskId) => {
+    failOperation: useCallback(async (taskId) => {
       const result = await tasks.failTask(taskId)
       if (result) {
         await profile.fetchProfile() // Refresh XP immediately
       }
       return result
-    },
+    }, [tasks, profile]),
 
-    undoFailOperation: async (taskId) => {
+    undoFailOperation: useCallback(async (taskId) => {
       const result = await tasks.undoFailTask(taskId)
       if (result) {
         await profile.fetchProfile() // Refresh XP immediately
@@ -164,7 +164,7 @@ export function OSProvider({ children }) {
         await profile.fetchProfile() // Refresh XP immediately
       }
       return result
-    }
+    }, [tasks, profile])
   }
 
   if (booting) {

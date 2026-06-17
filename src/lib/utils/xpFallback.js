@@ -37,11 +37,13 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
     console.error('Failed to insert xp_history', insertErr)
   }
 
-  // Fallback: manual update profiles
-  const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
-  if (prof) {
-    await supabase.from('profiles').update({ total_xp: (prof.total_xp || 0) + amount }).eq('id', userId)
-  }
+  // Fallback: manual update profiles with a local Mutex to prevent read-then-write race conditions
+  await navigator.locks.request('xp_update_lock', async () => {
+    const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
+    if (prof) {
+      await supabase.from('profiles').update({ total_xp: (prof.total_xp || 0) + amount }).eq('id', userId)
+    }
+  })
   
   return true
 }
@@ -68,10 +70,12 @@ export async function robustRemoveXP(userId, sourceType, sourceId, targetDateStr
 
   // Deduct from profile
   if (totalDeduction !== 0) {
-    const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
-    if (prof) {
-      await supabase.from('profiles').update({ total_xp: Math.max(0, (prof.total_xp || 0) - totalDeduction) }).eq('id', userId)
-    }
+    await navigator.locks.request('xp_update_lock', async () => {
+      const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
+      if (prof) {
+        await supabase.from('profiles').update({ total_xp: Math.max(0, (prof.total_xp || 0) - totalDeduction) }).eq('id', userId)
+      }
+    })
   }
 
   return true

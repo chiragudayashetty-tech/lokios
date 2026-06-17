@@ -10,10 +10,10 @@ export async function GET(request) {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // Using service role key if available to bypass RLS for background sync, otherwise falls back to anon
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  // Using the anon key to ensure queries are strictly bound by the database's existing RLS policies
+  const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
   // Look up user_id from profiles table using calendar_token
   const { data: profile } = await supabase.from('profiles').select('id').eq('calendar_token', token).single()
