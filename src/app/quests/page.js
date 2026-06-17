@@ -404,8 +404,8 @@ export default function DailyOps() {
                         </div>
                         
                         {/* Right Icon - Always reserve space, slightly visible, bright on hover */}
-                        <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-0 md:opacity-20 group-hover:opacity-100 hover:!opacity-100 transition-opacity text-danger" title="Delete Routine" style={{ width: '16px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-                          <Trash2 size={12} />
+                        <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-100 md:opacity-20 group-hover:opacity-100 transition-opacity text-danger" title="Delete Routine" style={{ width: '24px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+                          <Trash2 size={16} />
                         </button>
                         
                       </div>
@@ -432,10 +432,10 @@ export default function DailyOps() {
                             textAlign: 'center', padding: '0', cursor: 'pointer', borderRight: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)',
                             background: isToday ? 'var(--accent-subtle)' : 'transparent',
                           }}
-                          className="hover:bg-hover transition-colors min-w-[36px]"
+                          className="hover:bg-hover transition-colors min-w-[44px] h-[44px]"
                         >
                           <div style={{
-                            width: '26px', height: '26px', margin: '4px auto',
+                            width: '26px', height: '26px', margin: 'auto',
                             border: status === 'none' ? '1px solid var(--border-color)' : 'none',
                             borderRadius: '4px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',

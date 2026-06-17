@@ -14,7 +14,6 @@
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",
     "next": "16.2.9",
-    "puppeteer": "^25.1.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-tsparticles": "^2.12.2",
@@ -24,6 +23,7 @@
   "devDependencies": {
     "dotenv": "^17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.9"
+    "eslint-config-next": "16.2.9",
+    "puppeteer": "^25.1.0"
   }
 }

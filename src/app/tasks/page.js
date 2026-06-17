@@ -283,7 +283,7 @@ export default function Operations() {
                           </span>
                         )}
                       </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         {!isCompleted && <button type='button' onClick={() => startEdit(task)} className="p-1.5 text-muted hover:text-amber transition-colors"><Edit2 size={13} /></button>}
                         {isCompleted && <button type='button' onClick={() => undoCompleteTask(task.id)} className="p-1.5 text-muted hover:text-info transition-colors" title="Undo"><RotateCcw size={13} /></button>}
                       </div>

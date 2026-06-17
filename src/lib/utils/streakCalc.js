@@ -4,8 +4,12 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 export async function calculateAndUpdateStreak(userId, habitId = null) {
   const supabase = createClient()
   try {
+    const sixtyDaysAgo = new Date()
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
+    const sixtyDaysAgoStr = getLocalDateStr(sixtyDaysAgo)
+
     // 1. GLOBAL PROFILE STREAK
-    const { data: allLogs } = await supabase.from('habit_logs').select('date').eq('user_id', userId)
+    const { data: allLogs } = await supabase.from('habit_logs').select('date').eq('user_id', userId).gte('date', sixtyDaysAgoStr)
     if (allLogs) {
       const uniqueDates = [...new Set(allLogs.map(l => l.date))].sort().reverse()
       let streak = 0
@@ -47,7 +51,7 @@ export async function calculateAndUpdateStreak(userId, habitId = null) {
 
     // 2. INDIVIDUAL HABIT STREAK
     if (habitId) {
-      const { data: habitLogs } = await supabase.from('habit_logs').select('date').eq('user_id', userId).eq('habit_id', habitId)
+      const { data: habitLogs } = await supabase.from('habit_logs').select('date').eq('user_id', userId).eq('habit_id', habitId).gte('date', sixtyDaysAgoStr)
       if (habitLogs) {
         const uniqueDates = [...new Set(habitLogs.map(l => l.date))].sort().reverse()
         let habitStreak = 0
