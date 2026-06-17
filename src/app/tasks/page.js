@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +25,7 @@ export default function Operations() {
   const [proofUrl, setProofUrl] = useState('')
 
   const [isMobile, setIsMobile] = useState(false)
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', danger: false, onConfirm: null, onCancel: null, confirmText: 'CONFIRM' })
   useEffect(() => {
     setIsMobile(window.innerWidth < 640)
     const handleResize = () => setIsMobile(window.innerWidth < 640)
@@ -74,19 +76,54 @@ export default function Operations() {
   }
 
   const handleDeleteOperation = async (task) => {
-    if (!window.confirm('Are you sure you want to permanently delete this operation?')) return
-    
-    let revokeXp = true
-    if (task.status === 'completed' || task.status === 'cancelled') {
-      revokeXp = window.confirm('Do you want to revoke/refund the XP associated with this operation?\n\nOK = Revoke XP\nCancel = Keep XP')
-    }
-    
-    await deleteOperation(task.id, revokeXp)
+    setConfirmModal({
+      isOpen: true,
+      title: 'DELETE OPERATION',
+      message: 'Are you sure you want to permanently delete this operation?',
+      danger: true,
+      confirmText: 'DELETE',
+      onConfirm: async () => {
+        let revokeXp = true
+        if (task.status === 'completed' || task.status === 'cancelled') {
+          // Check if user wants to revoke XP
+          setConfirmModal({
+            isOpen: true,
+            title: 'REVOKE XP?',
+            message: 'Do you want to revoke/refund the XP associated with this operation?\n\nREVOKE = XP will be deducted\nKEEP = You keep the XP',
+            danger: true,
+            confirmText: 'REVOKE XP',
+            cancelText: 'KEEP XP',
+            onConfirm: async () => {
+              await deleteOperation(task.id, true)
+              setConfirmModal({ isOpen: false })
+            },
+            onCancel: async () => {
+              await deleteOperation(task.id, false)
+              setConfirmModal({ isOpen: false })
+            }
+          })
+          return
+        }
+        await deleteOperation(task.id, revokeXp)
+        setConfirmModal({ isOpen: false })
+      },
+      onCancel: () => setConfirmModal({ isOpen: false })
+    })
   }
 
   const failTask = async (task) => {
-    if (!window.confirm('Are you sure? This will permanently fail the operation and apply a negative XP penalty based on difficulty.')) return
-    await failOperation(task.id)
+    setConfirmModal({
+      isOpen: true,
+      title: 'FAIL OPERATION',
+      message: 'Are you sure? This will permanently fail the operation and apply a negative XP penalty based on difficulty.',
+      danger: true,
+      confirmText: 'FAIL',
+      onConfirm: async () => {
+        await failOperation(task.id)
+        setConfirmModal({ isOpen: false })
+      },
+      onCancel: () => setConfirmModal({ isOpen: false })
+    })
   }
 
   const handleComplete = (task) => {
@@ -492,6 +529,7 @@ export default function Operations() {
           )}
         </AnimatePresence>
 
+        <ConfirmModal {...confirmModal} />
       </div>
     </AppShell>
   )

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -17,6 +18,7 @@ export default function Missions() {
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
   
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', danger: false, onConfirm: null, onCancel: null, confirmText: 'CONFIRM' })
   const [proofModal, setProofModal] = useState({ show: false, goal: null, url: '' })
   
   const [editingId, setEditingId] = useState(null)
@@ -92,12 +94,38 @@ export default function Missions() {
   }
 
   const handleDeleteGoal = async (goal) => {
-    if (!window.confirm('Are you sure you want to permanently delete this mission?')) return
-    let revokeXp = true
-    if (goal.status === 'completed' || goal.status === 'cancelled') {
-      revokeXp = window.confirm('Do you want to revoke/refund the XP associated with this mission?\n\nOK = Revoke XP\nCancel = Keep XP')
-    }
-    await deleteMission(goal.id, revokeXp)
+    setConfirmModal({
+      isOpen: true,
+      title: 'DELETE MISSION',
+      message: 'Are you sure you want to permanently delete this mission?',
+      danger: true,
+      confirmText: 'DELETE',
+      onConfirm: async () => {
+        let revokeXp = true
+        if (goal.status === 'completed' || goal.status === 'cancelled') {
+          setConfirmModal({
+            isOpen: true,
+            title: 'REVOKE XP?',
+            message: 'Do you want to revoke/refund the XP associated with this mission?\n\nREVOKE = XP will be deducted\nKEEP = You keep the XP',
+            danger: true,
+            confirmText: 'REVOKE XP',
+            cancelText: 'KEEP XP',
+            onConfirm: async () => {
+              await deleteMission(goal.id, true)
+              setConfirmModal({ isOpen: false })
+            },
+            onCancel: async () => {
+              await deleteMission(goal.id, false)
+              setConfirmModal({ isOpen: false })
+            }
+          })
+          return
+        }
+        await deleteMission(goal.id, revokeXp)
+        setConfirmModal({ isOpen: false })
+      },
+      onCancel: () => setConfirmModal({ isOpen: false })
+    })
   }
 
   if (error) {
@@ -280,10 +308,19 @@ export default function Missions() {
                     
                     {goal.status !== 'completed' && goal.status !== 'cancelled' && (
                       <div className="mt-4 flex justify-end gap-2">
-                        <button onClick={async () => {
-                          if (window.confirm('Are you sure? This will permanently fail the mission and apply a massive negative XP penalty based on difficulty.')) {
-                            await failMission(goal.id)
-                          }
+                        <button onClick={() => {
+                          setConfirmModal({
+                            isOpen: true,
+                            title: 'FAIL MISSION',
+                            message: 'Are you sure? This will permanently fail the mission and apply a massive negative XP penalty based on difficulty.',
+                            danger: true,
+                            confirmText: 'FAIL',
+                            onConfirm: async () => {
+                              await failMission(goal.id)
+                              setConfirmModal({ isOpen: false })
+                            },
+                            onCancel: () => setConfirmModal({ isOpen: false })
+                          })
                         }} className="btn btn-ghost text-danger btn-sm" disabled={isPaused}>
                           <X size={14} /> MISSION FAILED
                         </button>
@@ -412,7 +449,8 @@ export default function Missions() {
             </div>
           )}
         </AnimatePresence>
-
+        
+        <ConfirmModal {...confirmModal} />
       </div>
     </AppShell>
   )

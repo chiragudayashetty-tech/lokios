@@ -6,6 +6,7 @@ import HudPanel from '@/components/ui/HudPanel'
 import { useBrainDump } from '@/lib/hooks/useBrainDump'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Lightbulb, CheckSquare, Target, FileText, Shuffle, Plus, ArrowRight, Trash2 } from 'lucide-react'
+import styles from './brain-dump.module.css'
 
 const TYPE_ICONS = {
   idea: Lightbulb,
@@ -62,7 +63,7 @@ export default function IntelDrop() {
         <HudPanel glow className="mb-8" style={{ padding: 0 }}>
           <form onSubmit={handleCapture}>
             <textarea 
-              className="brain-dump-input w-full bg-transparent border-0" 
+              className={`${styles.brainDumpInput} w-full bg-transparent border-0`} 
               placeholder="Awaiting intel transmission..." 
               value={content}
               onChange={e => setContent(e.target.value)}

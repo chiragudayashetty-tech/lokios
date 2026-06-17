@@ -7,7 +7,8 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { useCalendar } from '@/lib/hooks/useCalendar'
 import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Plus, MapPin, AlignLeft, Calendar as CalendarIcon, Clock, CheckSquare, Target } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, MapPin, AlignLeft, Calendar as CalendarIcon, Clock, CheckSquare, Target, Zap } from 'lucide-react'
+import styles from './calendar.module.css'
 
 export default function Calendar() {
   const { auth: { user }, profile: { profile }, tasks: { tasks, loading: tLoading }, goals: { goals: allGoals, loading: gLoading } } = useOS()
@@ -88,15 +89,15 @@ export default function Calendar() {
             <button onClick={nextMonth} className="btn btn-ghost p-2"><ChevronRight /></button>
           </div>
 
-          <div className="calendar-grid">
+          <div className={styles.calendarGrid}>
             {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (
-              <div key={day} className="p-2 text-center font-display text-xs text-muted uppercase tracking-wider bg-tertiary">
+              <div key={day} className={`p-2 text-center font-display text-xs text-muted uppercase tracking-wider bg-tertiary ${styles.calendarHeaderCell}`}>
                 {day}
               </div>
             ))}
             
             {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="calendar-cell other-month" />
+              <div key={`empty-${i}`} className={`${styles.calendarCell} ${styles.otherMonth}`} />
             ))}
             
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -110,7 +111,7 @@ export default function Calendar() {
                 <div 
                   key={day} 
                   onClick={() => setSelectedDate(dateStr)}
-                  className={`calendar-cell overflow-hidden cursor-pointer transition-all hover:bg-hover ${isToday ? 'today' : ''} ${isSelected ? 'border-info shadow-[inset_0_0_10px_rgba(96,165,250,0.1)]' : ''}`}
+                  className={`${styles.calendarCell} overflow-hidden cursor-pointer transition-all hover:bg-hover ${isToday ? styles.today : ''} ${isSelected ? 'border-info shadow-[inset_0_0_10px_rgba(96,165,250,0.1)]' : ''}`}
                   style={isSelected ? { border: '1px solid var(--info)' } : {}}
                 >
                   <div className="flex-between">

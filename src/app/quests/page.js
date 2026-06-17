@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
 import { QUEST_CATEGORIES } from '@/lib/constants'
@@ -24,6 +25,8 @@ export default function DailyOps() {
   const [customCategory, setCustomCategory] = useState('')
   const [newXp, setNewXp] = useState(25)
   const [activeTool, setActiveTool] = useState('cycle')
+
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', danger: false, onConfirm: null, onCancel: null, confirmText: 'CONFIRM' })
 
   // Edit State
   const [editingHabit, setEditingHabit] = useState(null)
@@ -105,8 +108,18 @@ export default function DailyOps() {
   }
 
   const handleDelete = async (habitId) => {
-    if (!window.confirm('Are you sure you want to permanently delete this operation?')) return
-    await deleteHabit(habitId)
+    setConfirmModal({
+      isOpen: true,
+      title: 'DELETE ROUTINE',
+      message: 'Are you sure you want to permanently delete this routine?',
+      danger: true,
+      confirmText: 'DELETE',
+      onConfirm: async () => {
+        await deleteHabit(habitId)
+        setConfirmModal({ isOpen: false })
+      },
+      onCancel: () => setConfirmModal({ isOpen: false })
+    })
   }
 
   // Stats for each habit
@@ -715,11 +728,20 @@ export default function DailyOps() {
                   </div>
                   <button 
                     type="button" 
-                    onClick={async () => {
-                      if (window.confirm('Are you sure you want to permanently delete this operation?')) {
-                        await deleteHabit(editingHabit.id);
-                        setEditingHabit(null);
-                      }
+                    onClick={() => {
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'DELETE ROUTINE',
+                        message: 'Are you sure you want to permanently delete this routine?',
+                        danger: true,
+                        confirmText: 'DELETE',
+                        onConfirm: async () => {
+                          await deleteHabit(editingHabit.id);
+                          setEditingHabit(null);
+                          setConfirmModal({ isOpen: false });
+                        },
+                        onCancel: () => setConfirmModal({ isOpen: false })
+                      })
                     }} 
                     className="btn border border-danger text-danger hover:bg-danger/20 transition-colors w-full flex justify-center items-center gap-2 mt-2"
                   >
@@ -731,6 +753,7 @@ export default function DailyOps() {
           </div>
         )}
       </AnimatePresence>
+      <ConfirmModal {...confirmModal} />
       </div>
     </AppShell>
   )

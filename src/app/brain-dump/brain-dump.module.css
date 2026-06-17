@@ -1,0 +1,59 @@
+.brainDumpInput {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--accent-primary);
+  caret-color: var(--accent-primary);
+  min-height: 60px;
+  resize: none;
+  transition: all var(--transition-base);
+  letter-spacing: var(--tracking-wide);
+}
+
+.brainDumpInput::placeholder {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-transform: none;
+  letter-spacing: var(--tracking-wide);
+}
+
+.brainDumpInput:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-subtle), 0 0 20px var(--amber-glow-lg);
+  outline: none;
+}
+
+.brainDumpItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-base);
+}
+
+.brainDumpItem:hover {
+  border-color: var(--hud-border);
+  background: var(--bg-hover);
+}
+
+.brainDumpItemText {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: var(--leading-relaxed);
+}
+
+.brainDumpItemTime {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
