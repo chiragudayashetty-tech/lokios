@@ -134,13 +134,7 @@ export function useHabitsInternal() {
     processingRef.current.add(procKey)
 
     try {
-      // 1. Clean Slate: Delete any existing log from the DB for this exact user/habit/date to prevent duplicates and constraint errors
-      await supabase.from('habit_logs').delete()
-        .eq('user_id', user.id)
-        .eq('habit_id', habitId)
-        .eq('date', targetDate)
-
-      // 2. XP Adjustments: Remove any XP given from the previous state for today
+      // 1. XP Adjustments: Remove any XP given from the previous state for today
       if (existingLog && targetDate === currentTodayStr) {
         if (existingLog.status === 'failed') {
           await robustRemoveXP(user.id, 'habit_failed', habitId, targetDate)
@@ -149,27 +143,51 @@ export function useHabitsInternal() {
         }
       }
 
-      // 3. Insert the new log and award XP based on the new state
-      if (nextStatus === 'completed') {
-        const { data: newLog, error } = await supabase.from('habit_logs').insert({ user_id: user.id, habit_id: habitId, date: targetDate, status: 'completed' }).select().single()
-        if (error) throw error
-        setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
+      // 2. Database Sync
+      if (nextStatus === 'none') {
+        // Find all real IDs for this date and delete them (handles duplicates)
+        const { data: rows } = await supabase.from('habit_logs').select('id').eq('user_id', user.id).eq('habit_id', habitId).eq('date', targetDate)
+        if (rows && rows.length > 0) {
+          await supabase.from('habit_logs').delete().in('id', rows.map(r => r.id))
+        }
+      } else {
+        // Try UPDATE first to avoid constraint conflicts or RLS delete silent fails
+        const { data: updatedRows, error: updateErr } = await supabase.from('habit_logs')
+          .update({ status: nextStatus })
+          .eq('user_id', user.id)
+          .eq('habit_id', habitId)
+          .eq('date', targetDate)
+          .select()
+          
+        let newLog;
+        if (!updateErr && updatedRows && updatedRows.length > 0) {
+          newLog = updatedRows[0]
+          // If duplicates were spawned by previous bugs, clean them up safely by explicit ID
+          if (updatedRows.length > 1) {
+            const extraIds = updatedRows.slice(1).map(r => r.id)
+            await supabase.from('habit_logs').delete().in('id', extraIds)
+          }
+        } else {
+          // If no rows were updated (none existed), gracefully INSERT
+          const { data: insertedRows, error: insertErr } = await supabase.from('habit_logs')
+            .insert({ user_id: user.id, habit_id: habitId, date: targetDate, status: nextStatus })
+            .select()
+          if (insertErr) throw insertErr
+          newLog = insertedRows[0]
+        }
         
+        // Update optimistic UI with real DB log
+        setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
+
+        // Award New XP
         if (targetDate === currentTodayStr) {
           const habit = habits.find((h) => h.id === habitId)
-          await robustAwardXP(user.id, habit?.xp_per_completion || 25, 'habit_complete', habitId, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
+          if (nextStatus === 'completed') {
+            await robustAwardXP(user.id, habit?.xp_per_completion || 25, 'habit_complete', habitId, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
+          } else if (nextStatus === 'failed') {
+            await robustAwardXP(user.id, -15, 'habit_failed', habitId, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
+          }
         }
-      } else if (nextStatus === 'failed') {
-        const { data: newLog, error } = await supabase.from('habit_logs').insert({ user_id: user.id, habit_id: habitId, date: targetDate, status: 'failed' }).select().single()
-        if (error) throw error
-        setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
-        
-        if (targetDate === currentTodayStr) {
-          const habit = habits.find((h) => h.id === habitId)
-          await robustAwardXP(user.id, -15, 'habit_failed', habitId, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
-        }
-      } else if (nextStatus === 'none') {
-        // We've already deleted the log in Step 1 and removed XP in Step 2. Nothing to insert.
       }
 
       try { 
