@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useHabits } from '@/lib/hooks/useHabits'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, Shield, Target, AlertTriangle, Eye, Flame, Swords, X, Plus, Trash2, Edit2, Link as LinkIcon, Crosshair } from 'lucide-react'
+import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, Search, Calendar, Flame, Lock, Unlock, Play, Pause, AlertTriangle, ChevronRight, X, Edit2, Trash2, Plus, Smartphone, Settings, BarChart2, Briefcase, Heart, BookOpen, User as UserIcon, LogOut, Sun, Moon, Cpu, Coffee, Activity, ArrowRight, ShieldAlert, Navigation, Layers, Link as LinkIcon, Database, ArrowUpCircle, Eye, Skull, Rocket, Sparkles, Dumbbell } from 'lucide-react'
+import { QUEST_CATEGORIES } from '@/lib/constants'
 
 // ── DEFAULT BLUEPRINT DATA ──
 const DEFAULT_BLUEPRINT = {
@@ -353,11 +354,30 @@ export default function OperatorDashboard() {
                               {battle.linked_habits?.length > 0 ? (
                                 battle.linked_habits.map(id => {
                                   const habit = habits.find(h => h.id === id);
-                                  return habit ? (
-                                    <span key={id} className="font-mono text-[9px] px-2 py-1 bg-bg-secondary border border-border-color text-secondary flex items-center gap-1">
-                                      <Crosshair size={10} className="text-amber" /> {habit.title}
-                                    </span>
-                                  ) : null;
+                                  if (!habit) return null;
+                                  
+                                  const categoryData = QUEST_CATEGORIES.find(c => c.id === habit.category) || QUEST_CATEGORIES.find(c => c.id === 'other');
+                                  const iconName = categoryData?.icon || 'Target';
+                                  
+                                  // Simple manual icon map since dynamic requires a bit of logic
+                                  const IconComponent = {
+                                    Rocket: Rocket,
+                                    Target: Target,
+                                    BookOpen: BookOpen,
+                                    Sparkles: Sparkles,
+                                    Dumbbell: Dumbbell
+                                  }[iconName] || Target;
+
+                                  return (
+                                    <div 
+                                      key={id} 
+                                      className="flex items-center justify-center p-1.5 rounded-sm border opacity-80 hover:opacity-100 transition-opacity cursor-help"
+                                      style={{ backgroundColor: `${categoryData.color}15`, borderColor: categoryData.color }}
+                                      title={habit.title}
+                                    >
+                                      <IconComponent size={14} color={categoryData.color} />
+                                    </div>
+                                  );
                                 })
                               ) : (
                                 <span className="font-mono text-[9px] text-danger">NO COUNTER-MEASURES DEPLOYED. VULNERABILITY DETECTED.</span>
