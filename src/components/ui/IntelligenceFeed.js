@@ -32,14 +32,6 @@ export default function IntelligenceFeed() {
     async function evaluateConsequences() {
       const today = new Date()
       const todayStr = getLocalDateStr(today)
-      const cacheKey = `consequences_${user.id}_${todayStr}`
-      const cached = sessionStorage.getItem(cacheKey)
-      if (cached) {
-        setAlerts(JSON.parse(cached))
-        setLoading(false)
-        return
-      }
-
       const newAlerts = []
       const supabase = createClient()
       const currentHour = today.getHours()
@@ -88,12 +80,13 @@ export default function IntelligenceFeed() {
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = getLocalDateStr(yesterday)
 
-      // Fetch logs for yesterday
+      // Fetch logs for yesterday, ONLY completed ones
       const { data: yesterdayLogs } = await supabase
         .from('habit_logs')
-        .select('habit_id')
+        .select('habit_id, status')
         .eq('user_id', user.id)
         .eq('date', yesterdayStr)
+        .eq('status', 'completed')
 
       // Fetch blueprint to evaluate battles
       const { data: blueprint } = await supabase
@@ -102,7 +95,12 @@ export default function IntelligenceFeed() {
         .eq('user_id', user.id)
         .single()
 
-      if (yesterdayLogs && blueprint && blueprint.battles) {
+      // Ensure we don't evaluate days before a hard reset
+      const storedResetDate = localStorage.getItem('last_reset_date')
+      const resetDateStr = storedResetDate ? getLocalDateStr(new Date(storedResetDate)) : '2026-06-29'
+      const shouldEvaluateYesterday = yesterdayStr >= resetDateStr
+
+      if (shouldEvaluateYesterday && yesterdayLogs && blueprint && blueprint.battles) {
         const completedHabitIds = new Set(yesterdayLogs.map(l => l.habit_id))
         let totalMissed = 0
         let battleUpdatesNeeded = false
@@ -199,7 +197,6 @@ export default function IntelligenceFeed() {
       }
       
       setAlerts(newAlerts)
-      sessionStorage.setItem(cacheKey, JSON.stringify(newAlerts))
       setLoading(false)
     }
 
