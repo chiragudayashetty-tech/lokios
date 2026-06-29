@@ -306,42 +306,66 @@ export function useHabitsInternal() {
         return
       }
       
-      const RESET_DATE = new Date('2026-06-15T00:00:00Z')
+      const storedResetDate = localStorage.getItem('last_reset_date')
+      const RESET_DATE = storedResetDate ? new Date(storedResetDate) : new Date('2026-06-15T00:00:00Z')
       const now = new Date()
       const yesterday = new Date(now)
       yesterday.setDate(yesterday.getDate() - 1)
       
-      // Determine the earliest date we have logs for based on monthLogs
-      let firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      const thirtyDaysAgo = new Date(now)
+      thirtyDaysAgo.setDate(now.getDate() - 30)
+
+      let globalStartDate = Math.max(RESET_DATE.getTime(), thirtyDaysAgo.getTime())
+      for (const h of habits) {
+        const hc = new Date(h.created_at).getTime()
+        if (hc < globalStartDate) globalStartDate = hc // Wait, we actually want the oldest possible start date across all habits, bounded by 30 days ago.
+      }
+      globalStartDate = Math.max(globalStartDate, thirtyDaysAgo.getTime(), RESET_DATE.getTime())
+      
+      const { data: recentLogs } = await supabase
+        .from('habit_logs')
+        .select('habit_id, date')
+        .eq('user_id', user.id)
+        .gte('date', getLocalDateStr(new Date(globalStartDate)))
+
+      const logMap = new Set((recentLogs || []).map(l => `${l.habit_id}_${l.date}`))
       
       let createdAny = false
       let newVirtualLogs = []
+      let dbInsertPayloads = []
       
       for (const h of habits) {
         const habitCreatedDate = new Date(h.created_at)
-        // Bound loop to max(RESET_DATE, habitCreatedDate, firstDayOfMonth) to prevent infinite past loop
-        let startDate = new Date(Math.max(RESET_DATE.getTime(), habitCreatedDate.getTime(), firstDayOfMonth.getTime()))
+        let startDate = new Date(Math.max(RESET_DATE.getTime(), habitCreatedDate.getTime(), thirtyDaysAgo.getTime()))
         
-        // Ensure we iterate until we hit today, then stop.
         for (let d = new Date(startDate); ; d.setDate(d.getDate() + 1)) {
           const dateStr = getLocalDateStr(d)
           if (dateStr >= todayStr) break // NEVER auto-fail today or future dates!
 
-          const hasLog = monthLogs.some(l => l.habit_id === h.id && l.date === dateStr)
-          if (!hasLog) {
+          if (!logMap.has(`${h.id}_${dateStr}`)) {
             const procKey = `${h.id}_${dateStr}_autofail`
             if (!processingRef.current.has(procKey)) {
               processingRef.current.add(procKey)
               await robustAwardXP(user.id, -15, 'habit_failed', h.id, `Missed routine: ${h.title}`, h.stat_category || 'discipline')
-              newVirtualLogs.push({ id: `virtual_fail_${h.id}_auto_${Date.now()}_${Math.random()}`, habit_id: h.id, date: dateStr, status: 'failed' })
+              
+              const failId = `virtual_fail_${h.id}_auto_${Date.now()}_${Math.random()}`
+              newVirtualLogs.push({ id: failId, habit_id: h.id, date: dateStr, status: 'failed' })
+              dbInsertPayloads.push({ user_id: user.id, habit_id: h.id, date: dateStr, status: 'failed' })
               createdAny = true
             }
           }
         }
       }
       
+      if (dbInsertPayloads.length > 0) {
+        await supabase.from('habit_logs').insert(dbInsertPayloads)
+      }
+      
       if (newVirtualLogs.length > 0) {
-        setMonthLogs(prev => [...prev, ...newVirtualLogs])
+        setMonthLogs(prev => {
+          // Only add logs that belong to the currently viewed month (monthLogs might only be partial)
+          return [...prev, ...newVirtualLogs]
+        })
       }
       
       if (createdAny) {

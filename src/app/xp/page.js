@@ -45,6 +45,9 @@ export default function XPDashboard() {
     await supabase.from('xp_history').delete().eq('user_id', user.id)
     await supabase.from('habit_logs').delete().eq('user_id', user.id)
     
+    localStorage.setItem('last_reset_date', getLocalDateStr(new Date()))
+    localStorage.removeItem('daily_ops_autofail_ran_today')
+    
     window.location.reload()
   }
 
@@ -91,6 +94,16 @@ export default function XPDashboard() {
       total: runningTotal
     }
   })
+
+  // Calculate actual days tracked since first activity (or reset)
+  let daysTracked = 1
+  if (timeline.length > 0) {
+    const firstDateStr = getLocalDateStr(new Date(timeline[0].created_at))
+    const firstDate = new Date(firstDateStr)
+    const today = new Date(getLocalDateStr(new Date()))
+    const diffTime = Math.abs(today - firstDate)
+    daysTracked = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+  }
 
   return (
     <AppShell>
@@ -150,7 +163,7 @@ export default function XPDashboard() {
                   <span className="font-mono text-[9px] uppercase tracking-widest text-muted">PENALTIES</span>
                 </div>
                 <div className="bg-bg-tertiary border border-border-color p-4 flex-col text-center">
-                  <span className="font-display text-2xl text-info">{last14Days.length}</span>
+                  <span className="font-display text-2xl text-info">{daysTracked}</span>
                   <span className="font-mono text-[9px] uppercase tracking-widest text-muted">DAYS TRACKED</span>
                 </div>
               </div>
