@@ -243,6 +243,7 @@ export function useHabitsInternal() {
       return true
     } catch (error) {
       console.error('Error cycling habit:', error)
+      alert(`SYSTEM ERROR: ${error.message || JSON.stringify(error)}`)
       // DEBUG: Log error to xp_history so I can read it
       supabase.from('xp_history').insert({
         user_id: user.id,

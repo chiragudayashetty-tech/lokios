@@ -81,27 +81,7 @@ export function OSProvider({ children }) {
           const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
           await goals.updateProgress(goal.id, newProgress)
 
-          // 3. Automate Mission Completion if 100% (BUT NOT FOR LONG-TERM/MAIN QUESTS)
-          if (newProgress >= 100 && goal.type !== 'long_term' && goal.type !== 'main_quest') {
-            // Pass skipXp = wasAlreadyCompleted to avoid re-awarding goal XP if task was already completed and this is just a re-submission/proof update.
-            await goals.completeGoal(goal.id, proofUrl, wasAlreadyCompleted)
-            
-            // 4. If Mission is completed, Automate Battle Damage (Main Quest)
-            if (!wasAlreadyCompleted) {
-              const mainQuest = goals.goals.find((g) => g.type === 'main_quest' && g.status !== 'completed')
-              if (mainQuest && mainQuest.progress !== undefined) {
-                 // Add 15% progress to the Main Battle for completing a Mission
-                 const newProgress = Math.min(100, (mainQuest.progress || 0) + 15)
-                 await goals.updateProgress(mainQuest.id, newProgress)
-                 
-                 xp.awardXP(100, 'battle_damage', mainQuest.id, 'Dealt damage to active Battle by completing Mission', 'combat')
-                 
-                 if (newProgress >= 100) {
-                   await goals.completeGoal(mainQuest.id)
-                 }
-              }
-            }
-          }
+          // Mission progress updates, but NEVER auto-completes. User must manually verify and close missions.
         }
       }
       return updatedTask
