@@ -243,6 +243,15 @@ export function useHabitsInternal() {
       return true
     } catch (error) {
       console.error('Error cycling habit:', error)
+      // DEBUG: Log error to xp_history so I can read it
+      supabase.from('xp_history').insert({
+        user_id: user.id,
+        amount: 0,
+        source_type: 'error_log',
+        source_id: habitId,
+        description: String(error.message || JSON.stringify(error))
+      }).then()
+      
       // Rollback optimistic update
       setMonthLogs(prev => {
         const filtered = prev.filter(l => l.id !== optimisticId)
