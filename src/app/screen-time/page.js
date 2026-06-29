@@ -82,13 +82,17 @@ export default function ScreenIntel() {
       .eq('date', date)
       .single()
 
+    let savedLogId = existing?.id;
+
     let saveError;
     if (existing) {
-      const { error } = await supabase.from('screen_time_logs').update(payload).eq('id', existing.id)
+      const { data: updated, error } = await supabase.from('screen_time_logs').update(payload).eq('id', existing.id).select().single()
       saveError = error
+      if (updated) savedLogId = updated.id;
     } else {
-      const { error } = await supabase.from('screen_time_logs').insert(payload)
+      const { data: inserted, error } = await supabase.from('screen_time_logs').insert(payload).select().single()
       saveError = error
+      if (inserted) savedLogId = inserted.id;
     }
 
     if (saveError) {
@@ -100,8 +104,12 @@ export default function ScreenIntel() {
     const { data } = await supabase.from('screen_time_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
     if (data) setLogs(data)
 
-    // Remove any previously awarded XP for this date so we can recalculate and update it dynamically
-    await robustRemoveXP(user.id, 'screen_time', date)
+    // Remove any previously awarded XP for this exact screen time log to prevent duplicates
+    if (savedLogId) {
+      await robustRemoveXP(user.id, 'screen_time', savedLogId)
+      // Cleanup for legacy bug: also remove any XP that was incorrectly logged under the date string
+      await robustRemoveXP(user.id, 'screen_time', date)
+    }
 
     // Calculate dynamic XP
     let xpAmount = 0
@@ -144,8 +152,8 @@ export default function ScreenIntel() {
       finalReason += ' (-5% Battle Health)'
     }
 
-    if (xpAmount !== 0) {
-      await awardXP(xpAmount, 'screen_time', date, finalReason, 'discipline')
+    if (xpAmount !== 0 && savedLogId) {
+      await awardXP(xpAmount, 'screen_time', savedLogId, finalReason, 'discipline')
       setXpAnim({ amount: xpAmount, reason: finalReason })
       setTimeout(() => setXpAnim(null), 4000)
     }
