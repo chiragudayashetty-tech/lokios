@@ -38,18 +38,23 @@ export default function WeeklyReview() {
       
       setDateRange({ start: formatDate(startStr, 'MMM DD'), end: formatDate(endStr, 'MMM DD') })
 
-      const [xpRes, habitRes] = await Promise.all([
-        supabase.from('xp_history').select('amount, source_type').eq('user_id', user.id).gte('date', startStr).lte('date', endStr),
-        supabase.from('habit_logs').select('status').eq('user_id', user.id).gte('date', startStr).lte('date', endStr).eq('status', 'completed')
+      const [xpRes, habitRes, taskRes, goalRes] = await Promise.all([
+        supabase.from('xp_history').select('amount, source_type').eq('user_id', user.id).gte('created_at', startStr).lte('created_at', endStr + 'T23:59:59.999Z'),
+        supabase.from('habit_logs').select('status').eq('user_id', user.id).gte('date', startStr).lte('date', endStr).eq('status', 'completed'),
+        supabase.from('tasks').select('id').eq('user_id', user.id).gte('completed_at', startStr).lte('completed_at', endStr + 'T23:59:59.999Z').eq('status', 'completed'),
+        supabase.from('goals').select('id').eq('user_id', user.id).gte('completed_at', startStr).lte('completed_at', endStr + 'T23:59:59.999Z').eq('status', 'completed')
       ])
 
       const xpLogs = xpRes.data || []
       const habitLogs = habitRes.data || []
+      const tasksCompleted = taskRes.data || []
+      const goalsCompleted = goalRes.data || []
 
       setStats({
         xp: xpLogs.reduce((sum, log) => sum + (log.amount > 0 ? log.amount : 0), 0),
-        tasks: xpLogs.filter(log => log.source_type === 'task_complete').length,
-        habits: habitLogs.length
+        tasks: tasksCompleted.length,
+        habits: habitLogs.length,
+        missions: goalsCompleted.length
       })
 
       setLoadingStats(false)
@@ -116,7 +121,7 @@ ${nextActions}`
         </header>
 
         {/* STATS ROW */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <HudPanel>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-amber/10 rounded-lg text-amber">
@@ -133,6 +138,19 @@ ${nextActions}`
           <HudPanel>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-success/10 rounded-lg text-success">
+                <Target size={24} />
+              </div>
+              <div className="flex-col">
+                <span className="font-mono text-xs text-muted uppercase tracking-widest">Missions Done</span>
+                <span className="font-display text-2xl text-primary">
+                  {loadingStats ? '...' : stats.missions}
+                </span>
+              </div>
+            </div>
+          </HudPanel>
+          <HudPanel>
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary/10 rounded-lg text-primary">
                 <CheckSquare size={24} />
               </div>
               <div className="flex-col">
@@ -145,7 +163,7 @@ ${nextActions}`
           </HudPanel>
           <HudPanel>
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-lg text-primary">
+              <div className="p-3 bg-secondary/10 rounded-lg text-secondary">
                 <Crosshair size={24} />
               </div>
               <div className="flex-col">

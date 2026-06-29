@@ -33,7 +33,7 @@ export default function MiniFocusTimer() {
         style={{ width: '220px' }}
       >
         <div 
-          className="bg-bg-secondary border-2 shadow-2xl rounded-xl overflow-hidden backdrop-blur-md"
+          className="bg-black/60 border-2 shadow-2xl rounded-xl overflow-hidden backdrop-blur-xl"
           style={{ borderColor: focus.category?.color || 'var(--accent-primary)' }}
         >
           {/* Header & Drag Grip */}
