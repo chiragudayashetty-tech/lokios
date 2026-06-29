@@ -231,7 +231,7 @@ export default function FocusMode() {
             </div>
 
             {/* Complete + Abort */}
-            <div className="flex gap-3 w-full max-w-xs">
+            <div className="flex gap-3 w-full max-w-xs mb-6">
               <button
                 onClick={() => handleComplete(true)}
                 disabled={saving}
@@ -247,6 +247,14 @@ export default function FocusMode() {
                 <X size={16} /> ABORT
               </button>
             </div>
+
+            {/* Minimize Button */}
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="btn btn-ghost text-muted text-sm flex items-center gap-2"
+            >
+              <ChevronDown size={16} /> MINIMIZE TO HUD
+            </button>
 
             <span className="font-mono text-xs text-muted mt-4">Abort = −5 XP penalty</span>
           </motion.div>

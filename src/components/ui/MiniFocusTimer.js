@@ -26,45 +26,46 @@ export default function MiniFocusTimer() {
         dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }}
         dragElastic={0}
         dragMomentum={false}
-        initial={{ opacity: 0, scale: 0.9, y: 50 }}
+        initial={{ opacity: 0, scale: 0.8, y: 50 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 50 }}
+        exit={{ opacity: 0, scale: 0.8, y: 50 }}
         className="fixed bottom-20 right-6 z-[100] cursor-move"
-        style={{ width: '220px' }}
       >
         <div 
-          className="bg-black/60 border-2 shadow-2xl rounded-xl overflow-hidden backdrop-blur-xl"
+          className="flex items-center gap-3 bg-bg-secondary border-2 shadow-2xl rounded-full overflow-hidden px-4 py-2"
           style={{ borderColor: focus.category?.color || 'var(--accent-primary)' }}
         >
-          {/* Header & Drag Grip */}
-          <div className="flex items-center justify-between p-2 pb-1 border-b border-border-color bg-black/40">
-            <div className="flex items-center gap-2">
-              <Zap size={12} color={focus.category?.color || 'var(--accent-primary)'} />
-              <span className="font-mono text-[10px] text-muted tracking-widest uppercase truncate max-w-[120px]">
-                {focus.taskName || focus.category?.label || 'FOCUS'}
-              </span>
-            </div>
-            <button onClick={() => router.push('/focus')} className="text-muted hover:text-primary transition-colors">
-              <ExternalLink size={12} />
-            </button>
+          {/* Circular Progress Indicator */}
+          <div className="relative flex-center" style={{ width: '32px', height: '32px' }} onClick={() => router.push('/focus')}>
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="18" cy="18" r="16" fill="none" stroke="var(--bg-tertiary)" strokeWidth="3" />
+              <motion.circle
+                cx="18" cy="18" r="16" fill="none"
+                stroke={focus.category?.color || 'var(--accent-primary)'} strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 16}
+                strokeDashoffset={2 * Math.PI * 16 * (1 - pct / 100)}
+                style={{ transition: 'stroke-dashoffset 1s linear' }}
+              />
+            </svg>
+            <Zap size={14} color={focus.category?.color || 'var(--accent-primary)'} />
           </div>
 
           {/* Time Display */}
-          <div className="p-3 text-center" onClick={() => router.push('/focus')}>
-            <span className="font-display text-3xl tracking-widest text-primary">
+          <div className="flex-col cursor-pointer" onClick={() => router.push('/focus')}>
+            <span className="font-display tracking-widest text-primary text-lg leading-none" style={{ color: focus.category?.color || 'var(--accent-primary)' }}>
               {mins}:{secs}
+            </span>
+            <span className="font-mono text-[9px] text-muted tracking-widest uppercase truncate max-w-[100px] leading-none mt-1">
+              {focus.taskName || focus.category?.label || 'FOCUS'}
             </span>
           </div>
 
-          {/* Progress Bar */}
-          <div className="w-full h-1 bg-tertiary">
-            <motion.div 
-              className="h-full"
-              style={{ backgroundColor: focus.category?.color || 'var(--accent-primary)' }}
-              initial={{ width: `${pct}%` }}
-              animate={{ width: `${pct}%` }}
-              transition={{ duration: 1 }}
-            />
+          {/* Open Full Screen Button */}
+          <div className="pl-2 border-l border-border-color ml-1">
+             <button onClick={() => router.push('/focus')} className="text-muted hover:text-primary transition-colors p-1 bg-tertiary rounded-full">
+               <ExternalLink size={14} />
+             </button>
           </div>
         </div>
       </motion.div>
