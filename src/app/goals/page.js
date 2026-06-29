@@ -8,12 +8,12 @@ import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
-import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw, AlertTriangle } from 'lucide-react'
+import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw, AlertTriangle, CheckSquare, Square } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
   const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
-  const { failMission, undoFailMission, deleteMission } = useOS()
+  const { failMission, undoFailMission, deleteMission, tasks: { tasks, completeOperation } } = useOS()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
@@ -296,6 +296,31 @@ export default function Missions() {
                                 className="w-full accent-amber-500"
                               />
                             </div>
+                            {/* MILESTONES (LINKED TASKS) */}
+                            {tasks.filter(t => t.goal_id === goal.id).length > 0 && (
+                              <div className="mt-4 pt-4 border-t border-border-color">
+                                <label className="font-mono text-xs text-info mb-3 block">MISSION MILESTONES (LINKED OPS)</label>
+                                <div className="flex-col gap-2">
+                                  {tasks.filter(t => t.goal_id === goal.id).map(task => {
+                                    const isCompleted = task.status === 'completed'
+                                    return (
+                                      <div key={task.id} className={`flex items-center gap-3 p-2 rounded border ${isCompleted ? 'bg-success/5 border-success/30' : 'bg-tertiary border-border-color'}`}>
+                                        <button 
+                                          onClick={() => !isCompleted && completeOperation(task.id)}
+                                          className={`${isCompleted ? 'text-success cursor-default' : 'text-muted hover:text-amber'}`}
+                                          disabled={isCompleted}
+                                        >
+                                          {isCompleted ? <CheckSquare size={16} /> : <Square size={16} />}
+                                        </button>
+                                        <span className={`font-mono text-sm ${isCompleted ? 'text-muted line-through' : 'text-primary'}`}>
+                                          {task.title}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
 
                           </div>
                         </motion.div>

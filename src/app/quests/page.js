@@ -24,6 +24,8 @@ export default function DailyOps() {
   const [newCategory, setNewCategory] = useState('beyond_tatva')
   const [customCategory, setCustomCategory] = useState('')
   const [newXp, setNewXp] = useState(25)
+  const [newFrequency, setNewFrequency] = useState('daily')
+  const [newFrequencyDays, setNewFrequencyDays] = useState([])
   const [activeTool, setActiveTool] = useState('cycle')
 
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', danger: false, onConfirm: null, onCancel: null, confirmText: 'CONFIRM' })
@@ -34,6 +36,8 @@ export default function DailyOps() {
   const [editCategory, setEditCategory] = useState('')
   const [editCustomCategory, setEditCustomCategory] = useState('')
   const [editXp, setEditXp] = useState(25)
+  const [editFrequency, setEditFrequency] = useState('daily')
+  const [editFrequencyDays, setEditFrequencyDays] = useState([])
 
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -171,11 +175,14 @@ export default function DailyOps() {
       title: newTitle,
       category: newCategory === 'other' ? (customCategory || 'Other') : newCategory,
       stat_category: QUEST_CATEGORIES.find(c => c.id === newCategory)?.stat_category || 'discipline',
-      frequency: 'daily',
+      frequency: newFrequency,
+      frequency_days: newFrequency === 'specific' ? newFrequencyDays : (newFrequency === 'weekdays' ? [1,2,3,4,5] : [0,1,2,3,4,5,6]),
       xp_per_completion: newXp
     })
     setNewTitle('')
     setCustomCategory('')
+    setNewFrequency('daily')
+    setNewFrequencyDays([])
     setShowAddForm(false)
   }
 
@@ -186,7 +193,9 @@ export default function DailyOps() {
       title: editTitle,
       category: editCategory === 'other' ? (editCustomCategory || 'Other') : editCategory,
       stat_category: QUEST_CATEGORIES.find(c => c.id === editCategory)?.stat_category || 'discipline',
-      xp_per_completion: editXp
+      xp_per_completion: editXp,
+      frequency: editFrequency,
+      frequency_days: editFrequency === 'specific' ? editFrequencyDays : (editFrequency === 'weekdays' ? [1,2,3,4,5] : [0,1,2,3,4,5,6])
     })
     setEditingHabit(null)
   }
@@ -203,6 +212,8 @@ export default function DailyOps() {
       setEditCustomCategory('')
     }
     setEditXp(h.xp_per_completion || 25)
+    setEditFrequency(h.frequency || 'daily')
+    setEditFrequencyDays(h.frequency_days || [0,1,2,3,4,5,6])
   }
 
   if (error) {
@@ -672,6 +683,28 @@ export default function DailyOps() {
                         <label className="font-mono text-xs text-muted mb-1 block">XP PER DAY</label>
                         <input type="number" className="input font-mono" value={newXp} onChange={e => setNewXp(e.target.value)} min="1" max="100" />
                       </div>
+                    </div>
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">FREQUENCY</label>
+                      <select className="select font-mono w-full" value={newFrequency} onChange={e => setNewFrequency(e.target.value)}>
+                        <option value="daily">EVERYDAY</option>
+                        <option value="weekdays">WEEKDAYS ONLY (MON-FRI)</option>
+                        <option value="specific">SPECIFIC DAYS</option>
+                      </select>
+                      {newFrequency === 'specific' && (
+                        <div className="flex gap-2 mt-2">
+                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setNewFrequencyDays(prev => prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i].sort())}
+                              className={`w-8 h-8 rounded border font-mono text-xs flex items-center justify-center transition-colors ${newFrequencyDays.includes(i) ? 'bg-amber/20 border-amber text-amber' : 'bg-tertiary border-border-color text-muted'}`}
+                            >
+                              {day}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2 mt-2">
                       <button type="submit" className="btn btn-primary flex-1">DEPLOY</button>

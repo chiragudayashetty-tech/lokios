@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle } from 'lucide-react'
 
 export default function Operations() {
-  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation, undoFailOperation } = useOS()
+  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation, undoFailOperation, goals: { goals } } = useOS()
 
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)
@@ -18,7 +18,7 @@ export default function Operations() {
   const [editForm, setEditForm] = useState({})
 
   // Deploy form
-  const [deployForm, setDeployForm] = useState({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '', due_date: getLocalDateStr() })
+  const [deployForm, setDeployForm] = useState({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '', due_date: getLocalDateStr(), goal_id: '' })
 
   // Proof state
   const [proofTask, setProofTask] = useState(null)
@@ -58,6 +58,7 @@ export default function Operations() {
       recurrence_days: deployForm.recurrence_type === 'daily' 
         ? [0, 1, 2, 3, 4, 5, 6] 
         : (deployForm.recurrence_type === 'weekly' ? [new Date().getDay()] : null),
+      goal_id: deployForm.goal_id || null,
     })
 
     if (result && result.error) {
@@ -464,11 +465,21 @@ export default function Operations() {
                       </div>
                     </div>
                     {deployForm.category === 'other' && (
-                      <div className="mt-3">
+                      <div className="mt-3 mb-3">
                         <label className="font-mono text-xs text-muted mb-1 block">CUSTOM CATEGORY</label>
                         <input type="text" className="input font-mono text-sm py-1" placeholder="e.g. Finance, Family" value={deployForm.customCategory} onChange={e=>setDeployForm({...deployForm, customCategory: e.target.value})} />
                       </div>
                     )}
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">LINK TO MISSION (OPTIONAL)</label>
+                      <select className="select font-mono text-sm py-1 w-full" value={deployForm.goal_id} onChange={e=>setDeployForm({...deployForm, goal_id: e.target.value})}>
+                        <option value="">NO MISSION LINKED</option>
+                        {goals?.filter(g => g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed').map(goal => (
+                          <option key={goal.id} value={goal.id}>{goal.title.toUpperCase()}</option>
+                        ))}
+                      </select>
+                    </div>
+
                     <div>
                       <label className="font-mono text-xs text-muted mb-1 block">RECURRENCE</label>
                       <select className="select font-mono" value={deployForm.recurrence_type}

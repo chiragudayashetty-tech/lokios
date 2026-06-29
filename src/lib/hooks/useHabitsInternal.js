@@ -385,6 +385,12 @@ export function useHabitsInternal() {
         for (let d = new Date(startDate); ; d.setDate(d.getDate() + 1)) {
           const dateStr = getLocalDateStr(d)
           if (dateStr >= todayStr) break // NEVER auto-fail today or future dates!
+          
+          const dayOfWeek = d.getDay()
+          const freqDays = h.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+          
+          // Skip auto-fail if today is not a scheduled day for this habit
+          if (!freqDays.includes(dayOfWeek)) continue;
 
           if (!logMap.has(`${h.id}_${dateStr}`)) {
             const procKey = `${h.id}_${dateStr}_autofail`

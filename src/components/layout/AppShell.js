@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/goals', icon: Target, label: 'Missions' },
   { href: '/tasks', icon: CheckSquare, label: 'Operations' },
   { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
+  { href: '/journal', icon: BookOpen, label: 'Daily Journal' },
   { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },
   { href: '/calendar', icon: CalendarDays, label: 'Calendar' },
   { href: '/weekly-review', icon: ClipboardList, label: 'Weekly Review' },
@@ -28,7 +29,7 @@ const NAV_ITEMS = [
 
 export default function AppShell({ children }) {
   const pathname = usePathname()
-  const { auth, profile: { profile } } = useOS()
+  const { auth, profile: { profile }, tasks: { todayTasks }, habits: { habits, todayLogs } } = useOS()
   const { user } = auth
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -40,6 +41,60 @@ export default function AppShell({ children }) {
     window.addEventListener('keydown', handleEsc)
     return () => window.removeEventListener('keydown', handleEsc)
   }, [])
+
+  // NOTIFICATION MANAGER
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return
+
+    const requestPerms = async () => {
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission()
+      }
+    }
+    requestPerms()
+
+    const checkAlarms = () => {
+      if (Notification.permission !== 'granted') return
+      
+      const now = new Date()
+      const hours = now.getHours()
+      const minutes = now.getMinutes()
+      const dateStr = now.toDateString()
+
+      // 9:00 AM Morning Briefing
+      if (hours === 9 && minutes === 0) {
+        const key = `notif_morning_${dateStr}`
+        if (!localStorage.getItem(key)) {
+          const dueTasks = todayTasks?.length || 0
+          new Notification('Morning Briefing', {
+            body: `Operator, you have ${dueTasks} Operations and ${habits?.length || 0} Daily Routines to secure today.`,
+            icon: '/icons/icon-192x192.png'
+          })
+          localStorage.setItem(key, 'true')
+        }
+      }
+
+      // 8:00 PM Evening Warning
+      if (hours === 20 && minutes === 0) {
+        const key = `notif_evening_${dateStr}`
+        if (!localStorage.getItem(key)) {
+          const incompleteHabits = (habits?.length || 0) - (todayLogs?.filter(l => l.status === 'completed')?.length || 0)
+          if (incompleteHabits > 0) {
+            new Notification('Evening Warning', {
+              body: `Midnight approaches. You still have ${incompleteHabits} routines unmarked. Secure them to protect your XP.`,
+              icon: '/icons/icon-192x192.png'
+            })
+          }
+          localStorage.setItem(key, 'true')
+        }
+      }
+    }
+
+    const interval = setInterval(checkAlarms, 60000) // Check every minute
+    checkAlarms() // Check immediately on mount
+
+    return () => clearInterval(interval)
+  }, [todayTasks, habits, todayLogs])
 
   if (!user) return null
 
