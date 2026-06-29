@@ -11,6 +11,7 @@ import {
   Menu, X, Shield, Trophy, RefreshCw, Timer, LogOut, ClipboardList
 } from 'lucide-react'
 import MiniFocusTimer from '@/components/ui/MiniFocusTimer'
+import AIAssistant from '@/components/AIAssistant'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Command Center' },
@@ -169,6 +170,8 @@ export default function AppShell({ children }) {
                 <span className="font-display tracking-wider uppercase text-sm">Sign Out</span>
               </button>
 
+              <AIAssistant />
+
               <div className="flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
                 <div className="flex items-center gap-3">
                   <Shield size={24} color="var(--accent-primary)" />
@@ -222,6 +225,7 @@ export default function AppShell({ children }) {
               <span className="font-mono text-sm text-primary font-bold">LV.{profile?.level || 1}</span>
             </div>
           </div>
+          <AIAssistant />
           <button 
             onClick={() => {
               if (confirm('Are you sure you want to sign out?')) {
