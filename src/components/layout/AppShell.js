@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy, RefreshCw
+  Menu, X, Shield, Trophy, RefreshCw, Timer, LogOut
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -21,12 +21,14 @@ const NAV_ITEMS = [
   { href: '/calendar', icon: CalendarDays, label: 'Calendar' },
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
   { href: '/xp', icon: Trophy, label: 'XP Metrics' },
+  { href: '/focus', icon: Timer, label: 'Focus Mode' },
   { href: '/profile', icon: User, label: 'Operator Profile' }
 ]
 
 export default function AppShell({ children }) {
   const pathname = usePathname()
-  const { auth: { user }, profile: { profile } } = useOS()
+  const { auth, profile: { profile } } = useOS()
+  const { user } = auth
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Close mobile menu on Escape key
@@ -98,6 +100,18 @@ export default function AppShell({ children }) {
                 <span className="font-display tracking-wider uppercase text-sm">Force Sync / Reload</span>
               </button>
 
+              <button 
+                onClick={() => {
+                  if (confirm('Are you sure you want to sign out?')) {
+                    auth.signOut()
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-3 p-4 bg-tertiary border border-danger rounded-xl text-danger active:scale-95 transition-transform"
+              >
+                <LogOut size={20} />
+                <span className="font-display tracking-wider uppercase text-sm">Sign Out</span>
+              </button>
+
               <div className="flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
                 <div className="flex items-center gap-3">
                   <Shield size={24} color="var(--accent-primary)" />
@@ -151,6 +165,17 @@ export default function AppShell({ children }) {
               <span className="font-mono text-sm text-primary font-bold">LV.{profile?.level || 1}</span>
             </div>
           </div>
+          <button 
+            onClick={() => {
+              if (confirm('Are you sure you want to sign out?')) {
+                auth.signOut()
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 mt-3 p-2 rounded text-muted hover:text-danger hover:bg-danger-subtle transition-colors font-mono text-xs uppercase tracking-wider"
+          >
+            <LogOut size={14} />
+            Sign Out
+          </button>
         </div>
       </aside>
 
