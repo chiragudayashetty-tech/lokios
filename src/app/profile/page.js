@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useHabits } from '@/lib/hooks/useHabits'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, Search, Calendar, Flame, Lock, Unlock, Play, Pause, AlertTriangle, ChevronRight, X, Edit2, Trash2, Plus, Smartphone, Settings, BarChart2, Briefcase, Heart, BookOpen, User as UserIcon, LogOut, Sun, Moon, Cpu, Coffee, Activity, ArrowRight, ShieldAlert, Navigation, Layers, Link as LinkIcon, Database, ArrowUpCircle, Eye, Skull, Rocket, Sparkles, Dumbbell } from 'lucide-react'
+import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, Search, Calendar, Flame, Lock, Unlock, Play, Pause, AlertTriangle, ChevronRight, X, Edit2, Trash2, Plus, Smartphone, Settings, BarChart2, Briefcase, Heart, BookOpen, User as UserIcon, LogOut, Sun, Moon, Cpu, Coffee, Activity, ArrowRight, ShieldAlert, Navigation, Layers, Link as LinkIcon, Database, ArrowUpCircle, Eye, Skull, Rocket, Sparkles, Dumbbell, Swords } from 'lucide-react'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 
 // ── DEFAULT BLUEPRINT DATA ──
