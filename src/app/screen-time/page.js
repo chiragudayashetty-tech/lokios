@@ -75,10 +75,25 @@ export default function ScreenIntel() {
       notes
     }
 
-    const { data: upsertData, error: upsertError } = await supabase.from('screen_time_logs').upsert(payload, { onConflict: 'user_id,date' }).select()
-    if (upsertError) {
-      console.error("Supabase upsert error:", upsertError)
-      alert("Failed to save screen time: " + upsertError.message)
+    // Manual check and insert/update instead of upsert
+    const { data: existing } = await supabase.from('screen_time_logs')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('date', date)
+      .single()
+
+    let saveError;
+    if (existing) {
+      const { error } = await supabase.from('screen_time_logs').update(payload).eq('id', existing.id)
+      saveError = error
+    } else {
+      const { error } = await supabase.from('screen_time_logs').insert(payload)
+      saveError = error
+    }
+
+    if (saveError) {
+      console.error("Supabase save error:", saveError)
+      alert("Failed to save screen time: " + saveError.message)
       return
     }
 
