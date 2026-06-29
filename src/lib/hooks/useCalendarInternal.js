@@ -2,12 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/hooks/useAuth'
 
-export function useCalendarInternal(year = new Date().getFullYear(), month = new Date().getMonth()) {
+export function useCalendarInternal(user, year = new Date().getFullYear(), month = new Date().getMonth()) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
   const supabase = createClient()
 
   const fetchEvents = useCallback(async () => {

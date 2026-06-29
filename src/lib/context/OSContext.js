@@ -20,17 +20,17 @@ const OSContext = createContext(null)
 export function OSProvider({ children }) {
   const auth = useAuth()
   
-  // Initialize all subsystems exactly once at the root level
-  const habits = useHabitsInternal()
-  const tasks = useTasksInternal()
-  const goals = useGoalsInternal()
-  const xp = useXPInternal()
-  const brainDump = useBrainDumpInternal()
-  const journal = useJournalInternal()
-  const profile = useProfileInternal()
-  const calendar = useCalendarInternal()
-  const characterStats = useCharacterStatsInternal()
-  const userConfig = useUserConfigInternal()
+  // Initialize all subsystems exactly once at the root level, passing down the single shared auth.user
+  const habits = useHabitsInternal(auth.user)
+  const tasks = useTasksInternal(auth.user)
+  const goals = useGoalsInternal(auth.user)
+  const xp = useXPInternal(auth.user)
+  const brainDump = useBrainDumpInternal(auth.user)
+  const journal = useJournalInternal(auth.user)
+  const profile = useProfileInternal(auth.user)
+  const calendar = useCalendarInternal(auth.user)
+  const characterStats = useCharacterStatsInternal(auth.user)
+  const userConfig = useUserConfigInternal(auth.user)
   const focus = useFocusInternal(auth.user, true)
 
   const [booting, setBooting] = useState(true)

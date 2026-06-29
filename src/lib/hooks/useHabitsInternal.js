@@ -2,13 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { XP_REWARDS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateAndUpdateStreak } from '@/lib/utils/streakCalc'
 
-export function useHabitsInternal() {
+export function useHabitsInternal(user) {
   const [habits, setHabits] = useState([])
   const [monthLogs, setMonthLogs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -16,7 +14,6 @@ export function useHabitsInternal() {
   const [initialized, setInitialized] = useState(false)
   const processingRef = useRef(new Set())
   const autoFailRanRef = useRef(false)
-  const { user } = useAuth()
   const supabase = createClient()
 
   const todayStr = getLocalDateStr()
@@ -137,9 +134,9 @@ export function useHabitsInternal() {
       // 1. XP Adjustments: Remove any XP given from the previous state for today
       if (existingLog && targetDate === currentTodayStr) {
         if (existingLog.status === 'failed') {
-          await robustRemoveXP(user.id, 'habit_failed', habitId, targetDate)
+          await robustRemoveXP(user.id, 'habit_failed', existingLog.id)
         } else if (!existingLog.status || existingLog.status === 'completed') {
-          await robustRemoveXP(user.id, 'habit_complete', habitId, targetDate)
+          await robustRemoveXP(user.id, 'habit_complete', existingLog.id)
         }
       }
 
@@ -180,12 +177,12 @@ export function useHabitsInternal() {
         setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
 
         // Award New XP
-        if (targetDate === currentTodayStr) {
+        if (targetDate === currentTodayStr && newLog) {
           const habit = habits.find((h) => h.id === habitId)
           if (nextStatus === 'completed') {
-            await robustAwardXP(user.id, habit?.xp_per_completion || 25, 'habit_complete', habitId, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
+            await robustAwardXP(user.id, habit?.xp_per_completion || 25, 'habit_complete', newLog.id, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
           } else if (nextStatus === 'failed') {
-            await robustAwardXP(user.id, -15, 'habit_failed', habitId, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
+            await robustAwardXP(user.id, -15, 'habit_failed', newLog.id, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
           }
         }
       }
@@ -219,9 +216,9 @@ export function useHabitsInternal() {
         }
 
         // ── STREAK MILESTONE REWARDS ──
-        const { data: profileData } = await supabase.from('profiles').select('current_streak').eq('id', user.id).single()
-        if (profileData?.current_streak) {
-          const streak = profileData.current_streak
+        const { data: profileData } = await supabase.from('profiles').select('streak_days').eq('id', user.id).single()
+        if (profileData?.streak_days) {
+          const streak = profileData.streak_days
           const milestones = [
             { days: 7, xp: XP_REWARDS.streak_7_days || 50, label: '🔥 7-Day Streak!' },
             { days: 30, xp: XP_REWARDS.streak_30_days || 200, label: '🔥🔥 30-Day Streak!' },

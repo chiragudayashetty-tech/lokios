@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from './useAuth'
 
 const DEFAULT_CONFIG = {
   current_mission: '',
@@ -25,8 +24,7 @@ const DEFAULT_CONFIG = {
   battles: []
 }
 
-export function useUserConfigInternal() {
-  const { user } = useAuth()
+export function useUserConfigInternal(user) {
   const [config, setConfig] = useState(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(true)
 

@@ -2,12 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/hooks/useAuth'
 
-export function useProfileInternal() {
+export function useProfileInternal(user) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
   const supabase = createClient()
 
   const fetchProfile = useCallback(async () => {

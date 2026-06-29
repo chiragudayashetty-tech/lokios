@@ -2,11 +2,9 @@
 
 import { useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/hooks/useAuth'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 
-export function useXPInternal() {
-  const { user } = useAuth()
+export function useXPInternal(user) {
   const supabase = createClient()
 
   const awardXP = useCallback(async (amount, sourceType, sourceId, description, statCategory = 'discipline') => {

@@ -2,14 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { XP_REWARDS } from '@/lib/constants'
 
-export function useBrainDumpInternal() {
+export function useBrainDumpInternal(user) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
   const supabase = createClient()
 
   const fetchItems = useCallback(async () => {

@@ -2,15 +2,13 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { XP_REWARDS } from '@/lib/constants'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 
-export function useJournalInternal() {
+export function useJournalInternal(user) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
   const supabase = createClient()
 
   const fetchEntries = useCallback(async () => {

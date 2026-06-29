@@ -2,16 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/hooks/useAuth'
 import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
 
-export function useTasksInternal() {
+export function useTasksInternal(user) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { user } = useAuth()
   const supabase = createClient()
 
   const fetchTasks = useCallback(async () => {

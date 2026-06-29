@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from './useAuth'
 
-export function useCharacterStatsInternal() {
-  const { user } = useAuth()
+export function useCharacterStatsInternal(user) {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
