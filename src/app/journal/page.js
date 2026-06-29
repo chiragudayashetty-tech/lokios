@@ -108,7 +108,7 @@ export default function JournalPage() {
                   <label className="font-mono text-xs text-muted uppercase tracking-widest mb-3 flex-between">
                     <span>Reflection Log</span>
                     <span className={content.length >= 100 ? 'text-success' : 'text-danger'}>
-                      {content.length}/100 chars for Full XP
+                      Min 100 chars for +30 XP bonus (Current: {content.length})
                     </span>
                   </label>
                   <textarea

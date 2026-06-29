@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { XP_REWARDS } from '@/lib/constants'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
 
 export function useJournalInternal() {
   const [entries, setEntries] = useState([])
@@ -85,19 +86,19 @@ export function useJournalInternal() {
         const isFull = data.content && data.content.length >= 100 && data.mood
         const xpAmount = isFull ? XP_REWARDS.journal_full : XP_REWARDS.journal_partial
 
-        await supabase.rpc('award_xp', {
-          p_user_id: user.id,
-          p_amount: xpAmount,
-          p_source_type: 'journal_entry',
-          p_source_id: result.id,
-          p_description: `Journal entry for ${entryDate}`,
-          p_stat_category: 'discipline',
-        })
+        try {
+          await robustAwardXP(user.id, xpAmount, 'journal_entry', result.id, `Journal entry for ${entryDate}`, 'discipline')
+        } catch (xpErr) {
+          console.error("XP Award Failed for journal:", xpErr)
+        }
       }
 
       return result
     } catch (error) {
       console.error('Error saving journal entry:', error)
+      if (typeof window !== 'undefined') {
+        alert(`SYSTEM ERROR SAVING JOURNAL: ${error.message || JSON.stringify(error)}`)
+      }
       return null
     }
   }, [user, entries])
