@@ -32,6 +32,10 @@ export default function DailyOps() {
 
   // Edit State
   const [editingHabit, setEditingHabit] = useState(null)
+  // Drag states
+  const [addFormDrag, setAddFormDrag] = useState({ x: 0, y: 0 })
+  const [editFormDrag, setEditFormDrag] = useState({ x: 0, y: 0 })
+
   const [editTitle, setEditTitle] = useState('')
   const [editCategory, setEditCategory] = useState('')
   const [editCustomCategory, setEditCustomCategory] = useState('')
@@ -350,7 +354,7 @@ export default function DailyOps() {
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
             <thead>
               <tr>
-                <th className="sticky z-20 col-habit" style={{ left: 0, background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
+                <th className="sticky z-20 col-habit" style={{ left: 0, background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)', resize: 'horizontal', overflow: 'hidden', minWidth: '200px', width: '250px', maxWidth: '500px' }}>
                   <div className="w-full" style={{ padding: '10px 16px', textAlign: 'left' }}>
                     <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
                   </div>
@@ -422,8 +426,14 @@ export default function DailyOps() {
                           <div className="font-mono text-[10px] md:text-xs text-primary transition-colors hover:text-amber" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {habit.title}
                           </div>
-                          <div className="font-mono text-[8px] md:text-[9px] text-muted uppercase hidden md:block" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
-                            {cat.name}
+                          <div className="font-mono text-[8px] md:text-[9px] text-muted uppercase hidden md:flex items-center gap-2 mt-[2px]">
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
+                            <span className="opacity-50">|</span>
+                            <div className="flex gap-[3px]">
+                              {['S','M','T','W','T','F','S'].map((day, i) => (
+                                <span key={i} className={(habit.frequency_days || [0,1,2,3,4,5,6]).includes(i) ? 'text-info font-bold' : 'opacity-30'}>{day}</span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                         
@@ -653,8 +663,18 @@ export default function DailyOps() {
         <AnimatePresence>
           {showAddForm && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div drag dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} dragElastic={0} dragMomentum={false} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
-                <HudPanel className="modal-content bottom-sheet-content" style={{ width: '420px', maxWidth: '100%' }}>
+              <motion.div 
+                drag 
+                dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} 
+                dragElastic={0} 
+                dragMomentum={false} 
+                initial={{ opacity: 0, y: 50, x: addFormDrag.x }} 
+                animate={{ opacity: 1, y: addFormDrag.y, x: addFormDrag.x }} 
+                exit={{ opacity: 0, y: 50 }} 
+                onDragEnd={(e, info) => setAddFormDrag({ x: addFormDrag.x + info.offset.x, y: addFormDrag.y + info.offset.y })}
+                className="w-full sm:w-auto"
+              >
+                <HudPanel className="modal-content bottom-sheet-content border-info cursor-move" style={{ width: '480px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber">Add Routine</span>
                     <button onClick={() => setShowAddForm(false)} className="text-muted hover:text-danger"><X size={18} /></button>
@@ -721,11 +741,16 @@ export default function DailyOps() {
       <AnimatePresence>
         {editingHabit && (
           <div className="modal-overlay bottom-sheet-mobile">
-            <motion.div drag dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} dragElastic={0} dragMomentum={false}
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
+            <motion.div 
+              drag 
+              dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} 
+              dragElastic={0} 
+              dragMomentum={false}
+              initial={{ opacity: 0, y: 50, x: editFormDrag.x }}
+              animate={{ opacity: 1, y: editFormDrag.y, x: editFormDrag.x }}
               exit={{ opacity: 0, y: 50 }}
-              className="modal-content bottom-sheet-content w-full sm:max-w-[420px]"
+              onDragEnd={(e, info) => setEditFormDrag({ x: editFormDrag.x + info.offset.x, y: editFormDrag.y + info.offset.y })}
+              className="modal-content bottom-sheet-content w-full sm:max-w-[420px] cursor-move"
             >
               <div className="modal-header">
                 <h3 className="font-display text-lg text-primary tracking-widest">EDIT ROUTINE</h3>

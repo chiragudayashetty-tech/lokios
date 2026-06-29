@@ -24,6 +24,10 @@ export default function Operations() {
   const [proofTask, setProofTask] = useState(null)
   const [proofUrl, setProofUrl] = useState('')
 
+  // Drag states
+  const [deployDrag, setDeployDrag] = useState({ x: 0, y: 0 })
+  const [proofDrag, setProofDrag] = useState({ x: 0, y: 0 })
+
   const [isMobile, setIsMobile] = useState(false)
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', danger: false, onConfirm: null, onCancel: null, confirmText: 'CONFIRM' })
   useEffect(() => {
@@ -148,7 +152,9 @@ export default function Operations() {
   }
 
   const saveEdit = async (id) => {
-    await editTask(id, editForm)
+    const payload = { ...editForm }
+    if (payload.due_date === '') payload.due_date = null
+    await editTask(id, payload)
     setEditingId(null)
   }
 
@@ -421,7 +427,17 @@ export default function Operations() {
         <AnimatePresence>
           {showDeploy && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div drag dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} dragElastic={0} dragMomentum={false} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+              <motion.div 
+                drag 
+                dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} 
+                dragElastic={0} 
+                dragMomentum={false} 
+                initial={{ opacity: 0, y: 50, x: deployDrag.x }} 
+                animate={{ opacity: 1, y: deployDrag.y, x: deployDrag.x }} 
+                exit={{ opacity: 0, y: 50 }} 
+                onDragEnd={(e, info) => setDeployDrag({ x: deployDrag.x + info.offset.x, y: deployDrag.y + info.offset.y })}
+                className="w-full sm:w-auto"
+              >
                 <HudPanel className="modal-content bottom-sheet-content border-amber cursor-move" style={{ width: '520px', maxWidth: '100%' }}>
                   <div className="flex-between mb-5 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber tracking-widest">DEPLOY OPERATION</span>
@@ -504,7 +520,17 @@ export default function Operations() {
         <AnimatePresence>
           {proofTask && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div drag dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} dragElastic={0} dragMomentum={false} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+              <motion.div 
+                drag 
+                dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} 
+                dragElastic={0} 
+                dragMomentum={false} 
+                initial={{ opacity: 0, y: 50, x: proofDrag.x }} 
+                animate={{ opacity: 1, y: proofDrag.y, x: proofDrag.x }} 
+                exit={{ opacity: 0, y: 50 }} 
+                onDragEnd={(e, info) => setProofDrag({ x: proofDrag.x + info.offset.x, y: proofDrag.y + info.offset.y })}
+                className="w-full sm:w-auto"
+              >
                 <HudPanel className="modal-content bottom-sheet-content border-success cursor-move" style={{ width: '440px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-success tracking-widest">OPERATION COMPLETE</span>
