@@ -81,8 +81,8 @@ export function OSProvider({ children }) {
           const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
           await goals.updateProgress(goal.id, newProgress)
 
-          // 3. Automate Mission Completion if 100%
-          if (newProgress >= 100) {
+          // 3. Automate Mission Completion if 100% (BUT NOT FOR LONG-TERM/MAIN QUESTS)
+          if (newProgress >= 100 && goal.type !== 'long_term' && goal.type !== 'main_quest') {
             // Pass skipXp = wasAlreadyCompleted to avoid re-awarding goal XP if task was already completed and this is just a re-submission/proof update.
             await goals.completeGoal(goal.id, proofUrl, wasAlreadyCompleted)
             
