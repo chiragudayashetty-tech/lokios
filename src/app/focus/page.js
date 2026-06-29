@@ -1,138 +1,422 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import AppShell from '@/components/layout/AppShell'
-import HudPanel from '@/components/ui/HudPanel'
-import { motion } from 'framer-motion'
-import { Play, Pause, Square, Clock, Target, CheckCircle, X } from 'lucide-react'
-import { useUserConfig } from '@/lib/hooks/useUserConfig'
-import Link from 'next/link'
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Play, Pause, Square, CheckCircle, X, ChevronDown, Timer, Zap, AlertTriangle, RotateCcw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
-import { XP_REWARDS } from '@/lib/constants'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
+
+const PRESETS = [
+  { label: '15 MIN', mins: 15 },
+  { label: '25 MIN', mins: 25 },
+  { label: '45 MIN', mins: 45 },
+  { label: '60 MIN', mins: 60 },
+  { label: 'CUSTOM', mins: null },
+]
+
+const CATEGORIES = [
+  { id: 'beyond_tatva', label: 'Beyond Tatva', color: '#d4a843', stat: 'founder' },
+  { id: 'learning', label: 'Learning', color: '#3498db', stat: 'learning' },
+  { id: 'fitness', label: 'Fitness', color: '#2ecc71', stat: 'strength' },
+  { id: 'personal', label: 'Personal', color: '#9b59b6', stat: 'discipline' },
+  { id: 'communication', label: 'Communication', color: '#e67e22', stat: 'communication' },
+  { id: 'creation', label: 'Creation', color: '#e74c3c', stat: 'creation' },
+]
 
 export default function FocusMode() {
-  const { auth: { user }, xp: { awardXP } } = useOS()
-  const { config } = useUserConfig()
+  const { auth: { user } } = useOS()
   const router = useRouter()
+
+  // ── Setup State (before session) ──
+  const [phase, setPhase] = useState('setup') // 'setup' | 'running' | 'done'
+  const [selectedPreset, setSelectedPreset] = useState(1) // index into PRESETS (25 min default)
+  const [customMins, setCustomMins] = useState(30)
+  const [taskName, setTaskName] = useState('')
+  const [category, setCategory] = useState(CATEGORIES[0])
   const [saving, setSaving] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(25 * 60) // 25 mins in seconds
+
+  // ── Timer State ──
+  const [totalSeconds, setTotalSeconds] = useState(25 * 60)
+  const [timeLeft, setTimeLeft] = useState(25 * 60)
   const [isActive, setIsActive] = useState(false)
-  const [taskName, setTaskName] = useState('FOCUS SESSION')
-  const [totalTime] = useState(25 * 60)
+  const intervalRef = useRef(null)
 
-  useEffect(() => {
-    // Get task name from URL query if present
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('task')) setTaskName(params.get('task'))
-  }, [])
+  // ── Session Result ──
+  const [sessionXp, setSessionXp] = useState(0)
+  const [aborted, setAborted] = useState(false)
 
+  // Sync timer when preset changes (only in setup phase)
   useEffect(() => {
-    let interval = null
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft(time => time - 1)
-      }, 1000)
-    } else if (timeLeft === 0) {
-      setIsActive(false)
-      // Play sound or notification here
+    if (phase !== 'setup') return
+    const preset = PRESETS[selectedPreset]
+    if (preset.mins !== null) {
+      const secs = preset.mins * 60
+      setTotalSeconds(secs)
+      setTimeLeft(secs)
+    } else {
+      const secs = Math.max(1, Math.min(180, customMins)) * 60
+      setTotalSeconds(secs)
+      setTimeLeft(secs)
     }
-    return () => clearInterval(interval)
+  }, [selectedPreset, customMins, phase])
+
+  // Tick
+  useEffect(() => {
+    if (isActive && timeLeft > 0) {
+      intervalRef.current = setInterval(() => setTimeLeft(t => t - 1), 1000)
+    } else {
+      clearInterval(intervalRef.current)
+    }
+    if (timeLeft === 0 && isActive) {
+      setIsActive(false)
+      handleComplete(false) // Timer ran out naturally — full completion
+    }
+    return () => clearInterval(intervalRef.current)
   }, [isActive, timeLeft])
 
-  const toggleTimer = () => setIsActive(!isActive)
-  const resetTimer = () => { setIsActive(false); setTimeLeft(totalTime) }
-  const completeTask = async () => {
+  // ── Read task from URL ──
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('task')) setTaskName(params.get('task').toUpperCase())
+    if (params.get('cat')) {
+      const found = CATEGORIES.find(c => c.id === params.get('cat'))
+      if (found) setCategory(found)
+    }
+  }, [])
+
+  // ── Start Session ──
+  const startSession = () => {
+    setPhase('running')
+    setIsActive(true)
+  }
+
+  // ── Complete Session (called when timer hits 0 OR user clicks "Complete") ──
+  const handleComplete = async (earlyComplete = false) => {
     if (saving || !user) return
     setSaving(true)
+    setIsActive(false)
+    clearInterval(intervalRef.current)
+
     try {
-      const durationHours = (totalTime - timeLeft) / 3600
-      if (durationHours > 0) {
-        const supabase = createClient()
-        const payload = {
+      const elapsed = totalSeconds - timeLeft // seconds actually worked
+      const elapsedMins = Math.floor(elapsed / 60)
+      const durationHours = elapsed / 3600
+
+      // XP rule: +10 XP base per session, +1 XP per every 5 minutes of focus (min 10)
+      const xpEarned = Math.max(10, 10 + Math.floor(elapsedMins / 5))
+
+      const supabase = createClient()
+      if (elapsed > 60) { // Only log if at least 1 minute worked
+        await supabase.from('work_logs').insert([{
           user_id: user.id,
-          title: taskName,
+          title: taskName || 'FOCUS SESSION',
           type: 'project_work',
-          description: 'Deep Focus Session',
+          description: `Deep Focus: ${category.label} — ${elapsedMins} min`,
           date: getLocalDateStr(),
           duration: durationHours.toFixed(2),
           duration_unit: 'hours',
-        }
-        await supabase.from('work_logs').insert([payload])
-        await awardXP(Math.round(XP_REWARDS.FOCUS_HOUR * durationHours), 'focus', getLocalDateStr(), 'Deep Focus Completed', 'discipline')
+        }])
+        await robustAwardXP(user.id, xpEarned, 'focus_complete', getLocalDateStr(), `🎯 Focus session: ${taskName || category.label} (${elapsedMins} min)`, category.stat)
+        setSessionXp(xpEarned)
       }
-      router.push('/dashboard')
+      setAborted(false)
+      setPhase('done')
     } catch (err) {
       console.error('Focus save error:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Abort Session (early quit with penalty) ──
+  const handleAbort = async () => {
+    if (!confirm('Abort focus session? This will cost -5 XP for breaking concentration.')) return
+    setSaving(true)
+    setIsActive(false)
+    clearInterval(intervalRef.current)
+
+    try {
+      if (user) {
+        await robustAwardXP(user.id, -5, 'focus_abort', getLocalDateStr(), '❌ Focus session aborted early', 'discipline')
+      }
+      setAborted(true)
+      setPhase('done')
+    } catch (err) {
+      console.error('Abort error:', err)
+    } finally {
       setSaving(false)
     }
   }
 
   const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0')
   const secs = (timeLeft % 60).toString().padStart(2, '0')
-  const progressPct = ((totalTime - timeLeft) / totalTime) * 100
+  const progressPct = ((totalSeconds - timeLeft) / totalSeconds) * 100
+  const elapsedMins = Math.floor((totalSeconds - timeLeft) / 60)
+  const totalMins = Math.floor(totalSeconds / 60)
 
   return (
-    <div className="flex-center relative overflow-hidden" style={{ minHeight: '100vh', backgroundColor: 'transparent' }}>
-      {isActive && <div className="radar-pulse" style={{ position: 'absolute', inset: 0, opacity: 0.1, background: 'radial-gradient(circle, var(--accent-primary) 0%, transparent 70%)', animation: 'pulse 4s infinite', pointerEvents: 'none' }} />}
-      
-      <Link href="/dashboard" className="absolute btn btn-ghost text-muted z-20" style={{ top: 'max(1rem, env(safe-area-inset-top, 1rem))', left: 'max(0.5rem, env(safe-area-inset-left, 0.5rem))' }}>
-        <X size={20} /> <span className="hidden sm:inline ml-2">ABORT SESSION</span>
-      </Link>
+    <div className="flex-center relative overflow-hidden" style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      {/* Ambient pulse when running */}
+      <AnimatePresence>
+        {isActive && (
+          <motion.div
+            key="pulse"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.05, 0.12, 0.05] }}
+            transition={{ duration: 4, repeat: Infinity }}
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: `radial-gradient(circle at 50% 50%, ${category.color} 0%, transparent 70%)` }}
+          />
+        )}
+      </AnimatePresence>
 
-      <motion.div 
-        className="flex-col flex-center text-center z-10 w-full max-w-lg"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <span className="font-display text-amber uppercase tracking-widest text-sm mb-2 glow-amber">ISOLATION PROTOCOL ACTIVE</span>
-        <h1 className="font-display text-4xl text-primary uppercase tracking-wide mb-2 px-4">{taskName}</h1>
-        {config?.current_mission && (
-          <span className="badge badge-amber mb-12">MISSION: {config.current_mission}</span>
+      {/* ── SETUP PHASE ── */}
+      <AnimatePresence mode="wait">
+        {phase === 'setup' && (
+          <motion.div
+            key="setup"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="w-full max-w-lg px-4 flex flex-col gap-6"
+          >
+            <div className="text-center mb-2">
+              <span className="font-mono text-xs tracking-widest text-muted uppercase">Isolation Protocol</span>
+              <h1 className="font-display text-3xl uppercase tracking-widest text-primary mt-1">Configure Session</h1>
+            </div>
+
+            {/* Session Name */}
+            <div>
+              <label className="font-mono text-xs text-muted uppercase tracking-widest mb-2 block">Session Name (optional)</label>
+              <input
+                type="text"
+                value={taskName}
+                onChange={e => setTaskName(e.target.value.toUpperCase())}
+                placeholder="WHAT ARE YOU BUILDING?"
+                className="input w-full font-mono text-sm uppercase"
+              />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="font-mono text-xs text-muted uppercase tracking-widest mb-2 block">Category</label>
+              <div className="grid grid-cols-3 gap-2">
+                {CATEGORIES.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setCategory(cat)}
+                    className="p-2 text-center font-mono text-xs uppercase tracking-wider border rounded transition-all"
+                    style={{
+                      borderColor: category.id === cat.id ? cat.color : 'var(--border-color)',
+                      background: category.id === cat.id ? `${cat.color}18` : 'var(--bg-secondary)',
+                      color: category.id === cat.id ? cat.color : 'var(--text-muted)',
+                    }}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Duration Presets */}
+            <div>
+              <label className="font-mono text-xs text-muted uppercase tracking-widest mb-2 block">Duration</label>
+              <div className="flex gap-2 flex-wrap">
+                {PRESETS.map((p, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedPreset(i)}
+                    className="flex-1 min-w-[60px] p-2 font-mono text-xs uppercase border rounded transition-all"
+                    style={{
+                      borderColor: selectedPreset === i ? category.color : 'var(--border-color)',
+                      background: selectedPreset === i ? `${category.color}18` : 'var(--bg-secondary)',
+                      color: selectedPreset === i ? category.color : 'var(--text-muted)',
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              {PRESETS[selectedPreset].mins === null && (
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1} max={180}
+                    value={customMins}
+                    onChange={e => setCustomMins(Math.max(1, Math.min(180, Number(e.target.value))))}
+                    className="input w-24 font-mono text-sm text-center"
+                  />
+                  <span className="font-mono text-xs text-muted">MINUTES (max 180)</span>
+                </div>
+              )}
+            </div>
+
+            {/* XP Rules Summary */}
+            <div className="border border-border-color rounded p-3 bg-bg-secondary">
+              <span className="font-mono text-xs text-muted uppercase tracking-widest block mb-2">XP Rules</span>
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-xs" style={{ color: 'var(--text-success)' }}>+10 XP base per completed session</span>
+                <span className="font-mono text-xs" style={{ color: 'var(--text-success)' }}>+1 XP per 5 minutes of focus (bonus)</span>
+                <span className="font-mono text-xs text-danger">−5 XP for aborting early</span>
+              </div>
+            </div>
+
+            {/* Start Button */}
+            <button
+              onClick={startSession}
+              className="btn btn-primary btn-lg w-full tracking-widest font-display text-lg"
+              style={{ borderColor: category.color, color: category.color }}
+            >
+              <Play size={20} /> INITIATE SESSION
+            </button>
+
+            <button onClick={() => router.push('/dashboard')} className="btn btn-ghost text-muted text-sm mx-auto">
+              ← Back to Command Center
+            </button>
+          </motion.div>
         )}
 
-        {/* Circular Timer Display */}
-        <div className="relative flex-center mb-12" style={{ width: 'min(320px, 80vw)', height: 'min(320px, 80vw)' }}>
-          {/* Progress Ring */}
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 320" style={{ transform: 'rotate(-90deg)' }}>
-            <circle cx="160" cy="160" r="150" fill="none" stroke="var(--bg-tertiary)" strokeWidth="4" />
-            <motion.circle 
-              cx="160" cy="160" r="150" fill="none" 
-              stroke="var(--accent-primary)" strokeWidth="4"
-              strokeDasharray={2 * Math.PI * 150}
-              strokeDashoffset={2 * Math.PI * 150 * (1 - progressPct / 100)}
-              style={{ transition: 'stroke-dashoffset 1s linear' }}
-            />
-          </svg>
-          
-          <div className="flex-col flex-center">
-            <span className="font-mono text-amber glow-amber" style={{ fontSize: 'clamp(4rem, 16vw, 6rem)', lineHeight: 1 }}>{mins}:{secs}</span>
-            <span className="font-mono text-muted text-sm tracking-widest mt-2">{isActive ? 'ENGAGED' : 'STANDBY'}</span>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="flex flex-wrap justify-center items-center gap-4 mb-8 w-full px-4">
-          <button 
-            onClick={toggleTimer}
-            className={`btn ${isActive ? 'btn-secondary text-amber' : 'btn-primary'} btn-lg flex items-center justify-center gap-2 flex-1`}
-            style={{ minWidth: '160px', maxWidth: '240px' }}
+        {/* ── RUNNING PHASE ── */}
+        {phase === 'running' && (
+          <motion.div
+            key="running"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            className="flex flex-col items-center text-center z-10 w-full max-w-lg px-4"
           >
-            {isActive ? <><Pause size={20} /> SUSPEND</> : <><Play size={20} /> EXECUTE</>}
-          </button>
-          <button onClick={resetTimer} className="btn btn-ghost p-3 shrink-0" title="Reset">
-            <Square size={20} />
-          </button>
-        </div>
+            <span className="font-mono text-xs tracking-widest mb-2 uppercase" style={{ color: category.color }}>
+              {category.label} — ISOLATION PROTOCOL ACTIVE
+            </span>
+            <h1 className="font-display text-3xl text-primary uppercase tracking-wide mb-8 px-4">
+              {taskName || 'FOCUS SESSION'}
+            </h1>
 
-        <button onClick={completeTask} disabled={saving} className="btn btn-ghost text-success hover:text-success border border-success-subtle hover:bg-success-subtle w-full max-w-xs p-4 tracking-widest">
-          <CheckCircle size={18} className="mr-2" /> {saving ? 'SAVING LOG...' : 'OPERATION COMPLETE'}
-        </button>
+            {/* Circular Timer */}
+            <div className="relative flex-center mb-10" style={{ width: 'min(280px, 80vw)', height: 'min(280px, 80vw)' }}>
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 280 280" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="140" cy="140" r="130" fill="none" stroke="var(--bg-tertiary)" strokeWidth="6" />
+                <motion.circle
+                  cx="140" cy="140" r="130" fill="none"
+                  stroke={category.color} strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 130}
+                  strokeDashoffset={2 * Math.PI * 130 * (1 - progressPct / 100)}
+                  style={{ transition: 'stroke-dashoffset 1s linear' }}
+                />
+              </svg>
+              <div className="flex flex-col items-center">
+                <span className="font-mono glow-amber" style={{ fontSize: 'clamp(3.5rem, 14vw, 5.5rem)', lineHeight: 1, color: category.color }}>
+                  {mins}:{secs}
+                </span>
+                <span className="font-mono text-muted text-xs tracking-widest mt-2">
+                  {isActive ? 'ENGAGED' : 'SUSPENDED'}
+                </span>
+                <span className="font-mono text-xs mt-1" style={{ color: category.color, opacity: 0.7 }}>
+                  {elapsedMins}/{totalMins} min
+                </span>
+              </div>
+            </div>
 
-      </motion.div>
+            {/* Controls */}
+            <div className="flex items-center gap-4 mb-6">
+              <button
+                onClick={() => setIsActive(!isActive)}
+                className="btn btn-lg flex items-center gap-2"
+                style={{
+                  borderColor: category.color,
+                  color: category.color,
+                  background: `${category.color}15`,
+                  minWidth: '160px'
+                }}
+              >
+                {isActive ? <><Pause size={20} /> SUSPEND</> : <><Play size={20} /> RESUME</>}
+              </button>
+            </div>
+
+            {/* Complete + Abort */}
+            <div className="flex gap-3 w-full max-w-xs">
+              <button
+                onClick={() => handleComplete(true)}
+                disabled={saving}
+                className="btn flex-1 flex items-center justify-center gap-2 text-success border-success hover:bg-success-subtle"
+              >
+                <CheckCircle size={16} /> {saving ? 'SAVING...' : 'COMPLETE'}
+              </button>
+              <button
+                onClick={handleAbort}
+                disabled={saving}
+                className="btn btn-ghost flex items-center gap-2 text-danger border-danger-subtle hover:bg-danger-subtle"
+              >
+                <X size={16} /> ABORT
+              </button>
+            </div>
+
+            <span className="font-mono text-xs text-muted mt-4">Abort = −5 XP penalty</span>
+          </motion.div>
+        )}
+
+        {/* ── DONE PHASE ── */}
+        {phase === 'done' && (
+          <motion.div
+            key="done"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center text-center z-10 w-full max-w-md px-4 gap-6"
+          >
+            {aborted ? (
+              <>
+                <AlertTriangle size={56} className="text-danger" />
+                <h1 className="font-display text-3xl uppercase tracking-widest text-danger">Session Aborted</h1>
+                <p className="font-mono text-sm text-muted">Concentration broken. −5 XP penalty applied.</p>
+              </>
+            ) : (
+              <>
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', damping: 12 }}
+                >
+                  <CheckCircle size={72} style={{ color: category.color }} />
+                </motion.div>
+                <h1 className="font-display text-3xl uppercase tracking-widest" style={{ color: category.color }}>
+                  Operation Complete
+                </h1>
+                <div className="border rounded p-4 w-full" style={{ borderColor: category.color, background: `${category.color}10` }}>
+                  <div className="font-mono text-xs text-muted uppercase tracking-widest mb-2">Session Summary</div>
+                  <div className="font-display text-xl text-primary">{taskName || 'FOCUS SESSION'}</div>
+                  <div className="font-mono text-xs text-muted mt-1">{category.label} • {elapsedMins} minutes</div>
+                  <div className="mt-3 flex items-center justify-center gap-2">
+                    <Zap size={18} style={{ color: category.color }} />
+                    <span className="font-display text-2xl font-bold" style={{ color: category.color }}>
+                      +{sessionXp} XP
+                    </span>
+                    <span className="font-mono text-xs text-muted">EARNED</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => { setPhase('setup'); setTimeLeft(totalSeconds); setIsActive(false); setAborted(false) }}
+                className="btn btn-ghost flex-1 flex items-center justify-center gap-2"
+              >
+                <RotateCcw size={16} /> NEW SESSION
+              </button>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="btn btn-primary flex-1"
+              >
+                → COMMAND CENTER
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
