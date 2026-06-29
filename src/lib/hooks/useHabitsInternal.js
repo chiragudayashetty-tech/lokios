@@ -307,7 +307,8 @@ export function useHabitsInternal() {
       }
       
       const storedResetDate = localStorage.getItem('last_reset_date')
-      const RESET_DATE = storedResetDate ? new Date(storedResetDate) : new Date('2026-06-15T00:00:00Z')
+      // Default to June 29th, 2026 so users returning at the end of June aren't retroactively penalized for the whole month
+      const RESET_DATE = storedResetDate ? new Date(storedResetDate) : new Date('2026-06-29T00:00:00Z')
       const now = new Date()
       const yesterday = new Date(now)
       yesterday.setDate(yesterday.getDate() - 1)
