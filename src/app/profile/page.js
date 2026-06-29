@@ -242,7 +242,7 @@ export default function OperatorDashboard() {
           <div className="flex flex-col gap-6">
             <HudPanel glow className="border-info" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
               <div className="flex items-center gap-2 mb-4 text-info border-b border-border-color pb-2">
-                <User size={16} /> <span className="font-display text-lg uppercase tracking-widest">IDENTITY</span>
+                <UserIcon size={16} /> <span className="font-display text-lg uppercase tracking-widest">IDENTITY</span>
               </div>
               {editMode ? (
                 <textarea className="textarea h-32 font-mono text-xs" value={form.identity} onChange={e => setForm({...form, identity: e.target.value})} />
