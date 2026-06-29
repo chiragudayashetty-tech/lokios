@@ -19,12 +19,11 @@ export default function ConfirmModal({
       {isOpen && (
         <div className="modal-overlay bottom-sheet-mobile z-50">
           <motion.div 
-            drag={!isMobile} 
-            dragMomentum={false} 
-            initial={{ opacity: 0, y: 50 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            exit={{ opacity: 0, y: 50 }} 
-            className="w-full sm:w-auto"
+            drag dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} dragElastic={0} dragMomentum={false}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="w-full max-w-sm mx-auto"
           >
             <HudPanel className={`modal-content bottom-sheet-content cursor-move ${danger ? 'border-danger' : 'border-amber'}`} style={{ width: '400px', maxWidth: '100%' }}>
               <div className="flex-between mb-5 border-b border-border-color pb-3">

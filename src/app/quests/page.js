@@ -653,7 +653,7 @@ export default function DailyOps() {
         <AnimatePresence>
           {showAddForm && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+              <motion.div drag dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} dragElastic={0} dragMomentum={false} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
                 <HudPanel className="modal-content bottom-sheet-content" style={{ width: '420px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber">Add Routine</span>
@@ -721,7 +721,7 @@ export default function DailyOps() {
       <AnimatePresence>
         {editingHabit && (
           <div className="modal-overlay bottom-sheet-mobile">
-            <motion.div 
+            <motion.div drag dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} dragElastic={0} dragMomentum={false}
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
@@ -753,6 +753,28 @@ export default function DailyOps() {
                   <label className="font-mono text-xs text-muted mb-1 block">XP REWARD / PENALTY</label>
                   <input type="number" className="input" value={editXp} onChange={(e) => setEditXp(Number(e.target.value))} required min="5" max="100" step="5" />
                   <p className="font-mono text-[10px] text-muted mt-1">XP earned when complete. Penalty for failing is currently fixed at -15 XP.</p>
+                </div>
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">FREQUENCY</label>
+                  <select className="select font-mono w-full" value={editFrequency} onChange={e => setEditFrequency(e.target.value)}>
+                    <option value="daily">EVERYDAY</option>
+                    <option value="weekdays">WEEKDAYS ONLY (MON-FRI)</option>
+                    <option value="specific">SPECIFIC DAYS</option>
+                  </select>
+                  {editFrequency === 'specific' && (
+                    <div className="flex gap-2 mt-2">
+                      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setEditFrequencyDays(prev => prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i].sort())}
+                          className={`w-8 h-8 rounded border font-mono text-xs flex items-center justify-center transition-colors ${editFrequencyDays.includes(i) ? 'bg-amber/20 border-amber text-amber' : 'bg-tertiary border-border-color text-muted'}`}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-3 mt-2">
                   <div className="flex gap-3">

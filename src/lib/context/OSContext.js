@@ -13,6 +13,7 @@ import { useProfileInternal } from '@/lib/hooks/useProfileInternal'
 import { useCalendarInternal } from '@/lib/hooks/useCalendarInternal'
 import { useCharacterStatsInternal } from '@/lib/hooks/useCharacterStatsInternal'
 import { useUserConfigInternal } from '@/lib/hooks/useUserConfigInternal'
+import { useFocusInternal } from '@/lib/hooks/useFocusInternal'
 
 const OSContext = createContext(null)
 
@@ -30,6 +31,7 @@ export function OSProvider({ children }) {
   const calendar = useCalendarInternal()
   const characterStats = useCharacterStatsInternal()
   const userConfig = useUserConfigInternal()
+  const focus = useFocusInternal(auth.user, true)
 
   const [booting, setBooting] = useState(true)
 
@@ -48,6 +50,7 @@ export function OSProvider({ children }) {
     habits,
     tasks,
     goals,
+    focus,
     xp,
     brainDump,
     journal,

@@ -10,6 +10,7 @@ import {
   BookOpen, Briefcase, CalendarDays, Monitor, User,
   Menu, X, Shield, Trophy, RefreshCw, Timer, LogOut, ClipboardList
 } from 'lucide-react'
+import MiniFocusTimer from '@/components/ui/MiniFocusTimer'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Command Center' },
@@ -266,6 +267,7 @@ export default function AppShell({ children }) {
         </button>
       </nav>
 
+      <MiniFocusTimer />
     </div>
   )
 }
