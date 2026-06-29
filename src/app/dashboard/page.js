@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Crosshair, Target, Shield, Dumbbell, BookOpen, Clock, Activity, AlertTriangle, CheckSquare, Zap, Terminal, BatteryCharging, Swords, Smartphone, Moon, Brain, DollarSign, Repeat } from 'lucide-react'
+import { Crosshair, Target, Shield, Dumbbell, BookOpen, Clock, Activity, AlertTriangle, CheckSquare, Zap, Terminal, BatteryCharging, Swords, Smartphone, Moon, Brain, DollarSign, Repeat, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
@@ -233,6 +233,27 @@ export default function MissionControl() {
                  <TacticalProgress value={todayPct} height={8} showValue={false} color="var(--success)" />
                </div>
             </HudPanel>
+
+            {/* WEEKLY DEBRIEF ACTION */}
+            {new Date().getDay() === 0 && ( // Highlight on Sundays
+              <Link href="/weekly-review">
+                <div className="bg-amber/10 border border-amber hover:bg-amber/20 transition-colors p-4 cursor-pointer text-center group">
+                  <h3 className="font-display text-lg text-amber tracking-widest uppercase flex-center gap-2">
+                    <ClipboardList size={18} /> CONDUCT WEEKLY DEBRIEF
+                  </h3>
+                  <p className="font-mono text-xs text-amber/80 mt-1">Reflect on the past 7 days to earn +40 XP.</p>
+                </div>
+              </Link>
+            )}
+            {new Date().getDay() !== 0 && (
+              <Link href="/weekly-review">
+                <div className="bg-tertiary border border-border-color hover:border-amber transition-colors p-3 cursor-pointer text-center group">
+                  <h3 className="font-mono text-xs text-muted group-hover:text-amber tracking-widest uppercase flex-center gap-2">
+                    <ClipboardList size={14} /> WEEKLY DEBRIEF
+                  </h3>
+                </div>
+              </Link>
+            )}
 
             {/* SECTION 2: ACTIVE BATTLES */}
             {battles.length > 0 && (

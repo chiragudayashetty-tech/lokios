@@ -13,7 +13,14 @@ import { Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, Image 
 export default function ProofOfWork() {
   const { user } = useAuth()
   const { profile } = useProfile()
-  const [activeTab, setActiveTab] = useState('timeline') // timeline | projects | resume
+  const [activeTab, setActiveTab] = useState('timeline') // timeline | projects | resume | reviews
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('tab')) {
+      setActiveTab(params.get('tab'))
+    }
+  }, [])
   const [logs, setLogs] = useState([])
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -128,6 +135,9 @@ export default function ProofOfWork() {
           <button className={`tab-item ${activeTab === 'timeline' ? 'tab-active' : ''}`} onClick={() => setActiveTab('timeline')}>
             TIMELINE LOGS
           </button>
+          <button className={`tab-item ${activeTab === 'reviews' ? 'tab-active' : ''}`} onClick={() => setActiveTab('reviews')}>
+            WEEKLY REVIEWS
+          </button>
           <button className={`tab-item ${activeTab === 'projects' ? 'tab-active' : ''}`} onClick={() => setActiveTab('projects')}>
             PROJECTS
           </button>
@@ -192,7 +202,7 @@ export default function ProofOfWork() {
             </AnimatePresence>
 
             <div className="flex-col gap-0 border-l border-border-strong ml-4 pl-6 relative">
-              {logs.map((log) => (
+              {logs.filter(l => l.type !== 'weekly_review').map((log) => (
                 <div key={log.id} className="relative pb-8 group">
                   <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
                   
@@ -240,7 +250,41 @@ export default function ProofOfWork() {
                   </div>
                 </div>
               ))}
-              {logs.length === 0 && <div className="font-mono text-sm text-muted py-8">NO WORK LOGS ARCHIVED.</div>}
+              {logs.filter(l => l.type !== 'weekly_review').length === 0 && <div className="font-mono text-sm text-muted py-8">NO WORK LOGS ARCHIVED.</div>}
+            </div>
+          </div>
+        )}
+
+        {/* WEEKLY REVIEWS TAB */}
+        {activeTab === 'reviews' && (
+          <div className="flex-col gap-6">
+            <div className="flex-col gap-0 border-l border-border-strong ml-4 pl-6 relative">
+              {logs.filter(l => l.type === 'weekly_review').map((log) => (
+                <div key={log.id} className="relative pb-8 group">
+                  <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
+                  
+                  <div className="bg-tertiary border border-border-color p-4 hover:border-amber transition-colors">
+                    <div className="flex-between mb-2">
+                      <span className="font-mono text-xs text-amber">{String(log.date || '')}</span>
+                      <span className="badge badge-amber">WEEKLY DEBRIEF</span>
+                    </div>
+                    
+                    <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-4">{log.title}</h3>
+                    
+                    {log.description && (
+                      <div className="prose prose-invert prose-sm max-w-none font-mono text-sm text-secondary">
+                        {log.description.split('\n').map((line, i) => {
+                          if (line.startsWith('### ')) {
+                            return <h4 key={i} className="text-amber mt-4 mb-2 font-display tracking-widest uppercase">{line.replace('### ', '')}</h4>
+                          }
+                          return <div key={i} className="min-h-[1.5em]">{line}</div>
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {logs.filter(l => l.type === 'weekly_review').length === 0 && <div className="font-mono text-sm text-muted py-8">NO WEEKLY REVIEWS ARCHIVED YET.</div>}
             </div>
           </div>
         )}

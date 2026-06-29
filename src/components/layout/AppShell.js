@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy, RefreshCw, Timer, LogOut
+  Menu, X, Shield, Trophy, RefreshCw, Timer, LogOut, ClipboardList
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
   { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },
   { href: '/calendar', icon: CalendarDays, label: 'Calendar' },
+  { href: '/weekly-review', icon: ClipboardList, label: 'Weekly Review' },
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
   { href: '/xp', icon: Trophy, label: 'XP Metrics' },
   { href: '/focus', icon: Timer, label: 'Focus Mode' },
