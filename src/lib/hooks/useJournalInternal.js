@@ -41,10 +41,7 @@ export function useJournalInternal() {
     fetchEntries()
   }, [fetchEntries])
 
-  const todayEntry = useMemo(() => {
-    const todayStr = getLocalDateStr()
-    return entries.find((e) => e.date === todayStr) || null
-  }, [entries])
+  // No longer locking to one entry per day
 
   const saveEntry = useCallback(async (data) => {
     if (!user) return null
@@ -53,25 +50,8 @@ export function useJournalInternal() {
     const entryDate = data.date || todayStr
 
     try {
-      // Check if entry already exists for this date
-      const existing = entries.find((e) => e.date === entryDate)
-
-      let result
-      if (existing) {
-        // Update existing entry
-        const { data: updated, error } = await supabase
-          .from('journal_entries')
-          .update({ ...data, updated_at: new Date().toISOString() })
-          .eq('id', existing.id)
-          .eq('user_id', user.id)
-          .select()
-          .single()
-
-        if (error) throw error
-        result = updated
-        setEntries((prev) => prev.map((e) => (e.id === existing.id ? updated : e)))
-      } else {
-        // Create new entry
+      // Always create a new entry
+      let result;
         const { data: newEntry, error } = await supabase
           .from('journal_entries')
           .insert({ ...data, user_id: user.id, date: entryDate })
@@ -90,7 +70,6 @@ export function useJournalInternal() {
           await robustAwardXP(user.id, xpAmount, 'journal_entry', result.id, `Journal entry for ${entryDate}`, 'discipline')
         } catch (xpErr) {
           console.error("XP Award Failed for journal:", xpErr)
-        }
       }
 
       return result
@@ -103,5 +82,5 @@ export function useJournalInternal() {
     }
   }, [user, entries])
 
-  return { entries, todayEntry, loading, saveEntry }
+  return { entries, loading, saveEntry }
 }

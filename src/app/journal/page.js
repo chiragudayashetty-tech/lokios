@@ -16,19 +16,11 @@ const MOODS = [
 ]
 
 export default function JournalPage() {
-  const { journal: { entries, todayEntry, loading, saveEntry } } = useOS()
-  const [content, setContent] = useState(todayEntry?.content || '')
-  const [mood, setMood] = useState(todayEntry?.mood || '')
+  const { journal: { entries, loading, saveEntry } } = useOS()
+  const [content, setContent] = useState('')
+  const [mood, setMood] = useState('')
   const [saving, setSaving] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-
-  // Auto-update local state if todayEntry loads
-  useEffect(() => {
-    if (todayEntry && !content) {
-      setContent(todayEntry.content)
-      setMood(todayEntry.mood)
-    }
-  }, [todayEntry, content])
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -42,8 +34,14 @@ export default function JournalPage() {
     }
     
     setSaving(true)
-    await saveEntry({ content, mood })
+    const success = await saveEntry({ content, mood })
     setSaving(false)
+    
+    if (success) {
+      setContent('')
+      setMood('')
+      setShowHistory(true)
+    }
   }
 
   const isFullEntry = content.length >= 100 && mood
@@ -135,7 +133,7 @@ export default function JournalPage() {
                     className="btn btn-primary btn-lg flex items-center gap-2"
                   >
                     <Save size={18} />
-                    {saving ? 'ENCRYPTING...' : (todayEntry ? 'UPDATE LOG' : 'SEAL LOG')}
+                    {saving ? 'ENCRYPTING...' : 'SEAL LOG'}
                   </button>
                 </div>
 
@@ -149,13 +147,20 @@ export default function JournalPage() {
                 NO JOURNAL ARCHIVES FOUND.
               </div>
             ) : (
-              entries.map(entry => {
+              entries.map((entry, index) => {
                 const moodObj = MOODS.find(m => m.id === entry.mood) || MOODS[2]
                 const MoodIcon = moodObj.icon
+                
+                // Calculate the chronological day number (oldest is Day 1)
+                const dayNumber = entries.length - index;
+
                 return (
                   <HudPanel key={entry.id} className="group hover:border-amber transition-colors">
                     <div className="flex-between mb-4 border-b border-border-color pb-2">
-                      <span className="font-mono text-sm text-amber">{entry.date}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="font-display text-lg text-primary tracking-widest">DAY {dayNumber}</span>
+                        <span className="font-mono text-sm text-amber opacity-80">{entry.date}</span>
+                      </div>
                       <div 
                         className="flex items-center gap-1 font-mono text-xs uppercase px-2 py-1 rounded border"
                         style={{ color: moodObj.color, borderColor: moodObj.color, backgroundColor: `${moodObj.color}15` }}
