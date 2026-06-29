@@ -140,7 +140,7 @@ export function useHabitsInternal() {
             await robustRemoveXP(user.id, 'habit_failed', habitId, targetDate)
           }
         }
-        const { data: newLog, error } = await supabase.from('habit_logs').insert({ user_id: user.id, habit_id: habitId, date: targetDate }).select().single()
+        const { data: newLog, error } = await supabase.from('habit_logs').insert({ user_id: user.id, habit_id: habitId, date: targetDate, status: 'completed' }).select().single()
         if (error) throw error
         // Replace optimistic ID with real ID
         setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))

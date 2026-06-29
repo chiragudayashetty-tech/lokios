@@ -69,8 +69,8 @@ export default function MissionControl() {
   }, [])
 
   // Today's Battle Plan
-  const activeHabits = habits.filter(h => !todayLogs.some(log => log.habit_id === h.id && log.status === 'completed'))
-  const completedHabits = habits.filter(h => todayLogs.some(log => log.habit_id === h.id && log.status === 'completed'))
+  const activeHabits = habits.filter(h => !todayLogs.some(log => log.habit_id === h.id && (!log.status || log.status === 'completed')))
+  const completedHabits = habits.filter(h => todayLogs.some(log => log.habit_id === h.id && (!log.status || log.status === 'completed')))
   const pendingTasks = todayTasks.filter(t => t.status !== 'completed')
   const totalTodayItems = habits.length + todayTasks.length
   const completedTodayItems = completedHabits.length + todayTasks.filter(t => t.status === 'completed').length
