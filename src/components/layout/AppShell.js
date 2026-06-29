@@ -8,9 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy, RefreshCw, Timer, LogOut, ClipboardList
+  Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList
 } from 'lucide-react'
-import MiniFocusTimer from '@/components/ui/MiniFocusTimer'
 import AIAssistant from '@/components/AIAssistant'
 
 const NAV_ITEMS = [
@@ -25,7 +24,6 @@ const NAV_ITEMS = [
   { href: '/weekly-review', icon: ClipboardList, label: 'Weekly Review' },
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
   { href: '/xp', icon: Trophy, label: 'XP Metrics' },
-  { href: '/focus', icon: Timer, label: 'Focus Mode' },
   { href: '/profile', icon: User, label: 'Operator Profile' }
 ]
 
@@ -271,7 +269,6 @@ export default function AppShell({ children }) {
         </button>
       </nav>
 
-      <MiniFocusTimer />
     </div>
   )
 }
