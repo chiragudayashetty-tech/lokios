@@ -102,7 +102,13 @@ export default function JournalPage() {
                     required
                     value={entryDate}
                     onChange={(e) => setEntryDate(e.target.value)}
-                    className="w-full bg-bg-tertiary border border-border-color rounded p-3 font-mono text-primary text-sm focus:border-amber focus:outline-none transition-colors"
+                    onClick={(e) => {
+                      try {
+                        if (e.target.showPicker) e.target.showPicker()
+                      } catch (err) {}
+                    }}
+                    style={{ colorScheme: 'dark' }}
+                    className="w-full bg-bg-tertiary border border-border-color rounded p-3 font-mono text-primary text-sm focus:border-amber focus:outline-none transition-colors cursor-pointer"
                   />
                 </div>
 
