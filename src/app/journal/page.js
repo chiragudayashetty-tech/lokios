@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import { useOS } from '@/lib/context/OSContext'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { BookOpen, Smile, Frown, Meh, Save, Zap, Heart, Flame, ShieldAlert, Coffee } from 'lucide-react'
 
 const MOODS = [
@@ -22,6 +23,11 @@ export default function JournalPage() {
   const [saving, setSaving] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [expandedArchive, setExpandedArchive] = useState(null)
+  const [entryDate, setEntryDate] = useState('')
+
+  useEffect(() => {
+    setEntryDate(getLocalDateStr())
+  }, [])
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -35,7 +41,7 @@ export default function JournalPage() {
     }
     
     setSaving(true)
-    const success = await saveEntry({ content, mood })
+    const success = await saveEntry({ content, mood, date: entryDate })
     setSaving(false)
     
     if (success) {
@@ -85,9 +91,21 @@ export default function JournalPage() {
           <div className="flex-center py-12"><span className="typewriter-text text-amber">DECRYPTING ARCHIVES...</span></div>
         ) : !showHistory ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <HudPanel label="TODAY's LOG">
+            <HudPanel label="NEW LOG">
               <form onSubmit={handleSave} className="space-y-6">
                 
+                {/* DATE SELECTOR */}
+                <div>
+                  <label className="font-mono text-xs text-muted uppercase tracking-widest mb-3 block">Log Date</label>
+                  <input 
+                    type="date"
+                    required
+                    value={entryDate}
+                    onChange={(e) => setEntryDate(e.target.value)}
+                    className="w-full bg-bg-tertiary border border-border-color rounded p-3 font-mono text-primary text-sm focus:border-amber focus:outline-none transition-colors"
+                  />
+                </div>
+
                 {/* MOOD SELECTOR */}
                 <div>
                   <label className="font-mono text-xs text-muted uppercase tracking-widest mb-3 block">Mental State Vector</label>
