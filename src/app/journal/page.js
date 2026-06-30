@@ -171,12 +171,18 @@ export default function JournalPage() {
                     </div>
                     {expandedArchive === entry.id && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="prose prose-invert prose-sm max-w-none font-mono text-secondary whitespace-pre-wrap">
-                        {entry.content || (
+                        {entry.content ? entry.content : (
                           <div className="flex flex-col gap-4">
-                            {entry.what_did_i_do && <div><span className="text-amber mb-1 block tracking-widest text-[10px]">WHAT I DID</span>{entry.what_did_i_do}</div>}
-                            {entry.what_did_i_learn && <div><span className="text-amber mb-1 block tracking-widest text-[10px]">WHAT I LEARNED</span>{entry.what_did_i_learn}</div>}
-                            {entry.what_went_well && <div><span className="text-amber mb-1 block tracking-widest text-[10px]">WINS</span>{entry.what_went_well}</div>}
-                            {entry.needs_improvement && <div><span className="text-amber mb-1 block tracking-widest text-[10px]">NEEDS IMPROVEMENT</span>{entry.needs_improvement}</div>}
+                            {entry.what_did_i_do && !entry.what_did_i_learn && !entry.what_went_well && !entry.needs_improvement ? (
+                              <div>{entry.what_did_i_do}</div>
+                            ) : (
+                              <>
+                                {entry.what_did_i_do && <div><span className="text-amber mb-1 block tracking-widest text-[10px]">WHAT I DID</span>{entry.what_did_i_do}</div>}
+                                {entry.what_did_i_learn && <div><span className="text-amber mb-1 block tracking-widest text-[10px]">WHAT I LEARNED</span>{entry.what_did_i_learn}</div>}
+                                {entry.what_went_well && <div><span className="text-amber mb-1 block tracking-widest text-[10px]">WINS</span>{entry.what_went_well}</div>}
+                                {entry.needs_improvement && <div><span className="text-amber mb-1 block tracking-widest text-[10px]">NEEDS IMPROVEMENT</span>{entry.needs_improvement}</div>}
+                              </>
+                            )}
                           </div>
                         )}
                       </motion.div>

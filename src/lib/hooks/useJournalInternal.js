@@ -50,9 +50,17 @@ export function useJournalInternal(user) {
     try {
       // Always create a new entry
       let result;
+        const dbPayload = {
+          user_id: user.id,
+          date: entryDate,
+          mood: data.mood,
+          what_did_i_do: data.content,
+          word_count: data.content ? data.content.split(/\s+/).length : 0
+        }
+
         const { data: newEntry, error } = await supabase
           .from('journal_entries')
-          .insert({ ...data, user_id: user.id, date: entryDate })
+          .insert(dbPayload)
           .select()
           .single()
 
