@@ -11,6 +11,7 @@ import {
   Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList
 } from 'lucide-react'
 import LokiAI from '@/components/LokiAI'
+import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Command Center' },
@@ -217,10 +218,12 @@ export default function AppShell({ children }) {
 
         <div className="sidebar-footer">
           <div className="sidebar-user">
-            <Shield size={24} color="var(--accent-primary)" opacity={0.5} />
+            <Shield size={24} color={profile ? getRankForXp(profile.total_xp || 0).colorHex : "var(--accent-primary)"} opacity={0.5} />
             <div className="flex-col">
-              <span className="font-display uppercase text-xs tracking-wide">{profile?.rank || 'OPERATOR'}</span>
-              <span className="font-mono text-sm text-primary font-bold">LV.{profile?.level || 1}</span>
+              <span className="font-display uppercase text-xs tracking-wide" style={{ color: profile ? getRankForXp(profile.total_xp || 0).colorHex : 'inherit' }}>
+                {profile ? `${getRankForXp(profile.total_xp || 0).code}-RANK` : 'OPERATOR'}
+              </span>
+              <span className="font-mono text-sm text-primary font-bold">LV.{profile ? calculateLevel(profile.total_xp || 0) : 1}</span>
             </div>
           </div>
           <LokiAI />
