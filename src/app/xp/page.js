@@ -51,6 +51,57 @@ export default function XPDashboard() {
     window.location.reload()
   }
 
+  const handleFixDuplicates = async () => {
+    setLoading(true)
+    const supabase = createClient()
+    
+    const { data: allHistory } = await supabase.from('xp_history').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
+    if (!allHistory) return
+    
+    const xpByDayAndRoutine = {}
+    for (const item of allHistory) {
+      if (!item.source_type?.startsWith('habit_')) continue
+      
+      const isComplete = item.description.startsWith('Completed routine: ')
+      const isFail = item.description.startsWith('Failed routine: ')
+      if (!isComplete && !isFail) continue
+      
+      const routineName = item.description.replace('Completed routine: ', '').replace('Failed routine: ', '')
+      const d = new Date(item.created_at)
+      const offset = d.getTimezoneOffset()
+      const local = new Date(d.getTime() - offset * 60 * 1000)
+      const dateStr = local.toISOString().split('T')[0]
+      
+      const key = `${dateStr}_${routineName}`
+      if (!xpByDayAndRoutine[key]) xpByDayAndRoutine[key] = []
+      xpByDayAndRoutine[key].push(item)
+    }
+    
+    let totalDeduction = 0
+    const toDelete = []
+    
+    for (const key in xpByDayAndRoutine) {
+      const items = xpByDayAndRoutine[key]
+      if (items.length > 1) {
+        items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        for (let i = 1; i < items.length; i++) {
+          toDelete.push(items[i].id)
+          totalDeduction += items[i].amount
+        }
+      }
+    }
+    
+    if (toDelete.length > 0) {
+      await supabase.from('xp_history').delete().in('id', toDelete)
+      const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', user.id).single()
+      if (prof) {
+        await supabase.from('profiles').update({ total_xp: Math.max(0, (prof.total_xp || 0) - totalDeduction) }).eq('id', user.id)
+      }
+    }
+    
+    window.location.reload()
+  }
+
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">LOADING NEURAL NETWORK...</span></div></AppShell>
 
   // Stats computation
@@ -113,12 +164,20 @@ export default function XPDashboard() {
             <h1 className="page-title flex items-center gap-3"><Trophy className="text-amber" /> EXPERIENCE METRICS</h1>
             <p className="page-subtitle font-mono uppercase text-xs">Visualize your character progression and stat distribution.</p>
           </div>
-          <button 
-            onClick={handleResetXP}
-            className="px-3 py-1.5 border border-danger text-danger text-xs font-mono uppercase tracking-widest hover:bg-danger/10 rounded flex items-center gap-2 transition-colors mt-1"
-          >
-            <RotateCcw size={14} /> Full Reset
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleFixDuplicates}
+              className="px-3 py-1.5 border border-info text-info text-xs font-mono uppercase tracking-widest hover:bg-info/10 rounded flex items-center gap-2 transition-colors mt-1"
+            >
+              <Activity size={14} /> FIX DUPLICATES
+            </button>
+            <button 
+              onClick={handleResetXP}
+              className="px-3 py-1.5 border border-danger text-danger text-xs font-mono uppercase tracking-widest hover:bg-danger/10 rounded flex items-center gap-2 transition-colors mt-1"
+            >
+              <RotateCcw size={14} /> Full Reset
+            </button>
+          </div>
         </header>
 
         {/* Level Up Banner / Core Stats */}
