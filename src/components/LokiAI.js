@@ -1,73 +1,17 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Zap, X, Settings, ChevronRight, Send, AlertTriangle, 
-  Sunrise, Moon, Target, Cpu, BookOpen, Activity, Flame,
-  TrendingUp, Swords, Crosshair, Layers, Monitor, ClipboardList,
-  ShieldAlert, CheckSquare, User, BarChart2, Eye, MessageSquare
+  Zap, X, Settings, Send, Eye, Trash2, ChevronRight
 } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
 import { buildContext } from '@/lib/ai/contextBuilder'
 import { getActionsForPage } from '@/lib/ai/quickActions'
-import { lokiQuery, getApiKey, saveApiKey, clearApiKey } from '@/lib/gemini'
+import { lokiChat, getApiKey, saveApiKey, clearApiKey } from '@/lib/gemini'
 import { createClient } from '@/lib/supabase/client'
 
-// ── Icon map for quick actions ──
-const ICON_MAP = {
-  Sunrise, Moon, Target, Cpu, BookOpen, Activity, Flame,
-  TrendingUp, Swords, Crosshair, Layers, Monitor, ClipboardList,
-  ShieldAlert, CheckSquare, User, BarChart2, Eye, AlertTriangle,
-  Zap, MessageSquare
-}
-
-// ── Static insights (no API key needed) ──
-function buildStaticInsights({ profile, habits, tasks, goals, brainDump, journal }) {
-  const insights = []
-  const p = profile?.profile || {}
-  const todayTasks = tasks?.todayTasks || []
-  const pending = todayTasks.filter(t => t.status === 'pending')
-  const completedT = todayTasks.filter(t => t.status === 'completed')
-  const totalHabits = habits?.habits?.filter(h => h.is_active)?.length || 0
-  const completedH = habits?.todayLogs?.filter(l => l.status === 'completed')?.length || 0
-  const inboxCount = brainDump?.items?.filter(i => i.status === 'inbox')?.length || 0
-  const mainQuest = goals?.mainQuest
-
-  if (completedT.length === 0 && pending.length > 0) {
-    insights.push({ type: 'warning', text: `${pending.length} operations pending. Nothing completed yet today.` })
-  } else if (completedT.length > 0) {
-    insights.push({ type: 'success', text: `${completedT.length}/${todayTasks.length} operations completed today.` })
-  }
-
-  const habitPct = totalHabits > 0 ? Math.round((completedH / totalHabits) * 100) : 0
-  if (habitPct < 50 && totalHabits > 0) {
-    insights.push({ type: 'warning', text: `Habits at ${habitPct}% — ${totalHabits - completedH} routines unexecuted.` })
-  } else if (habitPct >= 80) {
-    insights.push({ type: 'success', text: `Habit compliance strong: ${habitPct}% today.` })
-  }
-
-  if (!journal?.entries?.[0] || journal.entries[0].date !== new Date().toISOString().slice(0, 10)) {
-    insights.push({ type: 'info', text: 'No journal entry today. Reflection data missing.' })
-  }
-
-  if (inboxCount >= 3) {
-    insights.push({ type: 'info', text: `${inboxCount} brain dump items awaiting organization.` })
-  }
-
-  if (mainQuest) {
-    insights.push({ type: 'info', text: `Main Quest "${mainQuest.title}" at ${mainQuest.progress || 0}% progress.` })
-  }
-
-  if (p.streak_days >= 7) {
-    insights.push({ type: 'success', text: `${p.streak_days}-day streak active. Don't break it.` })
-  }
-
-  return insights.slice(0, 4)
-}
-
-// ── Main Component ──
 export default function LokiAI() {
   const pathname = usePathname()
   const os = useOS()
@@ -77,20 +21,20 @@ export default function LokiAI() {
   const [apiKey, setApiKey] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [apiKeyInput, setApiKeyInput] = useState('')
-  const [activeActionId, setActiveActionId] = useState(null)
-  const [response, setResponse] = useState('')
+  
+  // Chat state
+  const [messages, setMessages] = useState([])
+  const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [customPrompt, setCustomPrompt] = useState('')
   const [blueprint, setBlueprint] = useState(null)
-  const [sessionCache, setSessionCache] = useState({})
-  const responseRef = useRef(null)
+  
+  const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
   const actions = getActionsForPage(pathname)
   const hasKey = !!apiKey
-  const staticInsights = buildStaticInsights({ profile, habits, tasks, goals, brainDump, journal })
 
-  // Load API key + blueprint on mount
+  // Load API key, blueprint, and chat history on mount
   useEffect(() => {
     const key = getApiKey()
     if (key) {
@@ -98,14 +42,32 @@ export default function LokiAI() {
       setApiKeyInput(key)
     }
     fetchBlueprint()
+    
+    const savedHistory = localStorage.getItem('loki_chat_history')
+    if (savedHistory) {
+      try {
+        setMessages(JSON.parse(savedHistory))
+      } catch (e) {
+        console.error('Failed to parse loki chat history', e)
+      }
+    } else {
+      setMessages([{ role: 'model', content: "I'm LOKI. Your journal and habits are loaded. Let's get to work. What's the block right now?" }])
+    }
   }, [])
 
-  // Scroll response into view
+  // Auto-scroll chat to bottom
   useEffect(() => {
-    if (response && responseRef.current) {
-      responseRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [response])
+  }, [messages, isLoading])
+
+  // Save history on change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('loki_chat_history', JSON.stringify(messages))
+    }
+  }, [messages])
 
   const fetchBlueprint = async () => {
     try {
@@ -124,60 +86,47 @@ export default function LokiAI() {
     })
   }, [profile, habits, tasks, goals, brainDump, journal, characterStats, userConfig, blueprint, pathname])
 
-  const runAction = async (action) => {
-    setActiveActionId(action.id)
-    setResponse('')
-    setShowSettings(false)
-    
-    const cacheKey = `${pathname}_${action.id}`
-    if (sessionCache[cacheKey]) {
-      setResponse(sessionCache[cacheKey])
-      return
-    }
-
+  const handleSend = async (text, isQuickAction = false) => {
+    if (!text.trim()) return
     if (!hasKey) {
-      setResponse('⚡ Add your Gemini API key in LOKI Settings to activate AI analysis.')
+      setMessages(prev => [...prev, 
+        { role: 'user', content: text },
+        { role: 'model', content: '⚡ Please add your Gemini API key in Settings to continue.' }
+      ])
+      setInputValue('')
       return
     }
 
+    const newMsg = { role: 'user', content: text }
+    const updatedMessages = [...messages, newMsg]
+    setMessages(updatedMessages)
+    if (!isQuickAction) setInputValue('')
     setIsLoading(true)
+
     try {
       const ctx = buildCtx()
-      const prompt = action.prompt(ctx)
-      const result = await lokiQuery(prompt, apiKey)
-      if (result) {
-        setResponse(result)
-        setSessionCache(prev => ({ ...prev, [cacheKey]: result }))
+      const response = await lokiChat(updatedMessages, ctx, apiKey)
+      if (response) {
+        setMessages(prev => [...prev, { role: 'model', content: response }])
       }
     } catch (e) {
-      setResponse(`⚠ Error: ${e.message}`)
+      setMessages(prev => [...prev, { role: 'model', content: `⚠ Error: ${e.message}` }])
     } finally {
       setIsLoading(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
   }
 
-  const runCustom = async (e) => {
+  const handleFormSubmit = (e) => {
     e.preventDefault()
-    if (!customPrompt.trim()) return
-    setActiveActionId('custom')
-    setResponse('')
-    
-    if (!hasKey) {
-      setResponse('⚡ Add your Gemini API key in LOKI Settings to activate AI analysis.')
-      return
-    }
+    handleSend(inputValue)
+  }
 
-    setIsLoading(true)
-    try {
-      const ctx = buildCtx()
-      const fullPrompt = `${ctx}\n\nOPERATOR QUESTION: ${customPrompt}`
-      const result = await lokiQuery(fullPrompt, apiKey)
-      if (result) setResponse(result)
-    } catch (e) {
-      setResponse(`⚠ Error: ${e.message}`)
-    } finally {
-      setIsLoading(false)
-      setCustomPrompt('')
+  const clearHistory = () => {
+    if (confirm("Clear LOKI conversation history?")) {
+      const initial = [{ role: 'model', content: "I'm LOKI. Your journal and habits are loaded. Let's get to work. What's the block right now?" }]
+      setMessages(initial)
+      localStorage.setItem('loki_chat_history', JSON.stringify(initial))
     }
   }
 
@@ -187,7 +136,6 @@ export default function LokiAI() {
     saveApiKey(apiKeyInput)
     setApiKey(apiKeyInput)
     setShowSettings(false)
-    setResponse('')
   }
 
   const handleClearKey = () => {
@@ -213,26 +161,24 @@ export default function LokiAI() {
         {!hasKey && <span className="loki-trigger-dot" />}
       </button>
 
-      {/* ── Panel ── */}
+      {/* ── Full Screen Premium Modal ── */}
       <AnimatePresence>
         {isOpen && (
-          <>
-            {/* Backdrop */}
+          <div className="loki-modal-overlay">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
-              className="loki-backdrop"
+              className="loki-modal-backdrop"
             />
 
-            {/* Panel */}
             <motion.div
-              initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="loki-panel"
+              initial={{ y: 20, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 20, opacity: 0, scale: 0.98 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="loki-modal-window"
             >
               {/* ── Header ── */}
               <div className="loki-header">
@@ -241,11 +187,14 @@ export default function LokiAI() {
                     <Zap size={16} />
                   </div>
                   <div>
-                    <div className="loki-title">LOKI INTELLIGENCE</div>
+                    <div className="loki-title">LOKI</div>
                     <div className="loki-subtitle">{rank} · LV.{level}</div>
                   </div>
                 </div>
                 <div className="loki-header-actions">
+                  <button onClick={clearHistory} className="loki-icon-btn" title="Clear Chat">
+                    <Trash2 size={14} />
+                  </button>
                   <button
                     onClick={() => setShowSettings(s => !s)}
                     className={`loki-icon-btn ${showSettings ? 'active' : ''}`}
@@ -259,9 +208,6 @@ export default function LokiAI() {
                 </div>
               </div>
 
-              {/* ── Scan line ── */}
-              <div className="loki-scanline" />
-
               {/* ── Settings Panel ── */}
               <AnimatePresence>
                 {showSettings && (
@@ -269,7 +215,6 @@ export default function LokiAI() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
                     className="loki-settings"
                   >
                     <form onSubmit={handleSaveKey} className="loki-settings-form">
@@ -293,148 +238,79 @@ export default function LokiAI() {
                           CLEAR KEY
                         </button>
                       )}
-                      <p className="loki-settings-note">
-                        Stored in browser only. Never sent anywhere except Google's API.
-                        Get a free key at <strong>aistudio.google.com</strong>
-                      </p>
                     </form>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* ── Static Insights (no API needed) ── */}
-              {!hasKey && (
-                <div className="loki-no-key-banner">
-                  <Zap size={12} />
-                  <span>Add API key to unlock AI analysis. Showing live data below.</span>
-                </div>
-              )}
-
-              <div className="loki-body">
-
-                {/* ── Static Data Insights ── */}
-                {staticInsights.length > 0 && (
-                  <div className="loki-section">
-                    <div className="loki-section-label">
-                      <Activity size={11} />
-                      LIVE STATUS
+              {/* ── Chat History Body ── */}
+              <div className="loki-chat-body">
+                {messages.map((msg, i) => (
+                  <div key={i} className={`loki-msg-row ${msg.role === 'user' ? 'loki-msg-user' : 'loki-msg-model'}`}>
+                    {msg.role === 'model' && (
+                      <div className="loki-msg-avatar">
+                        <Zap size={12} />
+                      </div>
+                    )}
+                    <div className="loki-msg-bubble">
+                      {formatResponse(msg.content)}
                     </div>
-                    <div className="loki-insights">
-                      {staticInsights.map((insight, i) => (
-                        <div key={i} className={`loki-insight loki-insight--${insight.type}`}>
-                          <span className="loki-insight-dot" />
-                          {insight.text}
-                        </div>
-                      ))}
+                  </div>
+                ))}
+                
+                {isLoading && (
+                  <div className="loki-msg-row loki-msg-model">
+                    <div className="loki-msg-avatar"><Zap size={12} /></div>
+                    <div className="loki-msg-bubble loki-msg-loading">
+                      <span className="loki-loading-dot" />
+                      <span className="loki-loading-dot" style={{ animationDelay: '0.2s' }} />
+                      <span className="loki-loading-dot" style={{ animationDelay: '0.4s' }} />
                     </div>
                   </div>
                 )}
-
-                {/* ── Quick Actions ── */}
-                <div className="loki-section">
-                  <div className="loki-section-label">
-                    <Crosshair size={11} />
-                    {pathname.replace('/', '').toUpperCase() || 'DASHBOARD'} INTEL
-                  </div>
-                  <div className="loki-actions">
-                    {actions.map(action => {
-                      const Icon = ICON_MAP[action.icon] || Zap
-                      const isActive = activeActionId === action.id
-                      return (
-                        <button
-                          key={action.id}
-                          onClick={() => runAction(action)}
-                          className={`loki-action-btn ${isActive && isLoading ? 'loading' : ''} ${isActive && !isLoading && response ? 'active' : ''}`}
-                          disabled={isLoading}
-                        >
-                          <Icon size={13} className="loki-action-icon" />
-                          <div className="loki-action-text">
-                            <span className="loki-action-label">{action.label}</span>
-                            <span className="loki-action-desc">{action.description}</span>
-                          </div>
-                          <ChevronRight size={12} className="loki-action-chevron" />
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* ── AI Response ── */}
-                <AnimatePresence>
-                  {(isLoading || response) && (
-                    <motion.div
-                      ref={responseRef}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
-                      className="loki-response"
-                    >
-                      <div className="loki-response-header">
-                        <Zap size={11} />
-                        LOKI ANALYSIS
-                        {!isLoading && (
-                          <button
-                            onClick={() => { setResponse(''); setActiveActionId(null) }}
-                            className="loki-response-clear"
-                          >
-                            <X size={10} />
-                          </button>
-                        )}
-                      </div>
-                      {isLoading ? (
-                        <div className="loki-loading">
-                          <span className="loki-loading-dot" />
-                          <span className="loki-loading-dot" style={{ animationDelay: '0.2s' }} />
-                          <span className="loki-loading-dot" style={{ animationDelay: '0.4s' }} />
-                          <span className="loki-loading-text">PROCESSING...</span>
-                        </div>
-                      ) : (
-                        <div className="loki-response-text">
-                          {formatResponse(response)}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* ── Custom Query ── */}
-                <div className="loki-section">
-                  <div className="loki-section-label">
-                    <MessageSquare size={11} />
-                    DIRECT QUERY
-                  </div>
-                  <form onSubmit={runCustom} className="loki-chat-form">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={customPrompt}
-                      onChange={e => setCustomPrompt(e.target.value)}
-                      placeholder={hasKey ? 'Ask LOKI anything about your OS...' : 'Add API key in settings to query LOKI...'}
-                      className="loki-chat-input"
-                      disabled={isLoading || !hasKey}
-                    />
-                    <button
-                      type="submit"
-                      disabled={isLoading || !customPrompt.trim() || !hasKey}
-                      className="loki-chat-send"
-                    >
-                      <Send size={13} />
-                    </button>
-                  </form>
-                </div>
-
+                <div ref={messagesEndRef} />
               </div>
 
-              {/* ── Footer ── */}
-              <div className="loki-footer">
-                <span>LOKI v1 · gemini-2.5-flash · context-aware</span>
-                <span className={`loki-status-dot ${hasKey ? 'online' : 'offline'}`}>
-                  {hasKey ? '● ONLINE' : '○ OFFLINE'}
-                </span>
+              {/* ── Input Area ── */}
+              <div className="loki-input-area">
+                {/* Quick Actions Array - horizontally scrollable above input */}
+                {!isLoading && (
+                  <div className="loki-quick-actions">
+                    {actions.map(action => (
+                      <button
+                        key={action.id}
+                        onClick={() => handleSend(action.prompt(''), true)}
+                        className="loki-quick-btn"
+                        title={action.description}
+                      >
+                        {action.label} <ChevronRight size={10} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <form onSubmit={handleFormSubmit} className="loki-chat-form">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={e => setInputValue(e.target.value)}
+                    placeholder={hasKey ? 'Message LOKI...' : 'Add API key in settings...'}
+                    className="loki-chat-input"
+                    disabled={isLoading || !hasKey}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || !inputValue.trim() || !hasKey}
+                    className="loki-chat-send"
+                  >
+                    <Send size={15} />
+                  </button>
+                </form>
               </div>
 
             </motion.div>
-          </>
+          </div>
         )}
       </AnimatePresence>
     </>

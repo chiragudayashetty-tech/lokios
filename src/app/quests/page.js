@@ -313,26 +313,34 @@ export default function DailyOps() {
           <span className="font-display text-[10px] uppercase tracking-widest text-muted">PAINT MODE</span>
           <div className="inline-flex items-center bg-tertiary border border-border-color rounded overflow-hidden">
             <button 
-              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'hover:bg-hover text-primary'}`}
+              type="button"
+              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover md:hover:bg-hover text-primary'}`}
               onClick={() => setActiveTool('cycle')}
+              onTouchStart={(e) => { e.preventDefault(); setActiveTool('cycle'); }}
             >
               <RotateCcw size={10} className="md:w-3 md:h-3" /> CYCLE
             </button>
             <button 
-              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'hover:bg-hover text-success'}`}
+              type="button"
+              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover md:hover:bg-hover text-success'}`}
               onClick={() => setActiveTool('completed')}
+              onTouchStart={(e) => { e.preventDefault(); setActiveTool('completed'); }}
             >
               <Check size={10} className="md:w-3 md:h-3" /> DONE
             </button>
             <button 
-              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'hover:bg-hover text-danger'}`}
+              type="button"
+              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover md:hover:bg-hover text-danger'}`}
               onClick={() => setActiveTool('failed')}
+              onTouchStart={(e) => { e.preventDefault(); setActiveTool('failed'); }}
             >
               <X size={10} className="md:w-3 md:h-3" /> FAIL
             </button>
             <button 
-              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'hover:bg-hover text-muted'}`}
+              type="button"
+              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover md:hover:bg-hover text-muted'}`}
               onClick={() => setActiveTool('none')}
+              onTouchStart={(e) => { e.preventDefault(); setActiveTool('none'); }}
             >
               <Crosshair size={10} className="md:w-3 md:h-3" /> CLEAR
             </button>

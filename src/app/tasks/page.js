@@ -210,20 +210,20 @@ export default function Operations() {
         </header>
 
         {/* METRICS ROW */}
-        <div className="flex gap-2 md:gap-4 mb-6 overflow-x-auto hide-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center flex-1 min-w-[75px]">
+        <div className="grid grid-cols-2 md:flex md:flex-row gap-2 md:gap-4 mb-6">
+          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center w-full md:flex-1 md:min-w-[75px]">
             <div className="font-display text-2xl md:text-3xl text-primary">{pending.length}</div>
             <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">PENDING</div>
           </HudPanel>
-          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center border-danger flex-1 min-w-[75px]">
+          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center border-danger w-full md:flex-1 md:min-w-[75px]">
             <div className="font-display text-2xl md:text-3xl text-danger">{overdue.length}</div>
             <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">OVERDUE</div>
           </HudPanel>
-          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center border-amber flex-1 min-w-[75px]">
+          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center border-amber w-full md:flex-1 md:min-w-[75px]">
             <div className="font-display text-2xl md:text-3xl text-amber">{dueToday.length}</div>
             <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">DUE TODAY</div>
           </HudPanel>
-          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center flex-1 min-w-[75px]">
+          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center w-full md:flex-1 md:min-w-[75px]">
             <div className="font-display text-2xl md:text-3xl text-success">{completionRate}%</div>
             <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">COMPLETION</div>
           </HudPanel>
@@ -375,6 +375,9 @@ export default function Operations() {
                             </button>
                             <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-danger touch-ripple bg-bg-secondary" onClick={() => failTask(task)} title="Fail Operation">
                               <X size={16} className="sm:w-[14px] sm:h-[14px]" />
+                            </button>
+                            <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-muted hover:text-danger touch-ripple bg-bg-secondary" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
+                              <Trash2 size={16} className="sm:w-[14px] sm:h-[14px]" />
                             </button>
                           </>
                         )}
