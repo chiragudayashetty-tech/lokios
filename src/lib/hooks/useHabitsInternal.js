@@ -114,6 +114,10 @@ export function useHabitsInternal(user) {
     // Skip if we are trying to force a status that is already the current status
     if (forceStatus && currentStatus === forceStatus) return true;
 
+    const procKey = `${habitId}_${targetDate}_cycle`
+    if (processingRef.current.has(procKey)) return null
+    processingRef.current.add(procKey)
+
     // Optimistic UI Update
     const optimisticId = `opt_${habitId}_${crypto.randomUUID()}`
     setMonthLogs(prev => {
@@ -125,10 +129,6 @@ export function useHabitsInternal(user) {
       }
       return filtered
     })
-
-    const procKey = `${habitId}_${targetDate}_cycle`
-    if (processingRef.current.has(procKey)) return null
-    processingRef.current.add(procKey)
 
     try {
       // 1. XP Adjustments: Remove any XP given from the previous state for today
