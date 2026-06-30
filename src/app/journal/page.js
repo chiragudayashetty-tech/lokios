@@ -16,7 +16,7 @@ const MOODS = [
 ]
 
 export default function JournalPage() {
-  const { journal: { entries, loading, saveEntry } } = useOS()
+  const { journal: { entries, loading, saveEntry, clearJournal } } = useOS()
   const [content, setContent] = useState('')
   const [mood, setMood] = useState('')
   const [saving, setSaving] = useState(false)
@@ -60,12 +60,25 @@ export default function JournalPage() {
               Mental State & Reflection Archive
             </p>
           </div>
-          <button 
-            onClick={() => setShowHistory(!showHistory)} 
-            className="btn btn-ghost border border-border-color"
-          >
-            {showHistory ? 'VIEW TODAY' : 'VIEW ARCHIVES'}
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={async () => {
+                if (window.confirm('Are you sure you want to permanently delete all journal entries? This cannot be undone.')) {
+                  await clearJournal()
+                }
+              }}
+              className="btn btn-ghost text-danger border border-border-color hover:bg-danger hover:text-white"
+              title="Delete all journal history"
+            >
+              CLEAR ARCHIVES
+            </button>
+            <button 
+              onClick={() => setShowHistory(!showHistory)} 
+              className="btn btn-ghost border border-border-color"
+            >
+              {showHistory ? 'VIEW TODAY' : 'VIEW ARCHIVES'}
+            </button>
+          </div>
         </header>
 
         {loading ? (

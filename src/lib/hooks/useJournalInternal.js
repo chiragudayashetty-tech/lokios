@@ -88,5 +88,25 @@ export function useJournalInternal(user) {
     }
   }, [user, entries])
 
-  return { entries, loading, saveEntry }
+  const clearJournal = useCallback(async () => {
+    if (!user) return false
+    try {
+      setLoading(true)
+      const { error } = await supabase
+        .from('journal_entries')
+        .delete()
+        .eq('user_id', user.id)
+      
+      if (error) throw error
+      setEntries([])
+      return true
+    } catch (error) {
+      console.error('Error clearing journal:', error)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  return { entries, loading, saveEntry, clearJournal }
 }
