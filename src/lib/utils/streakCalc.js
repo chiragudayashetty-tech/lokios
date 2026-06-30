@@ -9,7 +9,7 @@ export async function calculateAndUpdateStreak(userId, habitId = null) {
     const sixtyDaysAgoStr = getLocalDateStr(sixtyDaysAgo)
 
     // 1. GLOBAL PROFILE STREAK
-    const { data: allLogs } = await supabase.from('habit_logs').select('date').eq('user_id', userId).gte('date', sixtyDaysAgoStr)
+    const { data: allLogs } = await supabase.from('habit_logs').select('date').eq('user_id', userId).gte('date', sixtyDaysAgoStr).or('status.eq.completed,status.is.null')
     if (allLogs) {
       const uniqueDates = [...new Set(allLogs.map(l => l.date))].sort().reverse()
       let streak = 0
@@ -51,7 +51,7 @@ export async function calculateAndUpdateStreak(userId, habitId = null) {
 
     // 2. INDIVIDUAL HABIT STREAK
     if (habitId) {
-      const { data: habitLogs } = await supabase.from('habit_logs').select('date').eq('user_id', userId).eq('habit_id', habitId).gte('date', sixtyDaysAgoStr)
+      const { data: habitLogs } = await supabase.from('habit_logs').select('date').eq('user_id', userId).eq('habit_id', habitId).gte('date', sixtyDaysAgoStr).or('status.eq.completed,status.is.null')
       if (habitLogs) {
         const uniqueDates = [...new Set(habitLogs.map(l => l.date))].sort().reverse()
         let habitStreak = 0

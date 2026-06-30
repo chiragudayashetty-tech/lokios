@@ -1,0 +1,667 @@
+/* ═══════════════════════════════════════════════
+   LOKI AI — HUD Intelligence Panel Styles
+   Matches ChiragOS tactical design language:
+   - Rajdhani (display), JetBrains Mono (mono)
+   - Amber gold accent: #d4a843
+   - Glass panels, scanlines, amber glow
+═══════════════════════════════════════════════ */
+
+/* ── Trigger Button ── */
+.loki-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 4px;
+  background: rgba(212, 168, 67, 0.06);
+  border: 1px solid rgba(212, 168, 67, 0.2);
+  border-radius: 6px;
+  color: #d4a843;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 200ms ease;
+  position: relative;
+}
+
+.loki-trigger:hover {
+  background: rgba(212, 168, 67, 0.12);
+  border-color: rgba(212, 168, 67, 0.45);
+  box-shadow: 0 0 12px rgba(212, 168, 67, 0.15);
+}
+
+.loki-trigger-icon {
+  flex-shrink: 0;
+}
+
+.loki-trigger-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--warning, #F59E0B);
+  border-radius: 50%;
+  margin-left: auto;
+  animation: pulse 2s infinite;
+}
+
+/* ── Backdrop ── */
+.loki-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 48;
+}
+
+/* ── Main Panel ── */
+.loki-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: 380px;
+  max-width: 100vw;
+  background: linear-gradient(180deg, rgba(10, 11, 16, 0.98) 0%, rgba(6, 7, 10, 0.99) 100%);
+  border-left: 1px solid rgba(212, 168, 67, 0.2);
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.6), -4px 0 0 rgba(212, 168, 67, 0.08);
+  z-index: 49;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.loki-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(212, 168, 67, 0.15);
+  background: rgba(212, 168, 67, 0.03);
+  flex-shrink: 0;
+}
+
+.loki-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.loki-logo {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.2), rgba(212, 168, 67, 0.05));
+  border: 1px solid rgba(212, 168, 67, 0.4);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d4a843;
+  box-shadow: 0 0 12px rgba(212, 168, 67, 0.2);
+  flex-shrink: 0;
+}
+
+.loki-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #d4a843;
+  line-height: 1;
+}
+
+.loki-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: rgba(212, 168, 67, 0.5);
+  letter-spacing: 0.12em;
+  margin-top: 3px;
+}
+
+.loki-header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.loki-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  color: var(--text-muted, #71717A);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.loki-icon-btn:hover,
+.loki-icon-btn.active {
+  border-color: rgba(212, 168, 67, 0.3);
+  color: #d4a843;
+  background: rgba(212, 168, 67, 0.06);
+}
+
+/* ── Scanline ── */
+.loki-scanline {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 168, 67, 0.4), transparent);
+  animation: scanline-sweep 3s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes scanline-sweep {
+  0% { background: linear-gradient(90deg, transparent, rgba(212, 168, 67, 0.4), transparent); background-position: -100% 0; }
+  100% { background: linear-gradient(90deg, transparent, rgba(212, 168, 67, 0.4), transparent); background-position: 200% 0; }
+}
+
+/* ── Settings ── */
+.loki-settings {
+  border-bottom: 1px solid rgba(212, 168, 67, 0.1);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.loki-settings-form {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loki-settings-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(212, 168, 67, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.loki-key-status {
+  color: var(--success, #10B981);
+  margin-left: 4px;
+}
+
+.loki-settings-row {
+  display: flex;
+  gap: 6px;
+}
+
+.loki-key-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(212, 168, 67, 0.2);
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-primary, #EDEDED);
+  outline: none;
+  transition: border-color 150ms;
+}
+
+.loki-key-input:focus {
+  border-color: rgba(212, 168, 67, 0.5);
+}
+
+.loki-save-btn {
+  padding: 7px 14px;
+  background: linear-gradient(135deg, #d4a843, #f1c76d);
+  border: none;
+  border-radius: 4px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #050505;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 150ms;
+}
+
+.loki-save-btn:hover { opacity: 0.9; }
+
+.loki-clear-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--danger, #EF4444);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  opacity: 0.7;
+  transition: opacity 150ms;
+}
+
+.loki-clear-btn:hover { opacity: 1; }
+
+.loki-settings-note {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted, #71717A);
+  line-height: 1.6;
+}
+
+/* ── No Key Banner ── */
+.loki-no-key-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(212, 168, 67, 0.05);
+  border-bottom: 1px solid rgba(212, 168, 67, 0.08);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: rgba(212, 168, 67, 0.6);
+  flex-shrink: 0;
+}
+
+/* ── Body ── */
+.loki-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 168, 67, 0.2) transparent;
+}
+
+.loki-body::-webkit-scrollbar { width: 3px; }
+.loki-body::-webkit-scrollbar-thumb { background: rgba(212, 168, 67, 0.2); border-radius: 2px; }
+
+/* ── Sections ── */
+.loki-section {
+  padding: 10px 16px;
+}
+
+.loki-section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+/* ── Static Insights ── */
+.loki-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.loki-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  border: 1px solid;
+}
+
+.loki-insight-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.loki-insight--success {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.15);
+  color: rgba(16, 185, 129, 0.85);
+}
+.loki-insight--success .loki-insight-dot { background: #10B981; }
+
+.loki-insight--warning {
+  background: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.15);
+  color: rgba(245, 158, 11, 0.85);
+}
+.loki-insight--warning .loki-insight-dot { background: #F59E0B; }
+
+.loki-insight--info {
+  background: rgba(59, 130, 246, 0.05);
+  border-color: rgba(59, 130, 246, 0.15);
+  color: rgba(100, 150, 230, 0.85);
+}
+.loki-insight--info .loki-insight-dot { background: #3B82F6; }
+
+/* ── Action Buttons ── */
+.loki-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.loki-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-align: left;
+  width: 100%;
+}
+
+.loki-action-btn:hover {
+  background: rgba(212, 168, 67, 0.06);
+  border-color: rgba(212, 168, 67, 0.25);
+}
+
+.loki-action-btn.active {
+  background: rgba(212, 168, 67, 0.08);
+  border-color: rgba(212, 168, 67, 0.35);
+}
+
+.loki-action-btn.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.loki-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.loki-action-icon {
+  color: #d4a843;
+  flex-shrink: 0;
+}
+
+.loki-action-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.loki-action-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-primary, #EDEDED);
+  line-height: 1;
+}
+
+.loki-action-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted, #71717A);
+  line-height: 1;
+}
+
+.loki-action-chevron {
+  color: rgba(212, 168, 67, 0.3);
+  flex-shrink: 0;
+  transition: transform 150ms, color 150ms;
+}
+
+.loki-action-btn:hover .loki-action-chevron {
+  transform: translateX(2px);
+  color: rgba(212, 168, 67, 0.7);
+}
+
+/* ── Response Box ── */
+.loki-response {
+  margin: 6px 16px;
+  background: rgba(212, 168, 67, 0.04);
+  border: 1px solid rgba(212, 168, 67, 0.15);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.loki-response-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: rgba(212, 168, 67, 0.07);
+  border-bottom: 1px solid rgba(212, 168, 67, 0.1);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #d4a843;
+}
+
+.loki-response-clear {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: rgba(212, 168, 67, 0.4);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 150ms;
+}
+.loki-response-clear:hover { color: #d4a843; }
+
+/* ── Loading ── */
+.loki-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 12px;
+}
+
+.loki-loading-dot {
+  width: 5px;
+  height: 5px;
+  background: #d4a843;
+  border-radius: 50%;
+  animation: loki-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes loki-pulse {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.loki-loading-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: rgba(212, 168, 67, 0.5);
+  animation: loki-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── Response Text ── */
+.loki-response-text {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.loki-resp-heading {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #d4a843;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(212, 168, 67, 0.12);
+}
+
+.loki-resp-line {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgba(237, 237, 237, 0.85);
+  line-height: 1.6;
+}
+
+.loki-resp-line strong {
+  color: #d4a843;
+  font-weight: 600;
+}
+
+.loki-resp-bullet {
+  display: flex;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgba(237, 237, 237, 0.85);
+  line-height: 1.5;
+  margin: 2px 0;
+}
+
+.loki-resp-bullet-dot {
+  color: #d4a843;
+  flex-shrink: 0;
+  font-size: 9px;
+  margin-top: 1px;
+}
+
+.loki-resp-numbered {
+  display: flex;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgba(237, 237, 237, 0.85);
+  line-height: 1.5;
+  margin: 2px 0;
+}
+
+.loki-resp-num {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d4a843;
+  min-width: 16px;
+  flex-shrink: 0;
+}
+
+.loki-resp-spacer {
+  height: 6px;
+}
+
+/* ── Chat Input ── */
+.loki-chat-form {
+  display: flex;
+  gap: 6px;
+}
+
+.loki-chat-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-primary, #EDEDED);
+  outline: none;
+  transition: border-color 150ms;
+  min-width: 0;
+}
+
+.loki-chat-input:focus {
+  border-color: rgba(212, 168, 67, 0.35);
+}
+
+.loki-chat-input::placeholder {
+  color: var(--text-muted, #71717A);
+  font-size: 9px;
+}
+
+.loki-chat-input:disabled {
+  opacity: 0.4;
+}
+
+.loki-chat-send {
+  width: 36px;
+  height: 36px;
+  background: rgba(212, 168, 67, 0.1);
+  border: 1px solid rgba(212, 168, 67, 0.25);
+  border-radius: 6px;
+  color: #d4a843;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 150ms ease;
+}
+
+.loki-chat-send:hover:not(:disabled) {
+  background: rgba(212, 168, 67, 0.2);
+  border-color: rgba(212, 168, 67, 0.5);
+}
+
+.loki-chat-send:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Footer ── */
+.loki-footer {
+  padding: 8px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.loki-status-dot {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.loki-status-dot.online {
+  color: var(--success, #10B981);
+}
+
+.loki-status-dot.offline {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Mobile (Bottom Sheet) ── */
+@media (max-width: 639px) {
+  .loki-panel {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    height: 85dvh;
+    border-left: none;
+    border-top: 1px solid rgba(212, 168, 67, 0.25);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.7);
+  }
+}

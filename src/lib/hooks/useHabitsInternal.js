@@ -132,11 +132,17 @@ export function useHabitsInternal(user) {
 
     try {
       // 1. XP Adjustments: Remove any XP given from the previous state for today
-      if (existingLog && targetDate === currentTodayStr) {
-        if (existingLog.status === 'failed') {
-          await robustRemoveXP(user.id, 'habit_failed', existingLog.id)
-        } else if (!existingLog.status || existingLog.status === 'completed') {
-          await robustRemoveXP(user.id, 'habit_complete', existingLog.id)
+      if (targetDate === currentTodayStr) {
+        // Query DB to find real log IDs to remove XP correctly (bypass optimistic UI bugs)
+        const { data: realLogs } = await supabase.from('habit_logs').select('id, status').eq('user_id', user.id).eq('habit_id', habitId).eq('date', targetDate)
+        if (realLogs && realLogs.length > 0) {
+          for (const realLog of realLogs) {
+            if (realLog.status === 'failed') {
+              await robustRemoveXP(user.id, 'habit_failed', realLog.id)
+            } else if (!realLog.status || realLog.status === 'completed') {
+              await robustRemoveXP(user.id, 'habit_complete', realLog.id)
+            }
+          }
         }
       }
 

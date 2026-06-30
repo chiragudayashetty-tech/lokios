@@ -10,7 +10,7 @@ import {
   BookOpen, Briefcase, CalendarDays, Monitor, User,
   Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList
 } from 'lucide-react'
-import AIAssistant from '@/components/AIAssistant'
+import LokiAI from '@/components/LokiAI'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Command Center' },
@@ -168,7 +168,7 @@ export default function AppShell({ children }) {
                 <span className="font-display tracking-wider uppercase text-sm">Sign Out</span>
               </button>
 
-              <AIAssistant />
+              <LokiAI />
 
               <div className="flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
                 <div className="flex items-center gap-3">
@@ -223,7 +223,7 @@ export default function AppShell({ children }) {
               <span className="font-mono text-sm text-primary font-bold">LV.{profile?.level || 1}</span>
             </div>
           </div>
-          <AIAssistant />
+          <LokiAI />
           <button 
             onClick={() => {
               if (confirm('Are you sure you want to sign out?')) {

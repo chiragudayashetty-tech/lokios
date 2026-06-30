@@ -21,6 +21,7 @@ export default function JournalPage() {
   const [mood, setMood] = useState('')
   const [saving, setSaving] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [expandedArchive, setExpandedArchive] = useState(null)
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -155,8 +156,8 @@ export default function JournalPage() {
                 const dayNumber = entries.length - index;
 
                 return (
-                  <HudPanel key={entry.id} className="group hover:border-amber transition-colors">
-                    <div className="flex-between mb-4 border-b border-border-color pb-2">
+                  <HudPanel key={entry.id} className="group hover:border-amber transition-colors cursor-pointer" onClick={() => setExpandedArchive(expandedArchive === entry.id ? null : entry.id)}>
+                    <div className={`flex-between ${expandedArchive === entry.id ? 'mb-4 border-b border-border-color pb-2' : ''}`}>
                       <div className="flex items-center gap-3">
                         <span className="font-display text-lg text-primary tracking-widest">DAY {dayNumber}</span>
                         <span className="font-mono text-sm text-amber opacity-80">{entry.date}</span>
@@ -168,9 +169,11 @@ export default function JournalPage() {
                         <MoodIcon size={12} /> {moodObj.label}
                       </div>
                     </div>
-                    <div className="prose prose-invert prose-sm max-w-none font-mono text-secondary whitespace-pre-wrap">
-                      {entry.content}
-                    </div>
+                    {expandedArchive === entry.id && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="prose prose-invert prose-sm max-w-none font-mono text-secondary whitespace-pre-wrap">
+                        {entry.content}
+                      </motion.div>
+                    )}
                   </HudPanel>
                 )
               })

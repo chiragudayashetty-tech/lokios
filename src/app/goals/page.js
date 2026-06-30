@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
   const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
-  const { failMission, undoFailMission, deleteMission, tasks: { tasks, completeOperation } } = useOS()
+  const { failMission, undoFailMission, deleteMission, tasks: { tasks, completeOperation, deleteTask } } = useOS()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)
@@ -179,6 +179,11 @@ export default function Missions() {
               const isPaused = goal.status === 'paused'
               const isEditing = editingId === goal.id
               const isExpanded = expandedGoal === goal.id
+              
+              const linkedTasks = tasks.filter(t => t.goal_id === goal.id)
+              const hasLinked = linkedTasks.length > 0
+              const completedLinked = linkedTasks.filter(t => t.status === 'completed').length
+              const displayProgress = hasLinked ? Math.round((completedLinked / linkedTasks.length) * 100) : (goal.progress || 0)
 
               return (
                 <motion.div
@@ -286,14 +291,17 @@ export default function Missions() {
                             
                             <div>
                               <div className="flex-between mb-2">
-                                <label className="font-mono text-xs text-amber">MANUAL PROGRESS: {goal.progress}%</label>
+                                <label className="font-mono text-xs text-amber">
+                                  {hasLinked ? `DYNAMIC PROGRESS: ${displayProgress}%` : `MANUAL PROGRESS: ${displayProgress}%`}
+                                </label>
                               </div>
                               <input 
                                 type="range" 
                                 min="0" max="100" 
-                                value={goal.progress} 
-                                onChange={(e) => updateProgress(goal.id, parseInt(e.target.value))}
-                                className="w-full accent-amber-500"
+                                value={displayProgress} 
+                                onChange={(e) => !hasLinked && updateProgress(goal.id, parseInt(e.target.value))}
+                                className={`w-full ${hasLinked ? 'accent-success opacity-50 cursor-not-allowed' : 'accent-amber-500'}`}
+                                disabled={hasLinked}
                               />
                             </div>
                             {/* MILESTONES (LINKED TASKS) */}
@@ -312,9 +320,12 @@ export default function Missions() {
                                         >
                                           {isCompleted ? <CheckSquare size={16} /> : <Square size={16} />}
                                         </button>
-                                        <span className={`font-mono text-sm ${isCompleted ? 'text-muted line-through' : 'text-primary'}`}>
+                                        <span className={`font-mono text-sm flex-1 ${isCompleted ? 'text-muted line-through' : 'text-primary'}`}>
                                           {task.title}
                                         </span>
+                                        <button onClick={() => deleteTask(task.id)} className="text-muted hover:text-danger p-1 opacity-50 hover:opacity-100 transition-opacity" title="Delete Linked Operation">
+                                          <Trash2 size={14} />
+                                        </button>
                                       </div>
                                     )
                                   })}
@@ -328,7 +339,7 @@ export default function Missions() {
                     </AnimatePresence>
                     
                     <div className="mt-6">
-                      <TacticalProgress value={goal.progress} color={isPaused ? 'var(--text-muted)' : 'var(--accent-primary)'} label="COMPLETION" />
+                      <TacticalProgress value={displayProgress} color={isPaused ? 'var(--text-muted)' : 'var(--accent-primary)'} label="COMPLETION" />
                     </div>
                     
                     {goal.status !== 'completed' && goal.status !== 'cancelled' && (

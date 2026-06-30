@@ -210,22 +210,22 @@ export default function Operations() {
         </header>
 
         {/* METRICS ROW */}
-        <div className="grid-4 gap-4 mb-6">
-          <HudPanel className="p-4 flex-col items-center justify-center text-center">
-            <div className="font-display text-3xl text-primary">{pending.length}</div>
-            <div className="font-mono text-[10px] text-muted uppercase tracking-widest">PENDING</div>
+        <div className="flex gap-2 md:gap-4 mb-6 overflow-x-auto hide-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center flex-1 min-w-[75px]">
+            <div className="font-display text-2xl md:text-3xl text-primary">{pending.length}</div>
+            <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">PENDING</div>
           </HudPanel>
-          <HudPanel className="p-4 flex-col items-center justify-center text-center border-danger">
-            <div className="font-display text-3xl text-danger">{overdue.length}</div>
-            <div className="font-mono text-[10px] text-muted uppercase tracking-widest">OVERDUE</div>
+          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center border-danger flex-1 min-w-[75px]">
+            <div className="font-display text-2xl md:text-3xl text-danger">{overdue.length}</div>
+            <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">OVERDUE</div>
           </HudPanel>
-          <HudPanel className="p-4 flex-col items-center justify-center text-center border-amber">
-            <div className="font-display text-3xl text-amber">{dueToday.length}</div>
-            <div className="font-mono text-[10px] text-muted uppercase tracking-widest">DUE TODAY</div>
+          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center border-amber flex-1 min-w-[75px]">
+            <div className="font-display text-2xl md:text-3xl text-amber">{dueToday.length}</div>
+            <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">DUE TODAY</div>
           </HudPanel>
-          <HudPanel className="p-4 flex-col items-center justify-center text-center">
-            <div className="font-display text-3xl text-success">{completionRate}%</div>
-            <div className="font-mono text-[10px] text-muted uppercase tracking-widest">COMPLETION</div>
+          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center flex-1 min-w-[75px]">
+            <div className="font-display text-2xl md:text-3xl text-success">{completionRate}%</div>
+            <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">COMPLETION</div>
           </HudPanel>
         </div>
 

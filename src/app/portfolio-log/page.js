@@ -14,6 +14,7 @@ export default function ProofOfWork() {
   const { user } = useAuth()
   const { profile } = useProfile()
   const [activeTab, setActiveTab] = useState('timeline') // timeline | projects | resume | reviews
+  const [expandedReview, setExpandedReview] = useState(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -27,6 +28,32 @@ export default function ProofOfWork() {
 
   const [editingId, setEditingId] = useState(null)
   const [newMediaUrl, setNewMediaUrl] = useState('')
+
+  const [editingLogId, setEditingLogId] = useState(null)
+  const [editLogForm, setEditLogForm] = useState({})
+
+  const startEditLog = (log) => {
+    setEditingLogId(log.id)
+    setEditLogForm({
+      title: log.title || '',
+      type: log.type || 'other',
+      description: log.description || '',
+      duration: log.duration_hours || '',
+      duration_unit: 'hours'
+    })
+  }
+
+  const saveEditLog = async (id) => {
+    const supabase = createClient()
+    await supabase.from('work_logs').update({
+      title: editLogForm.title,
+      type: editLogForm.type,
+      description: editLogForm.description,
+      duration_hours: editLogForm.duration ? parseFloat(editLogForm.duration) * (editLogForm.duration_unit === 'days' ? 24 : 1) : null
+    }).eq('id', id)
+    setEditingLogId(null)
+    fetchData()
+  }
 
   // New Log Form State
   const [showAddLog, setShowAddLog] = useState(false)
@@ -207,45 +234,77 @@ export default function ProofOfWork() {
                   <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
                   
                   <div className="bg-tertiary border border-border-color p-4 hover:border-amber transition-colors">
-                    <div className="flex-between mb-2">
-                      <span className="font-mono text-xs text-amber">{String(log.date || '')}</span>
-                      <span className="badge">{String(log.type || 'OTHER').replace('_', ' ').toUpperCase()}</span>
-                    </div>
-                    
-                    <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-2 break-words">{log.title}</h3>
-                    {log.description && <p className="font-mono text-sm text-secondary mb-3 break-words whitespace-pre-wrap">{log.description}</p>}
-                    
-                    <div className="font-mono text-[10px] text-muted flex items-center gap-1 mb-4">
-                      <Clock size={10} />
-                      {log.duration_hours ? (log.duration_hours >= 24 && log.duration_hours % 24 === 0 ? `DURATION: ${log.duration_hours / 24} DAYS` : `DURATION: ${log.duration_hours} HOURS`) : 'NO DURATION LOGGED'}
-                    </div>
-                    
-                    {Array.isArray(log.media_urls) && log.media_urls.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {log.media_urls.map((url, idx) => (
-                          <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-mono text-[10px] text-amber hover:text-primary transition-colors bg-bg-primary border border-amber px-2 py-1">
-                            <ExternalLink size={10} /> PROOF {idx + 1}
-                          </a>
-                        ))}
+                    {editingLogId === log.id ? (
+                      <div className="flex-col gap-3">
+                        <input type="text" className="input font-mono text-sm py-1" value={editLogForm.title} onChange={e=>setEditLogForm({...editLogForm, title: e.target.value})} />
+                        <select className="select font-mono text-sm py-1" value={editLogForm.type} onChange={e=>setEditLogForm({...editLogForm, type: e.target.value})}>
+                          <option value="project_work">PROJECT WORK</option>
+                          <option value="content">CONTENT CREATION</option>
+                          <option value="meeting">MEETING / SALES</option>
+                          <option value="learning">LEARNING</option>
+                          <option value="other">OTHER</option>
+                        </select>
+                        <textarea className="textarea font-mono text-sm py-1" value={editLogForm.description} onChange={e=>setEditLogForm({...editLogForm, description: e.target.value})} rows={2} />
+                        <div className="flex gap-2">
+                          <input type="number" step="0.5" className="input font-mono text-sm flex-1 py-1" value={editLogForm.duration} onChange={e => setEditLogForm({...editLogForm, duration: e.target.value})} placeholder="Duration" />
+                          <select className="select font-mono text-sm w-24 py-1" value={editLogForm.duration_unit} onChange={e => setEditLogForm({...editLogForm, duration_unit: e.target.value})}>
+                            <option value="hours">HOURS</option>
+                            <option value="days">DAYS</option>
+                          </select>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-2">
+                          <button onClick={() => saveEditLog(log.id)} className="btn btn-primary btn-sm">SAVE</button>
+                          <button onClick={() => setEditingLogId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
+                        </div>
                       </div>
-                    )}
+                    ) : (
+                      <>
+                        <div className="flex-between mb-2">
+                          <span className="font-mono text-xs text-amber">{String(log.date || '')}</span>
+                          <span className="badge">{String(log.type || 'OTHER').replace('_', ' ').toUpperCase()}</span>
+                        </div>
+                        
+                        <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-2 break-words">{log.title}</h3>
+                        {log.description && <p className="font-mono text-sm text-secondary mb-3 break-words whitespace-pre-wrap">{log.description}</p>}
+                        
+                        <div className="font-mono text-[10px] text-muted flex items-center gap-1 mb-4">
+                          <Clock size={10} />
+                          {log.duration_hours ? (log.duration_hours >= 24 && log.duration_hours % 24 === 0 ? `DURATION: ${log.duration_hours / 24} DAYS` : `DURATION: ${log.duration_hours} HOURS`) : 'NO DURATION LOGGED'}
+                        </div>
+                        
+                        {Array.isArray(log.media_urls) && log.media_urls.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {log.media_urls.map((url, idx) => (
+                              <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-mono text-[10px] text-amber hover:text-primary transition-colors bg-bg-primary border border-amber px-2 py-1">
+                                <ExternalLink size={10} /> PROOF {idx + 1}
+                              </a>
+                            ))}
+                          </div>
+                        )}
 
-                    <div className="flex justify-between items-center border-t border-border-color pt-3 mt-2">
-                      <span className="font-mono text-xs text-muted">
-                        {log.duration_hours ? `DURATION: ${log.duration_hours}H` : 'NO DURATION LOGGED'}
-                      </span>
-                      <button onClick={() => setEditingId(editingId === log.id ? null : log.id)} className="font-mono text-[10px] text-muted hover:text-primary flex items-center gap-1">
-                        <Plus size={10} /> ADD PROOF
-                      </button>
-                    </div>
+                        <div className="flex justify-between items-center border-t border-border-color pt-3 mt-2">
+                          <span className="font-mono text-xs text-muted">
+                            {log.duration_hours ? `DURATION: ${log.duration_hours}H` : 'NO DURATION LOGGED'}
+                          </span>
+                          <div className="flex gap-3">
+                            <button onClick={() => startEditLog(log)} className="font-mono text-[10px] text-muted hover:text-amber flex items-center gap-1">
+                              <Edit2 size={10} /> EDIT
+                            </button>
+                            <button onClick={() => setEditingId(editingId === log.id ? null : log.id)} className="font-mono text-[10px] text-muted hover:text-primary flex items-center gap-1">
+                              <Plus size={10} /> ADD PROOF
+                            </button>
+                          </div>
+                        </div>
 
-                    {editingId === log.id && (
-                      <div className="mt-4 flex gap-2">
-                        <input type="url" placeholder="https://..." className="input font-mono text-xs flex-1 py-1" value={newMediaUrl} onChange={e => setNewMediaUrl(e.target.value)} />
-                        <button onClick={() => handleAddMedia(log.id, log.media_urls)} className="btn btn-primary btn-sm flex items-center gap-1">
-                          <Save size={12} /> SAVE
-                        </button>
-                      </div>
+                        {editingId === log.id && (
+                          <div className="mt-4 flex gap-2">
+                            <input type="url" placeholder="https://..." className="input font-mono text-xs flex-1 py-1" value={newMediaUrl} onChange={e => setNewMediaUrl(e.target.value)} />
+                            <button onClick={() => handleAddMedia(log.id, log.media_urls)} className="btn btn-primary btn-sm flex items-center gap-1">
+                              <Save size={12} /> SAVE
+                            </button>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -259,27 +318,32 @@ export default function ProofOfWork() {
         {activeTab === 'reviews' && (
           <div className="flex-col gap-6">
             <div className="flex-col gap-0 border-l border-border-strong ml-4 pl-6 relative">
-              {logs.filter(l => l.type === 'weekly_review').map((log) => (
+              {logs.filter(l => l.type === 'weekly_review').map((log, idx, arr) => (
                 <div key={log.id} className="relative pb-8 group">
                   <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
                   
-                  <div className="bg-tertiary border border-border-color p-4 hover:border-amber transition-colors">
+                  <div className="bg-tertiary border border-border-color p-4 hover:border-amber transition-colors cursor-pointer" onClick={() => setExpandedReview(expandedReview === log.id ? null : log.id)}>
                     <div className="flex-between mb-2">
                       <span className="font-mono text-xs text-amber">{String(log.date || '')}</span>
                       <span className="badge badge-amber">WEEKLY DEBRIEF</span>
                     </div>
                     
-                    <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-4">{log.title}</h3>
+                    <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-0">WEEK {arr.length - idx}</h3>
                     
-                    {log.description && (
-                      <div className="prose prose-invert prose-sm max-w-none font-mono text-sm text-secondary">
-                        {log.description.split('\n').map((line, i) => {
-                          if (line.startsWith('### ')) {
-                            return <h4 key={i} className="text-amber mt-4 mb-2 font-display tracking-widest uppercase">{line.replace('### ', '')}</h4>
-                          }
-                          return <div key={i} className="min-h-[1.5em]">{line}</div>
-                        })}
-                      </div>
+                    {expandedReview === log.id && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="mt-4 border-t border-border-color pt-4">
+                        <h4 className="font-display text-lg uppercase tracking-wider text-secondary mb-4">{log.title}</h4>
+                        {log.description && (
+                          <div className="prose prose-invert prose-sm max-w-none font-mono text-sm text-secondary">
+                            {log.description.split('\n').map((line, i) => {
+                              if (line.startsWith('### ')) {
+                                return <h4 key={i} className="text-amber mt-4 mb-2 font-display tracking-widest uppercase">{line.replace('### ', '')}</h4>
+                              }
+                              return <div key={i} className="min-h-[1.5em]">{line}</div>
+                            })}
+                          </div>
+                        )}
+                      </motion.div>
                     )}
                   </div>
                 </div>

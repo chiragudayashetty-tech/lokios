@@ -6,7 +6,7 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
-import { getLocalDateStr, formatDate } from '@/lib/utils/dates'
+import { getLocalDateStr, formatDate, getStartOfWeek, getEndOfWeek } from '@/lib/utils/dates'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { CalendarDays, Trophy, CheckSquare, Crosshair, ArrowRight, Save, Target, AlertTriangle } from 'lucide-react'
 
@@ -30,11 +30,13 @@ export default function WeeklyReview() {
       const supabase = createClient()
       
       const today = new Date()
-      const endStr = getLocalDateStr(today)
       
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6) // Last 7 days including today
-      const startStr = getLocalDateStr(sevenDaysAgo)
+      // Enforce calendar week boundaries (Monday to Sunday)
+      const startOfWeek = getStartOfWeek(today)
+      const endOfWeek = getEndOfWeek(today)
+      
+      const startStr = getLocalDateStr(startOfWeek)
+      const endStr = getLocalDateStr(endOfWeek)
       
       setDateRange({ start: formatDate(startStr, 'MMM DD'), end: formatDate(endStr, 'MMM DD') })
 
