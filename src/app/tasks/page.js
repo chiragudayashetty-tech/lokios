@@ -51,12 +51,17 @@ export default function Operations() {
     e.preventDefault()
     if (!deployForm.title.trim()) return
 
+    let finalDesc = deployForm.description || ''
+    if (deployForm.category === 'other' && deployForm.customCategory) {
+      finalDesc = `[Category: ${deployForm.customCategory}]\n\n${finalDesc}`.trim()
+    }
+
     const result = await addTask({
       title: deployForm.title,
-      description: deployForm.description || null,
+      description: finalDesc || null,
       due_date: deployForm.due_date || today, 
       difficulty: deployForm.difficulty,
-      category: deployForm.category === 'other' ? (deployForm.customCategory || 'Other') : deployForm.category,
+      category: deployForm.category === 'other' ? 'other' : deployForm.category,
       type: deployForm.recurrence_type ? 'recurring' : 'custom',
       recurrence_type: deployForm.recurrence_type || null,
       recurrence_days: deployForm.recurrence_type === 'daily' 
