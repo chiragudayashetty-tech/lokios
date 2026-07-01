@@ -904,6 +904,15 @@ p:last-child {
   gap: var(--space-5);
 }
 
+@media (max-width: 639px) {
+  .grid-auto-lg {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+  .grid-auto-sm {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 /* ─────────────────────────────────────────────────────────────────────────────
    4. HUD PANEL COMPONENT — Core Tactical Card
@@ -3108,7 +3117,7 @@ select:focus {
 
   .main-content {
     padding: var(--space-4) var(--space-3);
-    padding-bottom: calc(var(--mobile-nav-height) + var(--space-4));
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 20px) + var(--space-4));
   }
 
   .page-title {
@@ -3463,7 +3472,7 @@ select:focus {
   }
 
   .hidden-desktop {
-    display: initial !important;
+    display: flex !important;
   }
 }
 

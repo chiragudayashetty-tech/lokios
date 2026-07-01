@@ -130,7 +130,7 @@ export default function MissionControl() {
             <IntelligenceFeed />
 
             {/* SECTION 1: CURRENT MISSION */}
-            <HudPanel className="relative overflow-hidden border-info-subtle bg-gradient-to-br from-bg-tertiary to-bg-primary" style={{ minHeight: '180px' }}>
+            <HudPanel className="relative overflow-hidden border-info-subtle bg-gradient-to-br from-bg-tertiary to-bg-primary dash-mission-card" style={{ minHeight: '180px' }}>
               <div className="absolute top-0 right-0 w-64 h-64 bg-info opacity-10 blur-[100px] rounded-full pointer-events-none" />
               <div className="flex-between mb-4 relative z-10">
                 <span className="font-mono text-xs text-info flex items-center gap-2"><Target size={14} /> ACTIVE OBJECTIVE</span>
@@ -155,7 +155,7 @@ export default function MissionControl() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* SECTION 3: TODAY'S BATTLE PLAN */}
-              <HudPanel label="TODAY'S BATTLE PLAN">
+              <HudPanel label="TODAY'S BATTLE PLAN" className="dash-battle-plan">
                 <div className="flex-col gap-2" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                   <AnimatePresence>
                     {activeHabits.map(habit => (
@@ -200,7 +200,7 @@ export default function MissionControl() {
 
               {/* SECTION 4: NEXT ACTION */}
               {nextAction && (
-                <HudPanel label="NEXT ACTION">
+                <HudPanel label="NEXT ACTION" className="dash-next-action">
                   <div className="flex-col h-full justify-center py-4">
                     <div className="mb-4">
                       <span className="font-mono text-[10px] text-danger bg-danger-subtle px-2 py-1 uppercase border border-danger">HIGHEST PRIORITY</span>
@@ -217,7 +217,7 @@ export default function MissionControl() {
           </div>
 
           {/* RIGHT BENTO AREA (4 cols) */}
-          <div className="bento-col-span-4 flex flex-col gap-6">
+          <div className="bento-col-span-4 flex flex-col gap-6 dash-sidebar">
 
             {/* TODAY'S PROGRESS WIDGET */}
             <HudPanel className="p-5 flex-col flex-center text-center relative overflow-hidden">

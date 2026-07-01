@@ -253,8 +253,8 @@ export default function DailyOps() {
             <Plus size={16} /> ADD ROUTINE
           </button>
         </header>
-        {/* Top Stats Row */}
-        <div className="grid-2 gap-4 mb-6">
+        {/* Top Stats Row — pushed to bottom on mobile via CSS order */}
+        <div className="grid-2 gap-4 mb-6 quests-stats-row">
           {/* Today's Progress */}
           <HudPanel glow className="flex items-center gap-5 p-5">
             <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
@@ -296,8 +296,8 @@ export default function DailyOps() {
           </HudPanel>
         </div>
 
-        {/* Month Navigation */}
-        <div className="flex items-center justify-center mb-6">
+        {/* Month Navigation — part of paint grid section on mobile */}
+        <div className="flex items-center justify-center mb-6 quests-paint-grid">
           <HudPanel className="flex-center gap-6 p-5">
             <button onClick={prevMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronLeft size={20} /></button>
             <div className="text-center">
@@ -311,38 +311,38 @@ export default function DailyOps() {
         {/* Paint Tool Selector */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mb-6">
           <span className="font-display text-[10px] uppercase tracking-widest text-muted">PAINT MODE</span>
-          <div className="inline-flex items-center bg-tertiary border border-border-color rounded overflow-hidden">
+          <div className="inline-flex items-center bg-tertiary border border-border-color rounded overflow-hidden w-full sm:w-auto">
             <button 
               type="button"
-              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover md:hover:bg-hover text-primary'}`}
+              className={`flex-1 sm:flex-none px-3 md:px-4 py-3 sm:py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover text-primary'}`}
               onClick={() => setActiveTool('cycle')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('cycle'); }}
             >
-              <RotateCcw size={10} className="md:w-3 md:h-3" /> CYCLE
+              <RotateCcw size={13} /> CYCLE
             </button>
             <button 
               type="button"
-              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover md:hover:bg-hover text-success'}`}
+              className={`flex-1 sm:flex-none px-3 md:px-4 py-3 sm:py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover text-success'}`}
               onClick={() => setActiveTool('completed')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('completed'); }}
             >
-              <Check size={10} className="md:w-3 md:h-3" /> DONE
+              <Check size={13} /> DONE
             </button>
             <button 
               type="button"
-              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover md:hover:bg-hover text-danger'}`}
+              className={`flex-1 sm:flex-none px-3 md:px-4 py-3 sm:py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover text-danger'}`}
               onClick={() => setActiveTool('failed')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('failed'); }}
             >
-              <X size={10} className="md:w-3 md:h-3" /> FAIL
+              <X size={13} /> FAIL
             </button>
             <button 
               type="button"
-              className={`px-2 md:px-4 py-1.5 font-mono text-[9px] md:text-[10px] flex items-center gap-1 md:gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover md:hover:bg-hover text-muted'}`}
+              className={`flex-1 sm:flex-none px-3 md:px-4 py-3 sm:py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover text-muted'}`}
               onClick={() => setActiveTool('none')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('none'); }}
             >
-              <Crosshair size={10} className="md:w-3 md:h-3" /> CLEAR
+              <Crosshair size={13} /> CLEAR
             </button>
           </div>
         </div>
@@ -556,8 +556,8 @@ export default function DailyOps() {
           )}
         </HudPanel>
 
-        {/* Mobile View: Cards for Today's Routine */}
-        <div className="hidden-desktop flex flex-col gap-3">
+        {/* Mobile View: Cards for Today's Routine — first on mobile */}
+        <div className="hidden-desktop flex flex-col gap-3 quests-card-list">
           <div className="flex-between mb-1 mt-2">
             <span className="font-display text-sm uppercase tracking-widest text-amber">TODAY'S OPERATIONS</span>
             <span className="font-mono text-[10px] text-muted">{todayStr}</span>

@@ -204,7 +204,7 @@ export default function Operations() {
       <div className="page-container" style={{ maxWidth: '1400px' }}>
 
         {/* HEADER */}
-        <header className="flex-between flex-wrap gap-4 mb-6">
+        <header className="flex-between flex-wrap gap-4 mb-6 tasks-header">
           <div>
             <h1 className="page-title flex items-center gap-3"><Target className="text-amber" /> OPERATIONS</h1>
             <p className="page-subtitle font-mono text-xs uppercase">Deploy morning work goals. Execute. Complete. Prove.</p>
@@ -214,8 +214,8 @@ export default function Operations() {
           </button>
         </header>
 
-        {/* METRICS ROW */}
-        <div className="grid grid-cols-2 md:flex md:flex-row gap-2 md:gap-4 mb-6">
+        {/* METRICS ROW — pushed to bottom on mobile */}
+        <div className="grid grid-cols-2 md:flex md:flex-row gap-2 md:gap-4 mb-6 tasks-metrics-row">
           <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center w-full md:flex-1 md:min-w-[75px]">
             <div className="font-display text-2xl md:text-3xl text-primary">{pending.length}</div>
             <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">PENDING</div>
@@ -235,7 +235,7 @@ export default function Operations() {
         </div>
 
         {/* TABS */}
-        <div className="tabs mb-6 flex-wrap">
+        <div className="tabs mb-6 flex-wrap tasks-tab-row">
           {[
             { id: 'today', label: `TODAY (${overdue.length + dueToday.length})` },
             { id: 'upcoming', label: `UPCOMING (${upcoming.length})` },
@@ -251,7 +251,7 @@ export default function Operations() {
         </div>
 
         {/* OPERATIONS GRID */}
-        <div className="grid-2 gap-4">
+        <div className="grid-2 gap-4 tasks-grid">
           <AnimatePresence mode="popLayout">
             {activeList.map((task) => {
               const isCompleted = task.status === 'completed'

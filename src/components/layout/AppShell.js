@@ -69,7 +69,7 @@ export default function AppShell({ children }) {
           const dueTasks = todayTasks?.length || 0
           new Notification('Morning Briefing', {
             body: `Operator, you have ${dueTasks} Operations and ${habits?.length || 0} Daily Routines to secure today.`,
-            icon: '/icons/icon-192x192.png'
+            icon: '/icons/icon-192.png'
           })
           localStorage.setItem(key, 'true')
         }
@@ -83,7 +83,7 @@ export default function AppShell({ children }) {
           if (incompleteHabits > 0) {
             new Notification('Evening Warning', {
               body: `Midnight approaches. You still have ${incompleteHabits} routines unmarked. Secure them to protect your XP.`,
-              icon: '/icons/icon-192x192.png'
+              icon: '/icons/icon-192.png'
             })
           }
           localStorage.setItem(key, 'true')
@@ -97,6 +97,25 @@ export default function AppShell({ children }) {
     return () => clearInterval(interval)
   }, [todayTasks, habits, todayLogs])
 
+  // PWA INSTALL BANNER LOGIC
+  const [showPwaInstall, setShowPwaInstall] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
+    const hasDismissed = localStorage.getItem('lokios_pwa_dismissed')
+
+    if (isIos && isSafari && !isStandalone && !hasDismissed) {
+      setShowPwaInstall(true)
+    }
+  }, [])
+
+  const dismissPwa = () => {
+    localStorage.setItem('lokios_pwa_dismissed', 'true')
+    setShowPwaInstall(false)
+  }
+
   if (!user) return null
 
   const mainItems = [
@@ -108,6 +127,20 @@ export default function AppShell({ children }) {
 
   return (
     <div className="app-shell">
+      {/* PWA Install Banner */}
+      {showPwaInstall && (
+        <div className="pwa-install-banner">
+          <div className="pwa-install-banner-icon">📱</div>
+          <div className="pwa-install-banner-text">
+            <div className="pwa-install-banner-title">Install App</div>
+            <div className="pwa-install-banner-subtitle">Tap Share → Add to Home Screen</div>
+          </div>
+          <button className="pwa-install-banner-close" onClick={dismissPwa}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Mobile Full-Screen Takeover Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
@@ -116,11 +149,13 @@ export default function AppShell({ children }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 hidden-desktop flex-col px-6 overflow-y-auto"
+            className="fixed inset-0 flex-col px-6 overflow-y-auto"
             style={{ 
-              zIndex: 90, 
-              background: 'rgba(var(--bg-primary-rgb), 0.98)', 
+              zIndex: 1100,
+              display: 'flex',
+              background: 'rgba(4, 5, 7, 0.98)', 
               backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               paddingTop: 'max(48px, env(safe-area-inset-top))',
               paddingBottom: 'calc(100px + env(safe-area-inset-bottom))' 
             }}
@@ -261,14 +296,14 @@ export default function AppShell({ children }) {
                 }}
               >
                 <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
-                <span className="text-xs mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.7 }}>{item.label}</span>
+                          <span style={{ fontSize: '10px', opacity: isActive ? 1 : 0.65 }}>{item.label}</span>
               </div>
             </Link>
           )
         })}
         <button type="button" style={{ flex: 1, minHeight: '56px' }} className={`flex-col flex-center p-3 transition-transform active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={1.5} />}
-          <span className="text-xs mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.7 }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
+                    <span style={{ fontSize: '10px', opacity: mobileMenuOpen ? 1 : 0.65 }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
         </button>
       </nav>
 

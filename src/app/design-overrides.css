@@ -806,7 +806,7 @@ body > * {
     right: 0;
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
-    z-index: 1000;
+    z-index: 1050;
   }
 
   .hud-panel {
@@ -884,5 +884,166 @@ body > * {
   }
   .tabs::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Loki AI modal must clear the bottom nav */
+  .loki-modal-overlay,
+  [class*="loki-modal"] {
+    z-index: 1090 !important;
+  }
+
+  /* Raise btn-xs and btn-sm to meet 44px touch target on mobile */
+  .btn-xs,
+  .btn-sm {
+    min-height: 44px !important;
+    padding: 0.6rem 0.9rem !important;
+  }
+
+  /* Modal close button touch target */
+  .modal-close,
+  [class*="modal-close"] {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  /* Raise btn-icon touch target */
+  .btn-icon {
+    width: 44px !important;
+    height: 44px !important;
+  }
+}
+
+/* ─── PWA Install Prompt Banner ──────────────────────────────────────────── */
+.pwa-install-banner {
+  position: fixed;
+  bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 12px);
+  left: 12px;
+  right: 12px;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 1045;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  animation: slideUpBanner 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUpBanner {
+  from { transform: translateY(100px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.pwa-install-banner-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7c3aed, #3b82f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 22px;
+}
+
+.pwa-install-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-install-banner-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pwa-install-banner-subtitle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 2px;
+}
+
+.pwa-install-banner-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: rgba(255,255,255,0.5);
+  font-size: 18px;
+  border: none;
+  transition: background 0.2s;
+}
+.pwa-install-banner-close:hover { background: rgba(255,255,255,0.15); }
+
+@media (min-width: 1024px) {
+  .pwa-install-banner { display: none; }
+}
+
+/* ─── Mobile Layout Reordering (Actions First, Stats After) ─────────────── */
+/* 
+   Strategy: wrap each page's sections in a flex-col container, then on mobile
+   use CSS `order` to push metrics/stats panels below the action/interaction panels.
+   Desktop order is unaffected (order only matters inside a flex container).
+*/
+
+@media (max-width: 1023px) {
+
+  /* DAILY OPS / QUESTS PAGE — Today's tap cards first, stats rings second */
+  .mobile-order-first  { order: -1; }
+  .mobile-order-last   { order: 99; }
+  .mobile-order-normal { order: 0; }
+
+  /* Make page-container flex so order works */
+  .page-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Page header always on top */
+  .page-header {
+    order: -10;
+  }
+
+  /* On mobile, the quests stats row goes below the card list */
+  .quests-stats-row   { order: 50; }
+  .quests-card-list   { order: 1; }
+  .quests-paint-grid  { order: 40; }
+
+  /* Tasks page: task list first, metrics row second */
+  .tasks-metrics-row  { order: 50; }
+  .tasks-tab-row      { order: 2; }
+  .tasks-grid         { order: 3; }
+  .tasks-header       { order: -10; }
+
+  /* Dashboard: battle plan first, mission objective second, sidebar last */
+  .dash-battle-plan   { order: 1; }
+  .dash-next-action   { order: 2; }
+  .dash-mission-card  { order: 10; }
+  .dash-sidebar       { order: 20; }
+
+  /* Goals page: add/create first, list second, progress last */
+  .goals-add-row      { order: 1; }
+  .goals-list         { order: 2; }
+  .goals-progress     { order: 10; }
+
+  /* Compact page title on mobile */
+  .page-title {
+    font-size: 1.4rem !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .page-subtitle {
+    font-size: 10px !important;
   }
 }
