@@ -605,7 +605,7 @@ export default function DailyOps() {
 
         {/* Top 10 Daily Habits Sidebar */}
         {topHabits.length > 0 && (
-          <div className="grid-2 gap-6 mt-6">
+          <div className="grid-2 gap-6 mt-6 quests-sidebar">
             <HudPanel label="TOP 10 CONSISTENT ROUTINES">
               <div className="flex-col gap-2">
                 {topHabits.map((h, i) => {

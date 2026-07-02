@@ -181,6 +181,14 @@ export default function AppShell({ children }) {
             
             <div className="mt-8 max-w-md mx-auto w-full flex flex-col gap-3">
               <button 
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-3 p-4 bg-tertiary border border-border-color rounded-xl text-primary active:scale-95 transition-transform"
+              >
+                <X size={20} />
+                <span className="font-display tracking-wider uppercase text-sm">Close Menu</span>
+              </button>
+              
+              <button 
                 onClick={() => {
                   if (typeof window !== 'undefined') {
                     window.location.reload();
@@ -208,10 +216,12 @@ export default function AppShell({ children }) {
 
               <div className="flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
                 <div className="flex items-center gap-3">
-                  <Shield size={24} color="var(--accent-primary)" />
+                  <Shield size={24} color={profile ? getRankForXp(profile.total_xp || 0).colorHex : "var(--accent-primary)"} />
                   <div className="flex-col">
-                    <span className="font-display uppercase text-xs tracking-wide text-muted">{profile?.rank || 'OPERATOR'}</span>
-                    <span className="font-mono text-sm text-primary font-bold">LV.{profile?.level || 1}</span>
+                    <span className="font-display uppercase text-xs tracking-wide text-muted" style={{ color: profile ? getRankForXp(profile.total_xp || 0).colorHex : 'inherit' }}>
+                      {profile ? `${getRankForXp(profile.total_xp || 0).code}-RANK` : 'OPERATOR'}
+                    </span>
+                    <span className="font-mono text-sm text-primary font-bold">LV.{profile ? calculateLevel(profile.total_xp || 0) : 1}</span>
                   </div>
                 </div>
               </div>
@@ -296,14 +306,14 @@ export default function AppShell({ children }) {
                 }}
               >
                 <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
-                          <span style={{ fontSize: '10px', opacity: isActive ? 1 : 0.65 }}>{item.label}</span>
+                <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{item.label}</span>
               </div>
             </Link>
           )
         })}
-        <button type="button" style={{ flex: 1, minHeight: '56px' }} className={`flex-col flex-center p-3 transition-transform active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+        <button type="button" style={{ flex: 1, minHeight: '56px', width: '20%' }} className={`flex-col flex-center p-3 transition-transform active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={1.5} />}
-                    <span style={{ fontSize: '10px', opacity: mobileMenuOpen ? 1 : 0.65 }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
+          <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
         </button>
       </nav>
 

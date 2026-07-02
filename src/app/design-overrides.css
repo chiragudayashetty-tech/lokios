@@ -1019,6 +1019,7 @@ body > * {
   .quests-stats-row   { order: 50; }
   .quests-card-list   { order: 1; }
   .quests-paint-grid  { order: 40; }
+  .quests-sidebar     { order: 60; }
 
   /* Tasks page: task list first, metrics row second */
   .tasks-metrics-row  { order: 50; }
