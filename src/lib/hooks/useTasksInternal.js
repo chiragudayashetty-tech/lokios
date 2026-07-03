@@ -138,9 +138,13 @@ export function useTasksInternal(user) {
       if (task.type === 'recurring' && task.recurrence_type && task.due_date) {
         const currentDueDate = new Date(task.due_date)
         const nextDueDate = new Date(currentDueDate)
-        if (task.recurrence_type === 'daily') {
+        const recType = String(task.recurrence_type).toLowerCase()
+        if (recType === 'daily') {
           nextDueDate.setDate(nextDueDate.getDate() + 1)
-        } else if (task.recurrence_type === 'weekly') {
+        } else if (recType === 'weekly') {
+          nextDueDate.setDate(nextDueDate.getDate() + 7)
+        } else {
+          // Fallback if somehow it's neither but marked recurring
           nextDueDate.setDate(nextDueDate.getDate() + 7)
         }
 
