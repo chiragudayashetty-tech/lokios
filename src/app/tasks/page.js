@@ -66,7 +66,6 @@ export default function Operations() {
     if (!deployForm.title.trim()) return
 
     let finalDesc = deployForm.description || ''
-    let finalDesc = deployForm.description || ''
     if (deployForm.category === 'other' && deployForm.customCategory) {
       finalDesc = `[Category: ${deployForm.customCategory}]\n\n${finalDesc}`.trim()
     }
