@@ -141,8 +141,28 @@ export function useTasksInternal(user) {
         const recType = String(task.recurrence_type).toLowerCase()
         if (recType === 'daily') {
           nextDueDate.setDate(nextDueDate.getDate() + 1)
-        } else if (recType === 'weekly') {
-          nextDueDate.setDate(nextDueDate.getDate() + 7)
+        } else if (recType === 'weekly' && task.recurrence_days && task.recurrence_days.length > 0) {
+          let duration = 0
+          if (task.description) {
+            const match = task.description.match(/\[Duration:\s*(\d+)\]/i)
+            if (match) duration = parseInt(match[1])
+          }
+          
+          const anchorDate = new Date(currentDueDate)
+          anchorDate.setDate(anchorDate.getDate() - duration)
+          
+          const currentDay = anchorDate.getDay()
+          const sortedDays = [...task.recurrence_days].sort((a, b) => a - b)
+          let nextDay = sortedDays.find(d => d > currentDay)
+          let daysToAdd = 0
+          if (nextDay !== undefined) {
+            daysToAdd = nextDay - currentDay
+          } else {
+            daysToAdd = (7 - currentDay) + sortedDays[0]
+          }
+          
+          nextDueDate.setTime(anchorDate.getTime())
+          nextDueDate.setDate(nextDueDate.getDate() + daysToAdd + duration)
         } else {
           // Fallback if somehow it's neither but marked recurring
           nextDueDate.setDate(nextDueDate.getDate() + 7)
@@ -321,6 +341,47 @@ export function useTasksInternal(user) {
     }
   }, [user, tasks])
 
+  const pushTaskToTomorrow = useCallback(async (id) => {
+    if (!user) return null
+    const task = tasks.find((t) => t.id === id)
+    if (!task) return null
+
+    try {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const nextDueStr = tomorrow.toISOString().split('T')[0]
+
+      const { data: updated, error } = await supabase
+        .from('tasks')
+        .update({ due_date: nextDueStr })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Procrastination XP penalty
+      const difficultyData = DIFFICULTY_LEVELS[task.difficulty] || DIFFICULTY_LEVELS.MEDIUM
+      if (difficultyData.id !== 'NONE' && difficultyData.penalty > 0) {
+        await robustAwardXP(
+          user.id,
+          -difficultyData.penalty,
+          'task_pushed',
+          id,
+          `Procrastination: Pushed ${task.title} to tomorrow`,
+          task.category || 'discipline'
+        )
+      }
+
+      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      return updated
+    } catch (error) {
+      console.error('Error pushing task:', error)
+      return null
+    }
+  }, [user, tasks])
+
   return {
     tasks,
     todayTasks,
@@ -330,6 +391,7 @@ export function useTasksInternal(user) {
     addTask,
     editTask,
     completeTask,
+    pushTaskToTomorrow,
     undoCompleteTask,
     deleteTask,
     failTask,

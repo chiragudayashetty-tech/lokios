@@ -48,6 +48,7 @@ export const XP_REWARDS = {
 };
 
 export const DIFFICULTY_LEVELS = {
+  NONE: { id: 'NONE', label: 'NONE', xp: 0, penalty: 0, color: 'var(--text-muted)' },
   EASY: { id: 'EASY', label: 'EASY', xp: 15, penalty: 0, color: 'var(--info)' },
   MEDIUM: { id: 'MEDIUM', label: 'MEDIUM', xp: 30, penalty: 10, color: 'var(--accent-primary)' },
   HARD: { id: 'HARD', label: 'HARD', xp: 60, penalty: 25, color: 'var(--warning)' },

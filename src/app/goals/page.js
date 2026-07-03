@@ -58,13 +58,17 @@ export default function Missions() {
       alert("LONG RANGE MISSIONS REQUIRE A STRICT DEADLINE.")
       return
     }
+    let finalDesc = formData.description || ''
+    if (formData.category === 'other' && formData.customCategory) {
+      finalDesc = `[Category: ${formData.customCategory}]\n\n${finalDesc}`.trim()
+    }
     const payload = {
       title: formData.title,
-      description: formData.description,
+      description: finalDesc || null,
       type: formData.type,
       difficulty: formData.difficulty,
       deadline: formData.deadline || null,
-      category: formData.category
+      category: formData.category === 'other' ? 'other' : formData.category
     }
     const result = await addGoal(payload)
     if (result && result.error) {
@@ -84,12 +88,18 @@ export default function Missions() {
       difficulty: goal.difficulty || 'HARD',
       type: goal.type || 'side_quest',
       category: goal.category || 'personal',
+      customCategory: '',
       deadline: goal.deadline ? getLocalDateStr(new Date(goal.deadline)) : ''
     })
   }
 
   const saveEdit = async (id) => {
-    await updateGoal(id, editForm)
+    const payload = { ...editForm }
+    if (payload.category === 'other' && payload.customCategory) {
+      payload.description = `[Category: ${payload.customCategory}]\n\n${payload.description || ''}`.trim()
+    }
+    delete payload.customCategory
+    await updateGoal(id, payload)
     setEditingId(null)
   }
 
@@ -261,8 +271,15 @@ export default function Missions() {
                               <option value="business">BEYOND TATVA (BUSINESS)</option>
                               <option value="health">FITNESS / HEALTH</option>
                               <option value="learning">LEARNING / SKILLS</option>
+                              <option value="other">OTHER</option>
                             </select>
                           </div>
+                          {editForm.category === 'other' && (
+                            <div className="col-span-2 sm:col-span-1">
+                              <label className="font-mono text-xs text-muted mb-1 block">CUSTOM CATEGORY</label>
+                              <input type="text" className="input font-mono text-sm py-1" placeholder="e.g. Finance" value={editForm.customCategory} onChange={e=>setEditForm({...editForm, customCategory: e.target.value})} />
+                            </div>
+                          )}
                         </div>
                         <div className="flex justify-end gap-2 mt-2">
                           <button onClick={() => saveEdit(goal.id)} className="btn btn-primary btn-sm">SAVE</button>
@@ -438,8 +455,15 @@ export default function Missions() {
                         <option value="business">BEYOND TATVA (BUSINESS)</option>
                         <option value="health">FITNESS / HEALTH</option>
                         <option value="learning">LEARNING / SKILLS</option>
+                        <option value="other">OTHER</option>
                       </select>
                     </div>
+                    {formData.category === 'other' && (
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">CUSTOM CATEGORY</label>
+                        <input type="text" className="input" placeholder="e.g. Finance, Family" value={formData.customCategory} onChange={e=>setFormData({...formData, customCategory: e.target.value})} />
+                      </div>
+                    )}
                     <div>
                       <label className="font-mono text-xs text-muted mb-1 block">
                         {formData.type === 'long_term' ? 'STRICT DEADLINE (REQUIRED)' : 'DEADLINE (OPTIONAL)'}

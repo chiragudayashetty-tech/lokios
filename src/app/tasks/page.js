@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle } from 'lucide-react'
 
 export default function Operations() {
-  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation, undoFailOperation, goals: { goals } } = useOS()
+  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, pushTaskToTomorrow, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation, undoFailOperation, goals: { goals } } = useOS()
 
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)
@@ -18,7 +18,21 @@ export default function Operations() {
   const [editForm, setEditForm] = useState({})
 
   // Deploy form
-  const [deployForm, setDeployForm] = useState({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '', due_date: getLocalDateStr(), goal_id: '' })
+  const [deployForm, setDeployForm] = useState({ 
+    title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', 
+    recurrence_type: '', customCategory: '', due_date: getLocalDateStr(), goal_id: '',
+    weeklyDays: [new Date().getDay()], weeklyDuration: 0
+  })
+
+  const DAYS_OF_WEEK = [
+    { label: 'MON', value: 1 },
+    { label: 'TUE', value: 2 },
+    { label: 'WED', value: 3 },
+    { label: 'THU', value: 4 },
+    { label: 'FRI', value: 5 },
+    { label: 'SAT', value: 6 },
+    { label: 'SUN', value: 0 }
+  ]
 
   // Proof state
   const [proofTask, setProofTask] = useState(null)
@@ -52,21 +66,43 @@ export default function Operations() {
     if (!deployForm.title.trim()) return
 
     let finalDesc = deployForm.description || ''
+    let finalDesc = deployForm.description || ''
     if (deployForm.category === 'other' && deployForm.customCategory) {
       finalDesc = `[Category: ${deployForm.customCategory}]\n\n${finalDesc}`.trim()
+    }
+    
+    let finalDueDate = deployForm.due_date || today
+    let finalRecurrenceDays = deployForm.recurrence_type === 'daily' ? [0,1,2,3,4,5,6] : null
+
+    if (deployForm.recurrence_type === 'weekly') {
+      finalRecurrenceDays = deployForm.weeklyDays.length > 0 ? deployForm.weeklyDays : [new Date().getDay()]
+      if (deployForm.weeklyDuration > 0) {
+        finalDesc = `[Duration: ${deployForm.weeklyDuration}]\n\n${finalDesc}`.trim()
+      }
+      // Calculate first due date
+      const fromDate = new Date()
+      const currentDay = fromDate.getDay()
+      const sortedDays = [...finalRecurrenceDays].sort((a, b) => a - b)
+      let nextDay = sortedDays.find(d => d >= currentDay)
+      let daysToAdd = 0
+      if (nextDay !== undefined) {
+        daysToAdd = nextDay - currentDay
+      } else {
+        daysToAdd = (7 - currentDay) + sortedDays[0]
+      }
+      fromDate.setDate(fromDate.getDate() + daysToAdd + parseInt(deployForm.weeklyDuration || 0))
+      finalDueDate = fromDate.toISOString().split('T')[0]
     }
 
     const result = await addTask({
       title: deployForm.title,
       description: finalDesc || null,
-      due_date: deployForm.due_date || today, 
+      due_date: finalDueDate, 
       difficulty: deployForm.difficulty,
       category: deployForm.category === 'other' ? 'other' : deployForm.category,
       type: deployForm.recurrence_type ? 'recurring' : 'custom',
       recurrence_type: deployForm.recurrence_type || null,
-      recurrence_days: deployForm.recurrence_type === 'daily' 
-        ? [0, 1, 2, 3, 4, 5, 6] 
-        : (deployForm.recurrence_type === 'weekly' ? [new Date(deployForm.due_date || today).getDay()] : null),
+      recurrence_days: finalRecurrenceDays,
       goal_id: deployForm.goal_id || null,
     })
 
@@ -75,14 +111,16 @@ export default function Operations() {
       return
     }
 
-    setDeployForm({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', recurrence_type: '', customCategory: '', due_date: today })
+    setDeployForm({ 
+      title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', 
+      recurrence_type: '', customCategory: '', due_date: today, goal_id: '',
+      weeklyDays: [new Date().getDay()], weeklyDuration: 0 
+    })
     setShowDeploy(false)
   }
 
   const pushToTomorrow = async (task) => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    await editTask(task.id, { due_date: getLocalDateStr(tomorrow) })
+    await pushTaskToTomorrow(task.id)
   }
 
   const handleDeleteOperation = async (task) => {
@@ -285,8 +323,8 @@ export default function Operations() {
                           </div>
                           <div>
                             <label className="font-mono text-[10px] text-muted mb-1 block">DIFFICULTY</label>
-                            <select className="select font-mono text-xs" value={editForm.difficulty}
-                              onChange={e => setEditForm({ ...editForm, difficulty: e.target.value })}>
+                            <select className="select font-mono text-xs" value={editForm.difficulty} onChange={e => setEditForm({ ...editForm, difficulty: e.target.value })}>
+                              <option value="NONE">NONE (0 XP)</option>
                               <option value="EASY">EASY</option>
                               <option value="MEDIUM">MEDIUM</option>
                               <option value="HARD">HARD</option>
@@ -472,14 +510,17 @@ export default function Operations() {
                         onChange={e => setDeployForm({ ...deployForm, description: e.target.value })}
                         placeholder="What needs to be done..." />
                     </div>
-                    <div>
-                      <label className="font-mono text-xs text-muted mb-1 block">DUE DATE</label>
-                      <input type="date" className="input font-mono text-sm py-1 w-full" value={deployForm.due_date} onChange={e=>setDeployForm({...deployForm, due_date: e.target.value})} />
-                    </div>
+                    {deployForm.recurrence_type !== 'weekly' && (
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">DUE DATE</label>
+                        <input type="date" className="input font-mono text-sm py-1 w-full" value={deployForm.due_date} onChange={e=>setDeployForm({...deployForm, due_date: e.target.value})} />
+                      </div>
+                    )}
                     <div className="grid-2 gap-3 mt-3">
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">DIFFICULTY</label>
                         <select className="select font-mono text-sm py-1" value={deployForm.difficulty} onChange={e=>setDeployForm({...deployForm, difficulty: e.target.value})}>
+                          <option value="NONE">NONE (0 XP)</option>
                           <option value="EASY">EASY</option>
                           <option value="MEDIUM">MEDIUM</option>
                           <option value="HARD">HARD</option>
@@ -521,6 +562,28 @@ export default function Operations() {
                         <option value="weekly">WEEKLY</option>
                       </select>
                     </div>
+                    {deployForm.recurrence_type === 'weekly' && (
+                      <div className="mt-3 p-3 border border-border/50 bg-bg-secondary rounded-lg">
+                        <label className="font-mono text-xs text-info mb-2 block">RECURRENCE DAYS</label>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {DAYS_OF_WEEK.map(day => (
+                            <button key={day.value} type="button" 
+                              className={`px-2 py-1 rounded text-xs font-mono border transition-colors ${deployForm.weeklyDays.includes(day.value) ? 'bg-info/20 border-info text-info' : 'border-border text-muted hover:border-info/50'}`}
+                              onClick={() => {
+                                const newDays = deployForm.weeklyDays.includes(day.value) 
+                                  ? deployForm.weeklyDays.filter(d => d !== day.value)
+                                  : [...deployForm.weeklyDays, day.value]
+                                setDeployForm({...deployForm, weeklyDays: newDays})
+                              }}>
+                              {day.label}
+                            </button>
+                          ))}
+                        </div>
+                        <label className="font-mono text-xs text-info mb-1 block">DAYS TO COMPLETE (DURATION)</label>
+                        <input type="number" min="0" max="14" className="input font-mono text-sm py-1 w-24" value={deployForm.weeklyDuration} onChange={e=>setDeployForm({...deployForm, weeklyDuration: parseInt(e.target.value) || 0})} />
+                        <span className="text-xs text-muted ml-2 font-mono">Days</span>
+                      </div>
+                    )}
                     <div className="flex gap-2 mt-3">
                       <button type="submit" className="btn btn-primary flex-1 py-3">DEPLOY</button>
                       <button type="button" className="btn btn-ghost" onClick={() => setShowDeploy(false)}>ABORT</button>
