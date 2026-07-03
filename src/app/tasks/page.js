@@ -66,7 +66,7 @@ export default function Operations() {
       recurrence_type: deployForm.recurrence_type || null,
       recurrence_days: deployForm.recurrence_type === 'daily' 
         ? [0, 1, 2, 3, 4, 5, 6] 
-        : (deployForm.recurrence_type === 'weekly' ? [new Date().getDay()] : null),
+        : (deployForm.recurrence_type === 'weekly' ? [new Date(deployForm.due_date || today).getDay()] : null),
       goal_id: deployForm.goal_id || null,
     })
 
@@ -161,6 +161,13 @@ export default function Operations() {
     if (payload.due_date === '') payload.due_date = null
     await editTask(id, payload)
     setEditingId(null)
+  }
+
+  const handleDeleteTask = async (id) => {
+    if (confirm("Are you sure you want to delete this operation? If it is a recurring series, this will end the series.")) {
+      await deleteTask(id)
+      setEditingId(null)
+    }
   }
 
   // Which list to show based on active tab
@@ -297,6 +304,7 @@ export default function Operations() {
                           </div>
                         </div>
                         <div className="flex gap-2 justify-end mt-2">
+                          <button type='button' onClick={() => handleDeleteTask(task.id)} className="btn btn-ghost btn-sm text-danger mr-auto">DELETE</button>
                           <button type='button' onClick={() => saveEdit(task.id)} className="btn btn-primary btn-sm">SAVE</button>
                           <button type='button' onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
                         </div>

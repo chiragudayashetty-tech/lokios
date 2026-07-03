@@ -53,11 +53,6 @@ export function useTasksInternal(user) {
       // Match tasks due today
       if (task.due_date && getLocalDateStr(new Date(task.due_date)) === todayStr) return true
 
-      // Match recurring tasks that apply to today
-      if (task.type === 'recurring' && task.recurrence_days) {
-        return task.recurrence_days.includes(dayOfWeek)
-      }
-
       // Incomplete one-time tasks with no due date
       if (!task.due_date && !task.completed_at && task.type === 'custom') return true
 
@@ -138,6 +133,42 @@ export function useTasksInternal(user) {
       )
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+
+      // AUTO-CLONING ENGINE FOR RECURRING TASKS
+      if (task.type === 'recurring' && task.recurrence_type && task.due_date) {
+        const currentDueDate = new Date(task.due_date)
+        const nextDueDate = new Date(currentDueDate)
+        if (task.recurrence_type === 'daily') {
+          nextDueDate.setDate(nextDueDate.getDate() + 1)
+        } else if (task.recurrence_type === 'weekly') {
+          nextDueDate.setDate(nextDueDate.getDate() + 7)
+        }
+
+        const cloneData = {
+          user_id: user.id,
+          title: task.title,
+          description: task.description,
+          difficulty: task.difficulty,
+          type: 'recurring',
+          category: task.category,
+          recurrence_type: task.recurrence_type,
+          recurrence_days: task.recurrence_days,
+          due_date: nextDueDate.toISOString(),
+          status: 'pending',
+          goal_id: task.goal_id
+        }
+
+        const { data: newClone, error: cloneError } = await supabase
+          .from('tasks')
+          .insert([cloneData])
+          .select()
+          .single()
+
+        if (!cloneError && newClone) {
+          setTasks((prev) => [...prev, newClone])
+        }
+      }
+
       return updated
     } catch (error) {
       console.error('Error completing task:', error)
