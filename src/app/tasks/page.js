@@ -15,6 +15,7 @@ export default function Operations() {
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [expandedDescId, setExpandedDescId] = useState(null)
   const [editForm, setEditForm] = useState({})
 
   // Deploy form
@@ -387,7 +388,15 @@ export default function Operations() {
                     <h3 className={`font-display text-xl uppercase tracking-wider mb-1 ${isCompleted ? 'line-through text-muted' : 'text-primary'}`}>
                       {task.title}
                     </h3>
-                    {task.description && <p className="font-mono text-xs text-secondary mb-3 line-clamp-2 truncate-mobile-wrap">{task.description}</p>}
+                    {task.description && (
+                      <p 
+                        className={`font-mono text-xs text-secondary mb-3 whitespace-pre-wrap cursor-pointer ${expandedDescId === task.id ? '' : 'line-clamp-2 truncate-mobile-wrap'}`}
+                        onClick={(e) => { e.stopPropagation(); setExpandedDescId(expandedDescId === task.id ? null : task.id) }}
+                        title={expandedDescId === task.id ? "Click to collapse" : "Click to expand"}
+                      >
+                        {task.description}
+                      </p>
+                    )}
 
                     {/* Bottom row */}
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 pt-3 border-t border-border-subtle gap-4 sm:gap-3">
