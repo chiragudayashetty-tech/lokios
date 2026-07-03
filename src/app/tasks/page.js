@@ -579,8 +579,10 @@ export default function Operations() {
                           ))}
                         </div>
                         <label className="font-mono text-xs text-info mb-1 block">DAYS TO COMPLETE (DURATION)</label>
-                        <input type="number" min="0" max="14" className="input font-mono text-sm py-1 w-24" value={deployForm.weeklyDuration} onChange={e=>setDeployForm({...deployForm, weeklyDuration: parseInt(e.target.value) || 0})} />
-                        <span className="text-xs text-muted ml-2 font-mono">Days</span>
+                        <div className="flex items-center gap-2">
+                          <input type="number" min="0" max="14" className="input font-mono text-sm py-1 w-24" value={deployForm.weeklyDuration} onChange={e=>setDeployForm({...deployForm, weeklyDuration: parseInt(e.target.value) || 0})} />
+                          <span className="text-xs text-muted font-mono">Days</span>
+                        </div>
                       </div>
                     )}
                     <div className="flex gap-2 mt-3">
