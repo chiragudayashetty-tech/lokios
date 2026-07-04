@@ -158,15 +158,22 @@ export default function MissionControl() {
               <HudPanel label="TODAY'S BATTLE PLAN" className="dash-battle-plan">
                 <div className="flex-col gap-2" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                   <AnimatePresence>
-                    {activeHabits.map(habit => (
-                      <motion.div key={habit.id} layout initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0, height:0}}
-                        className="flex items-center gap-3 p-3 bg-tertiary border border-border-color group hover:border-info transition-colors cursor-pointer rounded-md"
-                        onClick={() => toggleHabit(habit.id)}>
-                        <div className="w-4 h-4 border border-border-strong group-hover:border-info flex-center shrink-0 rounded-sm" />
-                        <span className="font-mono text-sm text-primary flex-1 truncate">{habit.title}</span>
-                        <span className="font-mono text-[9px] text-info font-bold">+{habit.xp_per_completion || 25} XP</span>
-                      </motion.div>
-                    ))}
+                    {activeHabits.map(habit => {
+                      const isBlocked = !(habit.frequency_days || [0,1,2,3,4,5,6]).includes(new Date().getDay());
+                      return (
+                        <motion.div key={habit.id} layout initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0, height:0}}
+                          className={`flex items-center gap-3 p-3 transition-colors cursor-pointer rounded-md ${isBlocked ? 'bg-bg border border-border-subtle opacity-60 hover:opacity-80' : 'bg-tertiary border border-border-color group hover:border-info'}`}
+                          onClick={() => toggleHabit(habit.id)}
+                          style={isBlocked ? { backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 20px)' } : {}}
+                        >
+                          <div className={`w-4 h-4 border flex-center shrink-0 rounded-sm ${isBlocked ? 'border-border-subtle' : 'border-border-strong group-hover:border-info'}`} />
+                          <span className={`font-mono text-sm flex-1 truncate ${isBlocked ? 'text-muted' : 'text-primary'}`}>
+                            {habit.title} {isBlocked && <span className="text-[10px] ml-2 text-danger opacity-70 tracking-widest">BLOCKED</span>}
+                          </span>
+                          <span className={`font-mono text-[9px] font-bold ${isBlocked ? 'text-muted' : 'text-info'}`}>+{isBlocked ? 0 : (habit.xp_per_completion || 25)} XP</span>
+                        </motion.div>
+                      )
+                    })}
                     {pendingTasks.map(task => (
                       <motion.div key={task.id} layout initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0, height:0}}
                         className="flex items-center gap-3 p-3 bg-tertiary border border-info-subtle group hover:border-info transition-colors cursor-pointer rounded-md"

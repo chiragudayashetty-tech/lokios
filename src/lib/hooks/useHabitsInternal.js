@@ -131,17 +131,15 @@ export function useHabitsInternal(user) {
     })
 
     try {
-      // 1. XP Adjustments: Remove any XP given from the previous state for today
-      if (targetDate === currentTodayStr) {
-        // Query DB to find real log IDs to remove XP correctly (bypass optimistic UI bugs)
-        const { data: realLogs } = await supabase.from('habit_logs').select('id, status').eq('user_id', user.id).eq('habit_id', habitId).eq('date', targetDate)
-        if (realLogs && realLogs.length > 0) {
-          for (const realLog of realLogs) {
-            if (realLog.status === 'failed') {
-              await robustRemoveXP(user.id, 'habit_failed', realLog.id)
-            } else if (!realLog.status || realLog.status === 'completed') {
-              await robustRemoveXP(user.id, 'habit_complete', realLog.id)
-            }
+      // 1. XP Adjustments: Remove any XP given from the previous state
+      // Query DB to find real log IDs to remove XP correctly (bypass optimistic UI bugs)
+      const { data: realLogs } = await supabase.from('habit_logs').select('id, status').eq('user_id', user.id).eq('habit_id', habitId).eq('date', targetDate)
+      if (realLogs && realLogs.length > 0) {
+        for (const realLog of realLogs) {
+          if (realLog.status === 'failed') {
+            await robustRemoveXP(user.id, 'habit_failed', realLog.id)
+          } else if (!realLog.status || realLog.status === 'completed') {
+            await robustRemoveXP(user.id, 'habit_complete', realLog.id)
           }
         }
       }
@@ -183,12 +181,16 @@ export function useHabitsInternal(user) {
         setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
 
         // Award New XP
-        if (targetDate === currentTodayStr && newLog) {
+        if (newLog) {
           const habit = habits.find((h) => h.id === habitId)
+          const targetDayOfWeek = new Date(targetDate).getDay()
+          const freqDays = habit?.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+          const isBlocked = !freqDays.includes(targetDayOfWeek)
+          
           if (nextStatus === 'completed') {
-            await robustAwardXP(user.id, habit?.xp_per_completion || 25, 'habit_complete', newLog.id, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
+            await robustAwardXP(user.id, isBlocked ? 0 : (habit?.xp_per_completion || 25), 'habit_complete', newLog.id, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
           } else if (nextStatus === 'failed') {
-            await robustAwardXP(user.id, -15, 'habit_failed', newLog.id, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
+            await robustAwardXP(user.id, isBlocked ? 0 : -15, 'habit_failed', newLog.id, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
           }
         }
       }

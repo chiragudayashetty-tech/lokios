@@ -613,26 +613,30 @@ export default function DailyOps() {
                   const isComplete = log && (!log.status || log.status === 'completed')
                   const isFailed = log && log.status === 'failed'
                   
+                  const isBlocked = !(h.frequency_days || [0,1,2,3,4,5,6]).includes(new Date().getDay())
+                  
                   return (
-                    <div key={h.id} className="flex items-center gap-3 p-2 hover:bg-hover transition-colors">
+                    <div key={h.id} className={`flex items-center gap-3 p-2 hover:bg-hover transition-colors ${isBlocked ? 'opacity-50 grayscale' : ''}`}>
                       <span className="font-mono text-xs text-muted w-5 text-right">{i + 1}</span>
                       <button 
                         onClick={() => cycleHabitState(h.id, todayStr)}
                         className="flex items-center justify-center transition-all hover:scale-110"
                         style={{
                           width: '24px', height: '24px',
-                          border: isComplete || isFailed ? 'none' : '1.5px solid var(--border-color)',
+                          border: isComplete || isFailed || isBlocked ? 'none' : '1.5px solid var(--border-color)',
                           borderRadius: '4px',
-                          background: isComplete ? 'var(--success)' : isFailed ? 'var(--danger)' : 'var(--bg-tertiary)',
+                          background: isComplete ? 'var(--success)' : isFailed ? 'var(--danger)' : isBlocked ? 'var(--border-color)' : 'var(--bg-tertiary)',
                         }}
                       >
                         {isComplete && <Check size={14} color="#fff" strokeWidth={3} />}
                         {isFailed && <X size={14} color="#fff" strokeWidth={3} />}
                       </button>
-                      <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : 'text-primary'}`}>{h.title}</span>
-                      {isComplete && <span className="font-mono text-[10px] text-success">+{h.xp_per_completion || 25} XP</span>}
-                      {isFailed && <span className="font-mono text-[10px] text-danger">-15 XP</span>}
-                      {!isComplete && !isFailed && <span className="font-mono text-[10px] text-info font-bold">+{h.xp_per_completion || 25} XP</span>}
+                      <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : isBlocked ? 'text-muted' : 'text-primary'}`}>
+                        {h.title} {isBlocked && <span className="text-[10px] ml-2 text-danger opacity-70 tracking-widest">BLOCKED</span>}
+                      </span>
+                      {isComplete && <span className="font-mono text-[10px] text-success">+{isBlocked ? 0 : (h.xp_per_completion || 25)} XP</span>}
+                      {isFailed && <span className="font-mono text-[10px] text-danger">{isBlocked ? 0 : -15} XP</span>}
+                      {!isComplete && !isFailed && <span className={`font-mono text-[10px] font-bold ${isBlocked ? 'text-muted' : 'text-info'}`}>+{isBlocked ? 0 : (h.xp_per_completion || 25)} XP</span>}
                     </div>
                   )
                 })}
