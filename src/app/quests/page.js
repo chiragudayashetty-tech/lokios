@@ -519,12 +519,13 @@ export default function DailyOps() {
                             border: status === 'none' ? '1px solid var(--border-color)' : 'none',
                             borderRadius: '4px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : 'transparent',
+                            background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : status === 'blocked' ? 'var(--amber)' : 'transparent',
                             transition: 'all 150ms ease',
                             opacity: status !== 'none' ? 1 : 0.4,
                           }}>
                             {status === 'completed' && <Check size={12} color="#fff" strokeWidth={3} />}
                             {status === 'failed' && <X size={12} color="#fff" strokeWidth={3} />}
+                            {status === 'blocked' && <AlertTriangle size={12} color="#000" strokeWidth={3} />}
                           </div>
                         </td>
                       )
@@ -620,12 +621,13 @@ export default function DailyOps() {
                       width: '42px', height: '42px',
                       border: todayStatus === 'none' ? '2px solid var(--border-color)' : 'none',
                       borderRadius: '12px',
-                      background: todayStatus === 'completed' ? cat.color : todayStatus === 'failed' ? 'var(--danger)' : 'var(--bg-tertiary)',
+                      background: todayStatus === 'completed' ? cat.color : todayStatus === 'failed' ? 'var(--danger)' : todayStatus === 'blocked' ? 'var(--amber)' : 'var(--bg-tertiary)',
                       boxShadow: todayStatus !== 'none' ? '0 4px 12px rgba(0,0,0,0.2)' : 'none'
                     }}
                   >
                     {todayStatus === 'completed' && <Check size={24} color="#fff" strokeWidth={3} />}
                     {todayStatus === 'failed' && <X size={24} color="#fff" strokeWidth={3} />}
+                    {todayStatus === 'blocked' && <AlertTriangle size={20} color="#000" strokeWidth={2} />}
                   </button>
                 </div>
               </HudPanel>
@@ -647,11 +649,10 @@ export default function DailyOps() {
             <HudPanel label="TOP 10 CONSISTENT ROUTINES">
               <div className="flex-col gap-2">
                 {topHabits.map((h, i) => {
-                  const log = todayLogs.find(l => l.habit_id === h.id)
-                  const isComplete = log && (!log.status || log.status === 'completed')
-                  const isFailed = log && log.status === 'failed'
-                  
-                  const isBlocked = !(h.frequency_days || [0,1,2,3,4,5,6]).includes(new Date().getDay())
+                  const status = getStatus(h.id, todayStr)
+                  const isComplete = status === 'completed'
+                  const isFailed = status === 'failed'
+                  const isBlocked = status === 'blocked'
                   
                   return (
                     <div key={h.id} className={`flex items-center gap-3 p-2 hover:bg-hover transition-colors ${isBlocked ? 'opacity-50 grayscale' : ''}`}>
@@ -663,11 +664,12 @@ export default function DailyOps() {
                           width: '24px', height: '24px',
                           border: isComplete || isFailed || isBlocked ? 'none' : '1.5px solid var(--border-color)',
                           borderRadius: '4px',
-                          background: isComplete ? 'var(--success)' : isFailed ? 'var(--danger)' : isBlocked ? 'var(--border-color)' : 'var(--bg-tertiary)',
+                          background: isComplete ? QUEST_CATEGORIES.find(c => c.id === h.category)?.color || 'var(--success)' : isFailed ? 'var(--danger)' : isBlocked ? 'var(--amber)' : 'var(--bg-tertiary)',
                         }}
                       >
                         {isComplete && <Check size={14} color="#fff" strokeWidth={3} />}
                         {isFailed && <X size={14} color="#fff" strokeWidth={3} />}
+                        {isBlocked && <AlertTriangle size={14} color="#000" strokeWidth={3} />}
                       </button>
                       <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : isBlocked ? 'text-muted' : 'text-primary'}`}>
                         {h.title} {isBlocked && <span className="text-[10px] ml-2 text-danger opacity-70 tracking-widest">BLOCKED</span>}
