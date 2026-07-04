@@ -26,13 +26,20 @@ export function buildContext({ profile, habits, tasks, goals, brainDump, journal
   // ── Today's Habits (HIGH PRIORITY) ──
   const todayHabits = habits?.todayLogs || []
   const activeHabitsList = habits?.habits?.filter(h => h.is_active) || []
-  const totalHabits = activeHabitsList.length
+  const todayActiveHabits = activeHabitsList.filter(h => {
+    const freqDays = h.frequency_days || [0,1,2,3,4,5,6]
+    return freqDays.includes(new Date().getDay())
+  })
+  const totalHabits = todayActiveHabits.length
   const completedHabits = todayHabits.filter(l => l.status === 'completed').length
   const habitPct = totalHabits > 0 ? Math.round((completedHabits / totalHabits) * 100) : 0
   
   const habitsDetail = activeHabitsList.map(h => {
+    const freqDays = h.frequency_days || [0,1,2,3,4,5,6]
+    const isOffDay = !freqDays.includes(new Date().getDay())
     const log = todayHabits.find(l => l.habit_id === h.id)
-    return `${h.title}: ${log?.status || 'pending'} (${h.current_streak || 0}d streak)`
+    const status = log?.status || (isOffDay ? 'off-day' : 'pending')
+    return `${h.title}: ${status} (${h.current_streak || 0}d streak)`
   }).join(' | ') || 'No active habits'
 
   // ── Today's Tasks (HIGH PRIORITY) ──

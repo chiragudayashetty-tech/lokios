@@ -51,37 +51,31 @@ export async function calculateAndUpdateStreak(userId, habitId = null) {
 
     // 2. INDIVIDUAL HABIT STREAK
     if (habitId) {
+      const { data: habit } = await supabase.from('habits').select('frequency_days').eq('id', habitId).single()
+      const freqDays = habit?.frequency_days || [0,1,2,3,4,5,6]
+
       const { data: habitLogs } = await supabase.from('habit_logs').select('date').eq('user_id', userId).eq('habit_id', habitId).gte('date', sixtyDaysAgoStr).or('status.eq.completed,status.is.null')
       if (habitLogs) {
-        const uniqueDates = [...new Set(habitLogs.map(l => l.date))].sort().reverse()
+        const uniqueDates = [...new Set(habitLogs.map(l => l.date))]
         let habitStreak = 0
         
-        const today = new Date()
-        const todayStr = getLocalDateStr(today)
+        let checkDate = new Date()
         
-        const yesterday = new Date(today)
-        yesterday.setDate(yesterday.getDate() - 1)
-        const yesterdayStr = getLocalDateStr(yesterday)
-        
-        let checkDate = new Date(today)
-        
-        if (uniqueDates.includes(todayStr)) {
-          habitStreak = 1
-          checkDate = new Date(yesterday)
-        } else if (uniqueDates.includes(yesterdayStr)) {
-          habitStreak = 1
-          checkDate = new Date(yesterday)
-          checkDate.setDate(checkDate.getDate() - 1)
-        }
-        
-        while (habitStreak > 0) {
+        for (let i = 0; i < 60; i++) {
           const checkStr = getLocalDateStr(checkDate)
-          if (uniqueDates.includes(checkStr)) {
+          const isOffDay = !freqDays.includes(checkDate.getDay())
+          const isCompleted = uniqueDates.includes(checkStr)
+
+          if (isCompleted) {
             habitStreak++
-            checkDate.setDate(checkDate.getDate() - 1)
-          } else {
-            break
+          } else if (!isOffDay) {
+            // It's an active day and wasn't completed.
+            // If it's today, we don't break the streak (they still have time).
+            if (i !== 0) {
+              break // Streak broken!
+            }
           }
+          checkDate.setDate(checkDate.getDate() - 1)
         }
         
         await supabase.from('habits').update({ current_streak: habitStreak }).eq('id', habitId)

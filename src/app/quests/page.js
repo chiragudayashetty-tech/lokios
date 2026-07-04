@@ -661,7 +661,7 @@ export default function DailyOps() {
             <HudPanel label="TOP 10 CONSISTENT ROUTINES">
               <div className="flex-col gap-2">
                 {topHabits.map((h, i) => {
-                  const status = getStatus(h.id, todayStr)
+                  const status = getStatus(h.id, todayDay)
                   const isComplete = status === 'completed'
                   const isFailed = status === 'failed'
                   const isBlocked = status === 'blocked'
