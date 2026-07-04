@@ -343,6 +343,9 @@ export function useHabitsInternal(user) {
       return data
     } catch (error) {
       console.error('Error updating habit:', error)
+      if (typeof window !== 'undefined') {
+        alert("DB Update Error: " + (error.message || JSON.stringify(error)))
+      }
       return null
     }
   }, [user])
