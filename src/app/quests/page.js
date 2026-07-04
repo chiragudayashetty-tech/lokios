@@ -213,7 +213,7 @@ export default function DailyOps() {
       title: newTitle,
       category: newCategory === 'other' ? (customCategory || 'Other') : newCategory,
       stat_category: QUEST_CATEGORIES.find(c => c.id === newCategory)?.stat_category || 'discipline',
-      frequency: 'specific',
+      frequency: 'daily',
       frequency_days: newFrequencyDays,
       xp_per_completion: newXp
     })
@@ -231,7 +231,7 @@ export default function DailyOps() {
       category: editCategory === 'other' ? (editCustomCategory || 'Other') : editCategory,
       stat_category: QUEST_CATEGORIES.find(c => c.id === editCategory)?.stat_category || 'discipline',
       xp_per_completion: editXp,
-      frequency: 'specific',
+      frequency: 'daily',
       frequency_days: editFrequencyDays
     })
     setEditingHabit(null)
