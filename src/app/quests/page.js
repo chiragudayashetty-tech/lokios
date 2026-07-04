@@ -112,7 +112,17 @@ export default function DailyOps() {
 
   const getStatus = (habitId, day) => {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    return logMap.get(`${habitId}::${dateStr}`) || 'none'
+    const dateObj = new Date(viewYear, viewMonth, day)
+    const habit = habits.find(h => h.id === habitId)
+    const freqDays = habit?.frequency_days || [0,1,2,3,4,5,6]
+    
+    const explicitStatus = logMap.get(`${habitId}::${dateStr}`)
+    if (explicitStatus) return explicitStatus
+    
+    // Automatically block days not in the active days array
+    if (!freqDays.includes(dateObj.getDay())) return 'blocked'
+    
+    return 'none'
   }
 
   const handleToggle = (habitId, day) => {
@@ -155,7 +165,8 @@ export default function DailyOps() {
       const status = getStatus(habitId, d)
       if (status === 'completed') completed++
       if (status === 'failed') failed++
-      if (status === 'blocked') goal--
+      // Only reduce goal if it was a manual block on an otherwise active day
+      if (status === 'blocked' && freqDays.includes(dateObj.getDay())) goal--
     })
     
     const left = goal - completed - failed
@@ -175,7 +186,7 @@ export default function DailyOps() {
         }
         const status = getStatus(h.id, d)
         if (status === 'completed') done++
-        if (status === 'blocked') total--
+        if (status === 'blocked' && freqDays.includes(dateObj.getDay())) total--
       })
     })
     return { completed: done, goal: total, pct: total === 0 ? 0 : Math.round((done / total) * 100) }
