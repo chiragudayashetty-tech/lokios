@@ -126,6 +126,8 @@ export function useHabitsInternal(user) {
         return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: 'completed' }]
       } else if (nextStatus === 'failed') {
         return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: 'failed' }]
+      } else if (nextStatus === 'blocked') {
+        return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: 'blocked' }]
       }
       return filtered
     })

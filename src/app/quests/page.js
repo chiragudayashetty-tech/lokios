@@ -24,14 +24,14 @@ export default function DailyOps() {
   const [newCategory, setNewCategory] = useState('beyond_tatva')
   const [customCategory, setCustomCategory] = useState('')
   const [newXp, setNewXp] = useState(25)
-  const [newFrequency, setNewFrequency] = useState('daily')
-  const [newFrequencyDays, setNewFrequencyDays] = useState([])
+  const [newFrequencyDays, setNewFrequencyDays] = useState([1,2,3,4,5,6,0])
   const [activeTool, setActiveTool] = useState('cycle')
 
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', danger: false, onConfirm: null, onCancel: null, confirmText: 'CONFIRM' })
 
   // Edit State
   const [editingHabit, setEditingHabit] = useState(null)
+  const [showEditForm, setShowEditForm] = useState(false)
   // Drag states
   const [addFormDrag, setAddFormDrag] = useState({ x: 0, y: 0 })
   const [editFormDrag, setEditFormDrag] = useState({ x: 0, y: 0 })
@@ -40,8 +40,17 @@ export default function DailyOps() {
   const [editCategory, setEditCategory] = useState('')
   const [editCustomCategory, setEditCustomCategory] = useState('')
   const [editXp, setEditXp] = useState(25)
-  const [editFrequency, setEditFrequency] = useState('daily')
-  const [editFrequencyDays, setEditFrequencyDays] = useState([])
+  const [editFrequencyDays, setEditFrequencyDays] = useState([1,2,3,4,5,6,0])
+
+  const DAYS_OF_WEEK = [
+    { label: 'MON', value: 1 },
+    { label: 'TUE', value: 2 },
+    { label: 'WED', value: 3 },
+    { label: 'THU', value: 4 },
+    { label: 'FRI', value: 5 },
+    { label: 'SAT', value: 6 },
+    { label: 'SUN', value: 0 }
+  ]
 
   const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -146,6 +155,7 @@ export default function DailyOps() {
       const status = getStatus(habitId, d)
       if (status === 'completed') completed++
       if (status === 'failed') failed++
+      if (status === 'blocked') goal--
     })
     
     const left = goal - completed - failed
@@ -163,7 +173,9 @@ export default function DailyOps() {
         if (freqDays.includes(dateObj.getDay())) {
           total++
         }
-        if (getStatus(h.id, d) === 'completed') done++
+        const status = getStatus(h.id, d)
+        if (status === 'completed') done++
+        if (status === 'blocked') total--
       })
     })
     return { completed: done, goal: total, pct: total === 0 ? 0 : Math.round((done / total) * 100) }
@@ -190,14 +202,13 @@ export default function DailyOps() {
       title: newTitle,
       category: newCategory === 'other' ? (customCategory || 'Other') : newCategory,
       stat_category: QUEST_CATEGORIES.find(c => c.id === newCategory)?.stat_category || 'discipline',
-      frequency: newFrequency,
-      frequency_days: newFrequency === 'specific' ? newFrequencyDays : (newFrequency === 'weekdays' ? [1,2,3,4,5] : [0,1,2,3,4,5,6]),
+      frequency: 'specific',
+      frequency_days: newFrequencyDays,
       xp_per_completion: newXp
     })
     setNewTitle('')
     setCustomCategory('')
-    setNewFrequency('daily')
-    setNewFrequencyDays([])
+    setNewFrequencyDays([1,2,3,4,5,6,0])
     setShowAddForm(false)
   }
 
@@ -209,8 +220,8 @@ export default function DailyOps() {
       category: editCategory === 'other' ? (editCustomCategory || 'Other') : editCategory,
       stat_category: QUEST_CATEGORIES.find(c => c.id === editCategory)?.stat_category || 'discipline',
       xp_per_completion: editXp,
-      frequency: editFrequency,
-      frequency_days: editFrequency === 'specific' ? editFrequencyDays : (editFrequency === 'weekdays' ? [1,2,3,4,5] : [0,1,2,3,4,5,6])
+      frequency: 'specific',
+      frequency_days: editFrequencyDays
     })
     setEditingHabit(null)
   }
@@ -227,8 +238,16 @@ export default function DailyOps() {
       setEditCustomCategory('')
     }
     setEditXp(h.xp_per_completion || 25)
-    setEditFrequency(h.frequency || 'daily')
-    setEditFrequencyDays(h.frequency_days || [0,1,2,3,4,5,6])
+    
+    // Convert old frequencies to array if missing
+    let days = h.frequency_days
+    if (!days || days.length === 0) {
+      if (h.frequency === 'weekdays') days = [1,2,3,4,5]
+      else days = [1,2,3,4,5,6,0]
+    }
+    setEditFrequencyDays(days)
+    
+    setShowEditForm(true)
   }
 
   if (error) {
@@ -317,15 +336,14 @@ export default function DailyOps() {
             </div>
             <button onClick={nextMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronRight size={20} /></button>
           </HudPanel>
-        </div>
-
+        
         {/* Paint Tool Selector */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mb-6">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
           <span className="font-display text-[10px] uppercase tracking-widest text-muted">PAINT MODE</span>
-          <div className="inline-flex items-center bg-tertiary border border-border-color rounded overflow-hidden w-full sm:w-auto">
+          <div className="flex flex-row items-center bg-tertiary border border-border-color rounded overflow-hidden">
             <button 
               type="button"
-              className={`flex-1 sm:flex-none px-3 md:px-4 py-3 sm:py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover text-primary'}`}
+              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover text-primary'}`}
               onClick={() => setActiveTool('cycle')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('cycle'); }}
             >
@@ -333,7 +351,7 @@ export default function DailyOps() {
             </button>
             <button 
               type="button"
-              className={`flex-1 sm:flex-none px-3 md:px-4 py-3 sm:py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover text-success'}`}
+              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover text-success'}`}
               onClick={() => setActiveTool('completed')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('completed'); }}
             >
@@ -341,7 +359,7 @@ export default function DailyOps() {
             </button>
             <button 
               type="button"
-              className={`flex-1 sm:flex-none px-3 md:px-4 py-3 sm:py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover text-danger'}`}
+              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover text-danger'}`}
               onClick={() => setActiveTool('failed')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('failed'); }}
             >
@@ -349,11 +367,19 @@ export default function DailyOps() {
             </button>
             <button 
               type="button"
-              className={`flex-1 sm:flex-none px-3 md:px-4 py-3 sm:py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover text-muted'}`}
+              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'bg-amber text-bg-primary' : 'active:bg-hover text-amber'}`}
+              onClick={() => setActiveTool('blocked')}
+              onTouchStart={(e) => { e.preventDefault(); setActiveTool('blocked'); }}
+            >
+              <AlertTriangle size={13} /> BLOCK
+            </button>
+            <button 
+              type="button"
+              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover text-muted'}`}
               onClick={() => setActiveTool('none')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('none'); }}
             >
-              <Crosshair size={13} /> CLEAR
+              <Trash2 size={13} /> CLEAR
             </button>
           </div>
         </div>
@@ -402,7 +428,7 @@ export default function DailyOps() {
                   <span className="font-mono text-[9px] text-success">DONE</span>
                 </th>
                 <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', minWidth: '45px' }}>
-                  <span className="font-mono text-[9px] text-muted">LEFT</span>
+                  <span className="font-mono text-[9px] text-muted">GOAL</span>
                 </th>
                 <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', minWidth: '50px', borderTopRightRadius: 'var(--radius-lg)' }}>
                   <span className="font-mono text-[9px] text-info">%</span>
@@ -507,7 +533,7 @@ export default function DailyOps() {
                       <span className="font-mono text-[10px] text-success font-bold">{stats.completed}</span>
                     </td>
                     <td style={{ textAlign: 'center', borderBottom: '1px solid var(--border-subtle)', padding: '6px' }}>
-                      <span className="font-mono text-[10px] text-muted">{stats.left}</span>
+                      <span className="font-mono text-[10px] text-muted">{stats.goal}</span>
                     </td>
                     <td style={{ textAlign: 'center', borderBottom: '1px solid var(--border-subtle)', padding: '6px' }}>
                       <span className={`font-mono text-xs font-bold ${stats.pct >= 80 ? 'text-success' : stats.pct >= 50 ? 'text-amber' : 'text-danger'}`}>
@@ -728,26 +754,19 @@ export default function DailyOps() {
                       </div>
                     </div>
                     <div>
-                      <label className="font-mono text-xs text-muted mb-1 block">FREQUENCY</label>
-                      <select className="select font-mono w-full" value={newFrequency} onChange={e => setNewFrequency(e.target.value)}>
-                        <option value="daily">EVERYDAY</option>
-                        <option value="weekdays">WEEKDAYS ONLY (MON-FRI)</option>
-                        <option value="specific">SPECIFIC DAYS</option>
-                      </select>
-                      {newFrequency === 'specific' && (
-                        <div className="flex gap-2 mt-2">
-                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              onClick={() => setNewFrequencyDays(prev => prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i].sort())}
-                              className={`w-8 h-8 rounded border font-mono text-xs flex items-center justify-center transition-colors ${newFrequencyDays.includes(i) ? 'bg-amber/20 border-amber text-amber' : 'bg-tertiary border-border-color text-muted'}`}
-                            >
-                              {day}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <label className="font-mono text-xs text-muted mb-1 block">ACTIVE DAYS</label>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {DAYS_OF_WEEK.map(day => (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => setNewFrequencyDays(prev => prev.includes(day.value) ? prev.filter(d => d !== day.value) : [...prev, day.value].sort())}
+                            className={`px-2 py-1 rounded border font-mono text-xs transition-colors ${newFrequencyDays.includes(day.value) ? 'bg-amber/20 border-amber text-amber' : 'bg-tertiary border-border-color text-muted'}`}
+                          >
+                            {day.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <div className="flex gap-2 mt-2">
                       <button type="submit" className="btn btn-primary flex-1">DEPLOY</button>
@@ -803,26 +822,19 @@ export default function DailyOps() {
                   <p className="font-mono text-[10px] text-muted mt-1">XP earned when complete. Penalty for failing is currently fixed at -15 XP.</p>
                 </div>
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">FREQUENCY</label>
-                  <select className="select font-mono w-full" value={editFrequency} onChange={e => setEditFrequency(e.target.value)}>
-                    <option value="daily">EVERYDAY</option>
-                    <option value="weekdays">WEEKDAYS ONLY (MON-FRI)</option>
-                    <option value="specific">SPECIFIC DAYS</option>
-                  </select>
-                  {editFrequency === 'specific' && (
-                    <div className="flex gap-2 mt-2">
-                      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setEditFrequencyDays(prev => prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i].sort())}
-                          className={`w-8 h-8 rounded border font-mono text-xs flex items-center justify-center transition-colors ${editFrequencyDays.includes(i) ? 'bg-amber/20 border-amber text-amber' : 'bg-tertiary border-border-color text-muted'}`}
-                        >
-                          {day}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <label className="font-mono text-xs text-muted mb-1 block">ACTIVE DAYS</label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {DAYS_OF_WEEK.map(day => (
+                      <button
+                        key={day.value}
+                        type="button"
+                        onClick={() => setEditFrequencyDays(prev => prev.includes(day.value) ? prev.filter(d => d !== day.value) : [...prev, day.value].sort())}
+                        className={`px-2 py-1 rounded border font-mono text-xs transition-colors ${editFrequencyDays.includes(day.value) ? 'bg-amber/20 border-amber text-amber' : 'bg-tertiary border-border-color text-muted'}`}
+                      >
+                        {day.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-3 mt-2">
                   <div className="flex gap-3">
