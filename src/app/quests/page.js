@@ -336,7 +336,8 @@ export default function DailyOps() {
             </div>
             <button onClick={nextMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronRight size={20} /></button>
           </HudPanel>
-        
+        </div>
+
         {/* Paint Tool Selector */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
           <span className="font-display text-[10px] uppercase tracking-widest text-muted">PAINT MODE</span>
