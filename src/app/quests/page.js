@@ -519,13 +519,13 @@ export default function DailyOps() {
                             border: status === 'none' ? '1px solid var(--border-color)' : 'none',
                             borderRadius: '4px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : status === 'blocked' ? 'var(--amber)' : 'transparent',
+                            background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : 'transparent',
                             transition: 'all 150ms ease',
                             opacity: status !== 'none' ? 1 : 0.4,
                           }}>
                             {status === 'completed' && <Check size={12} color="#fff" strokeWidth={3} />}
                             {status === 'failed' && <X size={12} color="#fff" strokeWidth={3} />}
-                            {status === 'blocked' && <AlertTriangle size={12} color="#000" strokeWidth={3} />}
+                            {status === 'blocked' && <AlertTriangle size={12} color="var(--amber)" strokeWidth={3} />}
                           </div>
                         </td>
                       )
@@ -621,13 +621,13 @@ export default function DailyOps() {
                       width: '42px', height: '42px',
                       border: todayStatus === 'none' ? '2px solid var(--border-color)' : 'none',
                       borderRadius: '12px',
-                      background: todayStatus === 'completed' ? cat.color : todayStatus === 'failed' ? 'var(--danger)' : todayStatus === 'blocked' ? 'var(--amber)' : 'var(--bg-tertiary)',
-                      boxShadow: todayStatus !== 'none' ? '0 4px 12px rgba(0,0,0,0.2)' : 'none'
+                      background: todayStatus === 'completed' ? cat.color : todayStatus === 'failed' ? 'var(--danger)' : 'var(--bg-tertiary)',
+                      boxShadow: todayStatus === 'completed' || todayStatus === 'failed' ? '0 4px 12px rgba(0,0,0,0.2)' : 'none'
                     }}
                   >
                     {todayStatus === 'completed' && <Check size={24} color="#fff" strokeWidth={3} />}
                     {todayStatus === 'failed' && <X size={24} color="#fff" strokeWidth={3} />}
-                    {todayStatus === 'blocked' && <AlertTriangle size={20} color="#000" strokeWidth={2} />}
+                    {todayStatus === 'blocked' && <AlertTriangle size={20} color="var(--amber)" strokeWidth={2} />}
                   </button>
                 </div>
               </HudPanel>
@@ -664,12 +664,12 @@ export default function DailyOps() {
                           width: '24px', height: '24px',
                           border: isComplete || isFailed || isBlocked ? 'none' : '1.5px solid var(--border-color)',
                           borderRadius: '4px',
-                          background: isComplete ? QUEST_CATEGORIES.find(c => c.id === h.category)?.color || 'var(--success)' : isFailed ? 'var(--danger)' : isBlocked ? 'var(--amber)' : 'var(--bg-tertiary)',
+                          background: isComplete ? QUEST_CATEGORIES.find(c => c.id === h.category)?.color || 'var(--success)' : isFailed ? 'var(--danger)' : 'var(--bg-tertiary)',
                         }}
                       >
                         {isComplete && <Check size={14} color="#fff" strokeWidth={3} />}
                         {isFailed && <X size={14} color="#fff" strokeWidth={3} />}
-                        {isBlocked && <AlertTriangle size={14} color="#000" strokeWidth={3} />}
+                        {isBlocked && <AlertTriangle size={14} color="var(--amber)" strokeWidth={3} />}
                       </button>
                       <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : isBlocked ? 'text-muted' : 'text-primary'}`}>
                         {h.title} {isBlocked && <span className="text-[10px] ml-2 text-danger opacity-70 tracking-widest">BLOCKED</span>}
