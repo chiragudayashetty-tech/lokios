@@ -379,7 +379,8 @@ export default function DailyOps() {
             </button>
             <button 
               type="button"
-              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'bg-amber text-bg-primary' : 'active:bg-hover text-amber'}`}
+              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'text-bg-primary' : 'active:bg-hover'}`}
+              style={activeTool === 'blocked' ? { backgroundColor: 'var(--warning)' } : { color: 'var(--warning)' }}
               onClick={() => setActiveTool('blocked')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('blocked'); }}
             >
@@ -536,7 +537,7 @@ export default function DailyOps() {
                           }}>
                             {status === 'completed' && <Check size={12} color="#fff" strokeWidth={3} />}
                             {status === 'failed' && <X size={12} color="#fff" strokeWidth={3} />}
-                            {status === 'blocked' && <AlertTriangle size={12} color="var(--amber)" strokeWidth={3} />}
+                            {status === 'blocked' && <AlertTriangle size={12} color="var(--warning)" strokeWidth={3} />}
                           </div>
                         </td>
                       )
@@ -638,7 +639,7 @@ export default function DailyOps() {
                   >
                     {todayStatus === 'completed' && <Check size={24} color="#fff" strokeWidth={3} />}
                     {todayStatus === 'failed' && <X size={24} color="#fff" strokeWidth={3} />}
-                    {todayStatus === 'blocked' && <AlertTriangle size={20} color="var(--amber)" strokeWidth={2} />}
+                    {todayStatus === 'blocked' && <AlertTriangle size={20} color="var(--warning)" strokeWidth={2} />}
                   </button>
                 </div>
               </HudPanel>
@@ -680,7 +681,7 @@ export default function DailyOps() {
                       >
                         {isComplete && <Check size={14} color="#fff" strokeWidth={3} />}
                         {isFailed && <X size={14} color="#fff" strokeWidth={3} />}
-                        {isBlocked && <AlertTriangle size={14} color="var(--amber)" strokeWidth={3} />}
+                        {isBlocked && <AlertTriangle size={14} color="var(--warning)" strokeWidth={3} />}
                       </button>
                       <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : isBlocked ? 'text-muted' : 'text-primary'}`}>
                         {h.title} {isBlocked && <span className="text-[10px] ml-2 text-danger opacity-70 tracking-widest">BLOCKED</span>}
@@ -775,7 +776,8 @@ export default function DailyOps() {
                             key={day.value}
                             type="button"
                             onClick={() => setNewFrequencyDays(prev => prev.includes(day.value) ? prev.filter(d => d !== day.value) : [...prev, day.value].sort())}
-                            className={`px-2 py-1 rounded border font-mono text-xs transition-colors ${newFrequencyDays.includes(day.value) ? 'bg-amber/20 border-amber text-amber' : 'bg-tertiary border-border-color text-muted'}`}
+                            className={`px-2 py-1 rounded border font-mono text-xs transition-colors`}
+                            style={newFrequencyDays.includes(day.value) ? { backgroundColor: 'var(--warning-subtle)', borderColor: 'var(--warning)', color: 'var(--warning)' } : { backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
                           >
                             {day.label}
                           </button>
@@ -843,7 +845,8 @@ export default function DailyOps() {
                         key={day.value}
                         type="button"
                         onClick={() => setEditFrequencyDays(prev => prev.includes(day.value) ? prev.filter(d => d !== day.value) : [...prev, day.value].sort())}
-                        className={`px-2 py-1 rounded border font-mono text-xs transition-colors ${editFrequencyDays.includes(day.value) ? 'bg-amber/20 border-amber text-amber' : 'bg-tertiary border-border-color text-muted'}`}
+                        className={`px-2 py-1 rounded border font-mono text-xs transition-colors`}
+                        style={editFrequencyDays.includes(day.value) ? { backgroundColor: 'var(--warning-subtle)', borderColor: 'var(--warning)', color: 'var(--warning)' } : { backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
                       >
                         {day.label}
                       </button>
