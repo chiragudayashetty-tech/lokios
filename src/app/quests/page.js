@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair } from 'lucide-react'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -384,7 +384,7 @@ export default function DailyOps() {
               onClick={() => setActiveTool('blocked')}
               onTouchStart={(e) => { e.preventDefault(); setActiveTool('blocked'); }}
             >
-              <AlertTriangle size={13} /> BLOCK
+              <Leaf size={13} /> BLOCK
             </button>
             <button 
               type="button"
@@ -537,7 +537,7 @@ export default function DailyOps() {
                           }}>
                             {status === 'completed' && <Check size={12} color="#fff" strokeWidth={3} />}
                             {status === 'failed' && <X size={12} color="#fff" strokeWidth={3} />}
-                            {status === 'blocked' && <AlertTriangle size={12} color="var(--warning)" strokeWidth={3} />}
+                            {status === 'blocked' && <Leaf size={12} color="var(--warning)" strokeWidth={3} />}
                           </div>
                         </td>
                       )
@@ -639,7 +639,7 @@ export default function DailyOps() {
                   >
                     {todayStatus === 'completed' && <Check size={24} color="#fff" strokeWidth={3} />}
                     {todayStatus === 'failed' && <X size={24} color="#fff" strokeWidth={3} />}
-                    {todayStatus === 'blocked' && <AlertTriangle size={20} color="var(--warning)" strokeWidth={2} />}
+                    {todayStatus === 'blocked' && <Leaf size={20} color="var(--warning)" strokeWidth={2} />}
                   </button>
                 </div>
               </HudPanel>
@@ -681,7 +681,7 @@ export default function DailyOps() {
                       >
                         {isComplete && <Check size={14} color="#fff" strokeWidth={3} />}
                         {isFailed && <X size={14} color="#fff" strokeWidth={3} />}
-                        {isBlocked && <AlertTriangle size={14} color="var(--warning)" strokeWidth={3} />}
+                        {isBlocked && <Leaf size={14} color="var(--warning)" strokeWidth={3} />}
                       </button>
                       <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : isBlocked ? 'text-muted' : 'text-primary'}`}>
                         {h.title} {isBlocked && <span className="text-[10px] ml-2 text-danger opacity-70 tracking-widest">BLOCKED</span>}
