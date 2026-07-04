@@ -339,9 +339,6 @@ export function useHabitsInternal(user) {
     try {
       const { data, error } = await supabase.from('habits').update(updates).eq('id', habitId).eq('user_id', user.id).select().single()
       if (error) throw error
-      if (typeof window !== 'undefined' && updates.frequency_days) {
-         alert("Saved! DB Returned frequency_days: " + JSON.stringify(data.frequency_days))
-      }
       setHabits((prev) => prev.map(h => h.id === habitId ? data : h))
       return data
     } catch (error) {
