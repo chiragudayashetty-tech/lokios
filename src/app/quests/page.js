@@ -134,29 +134,40 @@ export default function DailyOps() {
   const getHabitStats = (habitId) => {
     let completed = 0
     let failed = 0
+    const habit = habits.find(h => h.id === habitId)
+    const freqDays = habit?.frequency_days || [0,1,2,3,4,5,6]
+    let goal = 0
+
     days.forEach((d) => {
+      const dateObj = new Date(viewYear, viewMonth, d)
+      if (freqDays.includes(dateObj.getDay())) {
+        goal++
+      }
       const status = getStatus(habitId, d)
       if (status === 'completed') completed++
       if (status === 'failed') failed++
     })
-    const goal = daysInMonth
-    const left = goal - completed - failed // Not totally accurate if left implies days left, but works
+    
+    const left = goal - completed - failed
     const pct = goal === 0 ? 0 : Math.round((completed / goal) * 100)
-    return { completed, failed, left: Math.max(0, left), pct }
+    return { completed, failed, left: Math.max(0, left), pct, goal }
   }
 
-  // Global month stats
   const globalStats = useMemo(() => {
     let done = 0
     let total = 0
     habits.forEach((h) => {
+      const freqDays = h.frequency_days || [0,1,2,3,4,5,6]
       days.forEach((d) => {
-        total++
+        const dateObj = new Date(viewYear, viewMonth, d)
+        if (freqDays.includes(dateObj.getDay())) {
+          total++
+        }
         if (getStatus(h.id, d) === 'completed') done++
       })
     })
     return { completed: done, goal: total, pct: total === 0 ? 0 : Math.round((done / total) * 100) }
-  }, [habits, logMap, days])
+  }, [habits, logMap, days, viewYear, viewMonth])
 
   // Today's completion stats
   const todayComplete = habits.filter(h => todayLogs.some(l => l.habit_id === h.id && (!l.status || l.status === 'completed'))).length
