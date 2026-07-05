@@ -68,7 +68,7 @@ export default function WeeklyReview() {
 
     const fetchHistory = async () => {
       const supabase = createClient()
-      const { data } = await supabase.from('work_logs').select('*').eq('user_id', user.id).eq('type', 'weekly_review').order('created_at', { ascending: false })
+      const { data } = await supabase.from('work_logs').select('*').eq('user_id', user.id).ilike('title', 'Weekly Debrief%').order('created_at', { ascending: false })
       if (data) setHistoryLogs(data)
     }
 
@@ -102,12 +102,13 @@ ${nextActions}`
       const payload = {
         user_id: user.id,
         title: `Weekly Debrief: ${dateRange.start} - ${dateRange.end}`,
-        type: 'weekly_review',
+        type: 'project_work',
         description: formattedContent,
         date: todayStr,
       }
 
-      await supabase.from('work_logs').insert([payload])
+      const { error: insertError } = await supabase.from('work_logs').insert([payload])
+      if (insertError) throw insertError
       await robustAwardXP(user.id, 5, 'weekly_review', todayStr, `Weekly Review Completed`, 'discipline')
       
       setWins('')
@@ -116,7 +117,7 @@ ${nextActions}`
       setShowHistory(true)
       
       // refresh history
-      const { data } = await supabase.from('work_logs').select('*').eq('user_id', user.id).eq('type', 'weekly_review').order('created_at', { ascending: false })
+      const { data } = await supabase.from('work_logs').select('*').eq('user_id', user.id).ilike('title', 'Weekly Debrief%').order('created_at', { ascending: false })
       if (data) setHistoryLogs(data)
     } catch (error) {
       console.error('Failed to save review:', error)
