@@ -488,14 +488,14 @@ export default function Operations() {
         {/* DEPLOY MODAL */}
         <AnimatePresence>
           {showDeploy && (
-            <div className="modal-overlay bottom-sheet-mobile">
+            <div className="modal-overlay">
               <motion.div 
                 initial={{ opacity: 0, y: 50 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 exit={{ opacity: 0, y: 50 }} 
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto p-4"
               >
-                <HudPanel className="modal-content bottom-sheet-content border-amber" style={{ width: '520px', maxWidth: '100%' }}>
+                <HudPanel className="modal-content border-amber" style={{ width: '520px', maxWidth: '100%' }}>
                   <div className="flex-between mb-5 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber tracking-widest">DEPLOY OPERATION</span>
                     <button type='button' onClick={() => setShowDeploy(false)} className="text-muted hover:text-danger"><X size={18} /></button>
@@ -603,14 +603,14 @@ export default function Operations() {
         {/* PROOF MODAL */}
         <AnimatePresence>
           {proofTask && (
-            <div className="modal-overlay bottom-sheet-mobile">
+            <div className="modal-overlay">
               <motion.div 
                 initial={{ opacity: 0, y: 50 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 exit={{ opacity: 0, y: 50 }} 
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto p-4"
               >
-                <HudPanel className="modal-content bottom-sheet-content border-success" style={{ width: '440px', maxWidth: '100%' }}>
+                <HudPanel className="modal-content border-success" style={{ width: '440px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-success tracking-widest">OPERATION COMPLETE</span>
                     <button type='button' onClick={() => setProofTask(null)} className="text-muted hover:text-danger"><X size={18} /></button>

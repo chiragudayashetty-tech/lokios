@@ -726,14 +726,14 @@ export default function DailyOps() {
         {/* Add Form Modal */}
         <AnimatePresence>
           {showAddForm && (
-            <div className="modal-overlay bottom-sheet-mobile">
+            <div className="modal-overlay">
               <motion.div 
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto p-4"
               >
-                <HudPanel className="modal-content bottom-sheet-content border-info" style={{ width: '480px', maxWidth: '100%' }}>
+                <HudPanel className="modal-content border-info" style={{ width: '480px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber">Add Routine</span>
                     <button onClick={() => setShowAddForm(false)} className="text-muted hover:text-danger"><X size={18} /></button>
@@ -793,12 +793,12 @@ export default function DailyOps() {
       {/* Edit Routine Modal */}
       <AnimatePresence>
         {editingHabit && (
-          <div className="modal-overlay bottom-sheet-mobile">
+          <div className="modal-overlay">
             <motion.div 
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="modal-content bottom-sheet-content w-full sm:max-w-[420px]"
+              className="modal-content w-full sm:max-w-[420px] mx-4"
             >
               <div className="modal-header">
                 <h3 className="font-display text-lg text-primary tracking-widest">EDIT ROUTINE</h3>

@@ -430,9 +430,9 @@ export default function Missions() {
         {/* Modal Form */}
         <AnimatePresence>
           {showForm && (
-            <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
-                <HudPanel className="modal-content bottom-sheet-content">
+            <div className="modal-overlay">
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto p-4">
+                <HudPanel className="modal-content">
                   <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2"><Target size={18} /> Initialize Mission</div>
                   <form onSubmit={handleAdd} className="flex-col gap-4">
                     <div>
@@ -497,9 +497,9 @@ export default function Missions() {
         {/* Proof of Work Modal */}
         <AnimatePresence>
           {proofModal.show && (
-            <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
-                <HudPanel glow label="MISSION ACCOMPLISHED" className="modal-content bottom-sheet-content w-full max-w-md">
+            <div className="modal-overlay">
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto p-4">
+                <HudPanel glow label="MISSION ACCOMPLISHED" className="modal-content w-full max-w-md">
                   <div className="p-4">
                     <p className="font-mono text-sm text-secondary mb-4">Would you like to attach Proof of Work? This will automatically log to your Portfolio Engine.</p>
                     <label className="font-mono text-xs text-muted mb-1 block">ATTACH LINK / IMAGE URL (OPTIONAL)</label>

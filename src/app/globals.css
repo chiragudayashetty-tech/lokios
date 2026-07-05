@@ -173,12 +173,12 @@
   --z-sticky:   20;
   --z-fixed:    30;
   --z-sidebar:  40;
-  --z-modal:    50;
-  --z-popover:  60;
-  --z-toast:    70;
-  --z-tooltip:  80;
-  --z-overlay:  90;
-  --z-max:      100;
+  --z-modal:    150;
+  --z-popover:  160;
+  --z-toast:    170;
+  --z-tooltip:  180;
+  --z-overlay:  190;
+  --z-max:      200;
 
   /* ── Layout ── */
   --sidebar-width:     240px;
