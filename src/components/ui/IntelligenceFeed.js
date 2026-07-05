@@ -117,6 +117,13 @@ export default function IntelligenceFeed() {
               hpChange -= 15 // Direct damage to the enemy
               habitsHit++
             } else {
+              const habit = habits.find(h => h.id === habitId)
+              const requiredDays = habit?.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+              if (!requiredDays.includes(yesterday.getDay())) {
+                // Blocked or rest day, no penalty
+                return
+              }
+              
               hpChange += 20 // Enemy heals
               habitsMissed++
               totalMissed++
