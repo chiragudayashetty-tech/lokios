@@ -295,7 +295,16 @@ export default function Missions() {
                           {isExpanded ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
                         </div>
                         {goal.description && (
-                          <p className="text-sm text-secondary mt-2 font-mono line-clamp-2">{goal.description}</p>
+                          <p 
+                            className={`text-sm text-secondary mt-2 font-mono whitespace-pre-wrap cursor-pointer overflow-hidden ${isExpanded ? '' : 'line-clamp-2'}`}
+                            onClick={(e) => {
+                               e.stopPropagation();
+                               setExpandedGoal(isExpanded ? null : goal.id);
+                            }}
+                            title={isExpanded ? "Click to collapse" : "Click to expand"}
+                          >
+                            {goal.description}
+                          </p>
                         )}
                       </div>
                     )}

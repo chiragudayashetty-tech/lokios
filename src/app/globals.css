@@ -1838,7 +1838,7 @@ select:focus {
 
 .modal-content.full {
   max-width: 1200px;
-  max-height: 90vh;
+  max-height: 85svh;\n    overflow-y: auto;
 }
 
 .modal-header {
@@ -2818,6 +2818,7 @@ select:focus {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
+
 
 @keyframes slideDown {
   from { transform: translateY(-100%); }
