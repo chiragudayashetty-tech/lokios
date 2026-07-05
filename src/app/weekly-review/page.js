@@ -163,7 +163,7 @@ ${nextActions}`
 
       const { error: insertError } = await supabase.from('work_logs').insert([payload])
       if (insertError) throw insertError
-      await robustAwardXP(user.id, 5, 'weekly_review', todayStr, `Weekly Review Completed`, 'discipline')
+      await robustAwardXP(user.id, 5, 'task', todayStr, `Weekly Review Completed`, 'discipline')
       
       setWins('')
       setFails('')

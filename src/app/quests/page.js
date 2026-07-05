@@ -684,7 +684,7 @@ export default function DailyOps() {
                         {isBlocked && <Leaf size={14} color="var(--warning)" strokeWidth={3} />}
                       </button>
                       <span className={`font-mono text-sm flex-1 ${isComplete ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : isBlocked ? 'text-muted' : 'text-primary'}`}>
-                        {h.title} {isBlocked && <span className="text-[10px] ml-2 text-danger opacity-70 tracking-widest">BLOCKED</span>}
+                        {h.title} {isBlocked && <span className="text-[10px] ml-2 text-success opacity-90 tracking-widest">REST</span>}
                       </span>
                       {isComplete && <span className="font-mono text-[10px] text-success">+{isBlocked ? 0 : (h.xp_per_completion || 25)} XP</span>}
                       {isFailed && <span className="font-mono text-[10px] text-danger">{isBlocked ? 0 : -15} XP</span>}

@@ -168,7 +168,7 @@ export default function MissionControl() {
                         >
                           <div className={`w-4 h-4 border flex-center shrink-0 rounded-sm ${isBlocked ? 'border-border-subtle' : 'border-border-strong group-hover:border-info'}`} />
                           <span className={`font-mono text-sm flex-1 truncate ${isBlocked ? 'text-muted' : 'text-primary'}`}>
-                            {habit.title} {isBlocked && <span className="text-[10px] ml-2 text-danger opacity-70 tracking-widest">BLOCKED</span>}
+                            {habit.title} {isBlocked && <span className="text-[10px] ml-2 text-success opacity-90 tracking-widest">REST</span>}
                           </span>
                           <span className={`font-mono text-[9px] font-bold ${isBlocked ? 'text-muted' : 'text-info'}`}>+{isBlocked ? 0 : (habit.xp_per_completion || 25)} XP</span>
                         </motion.div>
