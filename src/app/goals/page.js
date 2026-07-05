@@ -296,7 +296,7 @@ export default function Missions() {
                         </div>
                         {goal.description && (
                           <p 
-                            className={`text-sm text-secondary mt-2 font-mono whitespace-pre-wrap cursor-pointer overflow-hidden ${isExpanded ? '' : 'line-clamp-2'}`}
+                            className={`text-sm text-secondary mt-2 font-mono cursor-pointer overflow-hidden transition-all ${isExpanded ? 'whitespace-pre-wrap' : 'whitespace-normal line-clamp-2'}`}
                             onClick={(e) => {
                                e.stopPropagation();
                                setExpandedGoal(isExpanded ? null : goal.id);

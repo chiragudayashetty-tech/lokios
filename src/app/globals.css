@@ -3143,7 +3143,7 @@ select:focus {
     margin: 0;
     width: 100%;
     max-width: 100%;
-    max-height: 85svh;
+    max-height: 85vh;
     overflow-y: auto;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     padding: var(--space-4) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
@@ -3151,6 +3151,10 @@ select:focus {
     border-left: none;
     border-right: none;
     animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .modal-content:focus-within {
+    max-height: 55vh;
   }
 
   .battle-card-metrics {

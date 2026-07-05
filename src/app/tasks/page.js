@@ -390,7 +390,7 @@ export default function Operations() {
                     </h3>
                     {task.description && (
                       <p 
-                        className={`font-mono text-xs text-secondary mb-3 whitespace-pre-wrap cursor-pointer overflow-hidden ${expandedDescId === task.id ? '' : 'line-clamp-2 truncate-mobile-wrap'}`}
+                        className={`font-mono text-xs text-secondary mb-3 cursor-pointer overflow-hidden transition-all ${expandedDescId === task.id ? 'whitespace-pre-wrap' : 'whitespace-normal line-clamp-2'}`}
                         onClick={(e) => { e.stopPropagation(); setExpandedDescId(expandedDescId === task.id ? null : task.id) }}
                         title={expandedDescId === task.id ? "Click to collapse" : "Click to expand"}
                       >
