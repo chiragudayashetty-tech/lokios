@@ -229,7 +229,7 @@ export default function ProofOfWork() {
             </AnimatePresence>
 
             <div className="flex-col gap-0 border-l border-border-strong ml-4 pl-6 relative">
-              {logs.filter(l => l.type !== 'weekly_review').map((log) => (
+              {logs.filter(l => !l.title?.startsWith('Weekly Debrief')).map((log) => (
                 <div key={log.id} className="relative pb-8 group">
                   <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
                   
@@ -309,7 +309,7 @@ export default function ProofOfWork() {
                   </div>
                 </div>
               ))}
-              {logs.filter(l => l.type !== 'weekly_review').length === 0 && <div className="font-mono text-sm text-muted py-8">NO WORK LOGS ARCHIVED.</div>}
+              {logs.filter(l => !l.title?.startsWith('Weekly Debrief')).length === 0 && <div className="font-mono text-sm text-muted py-8">NO WORK LOGS ARCHIVED.</div>}
             </div>
           </div>
         )}
@@ -318,7 +318,7 @@ export default function ProofOfWork() {
         {activeTab === 'reviews' && (
           <div className="flex-col gap-6">
             <div className="flex-col gap-0 border-l border-border-strong ml-4 pl-6 relative">
-              {logs.filter(l => l.type === 'weekly_review').map((log, idx, arr) => (
+              {logs.filter(l => l.title?.startsWith('Weekly Debrief')).map((log, idx, arr) => (
                 <div key={log.id} className="relative pb-8 group">
                   <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
                   
@@ -348,7 +348,7 @@ export default function ProofOfWork() {
                   </div>
                 </div>
               ))}
-              {logs.filter(l => l.type === 'weekly_review').length === 0 && <div className="font-mono text-sm text-muted py-8">NO WEEKLY REVIEWS ARCHIVED YET.</div>}
+              {logs.filter(l => l.title?.startsWith('Weekly Debrief')).length === 0 && <div className="font-mono text-sm text-muted py-8">NO WEEKLY REVIEWS ARCHIVED YET.</div>}
             </div>
           </div>
         )}
