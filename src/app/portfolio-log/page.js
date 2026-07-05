@@ -208,7 +208,7 @@ export default function ProofOfWork() {
                       <div>
                         <label className="font-mono text-xs text-muted mb-1 block">DURATION</label>
                         <div className="flex gap-2">
-                          <input type="number" step="0.5" className="input font-mono text-sm flex-1" value={newLog.duration} onChange={e => setNewLog({...newLog, duration: e.target.value})} placeholder="0" />
+                          <input type="text" inputMode="decimal" className="input font-mono text-sm flex-1" value={newLog.duration} onChange={e => setNewLog({...newLog, duration: e.target.value})} placeholder="0" />
                           <select className="select font-mono text-sm w-24" value={newLog.duration_unit} onChange={e => setNewLog({...newLog, duration_unit: e.target.value})}>
                             <option value="hours">HOURS</option>
                             <option value="days">DAYS</option>
@@ -246,7 +246,7 @@ export default function ProofOfWork() {
                         </select>
                         <textarea className="textarea font-mono text-sm py-1" value={editLogForm.description} onChange={e=>setEditLogForm({...editLogForm, description: e.target.value})} rows={2} />
                         <div className="flex gap-2">
-                          <input type="number" step="0.5" className="input font-mono text-sm flex-1 py-1" value={editLogForm.duration} onChange={e => setEditLogForm({...editLogForm, duration: e.target.value})} placeholder="Duration" />
+                          <input type="text" inputMode="decimal" className="input font-mono text-sm flex-1 py-1" value={editLogForm.duration} onChange={e => setEditLogForm({...editLogForm, duration: e.target.value})} placeholder="Duration" />
                           <select className="select font-mono text-sm w-24 py-1" value={editLogForm.duration_unit} onChange={e => setEditLogForm({...editLogForm, duration_unit: e.target.value})}>
                             <option value="hours">HOURS</option>
                             <option value="days">DAYS</option>
