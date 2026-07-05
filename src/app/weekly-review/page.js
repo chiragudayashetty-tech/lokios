@@ -14,6 +14,60 @@ export default function WeeklyReview() {
   const { user } = useAuth()
   const router = useRouter()
   
+  const RenderDebrief = ({ text }) => {
+    if (!text) return null
+    const sections = text.split('### ').filter(s => s.trim())
+    
+    return (
+      <div className="space-y-6">
+        {sections.map((section, idx) => {
+          let title = ''
+          let content = section.trim()
+          const knownTitles = ['What went well?', 'Bottlenecks & Fails', 'Priorities for Next Week']
+          
+          for (const kt of knownTitles) {
+            if (content.startsWith(kt)) {
+              title = kt
+              content = content.substring(kt.length).trim()
+              break
+            }
+          }
+          
+          if (!title) {
+            const lines = content.split('\n')
+            title = lines[0]
+            content = lines.slice(1).join('\n').trim()
+          }
+
+          let colorClass = 'text-primary'
+          let Icon = ArrowRight
+          
+          if (title.toLowerCase().includes('went well')) {
+            colorClass = 'text-success'
+            Icon = Target
+          } else if (title.toLowerCase().includes('fail') || title.toLowerCase().includes('bottleneck')) {
+            colorClass = 'text-danger'
+            Icon = AlertTriangle
+          } else if (title.toLowerCase().includes('priorit')) {
+            colorClass = 'text-info'
+            Icon = ArrowRight
+          }
+
+          return (
+            <div key={idx} className="space-y-3">
+              <h4 className={`font-display tracking-widest uppercase flex items-center gap-2 ${colorClass}`}>
+                <Icon size={16} /> {title}
+              </h4>
+              <div className="font-mono text-sm text-secondary whitespace-pre-wrap pl-6 border-l-2 border-border-color ml-2 opacity-90 leading-relaxed">
+                {content || 'None recorded.'}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+  
   const [loadingStats, setLoadingStats] = useState(true)
   const [stats, setStats] = useState({ xp: 0, tasks: 0, habits: 0 })
   
@@ -288,8 +342,8 @@ ${nextActions}`
                     <span className="font-mono text-xs text-amber">{log.amount || 5} XP</span>
                   </div>
                   {expandedArchive === log.id && (
-                    <div className="mt-4 pt-4 border-t border-border-color font-mono text-sm text-secondary whitespace-pre-wrap leading-relaxed">
-                      {log.description}
+                    <div className="mt-4 pt-5 border-t border-border-color">
+                      <RenderDebrief text={log.description} />
                     </div>
                   )}
                 </HudPanel>
