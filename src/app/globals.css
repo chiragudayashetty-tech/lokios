@@ -1838,7 +1838,8 @@ select:focus {
 
 .modal-content.full {
   max-width: 1200px;
-  max-height: 85svh;\n    overflow-y: auto;
+  max-height: 85svh;
+  overflow-y: auto;
 }
 
 .modal-header {
@@ -3142,7 +3143,8 @@ select:focus {
     margin: 0;
     width: 100%;
     max-width: 100%;
-    max-height: 90vh;
+    max-height: 85svh;
+    overflow-y: auto;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     padding: var(--space-4) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
     border-bottom: none;
