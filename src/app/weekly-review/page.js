@@ -22,6 +22,10 @@ export default function WeeklyReview() {
   const [nextActions, setNextActions] = useState('')
   const [saving, setSaving] = useState(false)
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
+  
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyLogs, setHistoryLogs] = useState([])
+  const [expandedArchive, setExpandedArchive] = useState(null)
 
   useEffect(() => {
     if (!user) return
@@ -53,7 +57,7 @@ export default function WeeklyReview() {
       const goalsCompleted = goalRes.data || []
 
       setStats({
-        xp: xpLogs.reduce((sum, log) => sum + (log.amount > 0 ? log.amount : 0), 0),
+        xp: xpLogs.reduce((sum, log) => sum + log.amount, 0),
         tasks: tasksCompleted.length,
         habits: habitLogs.length,
         missions: goalsCompleted.length
@@ -62,7 +66,14 @@ export default function WeeklyReview() {
       setLoadingStats(false)
     }
 
+    const fetchHistory = async () => {
+      const supabase = createClient()
+      const { data } = await supabase.from('work_logs').select('*').eq('user_id', user.id).eq('type', 'weekly_review').order('created_at', { ascending: false })
+      if (data) setHistoryLogs(data)
+    }
+
     fetchStats()
+    fetchHistory()
   }, [user])
 
   const handleSubmit = async (e) => {
@@ -97,9 +108,16 @@ ${nextActions}`
       }
 
       await supabase.from('work_logs').insert([payload])
-      await robustAwardXP(user.id, 40, 'weekly_review', todayStr, `Weekly Review Completed`, 'discipline')
+      await robustAwardXP(user.id, 5, 'weekly_review', todayStr, `Weekly Review Completed`, 'discipline')
       
-      router.push('/portfolio-log?tab=reviews')
+      setWins('')
+      setFails('')
+      setNextActions('')
+      setShowHistory(true)
+      
+      // refresh history
+      const { data } = await supabase.from('work_logs').select('*').eq('user_id', user.id).eq('type', 'weekly_review').order('created_at', { ascending: false })
+      if (data) setHistoryLogs(data)
     } catch (error) {
       console.error('Failed to save review:', error)
       alert('Failed to save review. Please try again.')
@@ -112,17 +130,27 @@ ${nextActions}`
     <AppShell>
       <div className="max-w-4xl mx-auto space-y-6">
         
-        <header className="mb-8">
-          <h1 className="font-display text-4xl text-primary uppercase tracking-widest mb-2 flex items-center gap-3">
-            <CalendarDays size={32} className="text-amber" />
-            Weekly Debrief
-          </h1>
-          <p className="font-mono text-muted text-sm uppercase tracking-widest">
-            {dateRange.start} — {dateRange.end}
-          </p>
+        <header className="mb-8 flex-between flex-wrap gap-4">
+          <div>
+            <h1 className="font-display text-4xl text-primary uppercase tracking-widest mb-2 flex items-center gap-3">
+              <CalendarDays size={32} className="text-amber" />
+              Weekly Debrief
+            </h1>
+            <p className="font-mono text-muted text-sm uppercase tracking-widest">
+              {dateRange.start} — {dateRange.end}
+            </p>
+          </div>
+          <button 
+            onClick={() => setShowHistory(!showHistory)} 
+            className="btn btn-ghost border border-border-color"
+          >
+            {showHistory ? 'VIEW THIS WEEK' : 'VIEW ARCHIVES'}
+          </button>
         </header>
 
-        {/* STATS ROW */}
+        {!showHistory ? (
+          <>
+            {/* STATS ROW */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <HudPanel>
             <div className="flex items-center gap-4">
@@ -223,7 +251,7 @@ ${nextActions}`
 
             <div className="pt-4 border-t border-border-color flex items-center justify-between">
               <div className="font-mono text-xs text-muted">
-                Reward: <span className="text-amber">+40 XP</span>
+                Reward: <span className="text-amber">+5 XP</span>
               </div>
               <button 
                 type="submit"
@@ -243,7 +271,31 @@ ${nextActions}`
 
           </form>
         </HudPanel>
-
+        </>
+        ) : (
+          <div className="space-y-4">
+            {historyLogs.length === 0 ? (
+              <div className="text-center py-12 text-muted font-mono text-sm">NO ARCHIVES FOUND.</div>
+            ) : (
+              historyLogs.map(log => (
+                <HudPanel key={log.id} className="cursor-pointer hover:border-amber transition-colors" onClick={() => setExpandedArchive(expandedArchive === log.id ? null : log.id)}>
+                  <div className="flex-between">
+                    <div>
+                      <h3 className="font-display text-lg text-primary">{log.title || 'Weekly Debrief'}</h3>
+                      <p className="font-mono text-xs text-muted">{formatDate(log.date)}</p>
+                    </div>
+                    <span className="font-mono text-xs text-amber">{log.amount || 5} XP</span>
+                  </div>
+                  {expandedArchive === log.id && (
+                    <div className="mt-4 pt-4 border-t border-border-color font-mono text-sm text-secondary whitespace-pre-wrap leading-relaxed">
+                      {log.description}
+                    </div>
+                  )}
+                </HudPanel>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </AppShell>
   )
