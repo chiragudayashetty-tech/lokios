@@ -3137,7 +3137,7 @@ select:focus {
 
   .modal-overlay {
     align-items: flex-start;
-    padding-top: max(4rem, env(safe-area-inset-top, 40px));
+    padding-top: calc(3rem + env(safe-area-inset-top, 20px));
   }
 
   .modal-content {
