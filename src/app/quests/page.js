@@ -728,17 +728,12 @@ export default function DailyOps() {
           {showAddForm && (
             <div className="modal-overlay bottom-sheet-mobile">
               <motion.div 
-                drag 
-                dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} 
-                dragElastic={0} 
-                dragMomentum={false} 
-                initial={{ opacity: 0, y: 50, x: addFormDrag.x }} 
-                animate={{ opacity: 1, y: addFormDrag.y, x: addFormDrag.x }} 
-                exit={{ opacity: 0, y: 50 }} 
-                onDragEnd={(e, info) => setAddFormDrag({ x: addFormDrag.x + info.offset.x, y: addFormDrag.y + info.offset.y })}
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 50 }}
                 className="w-full sm:w-auto"
               >
-                <HudPanel className="modal-content bottom-sheet-content border-info cursor-move" style={{ width: '480px', maxWidth: '100%' }}>
+                <HudPanel className="modal-content bottom-sheet-content border-info" style={{ width: '480px', maxWidth: '100%' }}>
                   <div className="flex-between mb-4 border-b border-border-color pb-3">
                     <span className="font-display text-xl uppercase text-amber">Add Routine</span>
                     <button onClick={() => setShowAddForm(false)} className="text-muted hover:text-danger"><X size={18} /></button>
@@ -800,15 +795,10 @@ export default function DailyOps() {
         {editingHabit && (
           <div className="modal-overlay bottom-sheet-mobile">
             <motion.div 
-              drag 
-              dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} 
-              dragElastic={0} 
-              dragMomentum={false}
-              initial={{ opacity: 0, y: 50, x: editFormDrag.x }}
-              animate={{ opacity: 1, y: editFormDrag.y, x: editFormDrag.x }}
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              onDragEnd={(e, info) => setEditFormDrag({ x: editFormDrag.x + info.offset.x, y: editFormDrag.y + info.offset.y })}
-              className="modal-content bottom-sheet-content w-full sm:max-w-[420px] cursor-move"
+              className="modal-content bottom-sheet-content w-full sm:max-w-[420px]"
             >
               <div className="modal-header">
                 <h3 className="font-display text-lg text-primary tracking-widest">EDIT ROUTINE</h3>

@@ -431,8 +431,8 @@ export default function Missions() {
         <AnimatePresence>
           {showForm && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div drag dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} dragElastic={0} dragMomentum={false} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
-                <HudPanel className="modal-content bottom-sheet-content cursor-move">
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+                <HudPanel className="modal-content bottom-sheet-content">
                   <div className="font-display text-xl uppercase text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2"><Target size={18} /> Initialize Mission</div>
                   <form onSubmit={handleAdd} className="flex-col gap-4">
                     <div>
@@ -498,7 +498,7 @@ export default function Missions() {
         <AnimatePresence>
           {proofModal.show && (
             <div className="modal-overlay bottom-sheet-mobile">
-              <motion.div drag dragConstraints={{ left: -1000, right: 1000, top: -1000, bottom: 1000 }} dragElastic={0} dragMomentum={false} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto">
                 <HudPanel glow label="MISSION ACCOMPLISHED" className="modal-content bottom-sheet-content w-full max-w-md">
                   <div className="p-4">
                     <p className="font-mono text-sm text-secondary mb-4">Would you like to attach Proof of Work? This will automatically log to your Portfolio Engine.</p>
