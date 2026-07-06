@@ -223,6 +223,7 @@ export default function Operations() {
   const activeList = getActiveList()
 
   const DIFFICULTY_CONFIG = {
+    NONE: { label: 'NONE', color: 'var(--muted)', xp: 0 },
     EASY: { label: 'EASY', color: 'var(--info)', xp: 15 },
     MEDIUM: { label: 'MEDIUM', color: 'var(--accent-primary)', xp: 30 },
     HARD: { label: 'HARD', color: 'var(--warning)', xp: 60 },
