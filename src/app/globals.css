@@ -1810,9 +1810,11 @@ select:focus {
   -webkit-backdrop-filter: blur(8px);
   z-index: var(--z-modal);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: var(--space-4);
+  padding: var(--space-8) var(--space-4);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {
@@ -1823,8 +1825,7 @@ select:focus {
   padding: var(--space-6);
   width: 100%;
   max-width: 520px;
-  max-height: 85vh;
-  overflow-y: auto;
+  margin: auto;
   box-shadow: var(--shadow-xl), 0 0 40px var(--amber-glow-lg);
 }
 
@@ -3136,22 +3137,16 @@ select:focus {
   }
 
   .modal-overlay {
-    align-items: flex-start;
     padding-top: calc(3rem + env(safe-area-inset-top, 20px));
+    padding-bottom: 4rem;
   }
 
   .modal-content {
-    margin: 0;
+    margin: 0 auto;
     width: 100%;
     max-width: 100%;
-    max-height: 80vh;
-    overflow-y: auto;
     border-radius: var(--radius-lg);
     padding: var(--space-4);
-  }
-
-  .modal-content:focus-within {
-    max-height: 50vh;
   }
 
   .battle-card-metrics {
