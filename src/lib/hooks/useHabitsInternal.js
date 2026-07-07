@@ -194,8 +194,6 @@ export function useHabitsInternal(user) {
             await robustAwardXP(user.id, isBlocked ? 0 : -15, 'habit_failed', newLog.id, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
           }
         }
-      }
-
       try { 
         await calculateAndUpdateStreak(user.id, habitId)
         const { data } = await supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: true })
