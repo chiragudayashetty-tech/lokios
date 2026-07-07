@@ -134,50 +134,49 @@ export function useHabitsInternal(user) {
 
     try {
       // 1. XP Adjustments: Remove any XP given from the previous state
-      // Query DB to find real log IDs to remove XP correctly (bypass optimistic UI bugs)
-      const { data: realLogs } = await supabase.from('habit_logs').select('id, status').eq('user_id', user.id).eq('habit_id', habitId).eq('date', targetDate)
-      if (realLogs && realLogs.length > 0) {
-        for (const realLog of realLogs) {
-          if (realLog.status === 'failed') {
-            await robustRemoveXP(user.id, 'habit_failed', realLog.id)
-          } else if (!realLog.status || realLog.status === 'completed') {
-            await robustRemoveXP(user.id, 'habit_complete', realLog.id)
-          }
+      // Find all real IDs from our local state to ensure we catch the exact ones causing UI issues!
+      const localRealLogs = monthLogs.filter(l => l.habit_id === habitId && l.date === targetDate)
+      
+      for (const realLog of localRealLogs) {
+        if (realLog.status === 'failed') {
+          await robustRemoveXP(user.id, 'habit_failed', realLog.id)
+        } else if (!realLog.status || realLog.status === 'completed') {
+          await robustRemoveXP(user.id, 'habit_complete', realLog.id)
         }
       }
 
+      let newLog;
       // 2. Database Sync
       if (nextStatus === 'none') {
-        // Find all real IDs for this date and delete them (handles duplicates)
-        const { data: rows } = await supabase.from('habit_logs').select('id').eq('user_id', user.id).eq('habit_id', habitId).eq('date', targetDate)
-        if (rows && rows.length > 0) {
-          await supabase.from('habit_logs').delete().in('id', rows.map(r => r.id))
+        if (localRealLogs.length > 0) {
+          const { error: delErr } = await supabase.from('habit_logs').delete().in('id', localRealLogs.map(l => l.id))
+          if (delErr) throw delErr
         }
       } else {
-        // Try UPDATE first to avoid constraint conflicts or RLS delete silent fails
-        const { data: updatedRows, error: updateErr } = await supabase.from('habit_logs')
-          .update({ status: nextStatus })
-          .eq('user_id', user.id)
-          .eq('habit_id', habitId)
-          .eq('date', targetDate)
-          .select()
+        if (localRealLogs.length > 0) {
+          const targetId = localRealLogs[0].id
+          const { data: updatedRows, error: updateErr } = await supabase.from('habit_logs')
+            .update({ status: nextStatus })
+            .eq('id', targetId)
+            .select()
+            
+          if (updateErr) throw updateErr
+          if (updatedRows && updatedRows.length > 0) newLog = updatedRows[0]
           
-        let newLog;
-        if (!updateErr && updatedRows && updatedRows.length > 0) {
-          newLog = updatedRows[0]
-          // If duplicates were spawned by previous bugs, clean them up safely by explicit ID
-          if (updatedRows.length > 1) {
-            const extraIds = updatedRows.slice(1).map(r => r.id)
+          if (localRealLogs.length > 1) {
+            const extraIds = localRealLogs.slice(1).map(l => l.id)
             await supabase.from('habit_logs').delete().in('id', extraIds)
           }
         } else {
-          // If no rows were updated (none existed), gracefully INSERT
+          // If no local logs existed, gracefully INSERT
           const { data: insertedRows, error: insertErr } = await supabase.from('habit_logs')
             .insert({ user_id: user.id, habit_id: habitId, date: targetDate, status: nextStatus })
             .select()
           if (insertErr) throw insertErr
           newLog = insertedRows[0]
         }
+      }
+      
         
         // Update optimistic UI with real DB log
         setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
