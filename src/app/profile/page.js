@@ -339,7 +339,7 @@ export default function OperatorDashboard() {
                           
                           {editMode ? (
                             <div className="grid grid-cols-2 gap-2 mt-2">
-                              {habits.map(habit => {
+                              {[{ id: 'sys_screen_intel', title: 'SYSTEM: Screen Intel' }, ...habits].map(habit => {
                                 const isLinked = battle.linked_habits?.includes(habit.id);
                                 return (
                                   <div key={habit.id} onClick={() => toggleLinkedHabit(idx, habit.id)}
@@ -353,7 +353,7 @@ export default function OperatorDashboard() {
                             <div className="flex flex-wrap gap-2">
                               {battle.linked_habits?.length > 0 ? (
                                 battle.linked_habits.map(id => {
-                                  const habit = habits.find(h => h.id === id);
+                                  const habit = id === 'sys_screen_intel' ? { id, title: 'SYSTEM: Screen Intel', category: 'personal_mission' } : habits.find(h => h.id === id);
                                   if (!habit) return null;
                                   
                                   const categoryData = QUEST_CATEGORIES.find(c => c.id === habit.category) || QUEST_CATEGORIES.find(c => c.id === 'other');

@@ -88,6 +88,14 @@ export default function IntelligenceFeed() {
         .eq('date', yesterdayStr)
         .eq('status', 'completed')
 
+      // Fetch screen time logs for yesterday
+      const { data: yesterdayScreenTime } = await supabase
+        .from('screen_time_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', yesterdayStr)
+        .maybeSingle()
+
       // Fetch blueprint to evaluate battles
       const { data: blueprint } = await supabase
         .from('user_blueprints')
@@ -113,6 +121,26 @@ export default function IntelligenceFeed() {
           let habitsHit = 0
 
           battle.linked_habits.forEach(habitId => {
+            if (habitId === 'sys_screen_intel') {
+              if (yesterdayScreenTime) {
+                const doomMins = yesterdayScreenTime.doom_scroll_minutes || 0
+                if (doomMins <= 60) {
+                  hpChange -= 15
+                  habitsHit++
+                } else {
+                  hpChange += 20
+                  habitsMissed++
+                  totalMissed++
+                }
+              } else {
+                // If they completely failed to log screen time
+                hpChange += 20
+                habitsMissed++
+                totalMissed++
+              }
+              return
+            }
+
             if (completedHabitIds.has(habitId)) {
               hpChange -= 15 // Direct damage to the enemy
               habitsHit++
