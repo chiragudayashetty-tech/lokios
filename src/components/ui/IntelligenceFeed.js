@@ -80,13 +80,15 @@ export default function IntelligenceFeed() {
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = getLocalDateStr(yesterday)
 
-      // Fetch logs for yesterday, ONLY completed ones
-      const { data: yesterdayLogs } = await supabase
+      // Fetch all logs for yesterday
+      const { data: yesterdayLogsRaw } = await supabase
         .from('habit_logs')
         .select('habit_id, status')
         .eq('user_id', user.id)
-        .eq('date', yesterdayStr)
-        .eq('status', 'completed')
+        .gte('date', yesterdayStr)
+        .lte('date', yesterdayStr + 'T23:59:59.999Z')
+        
+      const yesterdayLogsMap = new Map((yesterdayLogsRaw || []).map(l => [l.habit_id, l.status]))
 
       // Fetch screen time logs for yesterday
       const { data: yesterdayScreenTime } = await supabase
@@ -108,14 +110,15 @@ export default function IntelligenceFeed() {
       const resetDateStr = storedResetDate ? getLocalDateStr(new Date(storedResetDate)) : '2026-06-29'
       const shouldEvaluateYesterday = yesterdayStr >= resetDateStr
 
-      if (shouldEvaluateYesterday && yesterdayLogs && blueprint && blueprint.battles) {
-        const completedHabitIds = new Set(yesterdayLogs.map(l => l.habit_id))
+      if (shouldEvaluateYesterday && blueprint && blueprint.battles) {
         // Calculate true total missed routines globally (not per battle link)
         let totalMissed = 0
         habits.forEach(habit => {
           const requiredDays = habit.frequency_days || [0, 1, 2, 3, 4, 5, 6]
           if (requiredDays.includes(yesterday.getDay())) {
-            if (!completedHabitIds.has(habit.id)) {
+            const status = yesterdayLogsMap.get(habit.id) || 'none'
+            // 'blocked' means an excused absence (e.g. sick day, busy), do not penalize.
+            if (status !== 'completed' && status !== 'blocked') {
               totalMissed++
             }
           }
@@ -149,14 +152,18 @@ export default function IntelligenceFeed() {
               return
             }
 
-            if (completedHabitIds.has(habitId)) {
+            const status = yesterdayLogsMap.get(habitId) || 'none'
+            if (status === 'completed') {
               hpChange -= 15 // Direct damage to the enemy
               habitsHit++
+            } else if (status === 'blocked') {
+              // Blocked / Excused: Neutral action, no damage, no heal.
+              return
             } else {
               const habit = habits.find(h => h.id === habitId)
               const requiredDays = habit?.frequency_days || [0, 1, 2, 3, 4, 5, 6]
               if (!requiredDays.includes(yesterday.getDay())) {
-                // Blocked or rest day, no penalty
+                // Rest day, no penalty
                 return
               }
               
