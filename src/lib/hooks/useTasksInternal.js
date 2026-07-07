@@ -110,7 +110,8 @@ export function useTasksInternal(user) {
       // Dynamic XP Calculation based on Difficulty and Deadlines
       
       // Default to MEDIUM if no difficulty set
-      const difficultyData = DIFFICULTY_LEVELS[task?.difficulty] || DIFFICULTY_LEVELS.MEDIUM
+      const diffKey = (task?.difficulty || 'MEDIUM').toUpperCase()
+      const difficultyData = DIFFICULTY_LEVELS[diffKey] || DIFFICULTY_LEVELS.MEDIUM
       let xpAward = difficultyData.xp
 
       // Check if overdue
@@ -244,7 +245,8 @@ export function useTasksInternal(user) {
       if (error) throw error
 
       // Dynamic XP Penalty based on Difficulty
-      const difficultyData = DIFFICULTY_LEVELS[task?.difficulty] || DIFFICULTY_LEVELS.MEDIUM
+      const diffKey = (task?.difficulty || 'MEDIUM').toUpperCase()
+      const difficultyData = DIFFICULTY_LEVELS[diffKey] || DIFFICULTY_LEVELS.MEDIUM
       const penalty = difficultyData.penalty
 
       if (penalty > 0) {
@@ -362,7 +364,8 @@ export function useTasksInternal(user) {
       if (error) throw error
 
       // Procrastination XP penalty
-      const difficultyData = DIFFICULTY_LEVELS[task.difficulty] || DIFFICULTY_LEVELS.MEDIUM
+      const diffKey = (task.difficulty || 'MEDIUM').toUpperCase()
+      const difficultyData = DIFFICULTY_LEVELS[diffKey] || DIFFICULTY_LEVELS.MEDIUM
       if (difficultyData.id !== 'NONE' && difficultyData.penalty > 0) {
         await robustAwardXP(
           user.id,

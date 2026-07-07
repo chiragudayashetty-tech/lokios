@@ -283,9 +283,9 @@ export default function XPDashboard() {
                   <div className="absolute left-[-4.5px] top-5 w-2 h-2 rounded-full bg-border-color group-hover:bg-info transition-colors" />
                   <div className="flex justify-between items-start mb-1">
                     <div className="font-mono text-sm text-primary">{item.description}</div>
-                    <div className={`font-mono text-sm font-bold ${item.amount > 0 ? 'text-success' : 'text-danger'}`}>
+                    <span className={`font-mono text-sm font-bold ${item.amount > 0 ? 'text-success' : item.amount < 0 ? 'text-danger' : 'text-muted'}`}>
                       {item.amount > 0 ? '+' : ''}{item.amount} XP
-                    </div>
+                    </span>
                   </div>
                   <div className="font-mono text-[10px] text-muted flex gap-3">
                     <span>{new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString()}</span>

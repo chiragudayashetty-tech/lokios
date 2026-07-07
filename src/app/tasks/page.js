@@ -304,7 +304,8 @@ export default function Operations() {
               const isFailed = task.status === 'cancelled' || task.status === 'failed'
               const isEditing = editingId === task.id
               const isOverdue = !isCompleted && !isFailed && task.due_date && task.due_date < today
-              const diffConfig = DIFFICULTY_CONFIG[task.difficulty] || DIFFICULTY_CONFIG.MEDIUM
+              const diffKey = (task.difficulty || 'MEDIUM').toUpperCase()
+              const diffConfig = DIFFICULTY_CONFIG[diffKey] || DIFFICULTY_CONFIG.MEDIUM
               const dynamicXp = isOverdue ? Math.floor(diffConfig.xp * 0.5) : diffConfig.xp
 
               if (isEditing) {
