@@ -138,23 +138,39 @@ export function useHabitsInternal(user) {
       const localRealLogs = monthLogs.filter(l => l.habit_id === habitId && l.date === targetDate)
       
       for (const realLog of localRealLogs) {
-        if (realLog.status === 'failed') {
+        if (realLog.id.startsWith('virtual_fail_')) {
+          const prefix = `virtual_fail_${habitId}_`
+          if (realLog.id.startsWith(prefix)) {
+            const createdAt = realLog.id.substring(prefix.length)
+            const { data: xpRow } = await supabase.from('xp_history').select('id, amount').eq('user_id', user.id).eq('source_type', 'habit_failed').eq('source_id', habitId).eq('created_at', createdAt).single()
+            if (xpRow) {
+              await supabase.from('xp_history').delete().eq('id', xpRow.id)
+              await navigator.locks.request('xp_update_lock', async () => {
+                const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', user.id).single()
+                if (prof) {
+                  await supabase.from('profiles').update({ total_xp: Math.max(0, (prof.total_xp || 0) - xpRow.amount) }).eq('id', user.id)
+                }
+              })
+            }
+          }
+        } else if (realLog.status === 'failed') {
           await robustRemoveXP(user.id, 'habit_failed', realLog.id)
         } else if (!realLog.status || realLog.status === 'completed') {
           await robustRemoveXP(user.id, 'habit_complete', realLog.id)
         }
       }
 
+      const dbLogsOnly = localRealLogs.filter(l => !l.id.startsWith('virtual_fail_') && !l.id.startsWith('opt_'))
       let newLog;
       // 2. Database Sync
       if (nextStatus === 'none') {
-        if (localRealLogs.length > 0) {
-          const { error: delErr } = await supabase.from('habit_logs').delete().in('id', localRealLogs.map(l => l.id))
+        if (dbLogsOnly.length > 0) {
+          const { error: delErr } = await supabase.from('habit_logs').delete().in('id', dbLogsOnly.map(l => l.id))
           if (delErr) throw delErr
         }
       } else {
-        if (localRealLogs.length > 0) {
-          const targetId = localRealLogs[0].id
+        if (dbLogsOnly.length > 0) {
+          const targetId = dbLogsOnly[0].id
           const { data: updatedRows, error: updateErr } = await supabase.from('habit_logs')
             .update({ status: nextStatus })
             .eq('id', targetId)
@@ -163,8 +179,8 @@ export function useHabitsInternal(user) {
           if (updateErr) throw updateErr
           if (updatedRows && updatedRows.length > 0) newLog = updatedRows[0]
           
-          if (localRealLogs.length > 1) {
-            const extraIds = localRealLogs.slice(1).map(l => l.id)
+          if (dbLogsOnly.length > 1) {
+            const extraIds = dbLogsOnly.slice(1).map(l => l.id)
             await supabase.from('habit_logs').delete().in('id', extraIds)
           }
         } else {
