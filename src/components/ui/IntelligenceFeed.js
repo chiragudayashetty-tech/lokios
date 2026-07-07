@@ -110,7 +110,17 @@ export default function IntelligenceFeed() {
 
       if (shouldEvaluateYesterday && yesterdayLogs && blueprint && blueprint.battles) {
         const completedHabitIds = new Set(yesterdayLogs.map(l => l.habit_id))
+        // Calculate true total missed routines globally (not per battle link)
         let totalMissed = 0
+        habits.forEach(habit => {
+          const requiredDays = habit.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+          if (requiredDays.includes(yesterday.getDay())) {
+            if (!completedHabitIds.has(habit.id)) {
+              totalMissed++
+            }
+          }
+        })
+
         let battleUpdatesNeeded = false
         
         const updatedBattles = blueprint.battles.map(battle => {
@@ -130,13 +140,11 @@ export default function IntelligenceFeed() {
                 } else {
                   hpChange += 20
                   habitsMissed++
-                  totalMissed++
                 }
               } else {
                 // If they completely failed to log screen time
                 hpChange += 20
                 habitsMissed++
-                totalMissed++
               }
               return
             }
@@ -154,7 +162,6 @@ export default function IntelligenceFeed() {
               
               hpChange += 20 // Enemy heals
               habitsMissed++
-              totalMissed++
             }
           })
 
