@@ -18,6 +18,7 @@ export default function DailyOps() {
 
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth()) // 0-indexed
+  const [mobileSelectedDate, setMobileSelectedDate] = useState(new Date())
   const [mobileWeekStart, setMobileWeekStart] = useState(1)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -64,6 +65,8 @@ export default function DailyOps() {
   const mobileDays = Array.from({ length: 7 }, (_, i) => mobileWeekStart + i).filter(d => d <= daysInMonth)
   
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const mobileDateStr = `${mobileSelectedDate.getFullYear()}-${String(mobileSelectedDate.getMonth() + 1).padStart(2, '0')}-${String(mobileSelectedDate.getDate()).padStart(2, '0')}`
+  const isMobileToday = mobileDateStr === todayStr
 
   // Navigate months
   const prevMonth = () => {
@@ -79,6 +82,28 @@ export default function DailyOps() {
 
   const prevWeek = () => setMobileWeekStart(prev => Math.max(1, prev - 7))
   const nextWeek = () => setMobileWeekStart(prev => Math.min(daysInMonth, prev + 7))
+
+  const prevMobileDay = () => {
+    const newDate = new Date(mobileSelectedDate)
+    newDate.setDate(newDate.getDate() - 1)
+    setMobileSelectedDate(newDate)
+    if (newDate.getMonth() !== viewMonth || newDate.getFullYear() !== viewYear) {
+      setViewMonth(newDate.getMonth())
+      setViewYear(newDate.getFullYear())
+      fetchHabits(newDate.getFullYear(), newDate.getMonth())
+    }
+  }
+
+  const nextMobileDay = () => {
+    const newDate = new Date(mobileSelectedDate)
+    newDate.setDate(newDate.getDate() + 1)
+    setMobileSelectedDate(newDate)
+    if (newDate.getMonth() !== viewMonth || newDate.getFullYear() !== viewYear) {
+      setViewMonth(newDate.getMonth())
+      setViewYear(newDate.getFullYear())
+      fetchHabits(newDate.getFullYear(), newDate.getMonth())
+    }
+  }
 
   useEffect(() => {
     if (isCurrentMonth) {
@@ -610,13 +635,17 @@ export default function DailyOps() {
         {/* Mobile View: Cards for Today's Routine — first on mobile */}
         <div className="hidden-desktop flex flex-col gap-3 quests-card-list">
           <div className="flex-between mb-1 mt-2">
-            <span className="font-display text-sm uppercase tracking-widest text-amber">TODAY'S OPERATIONS</span>
-            <span className="font-mono text-[10px] text-muted">{todayStr}</span>
+            <span className="font-display text-sm uppercase tracking-widest text-amber">{isMobileToday ? "TODAY'S OPERATIONS" : "OPERATIONS"}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={prevMobileDay} className="p-1 hover:text-primary text-muted transition-colors"><ChevronLeft size={16} /></button>
+              <span className="font-mono text-[10px] text-muted">{mobileDateStr}</span>
+              <button onClick={nextMobileDay} className="p-1 hover:text-primary text-muted transition-colors"><ChevronRight size={16} /></button>
+            </div>
           </div>
           {habits.map((habit) => {
             const stats = getHabitStats(habit.id)
             const cat = QUEST_CATEGORIES.find(c => c.id === habit.category) || QUEST_CATEGORIES[0]
-            const todayStatus = getStatus(habit.id, todayDay)
+            const todayStatus = getStatus(habit.id, mobileSelectedDate.getDate())
             return (
               <HudPanel key={habit.id} className="p-4 flex-between relative overflow-hidden">
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: cat.color }} />
@@ -627,7 +656,7 @@ export default function DailyOps() {
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="font-mono text-[10px] text-info font-bold">+{habit.xp_per_completion || 25} XP</span>
                   <button 
-                    onClick={() => handleToggle(habit.id, todayDay)}
+                    onClick={() => handleToggle(habit.id, mobileSelectedDate.getDate())}
                     className="flex items-center justify-center transition-all active:scale-95"
                     style={{
                       width: '42px', height: '42px',
