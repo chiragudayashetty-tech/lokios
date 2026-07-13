@@ -123,6 +123,11 @@ export default function MissionControl() {
         .eq('user_id', user.id)
         .order('date', { ascending: true })
 
+      const { data: allHabitsData } = await sb
+        .from('habits')
+        .select('id, name')
+        .eq('user_id', user.id)
+
       if (allHabitLogs) {
         // Weekly Win Rate (last 7 days)
         const recentLogs = allHabitLogs.filter(l => l.date >= weekAgoStr)
@@ -159,7 +164,10 @@ export default function MissionControl() {
         const sortedFails = Object.entries(recentFails)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 2)
-          .map(([habitId, fails]) => ({ habitId, fails }))
+          .map(([habitId, fails]) => {
+            const habit = allHabitsData?.find(h => h.id === habitId)
+            return { habitId, fails, name: habit?.name || 'Unknown Routine' }
+          })
           
         setHabitGraveyard(sortedFails)
       }
@@ -213,13 +221,6 @@ export default function MissionControl() {
   const shallowWorkTasks = todayCompletedTasks.filter(t => t.difficulty === 'EASY' || t.difficulty === 'MEDIUM').length
   const totalWork = deepWorkTasks + shallowWorkTasks
   const deepWorkPct = totalWork > 0 ? (deepWorkTasks / totalWork) * 100 : 0
-
-  // Current Bottleneck
-  const allActiveGoals = [...(sideQuests||[]), ...(longTermGoals||[])]
-  const currentBottleneck = allActiveGoals.sort((a, b) => {
-    if (a.progress !== b.progress) return (a.progress || 0) - (b.progress || 0)
-    return new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at)
-  })[0]
 
   // Helper for Tooltip in Recharts
   const CustomTooltip = ({ active, payload, label }) => {
@@ -424,9 +425,6 @@ export default function MissionControl() {
           {/* LEFT (8 cols) */}
           <div className="col-8 flex flex-col gap-3 lg:gap-4">
 
-            {/* THREAT MATRIX (IntelligenceFeed) */}
-            <IntelligenceFeed />
-
             {/* ACTIVE OBJECTIVE & COUNTDOWN */}
             {mainQuest ? (
               <div
@@ -517,21 +515,6 @@ export default function MissionControl() {
                 "{briefing}"
               </p>
             </div>
-            
-            {/* CURRENT BOTTLENECK */}
-            {currentBottleneck && (
-              <div className="dashboard-card border-warning-subtle" style={{ borderLeft: '3px solid var(--warning)' }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle size={10} color="var(--warning)" />
-                  <span className="font-mono text-[8px] uppercase tracking-widest text-warning">Current Bottleneck</span>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div className="font-display text-sm text-primary truncate">{currentBottleneck.title}</div>
-                  <div className="font-mono text-[9px] font-bold text-warning">{currentBottleneck.progress || 0}% Progress</div>
-                </div>
-                <div className="font-mono text-[8px] text-muted mt-1">Oldest active mission dragging momentum. Unblock it.</div>
-              </div>
-            )}
 
           </div>
 
@@ -668,12 +651,10 @@ export default function MissionControl() {
                   <span className="font-mono text-[8px] uppercase tracking-widest text-danger">Habit Graveyard (30 Days)</span>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {habitGraveyard.map((grave, idx) => {
-                    const h = habits.find(h => h.id === grave.habitId)
-                    if (!h) return null
+                  {habitGraveyard.map((grave) => {
                     return (
                       <div key={grave.habitId} className="flex items-center justify-between p-2 bg-bg-primary border border-danger-subtle">
-                        <span className="font-mono text-[9px] text-primary truncate max-w-[150px]">{h.name}</span>
+                        <span className="font-mono text-[9px] text-primary truncate max-w-[150px]">{grave.name}</span>
                         <span className="font-mono text-[9px] font-bold text-danger">{grave.fails} Fails</span>
                       </div>
                     )
