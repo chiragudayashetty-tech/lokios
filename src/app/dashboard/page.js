@@ -152,7 +152,7 @@ export default function MissionControl() {
 
       const { data: allHabitsData } = await sb
         .from('habits')
-        .select('id, name')
+        .select('id, title')
         .eq('user_id', user.id)
 
       if (allHabitLogs) {
@@ -192,8 +192,8 @@ export default function MissionControl() {
           .sort((a, b) => b[1] - a[1])
           .slice(0, 2)
           .map(([habitId, fails]) => {
-            const habit = allHabitsData?.find(h => h.id === habitId)
-            return { habitId, fails, name: habit?.name || 'Unknown Routine' }
+            const habit = allHabitsData?.find(h => String(h.id) === String(habitId))
+            return { habitId, fails, name: habit?.title || 'Unknown Routine' }
           })
           
         setHabitGraveyard(sortedFails)
