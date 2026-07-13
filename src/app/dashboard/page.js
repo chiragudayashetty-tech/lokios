@@ -30,6 +30,23 @@ const ARC_CONFIG = [
   { rank: 'Emperor', name: 'The Apex',            flavor: 'Final form.' },
 ]
 
+// Battle icon map
+const BATTLE_ICONS = {
+  'Phone Addiction':       Smartphone,
+  'Porn Consumption':      Shield,
+  'Inconsistent Execution':Repeat,
+  'Fear of Selling':       DollarSign,
+  'Poor Sleep Discipline': Moon,
+  'Overthinking':          Brain,
+}
+
+const SEVERITY_COLORS = {
+  extreme: '#FF3B3B',
+  high:    'var(--danger)',
+  medium:  'var(--accent-primary)',
+  low:     'var(--info)',
+}
+
 const BRIEFINGS = [
   "The discipline you build in private becomes the edge you show in public.",
   "Amateurs wait for motivation. Professionals execute on schedule.",
@@ -58,11 +75,22 @@ export default function MissionControl() {
   const [xpThisWeek, setXpThisWeek]   = useState(0)
   const [weeklyWinRate, setWeeklyWinRate] = useState(0)
   const [arcExpanded, setArcExpanded] = useState(false)
+  const [battles, setBattles]         = useState([])
 
   // Live clock
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(t)
+  }, [])
+
+  // Fetch battles
+  useEffect(() => {
+    async function fetchBattles() {
+      const sb = createClient()
+      const { data } = await sb.from('user_blueprints').select('battles').single()
+      if (data?.battles) setBattles(data.battles.filter(b => b.status !== 'defeated'))
+    }
+    fetchBattles()
   }, [])
 
   // Fetch XP and Habit data for the new metrics
@@ -573,6 +601,49 @@ export default function MissionControl() {
                 </div>
               </Link>
             </div>
+
+            {/* WAR ROOM — Active Battles */}
+            {battles.length > 0 && (
+              <div style={{ padding: '20px', background: 'var(--bg-tertiary)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <div className="flex items-center gap-1.5 mb-4">
+                  <Swords size={10} color="var(--danger)" />
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-danger">Active Battles</span>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {battles.map((battle, idx) => {
+                    const Icon       = BATTLE_ICONS[battle.name] || Swords
+                    const hp         = battle.hp ?? 100
+                    const isCritical = hp > 75
+                    const sevColor   = SEVERITY_COLORS[battle.severity] || 'var(--info)'
+                    return (
+                      <div key={idx}>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <Icon size={11} style={{ color: sevColor, shrink: 0 }} />
+                          <span className="font-mono text-[10px] text-primary flex-1 truncate">{battle.name}</span>
+                          <span className="font-mono text-[9px] font-bold" style={{ color: isCritical ? 'var(--danger)' : 'var(--warning)' }}>
+                            {hp}HP
+                          </span>
+                        </div>
+                        <div style={{ height: '2px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+                          <motion.div
+                            style={{
+                              height: '100%',
+                              width: `${Math.min(100, Math.max(0, hp))}%`,
+                              background: isCritical ? 'var(--danger)' : hp > 50 ? 'var(--warning)' : 'var(--success)',
+                            }}
+                            animate={isCritical ? { opacity: [1, 0.4, 1] } : {}}
+                            transition={isCritical ? { repeat: Infinity, duration: 1.5 } : {}}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <Link href="/profile" className="font-mono text-[9px] text-muted hover:text-primary transition-colors text-center mt-1 block">
+                    MANAGE →
+                  </Link>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
