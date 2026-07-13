@@ -259,11 +259,12 @@ export default function IntelligenceFeed() {
       <HudPanel glow className="mb-6">
         <div className="flex items-center gap-3 text-success">
           <Cpu size={16} />
-          <span className="font-mono text-sm uppercase tracking-widest">CONSEQUENCE ENGINE: ALL SYSTEMS NOMINAL. NO PENALTIES ACTIVE.</span>
+          <span className="font-mono text-sm uppercase tracking-widest">THREAT MATRIX: ALL SYSTEMS NOMINAL. NO ACTIVE THREATS DETECTED.</span>
         </div>
       </HudPanel>
     )
   }
+
 
   return (
     <div className="flex-col gap-3 mb-6">
