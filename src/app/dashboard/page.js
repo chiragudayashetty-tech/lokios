@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Target, Shield, AlertTriangle, Zap, Swords, Smartphone,
-  Moon, Brain, DollarSign, Repeat, Flame, ChevronDown,
+  Target, AlertTriangle, Zap, Swords, Flame, ChevronDown,
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
-  Activity, Clock, Terminal
+  Activity, Clock, Terminal, Ghost, Skull, ArrowUpRight, BarChart2
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
@@ -18,8 +17,8 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { RANK_CONFIG } from '@/lib/constants'
 import { getLocalDateStr } from '@/lib/utils/dates'
+import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
-// Arc definitions
 const ARC_CONFIG = [
   { rank: 'E',       name: 'The Awakening',      flavor: 'You just woke up.' },
   { rank: 'D',       name: 'Discipline Rebuild',  flavor: 'The grind no one sees.' },
@@ -29,23 +28,6 @@ const ARC_CONFIG = [
   { rank: 'S',       name: 'Legend Mode',         flavor: 'Near mythical.' },
   { rank: 'Emperor', name: 'The Apex',            flavor: 'Final form.' },
 ]
-
-// Battle icon map
-const BATTLE_ICONS = {
-  'Phone Addiction':       Smartphone,
-  'Porn Consumption':      Shield,
-  'Inconsistent Execution':Repeat,
-  'Fear of Selling':       DollarSign,
-  'Poor Sleep Discipline': Moon,
-  'Overthinking':          Brain,
-}
-
-const SEVERITY_COLORS = {
-  extreme: '#FF3B3B',
-  high:    'var(--danger)',
-  medium:  'var(--accent-primary)',
-  low:     'var(--info)',
-}
 
 const BRIEFINGS = [
   "The discipline you build in private becomes the edge you show in public.",
@@ -65,8 +47,9 @@ export default function MissionControl() {
 
   const {
     profile: { profile },
-    goals:   { mainQuest },
-    habits:  { todayLogs },
+    goals:   { mainQuest, sideQuests, longTermGoals },
+    habits:  { todayLogs, habits },
+    tasks:   { tasks },
     journal: { entries }
   } = useOS()
 
@@ -75,25 +58,17 @@ export default function MissionControl() {
   const [xpThisWeek, setXpThisWeek]   = useState(0)
   const [weeklyWinRate, setWeeklyWinRate] = useState(0)
   const [arcExpanded, setArcExpanded] = useState(false)
-  const [battles, setBattles]         = useState([])
+  
+  // New metrics states
+  const [ghostScore, setGhostScore] = useState(0)
+  const [habitGraveyard, setHabitGraveyard] = useState([])
+  const [xpTrajectory, setXpTrajectory] = useState([])
 
-  // Live clock
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(t)
   }, [])
 
-  // Fetch battles
-  useEffect(() => {
-    async function fetchBattles() {
-      const sb = createClient()
-      const { data } = await sb.from('user_blueprints').select('battles').single()
-      if (data?.battles) setBattles(data.battles.filter(b => b.status !== 'defeated'))
-    }
-    fetchBattles()
-  }, [])
-
-  // Fetch XP and Habit data for the new metrics
   useEffect(() => {
     async function fetchMetrics() {
       if (!user) return
@@ -103,34 +78,90 @@ export default function MissionControl() {
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 6)
       const weekAgoStr = getLocalDateStr(weekAgo)
+      
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29)
+      const thirtyDaysAgoStr = getLocalDateStr(thirtyDaysAgo)
 
-      // 1. Fetch XP
+      // 1. Fetch XP Data (Last 30 Days)
       const { data: xpData } = await sb
         .from('xp_history')
         .select('amount, created_at')
         .eq('user_id', user.id)
-        .gte('created_at', weekAgoStr)
+        .gte('created_at', thirtyDaysAgoStr)
         
       if (xpData) {
         const positiveXp = xpData.filter(r => r.amount > 0)
-        setXpThisWeek(positiveXp.reduce((s, r) => s + r.amount, 0))
+        
+        // Today & This Week
+        setXpThisWeek(positiveXp.filter(r => r.created_at >= weekAgoStr).reduce((s, r) => s + r.amount, 0))
         setXpToday(positiveXp.filter(r => r.created_at.startsWith(todayStr)).reduce((s, r) => s + r.amount, 0))
+        
+        // 30-Day Trajectory Graph
+        const xpByDate = {}
+        positiveXp.forEach(r => {
+          const dateStr = r.created_at.substring(0, 10)
+          xpByDate[dateStr] = (xpByDate[dateStr] || 0) + r.amount
+        })
+        const graphData = []
+        for(let i=29; i>=0; i--) {
+          const d = new Date()
+          d.setDate(d.getDate() - i)
+          const dStr = getLocalDateStr(d)
+          graphData.push({
+            date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            xp: xpByDate[dStr] || 0
+          })
+        }
+        setXpTrajectory(graphData)
       }
 
-      // 2. Fetch Habit Logs for Win Rate (last 7 days)
-      const { data: habitData } = await sb
+      // 2. Fetch ALL Habit Logs (for Ghost Score, Win Rate, Graveyard)
+      const { data: allHabitLogs } = await sb
         .from('habit_logs')
-        .select('date, status')
+        .select('date, status, habit_id')
         .eq('user_id', user.id)
-        .gte('date', weekAgoStr)
+        .order('date', { ascending: true })
 
-      if (habitData) {
-        // Calculate days where at least one habit was completed
+      if (allHabitLogs) {
+        // Weekly Win Rate (last 7 days)
+        const recentLogs = allHabitLogs.filter(l => l.date >= weekAgoStr)
         const uniqueDaysWithCompletion = new Set(
-          habitData.filter(log => log.status === 'completed').map(log => log.date)
+          recentLogs.filter(log => log.status === 'completed').map(log => log.date)
         ).size
-        // Win rate is out of 7 days
         setWeeklyWinRate(Math.round((uniqueDaysWithCompletion / 7) * 100))
+
+        // Ghost Score (All-Time Recovery)
+        let ghostPoints = 0
+        const logsByHabit = {}
+        allHabitLogs.forEach(log => {
+          if (!logsByHabit[log.habit_id]) logsByHabit[log.habit_id] = []
+          logsByHabit[log.habit_id].push(log)
+        })
+
+        Object.values(logsByHabit).forEach(logs => {
+          for (let i = 0; i < logs.length - 1; i++) {
+            if (logs[i].status === 'failed' && logs[i+1].status === 'completed') {
+              ghostPoints++
+            }
+          }
+        })
+        setGhostScore(ghostPoints)
+
+        // Habit Graveyard (Last 30 Days)
+        const recentFails = {}
+        allHabitLogs
+          .filter(l => l.date >= thirtyDaysAgoStr && l.status === 'failed')
+          .forEach(l => {
+            recentFails[l.habit_id] = (recentFails[l.habit_id] || 0) + 1
+          })
+        
+        const sortedFails = Object.entries(recentFails)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 2)
+          .map(([habitId, fails]) => ({ habitId, fails }))
+          
+        setHabitGraveyard(sortedFails)
       }
     }
     fetchMetrics()
@@ -148,34 +179,26 @@ export default function MissionControl() {
   const arcColor     = RANK_CONFIG[currentRank.code]?.color || '#9CA3AF'
   const currentArc   = ARC_CONFIG.find(a => a.rank === currentRank.code) || ARC_CONFIG[0]
 
-  // Day pressure
   const hoursLeft = +(24 - currentTime.getHours() - currentTime.getMinutes() / 60).toFixed(1)
   const dayPct    = Math.round(((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100)
   const dayUrgency = dayPct > 80 ? 'danger' : dayPct > 60 ? 'warning' : 'ok'
 
-  // Streak display
   const flameColor = currentStreak >= 30 ? '#F59E0B' : currentStreak >= 7 ? '#f97316' : '#ef4444'
 
-  // Momentum Score (0-100)
-  // Weighted: 40% streak (cap at 30 days), 40% weekly win rate, 20% weekly XP (cap at 1000)
   const streakScore = Math.min(100, (currentStreak / 30) * 100) * 0.4
   const winRateScore = weeklyWinRate * 0.4
   const xpScore = Math.min(100, (xpThisWeek / 1000) * 100) * 0.2
   const momentumScore = Math.round(streakScore + winRateScore + xpScore)
-  
   const momentumColor = momentumScore >= 80 ? 'var(--success)' : momentumScore >= 50 ? 'var(--warning)' : 'var(--danger)'
   const momentumText = momentumScore >= 80 ? 'SURGING' : momentumScore >= 50 ? 'BUILDING' : 'STAGNANT'
 
-  // Daily Briefing (seeded randomly by day of year so it changes daily but stays consistent for the day)
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
 
-  // Journal Status
   const todayStr = getLocalDateStr(new Date())
   const lastJournalDate = entries?.[0]?.date
   const journalDoneToday = lastJournalDate === todayStr
 
-  // Deadline Countdown for Main Quest
   let deadlineDays = null
   let deadlineUrgency = 'ok'
   if (mainQuest?.deadline) {
@@ -184,20 +207,53 @@ export default function MissionControl() {
     deadlineUrgency = deadlineDays <= 3 ? 'danger' : deadlineDays <= 7 ? 'warning' : 'ok'
   }
 
+  // Daily Output Ratio
+  const todayCompletedTasks = tasks?.filter(t => t.status === 'completed' && t.completed_at?.startsWith(todayStr)) || []
+  const deepWorkTasks = todayCompletedTasks.filter(t => t.difficulty === 'HARD' || t.difficulty === 'EXTREME').length
+  const shallowWorkTasks = todayCompletedTasks.filter(t => t.difficulty === 'EASY' || t.difficulty === 'MEDIUM').length
+  const totalWork = deepWorkTasks + shallowWorkTasks
+  const deepWorkPct = totalWork > 0 ? (deepWorkTasks / totalWork) * 100 : 0
+
+  // Current Bottleneck
+  const allActiveGoals = [...(sideQuests||[]), ...(longTermGoals||[])]
+  const currentBottleneck = allActiveGoals.sort((a, b) => {
+    if (a.progress !== b.progress) return (a.progress || 0) - (b.progress || 0)
+    return new Date(a.updated_at || a.created_at) - new Date(b.updated_at || b.created_at)
+  })[0]
+
+  // Helper for Tooltip in Recharts
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div style={{ background: 'var(--bg-primary)', border: `1px solid ${arcColor}`, padding: '4px 8px' }}>
+          <p className="font-mono text-[9px] text-muted">{label}</p>
+          <p className="font-mono text-[10px] font-bold" style={{ color: arcColor }}>{payload[0].value} XP</p>
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
     <AppShell>
-      <div className="page-container relative max-w-[1600px]">
+      <div className="page-container relative max-w-[1600px] pb-10">
 
         <style dangerouslySetInnerHTML={{ __html: `
           :root { --arc-color: ${arcColor}; }
-          .arc-glow { box-shadow: 0 0 40px ${arcColor}18, 0 0 80px ${arcColor}08; }
+          .arc-glow { box-shadow: 0 0 30px ${arcColor}15, 0 0 60px ${arcColor}05; }
           .bento-grid {
-            display: grid; grid-template-columns: 1fr; gap: 20px;
+            display: grid; grid-template-columns: 1fr; gap: 12px;
+          }
+          .dashboard-card {
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
           }
           @media (min-width: 1024px) {
-            .bento-grid { grid-template-columns: repeat(12, 1fr); }
+            .bento-grid { grid-template-columns: repeat(12, 1fr); gap: 16px; }
             .col-8 { grid-column: span 8; }
             .col-4 { grid-column: span 4; }
+            .dashboard-card { padding: 20px; }
           }
         ` }} />
 
@@ -205,11 +261,11 @@ export default function MissionControl() {
             ARC HERO HEADER
         ══════════════════════════════════════════════════════════════════ */}
         <motion.header
-          className="mb-5 arc-glow relative overflow-hidden"
+          className="mb-4 lg:mb-5 arc-glow relative overflow-hidden"
           style={{
-            padding: '24px 28px',
+            padding: '20px 24px',
             background: `linear-gradient(130deg, #111111 0%, #0a0a0a 60%, ${arcColor}0a 100%)`,
-            borderLeft: `4px solid ${arcColor}`,
+            borderLeft: `3px solid ${arcColor}`,
             borderTop: `1px solid ${arcColor}22`,
             borderRight: `1px solid ${arcColor}0a`,
             borderBottom: `1px solid ${arcColor}0a`,
@@ -223,41 +279,41 @@ export default function MissionControl() {
             pointerEvents: 'none',
           }} />
 
-          <div className="flex flex-wrap items-center gap-5 relative z-10">
+          <div className="flex flex-wrap items-center gap-4 relative z-10">
             <div
               className="flex flex-col items-center justify-center shrink-0"
               style={{
-                width: '64px', height: '64px',
+                width: '56px', height: '56px',
                 border: `2px solid ${arcColor}`,
                 background: `${arcColor}12`,
               }}
             >
-              <span style={{ fontSize: '26px', lineHeight: 1 }}>{currentRank.icon}</span>
-              <span className="font-mono tracking-widest mt-0.5" style={{ fontSize: '8px', color: arcColor }}>
+              <span style={{ fontSize: '22px', lineHeight: 1 }}>{currentRank.icon}</span>
+              <span className="font-mono tracking-widest mt-0.5" style={{ fontSize: '7px', color: arcColor }}>
                 {currentRank.code === 'Emperor' ? 'EMP' : currentRank.code}-RANK
               </span>
             </div>
 
-            <div className="flex-1 min-w-[160px]">
+            <div className="flex-1 min-w-[140px]">
               <button
                 onClick={() => setArcExpanded(v => !v)}
                 className="flex items-center gap-2 mb-1 group"
               >
-                <h1 className="font-display font-bold tracking-tight text-primary" style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)' }}>
+                <h1 className="font-display font-bold tracking-tight text-primary" style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.8rem)' }}>
                   {currentArc.name.toUpperCase()}
                 </h1>
-                {arcExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
+                {arcExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
               </button>
-              <p className="font-mono text-[10px] text-muted uppercase tracking-widest mb-3">
+              <p className="font-mono text-[9px] text-muted uppercase tracking-widest mb-2.5">
                 LV.{currentLevel} · {profile?.full_name || 'OPERATOR'} · {currentArc.flavor}
               </p>
               <div>
-                <div className="flex justify-between font-mono text-[9px] text-muted mb-1">
+                <div className="flex justify-between font-mono text-[8px] text-muted mb-1">
                   <span>LV.{currentLevel}</span>
                   <span style={{ color: arcColor }}>{xpInLevel.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP</span>
                   <span>LV.{currentLevel + 1}</span>
                 </div>
-                <div style={{ height: '3px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                <div style={{ height: '2px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
                   <motion.div
                     style={{ height: '100%', background: arcColor }}
                     initial={{ width: 0 }}
@@ -265,15 +321,14 @@ export default function MissionControl() {
                     transition={{ duration: 1.4, ease: 'easeOut' }}
                   />
                 </div>
-                <p className="font-mono text-[9px] text-muted mt-1">{xpNeeded.toLocaleString()} XP to next level</p>
               </div>
             </div>
 
-            <div className="text-right shrink-0">
-              <div className="font-display font-bold text-primary tracking-tighter" style={{ fontSize: '2rem' }}>
+            <div className="text-right shrink-0 hidden sm:block">
+              <div className="font-display font-bold text-primary tracking-tighter" style={{ fontSize: '1.6rem' }}>
                 {currentTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
               </div>
-              <div className="font-mono text-[9px] text-muted uppercase tracking-widest mt-0.5">
+              <div className="font-mono text-[8px] text-muted uppercase tracking-widest mt-0.5">
                 {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               </div>
             </div>
@@ -289,14 +344,14 @@ export default function MissionControl() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden mb-5"
+              className="overflow-hidden mb-4 lg:mb-5"
             >
-              <div style={{ padding: '20px 24px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                <div className="flex justify-between items-center mb-5">
-                  <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: arcColor }}>
+              <div className="dashboard-card">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: arcColor }}>
                     CHARACTER ARC ROADMAP
                   </span>
-                  <button onClick={() => setArcExpanded(false)} className="font-mono text-[9px] text-muted hover:text-primary">
+                  <button onClick={() => setArcExpanded(false)} className="font-mono text-[8px] text-muted hover:text-primary">
                     COLLAPSE ↑
                   </button>
                 </div>
@@ -315,45 +370,41 @@ export default function MissionControl() {
                       return (
                         <div
                           key={arc.rank}
-                          className="relative flex items-center gap-4 py-3 pl-10"
+                          className="relative flex items-center gap-4 py-2.5 pl-10"
                           style={{ opacity: isCurrent ? 1 : isCleared ? 0.6 : 0.3 }}
                         >
                           <div
-                            className="absolute left-[1px] flex items-center justify-center shrink-0"
+                            className="absolute left-[2px] flex items-center justify-center shrink-0"
                             style={{
-                              width: '22px', height: '22px',
+                              width: '18px', height: '18px',
                               border: `2px solid ${isCurrent ? rd.color : isCleared ? '#22c55e' : 'var(--border-color)'}`,
                               background: isCurrent ? `${rd.color}15` : 'var(--bg-primary)',
                               boxShadow: isCurrent ? `0 0 10px ${rd.color}50` : 'none',
                             }}
                           >
-                            {isCleared && <Check size={11} color="#22c55e" strokeWidth={3} />}
+                            {isCleared && <Check size={10} color="#22c55e" strokeWidth={3} />}
                             {isCurrent && (
                               <motion.div
                                 className="rounded-full"
-                                style={{ width: 8, height: 8, background: rd.color }}
+                                style={{ width: 6, height: 6, background: rd.color }}
                                 animate={{ opacity: [1, 0.3, 1] }}
                                 transition={{ repeat: Infinity, duration: 1.4 }}
                               />
                             )}
-                            {isLocked && <Lock size={9} color="var(--text-muted)" />}
+                            {isLocked && <Lock size={8} color="var(--text-muted)" />}
                           </div>
-                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 min-w-0">
-                            <span className="font-display font-bold" style={{ color: isCurrent ? rd.color : 'var(--text-primary)', fontSize: '1rem' }}>
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                            <span className="font-display font-bold text-sm" style={{ color: isCurrent ? rd.color : 'var(--text-primary)' }}>
                               {arc.name.toUpperCase()}
                             </span>
-                            <span className="font-mono text-[9px]" style={{ color: rd.color }}>{arc.rank}-RANK</span>
+                            <span className="font-mono text-[8px]" style={{ color: rd.color }}>{arc.rank}-RANK</span>
                             {isCurrent && (
-                              <motion.span className="font-mono text-[9px]" style={{ color: rd.color }}
+                              <motion.span className="font-mono text-[8px]" style={{ color: rd.color }}
                                 animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
                                 ● ACTIVE
                               </motion.span>
                             )}
-                            {isCleared && <span className="font-mono text-[9px] text-success">✓ CLEARED</span>}
-                            <span className="font-mono text-[9px] text-muted">{arc.flavor}</span>
-                            {isLocked && (
-                              <span className="font-mono text-[9px] text-muted">🔒 {needed} XP to unlock</span>
-                            )}
+                            {isLocked && <span className="font-mono text-[8px] text-muted">🔒 {needed} XP</span>}
                           </div>
                         </div>
                       )
@@ -371,32 +422,16 @@ export default function MissionControl() {
         <div className="bento-grid">
 
           {/* LEFT (8 cols) */}
-          <div className="col-8 flex flex-col gap-5">
+          <div className="col-8 flex flex-col gap-3 lg:gap-4">
 
-            {/* THREAT MATRIX */}
+            {/* THREAT MATRIX (IntelligenceFeed) */}
             <IntelligenceFeed />
-
-            {/* DAILY CLASSIFIED BRIEFING */}
-            <div style={{
-              padding: '24px',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-color)',
-            }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Terminal size={12} color="var(--text-muted)" />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Daily Briefing // Intelligence</span>
-              </div>
-              <p className="font-display text-primary" style={{ fontSize: '1.4rem', lineHeight: 1.3 }}>
-                "{briefing}"
-              </p>
-            </div>
 
             {/* ACTIVE OBJECTIVE & COUNTDOWN */}
             {mainQuest ? (
               <div
-                className="relative overflow-hidden"
+                className="relative overflow-hidden dashboard-card"
                 style={{
-                  padding: '24px',
                   background: 'linear-gradient(135deg, #111111, #0a0a0a)',
                   border: '1px solid var(--info-subtle)',
                   borderLeft: '3px solid var(--info)',
@@ -404,131 +439,167 @@ export default function MissionControl() {
               >
                 <div className="absolute top-0 right-0 pointer-events-none" style={{
                   width: '200px', height: '200px', borderRadius: '50%',
-                  background: 'var(--info)', opacity: 0.06, filter: 'blur(60px)',
+                  background: 'var(--info)', opacity: 0.05, filter: 'blur(50px)',
                   transform: 'translate(30%, -30%)',
                 }} />
                 <div className="flex items-center gap-2 mb-3 relative z-10">
-                  <Target size={12} color="var(--info)" />
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-info">Active Objective</span>
-                  <span className="ml-auto font-mono text-[9px] text-info animate-pulse">● EXECUTING</span>
+                  <Target size={10} color="var(--info)" />
+                  <span className="font-mono text-[8px] uppercase tracking-widest text-info">Active Objective</span>
+                  <span className="ml-auto font-mono text-[8px] text-info animate-pulse">● EXECUTING</span>
                 </div>
                 
-                <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
+                <div className="flex flex-col sm:flex-row justify-between gap-4 relative z-10">
                   <div className="flex-1">
                     <h2 className="font-display font-bold text-primary leading-tight mb-2"
-                      style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)' }}>
+                      style={{ fontSize: 'clamp(1.2rem, 3vw, 1.6rem)' }}>
                       {mainQuest.title}
                     </h2>
                     {mainQuest.description && (
-                      <p className="font-mono text-xs text-muted mb-5 line-clamp-2">{mainQuest.description}</p>
+                      <p className="font-mono text-[10px] text-muted mb-4 line-clamp-2">{mainQuest.description}</p>
                     )}
                     <TacticalProgress value={mainQuest.progress} max={100} showValue color="var(--info)" />
                   </div>
 
                   {/* OPERATION DEADLINE COUNTDOWN */}
                   {deadlineDays !== null && (
-                    <div className="shrink-0 flex flex-col items-center justify-center p-4 border border-border-color bg-bg-primary min-w-[140px]">
-                      <Clock size={16} className="mb-2" style={{
+                    <div className="shrink-0 flex flex-col items-center justify-center p-3 border border-border-color bg-bg-primary min-w-[100px] sm:min-w-[120px]">
+                      <Clock size={14} className="mb-1" style={{
                         color: deadlineUrgency === 'danger' ? 'var(--danger)' : deadlineUrgency === 'warning' ? 'var(--warning)' : 'var(--info)'
                       }} />
                       <div className="font-display font-bold" style={{
-                        fontSize: '2.5rem', lineHeight: 1,
+                        fontSize: '2rem', lineHeight: 1,
                         color: deadlineUrgency === 'danger' ? 'var(--danger)' : deadlineUrgency === 'warning' ? 'var(--warning)' : 'var(--text-primary)'
                       }}>
                         {deadlineDays}
                       </div>
-                      <div className="font-mono text-[9px] text-muted uppercase mt-1">Days Remaining</div>
+                      <div className="font-mono text-[8px] text-muted uppercase mt-1">Days Left</div>
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div style={{ padding: '24px', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
-                <AlertTriangle size={24} className="text-muted mx-auto mb-2" />
-                <p className="font-mono text-xs text-muted mb-3">No active directives</p>
-                <Link href="/goals" className="btn btn-primary btn-sm">ASSIGN MISSION</Link>
+              <div className="dashboard-card border-dashed text-center">
+                <AlertTriangle size={20} className="text-muted mx-auto mb-2" />
+                <p className="font-mono text-[10px] text-muted mb-3">No active directives</p>
+                <Link href="/goals" className="btn btn-primary btn-sm" style={{ fontSize: '10px', padding: '4px 12px' }}>ASSIGN MISSION</Link>
               </div>
             )}
+
+            {/* 30-DAY XP TRAJECTORY GRAPH */}
+            <div className="dashboard-card" style={{ paddingBottom: '8px' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart2 size={10} color={arcColor} />
+                <span className="font-mono text-[8px] uppercase tracking-widest text-muted">30-Day Project Trajectory (XP)</span>
+              </div>
+              <div style={{ width: '100%', height: '140px' }}>
+                <ResponsiveContainer>
+                  <AreaChart data={xpTrajectory} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorXp" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={arcColor} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={arcColor} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="xp" stroke={arcColor} fillOpacity={1} fill="url(#colorXp)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* DAILY CLASSIFIED BRIEFING */}
+            <div className="dashboard-card">
+              <div className="flex items-center gap-2 mb-2">
+                <Terminal size={10} color="var(--text-muted)" />
+                <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Daily Briefing // Intelligence</span>
+              </div>
+              <p className="font-display text-primary" style={{ fontSize: '1.2rem', lineHeight: 1.3 }}>
+                "{briefing}"
+              </p>
+            </div>
+            
+            {/* CURRENT BOTTLENECK */}
+            {currentBottleneck && (
+              <div className="dashboard-card border-warning-subtle" style={{ borderLeft: '3px solid var(--warning)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle size={10} color="var(--warning)" />
+                  <span className="font-mono text-[8px] uppercase tracking-widest text-warning">Current Bottleneck</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="font-display text-sm text-primary truncate">{currentBottleneck.title}</div>
+                  <div className="font-mono text-[9px] font-bold text-warning">{currentBottleneck.progress || 0}% Progress</div>
+                </div>
+                <div className="font-mono text-[8px] text-muted mt-1">Oldest active mission dragging momentum. Unblock it.</div>
+              </div>
+            )}
+
           </div>
 
           {/* RIGHT SIDEBAR (4 cols) */}
-          <div className="col-4 flex flex-col gap-5">
+          <div className="col-4 flex flex-col gap-3 lg:gap-4">
 
-            {/* MOMENTUM & STREAK (Combines Momentum, Win Rate, Streak) */}
-            <div style={{ padding: '20px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between mb-4">
+            {/* MOMENTUM & STREAK */}
+            <div className="dashboard-card">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5">
                   <Activity size={10} color={momentumColor} />
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Momentum Engine</span>
+                  <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Momentum Engine</span>
                 </div>
-                <span className="font-mono text-[9px] font-bold" style={{ color: momentumColor }}>
+                <span className="font-mono text-[8px] font-bold" style={{ color: momentumColor }}>
                   {momentumText}
                 </span>
               </div>
               
-              <div className="flex items-end justify-between mb-5">
+              <div className="flex items-end justify-between mb-4">
                 <div>
-                  <div className="font-display font-bold tracking-tighter" style={{ fontSize: '3.5rem', color: momentumColor, lineHeight: 1 }}>
+                  <div className="font-display font-bold tracking-tighter" style={{ fontSize: '2.8rem', color: momentumColor, lineHeight: 1 }}>
                     {momentumScore}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase">Global Score</div>
                 </div>
                 
                 <div className="text-right">
-                  <div className="flex items-center justify-end gap-1 mb-2">
-                    <Flame size={12} color={flameColor} />
-                    <span className="font-mono font-bold text-primary" style={{ fontSize: '1.2rem' }}>{currentStreak} <span className="text-[10px] text-muted font-normal">days</span></span>
+                  <div className="flex items-center justify-end gap-1 mb-1.5">
+                    <Flame size={10} color={flameColor} />
+                    <span className="font-mono font-bold text-primary" style={{ fontSize: '1rem' }}>{currentStreak} <span className="text-[8px] text-muted font-normal">days</span></span>
                   </div>
-                  <div className="font-mono font-bold text-primary" style={{ fontSize: '1.2rem' }}>{weeklyWinRate}% <span className="text-[10px] text-muted font-normal">win rate</span></div>
+                  <div className="font-mono font-bold text-primary" style={{ fontSize: '1rem' }}>{weeklyWinRate}% <span className="text-[8px] text-muted font-normal">win rate</span></div>
                 </div>
               </div>
 
               {/* Score bar */}
               <div style={{ height: '2px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${momentumScore}%`,
-                  background: momentumColor,
-                  transition: 'width 1s ease',
-                }} />
+                <div style={{ height: '100%', width: `${momentumScore}%`, background: momentumColor, transition: 'width 1s ease' }} />
               </div>
             </div>
 
             {/* XP STAT CARD */}
-            <div
-              style={{
-                padding: '20px',
-                background: 'var(--bg-tertiary)',
-                borderLeft: `3px solid ${arcColor}`,
-                border: `1px solid ${arcColor}20`,
-              }}
-            >
-              <div className="flex items-center gap-1.5 mb-4">
+            <div className="dashboard-card" style={{ borderLeft: `3px solid ${arcColor}`, borderTop: `1px solid ${arcColor}20`, borderRight: `1px solid ${arcColor}20`, borderBottom: `1px solid ${arcColor}20` }}>
+              <div className="flex items-center gap-1.5 mb-3">
                 <Zap size={10} style={{ color: arcColor }} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted">XP Matrix</span>
+                <span className="font-mono text-[8px] uppercase tracking-widest text-muted">XP Matrix</span>
               </div>
-              <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+              <div className="grid grid-cols-2 gap-y-3 gap-x-2">
                 <div>
-                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.6rem', color: arcColor }}>
+                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: arcColor }}>
                     {totalXp >= 1000 ? `${(totalXp / 1000).toFixed(1)}k` : totalXp}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">TOTAL</div>
                 </div>
                 <div>
-                  <div className="font-display font-bold tracking-tighter leading-none text-info" style={{ fontSize: '1.6rem' }}>
+                  <div className="font-display font-bold tracking-tighter leading-none text-info" style={{ fontSize: '1.4rem' }}>
                     {xpNeeded >= 1000 ? `${(xpNeeded / 1000).toFixed(1)}k` : xpNeeded}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">TO LV.{currentLevel + 1}</div>
                 </div>
                 <div>
-                  <div className={`font-display font-bold tracking-tighter leading-none`}
-                    style={{ fontSize: '1.6rem', color: xpToday > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
+                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: xpToday > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
                     +{xpToday}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">TODAY</div>
                 </div>
                 <div>
-                  <div className={`font-display font-bold tracking-tighter leading-none text-primary`} style={{ fontSize: '1.6rem' }}>
+                  <div className="font-display font-bold tracking-tighter leading-none text-primary" style={{ fontSize: '1.4rem' }}>
                     +{xpThisWeek}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">THIS WEEK</div>
@@ -537,32 +608,31 @@ export default function MissionControl() {
             </div>
 
             {/* DAY PRESSURE CLOCK */}
-            <div style={{ padding: '20px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center gap-1.5 mb-4">
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Time Remaining</span>
+            <div className="dashboard-card">
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Time Remaining</span>
               </div>
               <div className="flex items-center gap-4">
-                <div className="relative shrink-0" style={{ width: '64px', height: '64px' }}>
-                  <svg width="64" height="64" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="32" cy="32" r="26" fill="none" stroke="var(--bg-primary)" strokeWidth="5" />
-                    <circle cx="32" cy="32" r="26" fill="none"
+                <div className="relative shrink-0" style={{ width: '48px', height: '48px' }}>
+                  <svg width="48" height="48" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx="24" cy="24" r="20" fill="none" stroke="var(--bg-primary)" strokeWidth="4" />
+                    <circle cx="24" cy="24" r="20" fill="none"
                       stroke={dayUrgency === 'danger' ? 'var(--danger)' : dayUrgency === 'warning' ? 'var(--warning)' : arcColor}
-                      strokeWidth="5"
-                      strokeDasharray={`${2 * Math.PI * 26}`}
-                      strokeDashoffset={`${2 * Math.PI * 26 * (1 - dayPct / 100)}`}
+                      strokeWidth="4"
+                      strokeDasharray={`${2 * Math.PI * 20}`}
+                      strokeDashoffset={`${2 * Math.PI * 20 * (1 - dayPct / 100)}`}
                       style={{ transition: 'stroke-dashoffset 1s ease' }}
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="font-mono font-bold text-primary" style={{ fontSize: '10px' }}>{dayPct}%</span>
+                    <span className="font-mono font-bold text-primary" style={{ fontSize: '8px' }}>{dayPct}%</span>
                   </div>
                 </div>
                 <div>
-                  <div className="font-display font-bold text-primary" style={{ fontSize: '1.8rem', lineHeight: 1 }}>
-                    {hoursLeft}<span className="font-mono text-sm text-muted">h</span>
+                  <div className="font-display font-bold text-primary" style={{ fontSize: '1.4rem', lineHeight: 1 }}>
+                    {hoursLeft}<span className="font-mono text-xs text-muted">h</span>
                   </div>
-                  <div className="font-mono text-[8px] text-muted uppercase mt-1">hours left</div>
-                  <div className="font-mono text-[8px] mt-2" style={{
+                  <div className="font-mono text-[8px] mt-1.5" style={{
                     color: dayUrgency === 'danger' ? 'var(--danger)' : dayUrgency === 'warning' ? 'var(--warning)' : 'var(--text-muted)'
                   }}>
                     {dayUrgency === 'danger' ? '⚠ EXECUTE NOW' : dayUrgency === 'warning' ? 'WINDOW CLOSING' : 'TIME ON SIDE'}
@@ -571,16 +641,57 @@ export default function MissionControl() {
               </div>
             </div>
 
+            {/* GHOST SCORE & DAILY OUTPUT RATIO */}
+            <div className="grid grid-cols-2 gap-3 lg:gap-4">
+              <div className="dashboard-card text-center" style={{ padding: '12px' }}>
+                <Ghost size={12} className="mx-auto mb-1 text-muted" />
+                <div className="font-display font-bold tracking-tighter" style={{ fontSize: '1.8rem', lineHeight: 1 }}>{ghostScore}</div>
+                <div className="font-mono text-[8px] uppercase tracking-widest text-muted mt-1">Ghost Score</div>
+                <div className="font-mono text-[7px] text-muted mt-0.5">(All-Time Bounces)</div>
+              </div>
+              
+              <div className="dashboard-card text-center" style={{ padding: '12px' }}>
+                <ArrowUpRight size={12} className="mx-auto mb-1" style={{ color: deepWorkPct >= 50 ? 'var(--success)' : 'var(--text-muted)' }} />
+                <div className="font-display font-bold tracking-tighter" style={{ fontSize: '1.8rem', lineHeight: 1, color: deepWorkPct >= 50 ? 'var(--success)' : 'var(--text-primary)' }}>
+                  {Math.round(deepWorkPct)}%
+                </div>
+                <div className="font-mono text-[8px] uppercase tracking-widest text-muted mt-1">Deep Work Ratio</div>
+                <div className="font-mono text-[7px] text-muted mt-0.5">({deepWorkTasks} Hard / {totalWork} Total)</div>
+              </div>
+            </div>
+
+            {/* HABIT GRAVEYARD */}
+            {habitGraveyard.length > 0 && (
+              <div className="dashboard-card border-danger-subtle" style={{ borderLeft: '3px solid var(--danger)' }}>
+                <div className="flex items-center gap-1.5 mb-3">
+                  <Skull size={10} color="var(--danger)" />
+                  <span className="font-mono text-[8px] uppercase tracking-widest text-danger">Habit Graveyard (30 Days)</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {habitGraveyard.map((grave, idx) => {
+                    const h = habits.find(h => h.id === grave.habitId)
+                    if (!h) return null
+                    return (
+                      <div key={grave.habitId} className="flex items-center justify-between p-2 bg-bg-primary border border-danger-subtle">
+                        <span className="font-mono text-[9px] text-primary truncate max-w-[150px]">{h.name}</span>
+                        <span className="font-mono text-[9px] font-bold text-danger">{grave.fails} Fails</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* JOURNAL STATUS & WEEKLY DEBRIEF */}
-            <div className="flex gap-2">
+            <div className="flex gap-3 lg:gap-4">
               <Link href="/journal" className="flex-1">
                 <div style={{
-                  padding: '16px', textAlign: 'center', cursor: 'pointer',
+                  padding: '12px', textAlign: 'center', cursor: 'pointer',
                   background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', height: '100%'
                 }} className="hover:border-primary transition-colors flex flex-col justify-center items-center">
-                  <BookOpen size={14} color={journalDoneToday ? "var(--success)" : "var(--text-muted)"} className="mb-2" />
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-muted">Journal</div>
-                  <div className="font-mono text-[9px] mt-1 font-bold" style={{ color: journalDoneToday ? 'var(--success)' : 'var(--warning)' }}>
+                  <BookOpen size={12} color={journalDoneToday ? "var(--success)" : "var(--text-muted)"} className="mb-1.5" />
+                  <div className="font-mono text-[8px] uppercase tracking-widest text-muted">Journal</div>
+                  <div className="font-mono text-[8px] mt-1 font-bold" style={{ color: journalDoneToday ? 'var(--success)' : 'var(--warning)' }}>
                     {journalDoneToday ? '✓ LOGGED' : '⚠ PENDING'}
                   </div>
                 </div>
@@ -588,62 +699,19 @@ export default function MissionControl() {
               
               <Link href="/weekly-review" className="flex-1">
                 <div style={{
-                  padding: '16px', textAlign: 'center', cursor: 'pointer',
+                  padding: '12px', textAlign: 'center', cursor: 'pointer',
                   background: new Date().getDay() === 0 ? 'rgba(245,158,11,0.08)' : 'var(--bg-tertiary)', 
                   border: `1px solid ${new Date().getDay() === 0 ? 'var(--warning)' : 'var(--border-color)'}`,
                   height: '100%'
                 }} className="hover:border-amber transition-colors flex flex-col justify-center items-center">
-                  <ClipboardList size={14} color={new Date().getDay() === 0 ? "var(--warning)" : "var(--text-muted)"} className="mb-2" />
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-muted">Debrief</div>
+                  <ClipboardList size={12} color={new Date().getDay() === 0 ? "var(--warning)" : "var(--text-muted)"} className="mb-1.5" />
+                  <div className="font-mono text-[8px] uppercase tracking-widest text-muted">Debrief</div>
                   {new Date().getDay() === 0 && (
-                     <div className="font-mono text-[9px] mt-1 text-amber">+40 XP</div>
+                     <div className="font-mono text-[8px] mt-1 text-amber">+40 XP</div>
                   )}
                 </div>
               </Link>
             </div>
-
-            {/* WAR ROOM — Active Battles */}
-            {battles.length > 0 && (
-              <div style={{ padding: '20px', background: 'var(--bg-tertiary)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                <div className="flex items-center gap-1.5 mb-4">
-                  <Swords size={10} color="var(--danger)" />
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-danger">Active Battles</span>
-                </div>
-                <div className="flex flex-col gap-3">
-                  {battles.map((battle, idx) => {
-                    const Icon       = BATTLE_ICONS[battle.name] || Swords
-                    const hp         = battle.hp ?? 100
-                    const isCritical = hp > 75
-                    const sevColor   = SEVERITY_COLORS[battle.severity] || 'var(--info)'
-                    return (
-                      <div key={idx}>
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <Icon size={11} style={{ color: sevColor, shrink: 0 }} />
-                          <span className="font-mono text-[10px] text-primary flex-1 truncate">{battle.name}</span>
-                          <span className="font-mono text-[9px] font-bold" style={{ color: isCritical ? 'var(--danger)' : 'var(--warning)' }}>
-                            {hp}HP
-                          </span>
-                        </div>
-                        <div style={{ height: '2px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-                          <motion.div
-                            style={{
-                              height: '100%',
-                              width: `${Math.min(100, Math.max(0, hp))}%`,
-                              background: isCritical ? 'var(--danger)' : hp > 50 ? 'var(--warning)' : 'var(--success)',
-                            }}
-                            animate={isCritical ? { opacity: [1, 0.4, 1] } : {}}
-                            transition={isCritical ? { repeat: Infinity, duration: 1.5 } : {}}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                  <Link href="/profile" className="font-mono text-[9px] text-muted hover:text-primary transition-colors text-center mt-1 block">
-                    MANAGE →
-                  </Link>
-                </div>
-              </div>
-            )}
 
           </div>
         </div>
