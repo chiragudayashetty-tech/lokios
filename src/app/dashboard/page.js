@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Target, AlertTriangle, Zap, Swords, Flame, ChevronDown,
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
-  Activity, Clock, Terminal, Ghost, Skull, ArrowUpRight, BarChart2
+  Activity, Clock, Terminal, Ghost, Skull, ArrowUpRight, BarChart2,
+  Smartphone, Shield, DollarSign, Moon, Brain, Repeat
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import TacticalProgress from '@/components/ui/ProgressBar'
-import IntelligenceFeed from '@/components/ui/IntelligenceFeed'
 import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
@@ -28,6 +28,22 @@ const ARC_CONFIG = [
   { rank: 'S',       name: 'Legend Mode',         flavor: 'Near mythical.' },
   { rank: 'Emperor', name: 'The Apex',            flavor: 'Final form.' },
 ]
+
+const BATTLE_ICONS = {
+  'Phone Addiction':       Smartphone,
+  'Porn Consumption':      Shield,
+  'Inconsistent Execution':Repeat,
+  'Fear of Selling':       DollarSign,
+  'Poor Sleep Discipline': Moon,
+  'Overthinking':          Brain,
+}
+
+const SEVERITY_COLORS = {
+  extreme: '#FF3B3B',
+  high:    'var(--danger)',
+  medium:  'var(--accent-primary)',
+  low:     'var(--info)',
+}
 
 const BRIEFINGS = [
   "The discipline you build in private becomes the edge you show in public.",
@@ -63,6 +79,7 @@ export default function MissionControl() {
   const [ghostScore, setGhostScore] = useState(0)
   const [habitGraveyard, setHabitGraveyard] = useState([])
   const [xpTrajectory, setXpTrajectory] = useState([])
+  const [battles, setBattles] = useState([])
 
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -89,6 +106,16 @@ export default function MissionControl() {
         .select('amount, created_at')
         .eq('user_id', user.id)
         .gte('created_at', thirtyDaysAgoStr)
+
+      // 1b. Fetch Active Battles (War Room)
+      const { data: blueprints } = await sb
+        .from('user_blueprints')
+        .select('battles')
+        .eq('user_id', user.id)
+        .single()
+      if (blueprints?.battles) {
+        setBattles(blueprints.battles.filter(b => b.status !== 'defeated'))
+      }
         
       if (xpData) {
         const positiveXp = xpData.filter(r => r.amount > 0)
@@ -480,6 +507,48 @@ export default function MissionControl() {
                 <AlertTriangle size={20} className="text-muted mx-auto mb-2" />
                 <p className="font-mono text-[10px] text-muted mb-3">No active directives</p>
                 <Link href="/goals" className="btn btn-primary btn-sm" style={{ fontSize: '10px', padding: '4px 12px' }}>ASSIGN MISSION</Link>
+              </div>
+            )}
+
+            {/* ACTIVE BATTLES (War Room Widget) */}
+            {battles.length > 0 && (
+              <div className="dashboard-card border-danger-subtle" style={{ borderLeft: '3px solid var(--danger)' }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Swords size={12} color="var(--danger)" />
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-danger">War Room // Active Battles</span>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {battles.map((battle, idx) => {
+                    const Icon       = BATTLE_ICONS[battle.name] || Swords
+                    const hp         = battle.hp ?? 100
+                    const isCritical = hp > 75
+                    const sevColor   = SEVERITY_COLORS[battle.severity] || 'var(--info)'
+                    return (
+                      <div key={idx}>
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="flex items-center justify-center" style={{ width: 24, height: 24, background: `${sevColor}15`, border: `1px solid ${sevColor}50` }}>
+                            <Icon size={12} style={{ color: sevColor }} />
+                          </div>
+                          <span className="font-display text-primary tracking-tight flex-1 truncate" style={{ fontSize: '1rem' }}>{battle.name}</span>
+                          <span className="font-mono text-[10px] font-bold" style={{ color: isCritical ? 'var(--danger)' : 'var(--warning)' }}>
+                            {hp} HP
+                          </span>
+                        </div>
+                        <div style={{ height: '3px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+                          <motion.div
+                            style={{
+                              height: '100%',
+                              width: `${Math.min(100, Math.max(0, hp))}%`,
+                              background: isCritical ? 'var(--danger)' : hp > 50 ? 'var(--warning)' : 'var(--success)',
+                            }}
+                            animate={isCritical ? { opacity: [1, 0.4, 1] } : {}}
+                            transition={isCritical ? { repeat: Infinity, duration: 1.5 } : {}}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
