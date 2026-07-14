@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList
+  Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList, Scale
 } from 'lucide-react'
 import LokiAI from '@/components/LokiAI'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { href: '/weekly-review', icon: ClipboardList, label: 'Weekly Review' },
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
   { href: '/xp', icon: Trophy, label: 'XP Metrics' },
+  { href: '/weight', icon: Scale, label: 'Body Recon' },
   { href: '/profile', icon: User, label: 'Operator Profile' }
 ]
 

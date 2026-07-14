@@ -6,7 +6,7 @@ import {
   Target, AlertTriangle, Zap, Swords, Flame, ChevronDown,
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
   Activity, Clock, Terminal, Ghost, Skull, ArrowUpRight, BarChart2,
-  Smartphone, Shield, DollarSign, Moon, Brain, Repeat
+  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
@@ -80,6 +80,7 @@ export default function MissionControl() {
   const [habitGraveyard, setHabitGraveyard] = useState([])
   const [xpTrajectory, setXpTrajectory] = useState([])
   const [battles, setBattles] = useState([])
+  const [weightData, setWeightData] = useState(null)
 
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -205,6 +206,26 @@ export default function MissionControl() {
           })
           
         setHabitGraveyard(sortedFails)
+      }
+
+      // ── Weight Tracking (Body Recon Widget) ──
+      const { data: wConfig } = await sb.from('weight_config').select('*').eq('user_id', user.id).maybeSingle()
+      if (wConfig) {
+        const { data: latestLog } = await sb.from('weight_logs').select('weight_kg, date').eq('user_id', user.id).order('date', { ascending: false }).limit(1).maybeSingle()
+        const { data: todayLog } = await sb.from('weight_logs').select('id').eq('user_id', user.id).eq('date', todayStr).maybeSingle()
+        if (latestLog) {
+          const lost = (wConfig.starting_weight - latestLog.weight_kg).toFixed(1)
+          const range = wConfig.starting_weight - wConfig.target_weight
+          const pct = range > 0 ? Math.min(100, Math.max(0, Math.round((parseFloat(lost) / range) * 100))) : 0
+          setWeightData({
+            current: parseFloat(latestLog.weight_kg),
+            target: parseFloat(wConfig.target_weight),
+            start: parseFloat(wConfig.starting_weight),
+            lost: parseFloat(lost),
+            progressPct: pct,
+            loggedToday: !!todayLog
+          })
+        }
       }
     }
     fetchMetrics()
@@ -674,6 +695,39 @@ export default function MissionControl() {
                 </div>
               </div>
             </div>
+
+            {/* BODY RECON WIDGET */}
+            {weightData && (
+              <Link href="/weight">
+                <div className="dashboard-card hover:border-amber transition-colors cursor-pointer" style={{ borderLeft: '3px solid var(--accent-primary)' }}>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Scale size={10} color="var(--accent-primary)" />
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Body Recon</span>
+                    {weightData.loggedToday && <span className="ml-auto font-mono text-[8px] text-success">✓ LOGGED</span>}
+                  </div>
+                  <div className="flex items-end justify-between mb-3">
+                    <div>
+                      <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.8rem', color: 'var(--text-primary)' }}>
+                        {weightData.current}
+                        <span className="font-mono text-[9px] text-muted ml-1">kg</span>
+                      </div>
+                      <div className="font-mono text-[8px] text-muted uppercase mt-1">
+                        {weightData.lost > 0 ? `▼ ${weightData.lost} kg lost` : 'Current'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono text-[10px] font-bold" style={{ color: 'var(--accent-primary)' }}>
+                        → {weightData.target} kg
+                      </div>
+                      <div className="font-mono text-[8px] text-muted mt-0.5">{weightData.progressPct}%</div>
+                    </div>
+                  </div>
+                  <div style={{ height: '3px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${weightData.progressPct}%`, background: weightData.progressPct >= 100 ? 'var(--success)' : 'var(--accent-primary)', transition: 'width 1s ease' }} />
+                  </div>
+                </div>
+              </Link>
+            )}
 
             {/* DAY PRESSURE CLOCK */}
             <div className="dashboard-card">
