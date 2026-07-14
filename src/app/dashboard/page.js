@@ -92,9 +92,12 @@ export default function MissionControl() {
       const sb = createClient()
       
       const todayStr = getLocalDateStr(new Date())
-      const weekAgo = new Date()
-      weekAgo.setDate(weekAgo.getDate() - 6)
-      const weekAgoStr = getLocalDateStr(weekAgo)
+      
+      const currentMonday = new Date()
+      const day = currentMonday.getDay()
+      const diff = currentMonday.getDate() - day + (day === 0 ? -6 : 1)
+      currentMonday.setDate(diff)
+      const currentMondayStr = getLocalDateStr(currentMonday)
       
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29)
@@ -121,7 +124,7 @@ export default function MissionControl() {
         const positiveXp = xpData.filter(r => r.amount > 0)
         
         // Today & This Week
-        setXpThisWeek(positiveXp.filter(r => r.created_at >= weekAgoStr).reduce((s, r) => s + r.amount, 0))
+        setXpThisWeek(positiveXp.filter(r => r.created_at >= currentMondayStr).reduce((s, r) => s + r.amount, 0))
         setXpToday(positiveXp.filter(r => r.created_at.startsWith(todayStr)).reduce((s, r) => s + r.amount, 0))
         
         // 30-Day Trajectory Graph
@@ -156,12 +159,17 @@ export default function MissionControl() {
         .eq('user_id', user.id)
 
       if (allHabitLogs) {
-        // Weekly Win Rate (last 7 days)
-        const recentLogs = allHabitLogs.filter(l => l.date >= weekAgoStr)
+        // Weekly Win Rate (This week from Monday)
+        const recentLogs = allHabitLogs.filter(l => l.date >= currentMondayStr)
         const uniqueDaysWithCompletion = new Set(
           recentLogs.filter(log => log.status === 'completed').map(log => log.date)
         ).size
-        setWeeklyWinRate(Math.round((uniqueDaysWithCompletion / 7) * 100))
+        
+        // Calculate days elapsed in the current week so far (Monday = 1 day elapsed)
+        let daysElapsed = new Date().getDay()
+        if (daysElapsed === 0) daysElapsed = 7 // Sunday is the 7th day
+        
+        setWeeklyWinRate(Math.round((uniqueDaysWithCompletion / daysElapsed) * 100))
 
         // Ghost Score (All-Time Recovery)
         let ghostPoints = 0
@@ -424,18 +432,20 @@ export default function MissionControl() {
                             )}
                             {isLocked && <Lock size={8} color="var(--text-muted)" />}
                           </div>
-                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
-                            <span className="font-display font-bold text-sm" style={{ color: isCurrent ? rd.color : 'var(--text-primary)' }}>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-display font-bold text-sm leading-tight" style={{ color: isCurrent ? rd.color : 'var(--text-primary)' }}>
                               {arc.name.toUpperCase()}
                             </span>
-                            <span className="font-mono text-[8px]" style={{ color: rd.color }}>{arc.rank}-RANK</span>
-                            {isCurrent && (
-                              <motion.span className="font-mono text-[8px]" style={{ color: rd.color }}
-                                animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
-                                ● ACTIVE
-                              </motion.span>
-                            )}
-                            {isLocked && <span className="font-mono text-[8px] text-muted">🔒 {needed} XP</span>}
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="font-mono text-[8px]" style={{ color: rd.color }}>{arc.rank}-RANK</span>
+                              {isCurrent && (
+                                <motion.span className="font-mono text-[8px]" style={{ color: rd.color }}
+                                  animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+                                  ● ACTIVE
+                                </motion.span>
+                              )}
+                              {isLocked && <span className="font-mono text-[8px] text-muted">🔒 {needed} XP</span>}
+                            </div>
                           </div>
                         </div>
                       )
