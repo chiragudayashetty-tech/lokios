@@ -395,9 +395,9 @@ export default function MissionControl() {
                   </button>
                 </div>
 
-                <div className="relative">
-                  <div className="absolute left-[11px] top-0 bottom-0 w-px" style={{ background: 'var(--border-color)' }} />
-                  <div className="flex flex-col gap-0">
+                <div className="relative mt-2 mb-2">
+                  <div className="absolute left-[11px] top-2 bottom-2 w-px" style={{ background: 'var(--border-color)' }} />
+                  <div className="flex flex-col gap-2">
                     {ARC_CONFIG.map((arc) => {
                       const rd       = RANK_CONFIG[arc.rank]
                       if (!rd) return null
@@ -409,8 +409,8 @@ export default function MissionControl() {
                       return (
                         <div
                           key={arc.rank}
-                          className="relative flex items-center gap-4 py-2.5 pl-10"
-                          style={{ opacity: isCurrent ? 1 : isCleared ? 0.6 : 0.3 }}
+                          className="relative flex items-center gap-5 py-4 pl-12"
+                          style={{ opacity: isCurrent ? 1 : isCleared ? 0.5 : 0.25 }}
                         >
                           <div
                             className="absolute left-[2px] flex items-center justify-center shrink-0"
@@ -432,19 +432,21 @@ export default function MissionControl() {
                             )}
                             {isLocked && <Lock size={8} color="var(--text-muted)" />}
                           </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-display font-bold text-sm leading-tight" style={{ color: isCurrent ? rd.color : 'var(--text-primary)' }}>
+                          <div className="flex flex-col min-w-0 gap-1">
+                            <span className="font-display font-bold text-base md:text-lg leading-tight tracking-wide" style={{ color: isCurrent ? rd.color : 'var(--text-primary)' }}>
                               {arc.name.toUpperCase()}
                             </span>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="font-mono text-[8px]" style={{ color: rd.color }}>{arc.rank}-RANK</span>
+                            <div className="flex flex-wrap items-center gap-3 mt-1">
+                              <span className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-sm" style={{ background: `${rd.color}15`, color: rd.color }}>
+                                {arc.rank}-RANK
+                              </span>
                               {isCurrent && (
-                                <motion.span className="font-mono text-[8px]" style={{ color: rd.color }}
+                                <motion.span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: rd.color }}
                                   animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
                                   ● ACTIVE
                                 </motion.span>
                               )}
-                              {isLocked && <span className="font-mono text-[8px] text-muted">🔒 {needed} XP</span>}
+                              {isLocked && <span className="font-mono text-[9px] text-muted tracking-widest">🔒 {needed} XP</span>}
                             </div>
                           </div>
                         </div>
