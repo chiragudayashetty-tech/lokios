@@ -286,10 +286,11 @@ export default function MissionControl() {
         ` }} />
 
         {/* ══════════════════════════════════════════════════════════════════
-            ARC HERO HEADER
+            ARC HERO HEADER & DROPDOWN
         ══════════════════════════════════════════════════════════════════ */}
-        <motion.header
-          className="mb-4 lg:mb-5 arc-glow relative overflow-hidden"
+        <div className="relative z-50 mb-4 lg:mb-5">
+          <motion.header
+            className="arc-glow relative overflow-hidden"
           style={{
             padding: '20px 24px',
             background: `linear-gradient(130deg, #111111 0%, #0a0a0a 60%, ${arcColor}0a 100%)`,
@@ -325,7 +326,7 @@ export default function MissionControl() {
             <div className="flex-1 min-w-[140px]">
               <button
                 onClick={() => setArcExpanded(v => !v)}
-                className="flex items-center gap-2 mb-1 group"
+                className="flex items-center gap-2 mb-1 group text-left"
               >
                 <h1 className="font-display font-bold tracking-tight text-primary" style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.8rem)' }}>
                   {currentArc.name.toUpperCase()}
@@ -369,12 +370,14 @@ export default function MissionControl() {
         <AnimatePresence>
           {arcExpanded && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden mb-4 lg:mb-5"
+              initial={{ opacity: 0, y: -10, scaleY: 0.95 }}
+              animate={{ opacity: 1, y: 0, scaleY: 1 }}
+              exit={{ opacity: 0, y: -10, scaleY: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="absolute left-0 right-0 z-50"
+              style={{ top: '100%', marginTop: '8px', transformOrigin: 'top' }}
             >
-              <div className="dashboard-card">
+              <div className="dashboard-card shadow-2xl" style={{ border: `1px solid ${arcColor}50`, background: 'rgba(4, 5, 7, 0.95)', backdropFilter: 'blur(16px)' }}>
                 <div className="flex justify-between items-center mb-4">
                   <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: arcColor }}>
                     CHARACTER ARC ROADMAP
@@ -443,6 +446,7 @@ export default function MissionControl() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
 
         {/* ══════════════════════════════════════════════════════════════════
             MAIN BENTO GRID
