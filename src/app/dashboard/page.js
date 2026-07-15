@@ -20,13 +20,13 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
-  { rank: 'E',       name: 'The Awakening',      flavor: 'You just woke up.' },
-  { rank: 'D',       name: 'Discipline Rebuild',  flavor: 'The grind no one sees.' },
-  { rank: 'C',       name: 'The Forge',           flavor: "Shaped by pressure." },
-  { rank: 'B',       name: 'The Surge',           flavor: 'Momentum compounds.' },
-  { rank: 'A',       name: 'Apex Protocol',       flavor: 'Elite territory.' },
-  { rank: 'S',       name: 'Legend Mode',         flavor: 'Near mythical.' },
-  { rank: 'Emperor', name: 'The Apex',            flavor: 'Final form.' },
+  { rank: 'E',       name: 'East Blue Startup',      flavor: 'Small crew, big dreams.' },
+  { rank: 'D',       name: 'Grand Line Hustle',      flavor: 'Navigating the chaos.' },
+  { rank: 'C',       name: 'New World Expansion',    flavor: 'Entering the big leagues.' },
+  { rank: 'B',       name: 'Haki Awakening',         flavor: 'Willpower weaponized.' },
+  { rank: 'A',       name: 'Supernova Syndicate',    flavor: 'Disrupting the market.' },
+  { rank: 'S',       name: 'Yonko Empire',           flavor: 'Industry dominant.' },
+  { rank: 'Emperor', name: 'Pirate King Enterprise', flavor: 'Absolute monopoly.' },
 ]
 
 const BATTLE_ICONS = {
@@ -405,8 +405,8 @@ export default function MissionControl() {
                 </h1>
                 {arcExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
               </button>
-              <p className="font-mono text-[9px] text-muted uppercase tracking-widest mb-2.5">
-                LV.{currentLevel} · {profile?.full_name || 'OPERATOR'} · {currentArc.flavor}
+              <p className="font-mono text-[10px] text-muted uppercase tracking-widest mb-2.5">
+                LV.{currentLevel} · <span className="text-primary font-bold">{totalXp.toLocaleString()} XP</span> · <span style={{ color: arcColor }}>{currentArc.flavor}</span>
               </p>
               <div>
                 <div className="flex justify-between font-mono text-[8px] text-muted mb-1">
