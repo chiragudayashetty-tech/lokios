@@ -461,8 +461,8 @@ export default function MissionControl() {
                   </button>
                 </div>
 
-                <div className="relative mt-2 mb-2">
-                  <div className="absolute left-[11px] top-2 bottom-2 w-px" style={{ background: 'var(--border-color)' }} />
+                <div className="relative mt-2 mb-2 pl-2">
+                  <div className="absolute left-[17px] top-4 bottom-4 w-px" style={{ background: 'var(--border-color)' }} />
                   <div className="flex flex-col gap-2">
                     {ARC_CONFIG.map((arc) => {
                       const rd       = RANK_CONFIG[arc.rank]
@@ -475,11 +475,11 @@ export default function MissionControl() {
                       return (
                         <div
                           key={arc.rank}
-                          className="relative flex items-center gap-5 py-4 pl-8"
+                          className="relative flex flex-row items-center gap-5 py-4"
                           style={{ opacity: isCurrent ? 1 : isCleared ? 0.5 : 0.25 }}
                         >
                           <div
-                            className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center shrink-0 bg-black z-10"
+                            className="flex items-center justify-center shrink-0 bg-black z-10"
                             style={{
                               width: '18px', height: '18px',
                               border: `2px solid ${isCurrent ? rd.color : isCleared ? '#22c55e' : 'var(--border-color)'}`,
