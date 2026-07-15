@@ -76,20 +76,40 @@ export default function BodyRecon() {
     if (isNaN(weight) || weight <= 0 || weight > 500) return
     setSaving(true)
 
-    // Insert log
-    const { error } = await supabase.from('weight_logs').upsert({
+    // Insert log (try insert first, update if exists)
+    let insertError = null
+    const { error: err1 } = await supabase.from('weight_logs').insert({
       user_id: user.id,
       date: todayStr,
       weight_kg: weight
-    }, { onConflict: 'user_id,date' })
-
-    if (error) { setSaving(false); return }
+    })
+    if (err1) {
+      // Likely duplicate — try update instead
+      const { error: err2 } = await supabase.from('weight_logs')
+        .update({ weight_kg: weight })
+        .eq('user_id', user.id)
+        .eq('date', todayStr)
+      if (err2) {
+        console.error('Weight log failed:', err2)
+        setSaving(false)
+        return
+      }
+    }
 
     let totalXpEarned = 0
 
-    // +2 XP for logging
-    await robustAwardXP(user.id, 2, 'weight_log', todayStr, 'Daily weight log', 'discipline')
-    totalXpEarned += 2
+    // +2 XP for logging (check if already awarded today to prevent double XP)
+    const { data: existingXp } = await supabase.from('xp_history')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('source_type', 'weight_log')
+      .eq('source_id', todayStr)
+      .maybeSingle()
+    
+    if (!existingXp) {
+      await robustAwardXP(user.id, 2, 'weight_log', todayStr, 'Daily weight log', 'discipline')
+      totalXpEarned += 2
+    }
 
     // Check milestones
     if (config) {
