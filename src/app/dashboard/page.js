@@ -20,13 +20,14 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
-  { rank: 'E',       name: 'Day Zero',               flavor: 'Breaking the chains. Escaping the abyss.' },
-  { rank: 'D',       name: 'The Crucible',           flavor: 'Rewiring the brain. Building the foundation.' },
-  { rank: 'C',       name: 'Zero to One',            flavor: 'The startup phase. Hustling for the first dollar.' },
-  { rank: 'B',       name: 'Traction',               flavor: 'Systems are working. The momentum builds.' },
-  { rank: 'A',       name: 'Six-Figure Operator',    flavor: 'Scaling the machine. Unstoppable focus.' },
-  { rank: 'S',       name: 'Seven-Figure Empire',    flavor: 'Financial autonomy. The vision realized.' },
-  { rank: 'Emperor', name: 'The Apex',               flavor: 'Legacy mode. Unconquerable.' },
+  { rank: 'I',       name: 'The Awakening',          flavor: 'The moment I stopped drifting and chose the life I wanted to build.' },
+  { rank: 'II',      name: 'The Discipline Rebuild', flavor: 'I rebuilt my mind, habits, and identity one day at a time.' },
+  { rank: 'III',     name: 'The Spark',              flavor: 'Small actions became unstoppable momentum.' },
+  { rank: 'IV',      name: 'The Architect',          flavor: 'I stopped chasing success and started designing systems, businesses, and a better future.' },
+  { rank: 'V',       name: 'The King',               flavor: 'I learned to lead myself first, then earned the trust to lead others.' },
+  { rank: 'VI',      name: 'The Empire',             flavor: 'My work grew beyond me into companies, teams, and communities that create lasting value.' },
+  { rank: 'VII',     name: 'The Legacy',             flavor: 'My greatest achievement became the people I inspired and the lives I changed.' },
+  { rank: 'VIII',    name: 'Beyond',                 flavor: 'There is no finish line. Every summit reveals a higher mountain.' },
 ]
 
 const BATTLE_ICONS = {
@@ -391,8 +392,8 @@ export default function MissionControl() {
               }}
             >
               <span style={{ fontSize: '22px', lineHeight: 1 }}>{currentRank.icon}</span>
-              <span className="font-mono tracking-widest mt-0.5" style={{ fontSize: '7px', color: arcColor }}>
-                {currentRank.code === 'Emperor' ? 'EMP' : currentRank.code}-RANK
+              <span className="font-mono tracking-widest mt-0.5" style={{ fontSize: '8px', color: arcColor }}>
+                SAGA {currentRank.code}
               </span>
             </div>
 
@@ -503,7 +504,7 @@ export default function MissionControl() {
                             </span>
                             <div className="flex flex-wrap items-center gap-3 mt-1">
                               <span className="font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-sm" style={{ background: `${rd.color}15`, color: rd.color }}>
-                                {arc.rank}-RANK
+                                SAGA {arc.rank}
                               </span>
                               {isCurrent && (
                                 <motion.span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: rd.color }}

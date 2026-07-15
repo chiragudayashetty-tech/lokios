@@ -6,7 +6,7 @@ import { RANK_CONFIG } from '@/lib/constants'
  */
 export function getRankDisplay(rank) {
   const config = RANK_CONFIG[rank]
-  if (!config) return getRankDisplay('E')
+  if (!config) return getRankDisplay('I')
 
   return {
     name: config.name,

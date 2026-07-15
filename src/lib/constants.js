@@ -19,14 +19,15 @@ export const STAT_CATEGORIES = [
 ];
 
 export const RANK_CONFIG = {
-  F: { code: 'F', name: 'F-Rank (Deserter)', minXp: -999999, maxXp: -1, icon: '💀', color: '#EF4444' },
-  E: { code: 'E', name: 'E-Rank', minXp: 0, maxXp: 999, icon: '🛡️', color: '#9CA3AF' },
-  D: { code: 'D', name: 'D-Rank', minXp: 1000, maxXp: 4999, icon: '🗡️', color: '#60A5FA' },
-  C: { code: 'C', name: 'C-Rank', minXp: 5000, maxXp: 14999, icon: '◆', color: '#818CF8' },
-  B: { code: 'B', name: 'B-Rank', minXp: 15000, maxXp: 34999, icon: '⬡', color: '#A78BFA' },
-  A: { code: 'A', name: 'A-Rank', minXp: 35000, maxXp: 74999, icon: '✦', color: '#C084FC' },
-  S: { code: 'S', name: 'S-Rank', minXp: 75000, maxXp: 149999, icon: '★', color: '#E879F9' },
-  Emperor: { code: 'Emperor', name: 'Emperor', minXp: 150000, maxXp: 9999999, icon: '♛', color: '#F59E0B' }
+  Fallen: { code: 'Fallen', name: 'The Fallen', minXp: -999999, maxXp: -1, icon: '💀', color: '#EF4444' },
+  I:      { code: 'I',      name: 'Saga I',     minXp: 0,       maxXp: 999,      icon: '🛡️', color: '#9CA3AF' },
+  II:     { code: 'II',     name: 'Saga II',    minXp: 1000,    maxXp: 4999,     icon: '🗡️', color: '#60A5FA' },
+  III:    { code: 'III',    name: 'Saga III',   minXp: 5000,    maxXp: 14999,    icon: '◆', color: '#818CF8' },
+  IV:     { code: 'IV',     name: 'Saga IV',    minXp: 15000,   maxXp: 34999,    icon: '⬡', color: '#A78BFA' },
+  V:      { code: 'V',      name: 'Saga V',     minXp: 35000,   maxXp: 74999,    icon: '✦', color: '#C084FC' },
+  VI:     { code: 'VI',     name: 'Saga VI',    minXp: 75000,   maxXp: 149999,   icon: '★', color: '#E879F9' },
+  VII:    { code: 'VII',    name: 'Saga VII',   minXp: 150000,  maxXp: 299999,   icon: '♛', color: '#F59E0B' },
+  VIII:   { code: 'VIII',   name: 'Saga VIII',  minXp: 300000,  maxXp: 9999999,  icon: '∞', color: '#FCD34D' }
 };
 
 export const XP_REWARDS = {
