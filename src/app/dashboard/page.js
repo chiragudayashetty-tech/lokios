@@ -20,13 +20,13 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
-  { rank: 'E',       name: 'East Blue Startup',      flavor: 'Small crew, big dreams.' },
-  { rank: 'D',       name: 'Grand Line Hustle',      flavor: 'Navigating the chaos.' },
-  { rank: 'C',       name: 'New World Expansion',    flavor: 'Entering the big leagues.' },
-  { rank: 'B',       name: 'Haki Awakening',         flavor: 'Willpower weaponized.' },
-  { rank: 'A',       name: 'Supernova Syndicate',    flavor: 'Disrupting the market.' },
-  { rank: 'S',       name: 'Yonko Empire',           flavor: 'Industry dominant.' },
-  { rank: 'Emperor', name: 'Pirate King Enterprise', flavor: 'Absolute monopoly.' },
+  { rank: 'E',       name: 'Day Zero',               flavor: 'Breaking the chains. Escaping the abyss.' },
+  { rank: 'D',       name: 'The Crucible',           flavor: 'Rewiring the brain. Building the foundation.' },
+  { rank: 'C',       name: 'Zero to One',            flavor: 'The startup phase. Hustling for the first dollar.' },
+  { rank: 'B',       name: 'Traction',               flavor: 'Systems are working. The momentum builds.' },
+  { rank: 'A',       name: 'Six-Figure Operator',    flavor: 'Scaling the machine. Unstoppable focus.' },
+  { rank: 'S',       name: 'Seven-Figure Empire',    flavor: 'Financial autonomy. The vision realized.' },
+  { rank: 'Emperor', name: 'The Apex',               flavor: 'Legacy mode. Unconquerable.' },
 ]
 
 const BATTLE_ICONS = {
@@ -74,6 +74,7 @@ export default function MissionControl() {
   const [xpThisWeek, setXpThisWeek]   = useState(0)
   const [weeklyWinRate, setWeeklyWinRate] = useState(0)
   const [arcExpanded, setArcExpanded] = useState(false)
+  const [momentumExpanded, setMomentumExpanded] = useState(false)
   
   // New metrics states
   const [ghostScore, setGhostScore] = useState(0)
@@ -473,11 +474,11 @@ export default function MissionControl() {
                       return (
                         <div
                           key={arc.rank}
-                          className="relative flex items-center gap-5 py-4 pl-12"
+                          className="relative flex items-center gap-5 py-4 pl-8"
                           style={{ opacity: isCurrent ? 1 : isCleared ? 0.5 : 0.25 }}
                         >
                           <div
-                            className="absolute left-[2px] flex items-center justify-center shrink-0"
+                            className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center shrink-0 bg-black z-10"
                             style={{
                               width: '18px', height: '18px',
                               border: `2px solid ${isCurrent ? rd.color : isCleared ? '#22c55e' : 'var(--border-color)'}`,
@@ -671,7 +672,10 @@ export default function MissionControl() {
           <div className="col-4 flex flex-col gap-3 lg:gap-4">
 
             {/* MOMENTUM & STREAK */}
-            <div className="dashboard-card">
+            <div 
+              className="dashboard-card cursor-pointer hover:border-primary transition-colors" 
+              onClick={() => setMomentumExpanded(!momentumExpanded)}
+            >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5">
                   <Activity size={10} color={momentumColor} />
@@ -703,6 +707,34 @@ export default function MissionControl() {
               <div style={{ height: '2px', background: 'var(--bg-primary)', overflow: 'hidden', position: 'relative' }}>
                 <div style={{ height: '100%', width: `${((momentumScore + 10) / 20) * 100}%`, background: momentumColor, transition: 'width 1s ease' }} />
               </div>
+
+              {/* Momentum Breakdown */}
+              <AnimatePresence>
+                {momentumExpanded && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }} 
+                    animate={{ opacity: 1, height: 'auto' }} 
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4 pt-4 overflow-hidden"
+                    style={{ borderTop: '1px solid var(--border-color)' }}
+                  >
+                    <div className="flex flex-col gap-2 font-mono text-[9px] text-muted tracking-widest">
+                      <div className="flex justify-between">
+                        <span>STREAK ({currentStreak}d)</span> 
+                        <span className="font-bold" style={{ color: streakComponent > 0 ? 'var(--success)' : 'inherit' }}>{streakComponent > 0 ? '+' : ''}{streakComponent.toFixed(1)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>WIN RATE ({weeklyWinRate}%)</span> 
+                        <span className="font-bold" style={{ color: winRateComponent > 0 ? 'var(--success)' : winRateComponent < 0 ? 'var(--danger)' : 'inherit' }}>{winRateComponent > 0 ? '+' : ''}{winRateComponent.toFixed(1)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>WEEKLY XP ({xpThisWeek})</span> 
+                        <span className="font-bold" style={{ color: xpComponent > 0 ? 'var(--info)' : 'inherit' }}>{xpComponent > 0 ? '+' : ''}{xpComponent.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* XP STAT CARD */}
