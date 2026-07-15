@@ -111,26 +111,71 @@ export default function MissionControl() {
         .eq('user_id', user.id)
         .gte('created_at', thirtyDaysAgoStr)
 
-      // 1b. Fetch Active Battles (War Room)
+      // 1b. Fetch Active Battles (War Room) & recalculate HP daily
       const { data: blueprints } = await sb
         .from('user_blueprints')
-        .select('battles')
+        .select('id, battles, last_evaluated_date')
         .eq('user_id', user.id)
         .single()
       if (blueprints?.battles) {
-        setBattles(blueprints.battles.filter(b => b.status !== 'defeated'))
+        // Recalculate battle HP if not yet evaluated today
+        if (blueprints.last_evaluated_date !== todayStr) {
+          const yesterday = new Date()
+          yesterday.setDate(yesterday.getDate() - 1)
+          const yesterdayStr = getLocalDateStr(yesterday)
+          
+          const { data: yesterdayLogs } = await sb
+            .from('habit_logs')
+            .select('habit_id, status')
+            .eq('user_id', user.id)
+            .eq('date', yesterdayStr)
+          
+          const logsMap = new Map((yesterdayLogs || []).map(l => [l.habit_id, l.status]))
+          
+          let needsUpdate = false
+          const updatedBattles = blueprints.battles.map(battle => {
+            if (!battle.linked_habits || battle.linked_habits.length === 0) return battle
+            let hpChange = 0
+            battle.linked_habits.forEach(habitId => {
+              const status = logsMap.get(habitId) || 'none'
+              if (status === 'completed') {
+                hpChange -= 15 // damage to enemy
+              } else if (status !== 'blocked') {
+                hpChange += 20 // enemy heals
+              }
+            })
+            if (hpChange !== 0) {
+              needsUpdate = true
+              return { ...battle, hp: Math.max(0, Math.min(100, (battle.hp ?? 100) + hpChange)) }
+            }
+            return battle
+          })
+          
+          if (needsUpdate) {
+            await sb.from('user_blueprints')
+              .update({ battles: updatedBattles, last_evaluated_date: todayStr })
+              .eq('id', blueprints.id)
+            setBattles(updatedBattles.filter(b => b.status !== 'defeated'))
+          } else {
+            // Still update last_evaluated_date to prevent re-running
+            await sb.from('user_blueprints')
+              .update({ last_evaluated_date: todayStr })
+              .eq('id', blueprints.id)
+            setBattles(blueprints.battles.filter(b => b.status !== 'defeated'))
+          }
+        } else {
+          setBattles(blueprints.battles.filter(b => b.status !== 'defeated'))
+        }
       }
         
       if (xpData) {
-        const positiveXp = xpData.filter(r => r.amount > 0)
-        
-        // Today & This Week
-        setXpThisWeek(positiveXp.filter(r => r.created_at >= currentMondayStr).reduce((s, r) => s + r.amount, 0))
-        setXpToday(positiveXp.filter(r => r.created_at.startsWith(todayStr)).reduce((s, r) => s + r.amount, 0))
+        // Today & This Week (NET XP including penalties)
+        setXpThisWeek(xpData.filter(r => r.created_at >= currentMondayStr).reduce((s, r) => s + r.amount, 0))
+        setXpToday(xpData.filter(r => r.created_at.startsWith(todayStr)).reduce((s, r) => s + r.amount, 0))
         
         // 30-Day Trajectory Graph
         const xpByDate = {}
-        positiveXp.forEach(r => {
+        xpData.filter(r => r.amount > 0).forEach(r => {
           const dateStr = r.created_at.substring(0, 10)
           xpByDate[dateStr] = (xpByDate[dateStr] || 0) + r.amount
         })
@@ -249,12 +294,15 @@ export default function MissionControl() {
 
   const flameColor = currentStreak >= 30 ? '#F59E0B' : currentStreak >= 7 ? '#f97316' : '#ef4444'
 
-  const streakScore = Math.min(100, (currentStreak / 30) * 100) * 0.4
-  const winRateScore = weeklyWinRate * 0.4
-  const xpScore = Math.min(100, (xpThisWeek / 1000) * 100) * 0.2
-  const momentumScore = Math.round(streakScore + winRateScore + xpScore)
-  const momentumColor = momentumScore >= 80 ? 'var(--success)' : momentumScore >= 50 ? 'var(--warning)' : 'var(--danger)'
-  const momentumText = momentumScore >= 80 ? 'SURGING' : momentumScore >= 50 ? 'BUILDING' : 'STAGNANT'
+  // Momentum Engine: -10 to +10 scale
+  // Streak contributes up to +4, win rate up to +4, weekly XP up to +2
+  const streakComponent = Math.min(4, (currentStreak / 14) * 4)
+  const winRateComponent = ((weeklyWinRate / 100) * 8) - 4 // 0% = -4, 50% = 0, 100% = +4
+  const xpComponent = Math.min(2, (xpThisWeek / 500) * 2)
+  const rawMomentum = streakComponent + winRateComponent + xpComponent
+  const momentumScore = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
+  const momentumColor = momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)'
+  const momentumText = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
 
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
@@ -271,12 +319,7 @@ export default function MissionControl() {
     deadlineUrgency = deadlineDays <= 3 ? 'danger' : deadlineDays <= 7 ? 'warning' : 'ok'
   }
 
-  // Daily Output Ratio
-  const todayCompletedTasks = tasks?.filter(t => t.status === 'completed' && t.completed_at?.startsWith(todayStr)) || []
-  const deepWorkTasks = todayCompletedTasks.filter(t => t.difficulty === 'HARD' || t.difficulty === 'EXTREME').length
-  const shallowWorkTasks = todayCompletedTasks.filter(t => t.difficulty === 'EASY' || t.difficulty === 'MEDIUM').length
-  const totalWork = deepWorkTasks + shallowWorkTasks
-  const deepWorkPct = totalWork > 0 ? (deepWorkTasks / totalWork) * 100 : 0
+
 
   // Helper for Tooltip in Recharts
   const CustomTooltip = ({ active, payload, label }) => {
@@ -642,9 +685,9 @@ export default function MissionControl() {
               <div className="flex items-end justify-between mb-4">
                 <div>
                   <div className="font-display font-bold tracking-tighter" style={{ fontSize: '2.8rem', color: momentumColor, lineHeight: 1 }}>
-                    {momentumScore}
+                    {momentumScore > 0 ? '+' : ''}{momentumScore}
                   </div>
-                  <div className="font-mono text-[8px] text-muted uppercase">Global Score</div>
+                  <div className="font-mono text-[8px] text-muted uppercase">-10 to +10</div>
                 </div>
                 
                 <div className="text-right">
@@ -657,8 +700,8 @@ export default function MissionControl() {
               </div>
 
               {/* Score bar */}
-              <div style={{ height: '2px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${momentumScore}%`, background: momentumColor, transition: 'width 1s ease' }} />
+              <div style={{ height: '2px', background: 'var(--bg-primary)', overflow: 'hidden', position: 'relative' }}>
+                <div style={{ height: '100%', width: `${((momentumScore + 10) / 20) * 100}%`, background: momentumColor, transition: 'width 1s ease' }} />
               </div>
             </div>
 
@@ -668,13 +711,7 @@ export default function MissionControl() {
                 <Zap size={10} style={{ color: arcColor }} />
                 <span className="font-mono text-[8px] uppercase tracking-widest text-muted">XP Matrix</span>
               </div>
-              <div className="grid grid-cols-2 gap-y-3 gap-x-2">
-                <div>
-                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: arcColor }}>
-                    {totalXp >= 1000 ? `${(totalXp / 1000).toFixed(1)}k` : totalXp}
-                  </div>
-                  <div className="font-mono text-[8px] text-muted uppercase mt-1">TOTAL</div>
-                </div>
+              <div className="grid grid-cols-3 gap-y-3 gap-x-2">
                 <div>
                   <div className="font-display font-bold tracking-tighter leading-none text-info" style={{ fontSize: '1.4rem' }}>
                     {xpNeeded >= 1000 ? `${(xpNeeded / 1000).toFixed(1)}k` : xpNeeded}
@@ -682,14 +719,14 @@ export default function MissionControl() {
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">TO LV.{currentLevel + 1}</div>
                 </div>
                 <div>
-                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: xpToday > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
-                    +{xpToday}
+                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: xpToday > 0 ? 'var(--success)' : xpToday < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                    {xpToday >= 0 ? '+' : ''}{xpToday}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">TODAY</div>
                 </div>
                 <div>
-                  <div className="font-display font-bold tracking-tighter leading-none text-primary" style={{ fontSize: '1.4rem' }}>
-                    +{xpThisWeek}
+                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: xpThisWeek > 0 ? 'var(--success)' : xpThisWeek < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                    {xpThisWeek >= 0 ? '+' : ''}{xpThisWeek}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">THIS WEEK</div>
                 </div>
@@ -763,23 +800,12 @@ export default function MissionControl() {
               </div>
             </div>
 
-            {/* GHOST SCORE & DAILY OUTPUT RATIO */}
-            <div className="grid grid-cols-2 gap-3 lg:gap-4">
-              <div className="dashboard-card text-center" style={{ padding: '12px' }}>
-                <Ghost size={12} className="mx-auto mb-1 text-muted" />
-                <div className="font-display font-bold tracking-tighter" style={{ fontSize: '1.8rem', lineHeight: 1 }}>{ghostScore}</div>
-                <div className="font-mono text-[8px] uppercase tracking-widest text-muted mt-1">Ghost Score</div>
-                <div className="font-mono text-[7px] text-muted mt-0.5">(All-Time Bounces)</div>
-              </div>
-              
-              <div className="dashboard-card text-center" style={{ padding: '12px' }}>
-                <ArrowUpRight size={12} className="mx-auto mb-1" style={{ color: deepWorkPct >= 50 ? 'var(--success)' : 'var(--text-muted)' }} />
-                <div className="font-display font-bold tracking-tighter" style={{ fontSize: '1.8rem', lineHeight: 1, color: deepWorkPct >= 50 ? 'var(--success)' : 'var(--text-primary)' }}>
-                  {Math.round(deepWorkPct)}%
-                </div>
-                <div className="font-mono text-[8px] uppercase tracking-widest text-muted mt-1">Deep Work Ratio</div>
-                <div className="font-mono text-[7px] text-muted mt-0.5">({deepWorkTasks} Hard / {totalWork} Total)</div>
-              </div>
+            {/* GHOST SCORE */}
+            <div className="dashboard-card text-center" style={{ padding: '12px' }}>
+              <Ghost size={12} className="mx-auto mb-1 text-muted" />
+              <div className="font-display font-bold tracking-tighter" style={{ fontSize: '1.8rem', lineHeight: 1 }}>{ghostScore}</div>
+              <div className="font-mono text-[8px] uppercase tracking-widest text-muted mt-1">Ghost Score</div>
+              <div className="font-mono text-[7px] text-muted mt-0.5">(All-Time Bounces)</div>
             </div>
 
             {/* HABIT GRAVEYARD */}
