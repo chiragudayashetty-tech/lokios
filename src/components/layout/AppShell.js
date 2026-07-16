@@ -292,45 +292,29 @@ export default function AppShell({ children }) {
         {children}
       </main>
 
-      {/* Mobile Bottom Nav (Frosted Glass) */}
-      <nav className="mobile-nav flex justify-around items-center px-2 shadow-2xl">
+      {/* Mobile Bottom Nav */}
+      <nav className="mobile-nav" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', zIndex: 100 }}>
         {mainItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
           return (
-            <Link key={item.href} href={item.href} className="flex-1 h-full flex items-center justify-center">
-              <motion.div 
-                whileTap={{ scale: 0.85 }}
-                className={`flex flex-col items-center justify-center w-full h-full gap-1 rounded-xl transition-all duration-300 ${isActive ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`} 
-                style={{ minHeight: '64px' }}
+            <Link key={item.href} href={item.href} style={{ flex: 1 }}>
+              <div 
+                className={`flex-col flex-center p-3 transition-transform active:scale-90 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
+                style={{ 
+                  color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  minHeight: '56px', /* 44px min touch target + padding */
+                }}
               >
-                <div className="relative flex items-center justify-center h-7 w-7">
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTabGlow"
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: 'radial-gradient(circle, rgba(212,168,67,0.3) 0%, transparent 70%)', filter: 'blur(4px)' }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    />
-                  )}
-                  <Icon size={22} strokeWidth={isActive ? 2.5 : 1.5} className="relative z-10" />
-                </div>
-                <span className="font-display uppercase tracking-widest" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.6 }}>{item.label}</span>
-              </motion.div>
+                <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
+                <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{item.label}</span>
+              </div>
             </Link>
           )
         })}
-        <button type="button" className="flex-1 h-full flex items-center justify-center" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          <motion.div 
-            whileTap={{ scale: 0.85 }}
-            className={`flex flex-col items-center justify-center w-full h-full gap-1 rounded-xl transition-all duration-300 ${mobileMenuOpen ? 'text-amber' : 'text-zinc-500 hover:text-zinc-300'}`}
-            style={{ minHeight: '64px' }}
-          >
-            <div className="relative flex items-center justify-center h-7 w-7">
-              {mobileMenuOpen ? <X size={24} strokeWidth={2.5} /> : <Menu size={22} strokeWidth={1.5} />}
-            </div>
-            <span className="font-display uppercase tracking-widest" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.6 }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
-          </motion.div>
+        <button type="button" style={{ flex: 1, minHeight: '56px', width: '20%' }} className={`flex-col flex-center p-3 transition-transform active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={1.5} />}
+          <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
         </button>
       </nav>
 

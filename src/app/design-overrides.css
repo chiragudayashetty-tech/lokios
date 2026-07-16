@@ -1,14 +1,12 @@
 /* Design overrides for a calmer, more intentional ChiragOS presentation. */
 
 :root {
-  /* Elevating to a premium dark slate/navy hue instead of pure black */
-  --surface-0: rgba(6, 8, 12, 0.95);
+  --surface-0: rgba(8, 10, 14, 0.92);
   --surface-1: rgba(12, 14, 20, 0.88);
-  --surface-2: rgba(20, 24, 32, 0.85);
-  --surface-border: rgba(212, 168, 67, 0.15);
-  --surface-border-strong: rgba(212, 168, 67, 0.35);
-  --surface-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
-  --glass-blur: blur(24px);
+  --surface-2: rgba(18, 21, 29, 0.82);
+  --surface-border: rgba(212, 168, 67, 0.14);
+  --surface-border-strong: rgba(212, 168, 67, 0.26);
+  --surface-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
 }
 
 html,
@@ -18,10 +16,9 @@ body {
 
 body {
   background:
-    radial-gradient(circle at 10% 0%, rgba(212, 168, 67, 0.05), transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(0, 112, 243, 0.05), transparent 40%),
-    linear-gradient(180deg, #040507 0%, #080b11 50%, #030406 100%);
-  background-attachment: fixed;
+    radial-gradient(circle at top left, rgba(212, 168, 67, 0.08), transparent 32%),
+    radial-gradient(circle at top right, rgba(0, 240, 255, 0.05), transparent 28%),
+    linear-gradient(180deg, #040507 0%, #07090d 52%, #030406 100%);
 }
 
 /* Removed body grid lines per user request */
@@ -76,16 +73,8 @@ body > * {
 }
 
 .mobile-nav {
-  background: rgba(4, 5, 7, 0.65);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
-}
-
-.mobile-nav .active-nav-item {
-  color: var(--accent-primary);
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  background: rgba(8, 10, 14, 0.94);
+  border-top-color: rgba(255, 255, 255, 0.06);
 }
 
 .hud-panel,
@@ -1058,53 +1047,4 @@ body > * {
   .page-subtitle {
     font-size: 10px !important;
   }
-}
-/* -- Premium Sidebar Nav Items -- */
-.nav-item {
-  position: relative;
-  border-radius: 12px;
-  margin-bottom: 4px;
-  padding: 12px 16px;
-  font-family: var(--font-display);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid transparent;
-  background: transparent;
-}
-
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-.nav-item.active {
-  background: rgba(212, 168, 67, 0.08);
-  color: var(--accent-primary);
-  border-color: rgba(212, 168, 67, 0.2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: -1px;
-  top: 15%;
-  bottom: 15%;
-  width: 3px;
-  background: var(--accent-primary);
-  border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 10px var(--accent-primary);
-}
-/* -- Premium Hud Panel Enhancements -- */
-.hud-panel {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  transform: translateY(0);
-}
-.hud-panel:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(212, 168, 67, 0.3) inset;
 }
