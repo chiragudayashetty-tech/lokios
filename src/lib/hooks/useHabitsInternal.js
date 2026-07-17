@@ -184,9 +184,9 @@ export function useHabitsInternal(user) {
             await supabase.from('habit_logs').delete().in('id', extraIds)
           }
         } else {
-          // If no local logs existed, gracefully INSERT
+          // If no local logs existed (possible desync on past days), safely UPSERT
           const { data: insertedRows, error: insertErr } = await supabase.from('habit_logs')
-            .insert({ user_id: user.id, habit_id: habitId, date: targetDate, status: nextStatus })
+            .upsert({ user_id: user.id, habit_id: habitId, date: targetDate, status: nextStatus }, { onConflict: 'habit_id,date' })
             .select()
           if (insertErr) throw insertErr
           newLog = insertedRows[0]
