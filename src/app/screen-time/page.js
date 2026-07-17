@@ -22,6 +22,7 @@ export default function ScreenIntel() {
   const [totalHours, setTotalHours] = useState(0)
   const [focusHours, setFocusHours] = useState(0)
   const [doomScroll, setDoomScroll] = useState(0)
+  const [streamingHours, setStreamingHours] = useState(0)
   
   const getLocalDateStr = (d) => {
     const offset = d.getTimezoneOffset()
@@ -48,11 +49,13 @@ export default function ScreenIntel() {
       setTotalHours(todayLog.total_hours || 0)
       setFocusHours(todayLog.focus_hours || 0)
       setDoomScroll(todayLog.doom_scroll_minutes || 0)
+      setStreamingHours(todayLog.streaming_hours || 0)
       setNotes(todayLog.notes || '')
     } else {
       setTotalHours(0)
       setFocusHours(0)
       setDoomScroll(0)
+      setStreamingHours(0)
       setNotes('')
     }
   }, [date, logs])
@@ -72,6 +75,7 @@ export default function ScreenIntel() {
       total_hours: parseFloat(totalHours),
       focus_hours: parseFloat(focusHours),
       doom_scroll_minutes: parsedDoom,
+      streaming_hours: parseFloat(streamingHours) || 0,
       notes
     }
 
@@ -118,6 +122,7 @@ export default function ScreenIntel() {
     const tHours = parseFloat(totalHours) || 0
     const fHours = parseFloat(focusHours) || 0
     const dMins = parsedDoom
+    const sHours = parseFloat(streamingHours) || 0
 
     // 1. Total Hours: Target 6
     const totalDiff = 6 - tHours
@@ -141,6 +146,14 @@ export default function ScreenIntel() {
     if (focusXp !== 0) {
       xpAmount += focusXp
       reasons.push(`Focus: ${focusXp > 0 ? '+' : ''}${focusXp}`)
+    }
+
+    // 4. Streaming Hours: Target 2
+    const streamingDiff = 2 - sHours
+    const streamingXp = Math.round(streamingDiff * 10)
+    if (streamingXp !== 0) {
+      xpAmount += streamingXp
+      reasons.push(`Streaming: ${streamingXp > 0 ? '+' : ''}${streamingXp}`)
     }
 
     let finalReason = reasons.join(' | ') || 'Screen Time logged'
@@ -177,7 +190,8 @@ export default function ScreenIntel() {
       date: d.substring(5).replace('-', '/'),
       total: log?.total_hours || 0,
       focus: log?.focus_hours || 0,
-      doom: log?.doom_scroll_minutes || 0
+      doom: log?.doom_scroll_minutes || 0,
+      streaming: log?.streaming_hours || 0
     }
   })
 
@@ -222,12 +236,21 @@ export default function ScreenIntel() {
                   </p>
                 </div>
               </div>
-              <div className="p-4 border border-danger-subtle bg-bg-tertiary">
-                <label className="font-mono text-[10px] text-danger mb-2 block uppercase tracking-widest flex items-center gap-1"><AlertTriangle size={12}/> Doom Scroll (Minutes)</label>
-                <input type="number" min="0" className="input font-mono text-2xl border-danger text-danger w-full mb-2" value={doomScroll} onChange={e=>setDoomScroll(e.target.value)} />
-                <p className="font-mono text-[9px] text-muted">
-                  &lt; 60 mins = <span className="text-success">+0.5 XP/min</span> | &gt; 60 mins = <span className="text-danger">-0.5 XP/min</span>
-                </p>
+              <div className="grid-2 gap-4">
+                <div className="p-4 border border-danger-subtle bg-bg-tertiary">
+                  <label className="font-mono text-[10px] text-danger mb-2 block uppercase tracking-widest flex items-center gap-1"><AlertTriangle size={12}/> Doom Scroll (Minutes)</label>
+                  <input type="number" min="0" className="input font-mono text-2xl border-danger text-danger w-full mb-2" value={doomScroll} onChange={e=>setDoomScroll(e.target.value)} />
+                  <p className="font-mono text-[9px] text-muted">
+                    &lt; 60 mins = <span className="text-success">+0.5 XP/min</span> | &gt; 60 mins = <span className="text-danger">-0.5 XP/min</span>
+                  </p>
+                </div>
+                <div className="p-4 border border-amber-subtle bg-bg-tertiary">
+                  <label className="font-mono text-[10px] text-amber mb-2 block uppercase tracking-widest flex items-center gap-1">Streaming (Hours)</label>
+                  <input type="number" step="0.5" min="0" className="input font-mono text-2xl border-amber text-amber w-full mb-2" value={streamingHours} onChange={e=>setStreamingHours(e.target.value)} />
+                  <p className="font-mono text-[9px] text-muted">
+                    &lt; 2 hrs = <span className="text-success">+10 XP/hr</span> | &gt; 2 hrs = <span className="text-danger">-10 XP/hr</span>
+                  </p>
+                </div>
               </div>
               <div className="mt-auto">
                 <button type="submit" disabled={saving} className="btn btn-primary w-full py-3">{saving ? 'TRANSMITTING...' : 'TRANSMIT DATA'}</button>
@@ -250,6 +273,7 @@ export default function ScreenIntel() {
                   <Legend iconType="square" wrapperStyle={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }} />
                   <Bar dataKey="total" name="Total (h)" fill="var(--border-strong)" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="focus" name="Focus (h)" fill="var(--info)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="streaming" name="Streaming (h)" fill="var(--amber)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
