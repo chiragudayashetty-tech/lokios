@@ -158,11 +158,25 @@ export default function ScreenIntel() {
 
     let finalReason = reasons.join(' | ') || 'Screen Time logged'
 
-    // Damage Battle/Main Quest
-    if (dMins > 60 && mainQuest && typeof mainQuest.progress === 'number') {
-      const newProgress = Math.max(0, mainQuest.progress - 5)
-      await updateProgress(mainQuest.id, newProgress)
-      finalReason += ' (-5% Battle Health)'
+    // Damage Phone Addiction Battle
+    if (dMins > 60) {
+      const { data: bp } = await supabase.from('user_blueprints').select('*').eq('user_id', user.id).single()
+      if (bp && bp.battles) {
+        let battleUpdated = false
+        const updatedBattles = bp.battles.map(battle => {
+          const bName = battle.name?.toLowerCase() || ''
+          if (battle.status !== 'defeated' && (bName.includes('phone') || bName.includes('screen') || bName.includes('addiction'))) {
+            battleUpdated = true
+            return { ...battle, hp: Math.max(0, (battle.hp ?? 100) - 5) }
+          }
+          return battle
+        })
+        
+        if (battleUpdated) {
+          await supabase.from('user_blueprints').update({ battles: updatedBattles }).eq('id', bp.id)
+          finalReason += ' (-5 HP Phone War)'
+        }
+      }
     }
 
     if (xpAmount !== 0 && savedLogId) {
