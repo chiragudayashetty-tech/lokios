@@ -158,24 +158,37 @@ export default function ScreenIntel() {
 
     let finalReason = reasons.join(' | ') || 'Screen Time logged'
 
-    // Damage Phone Addiction Battle
-    if (dMins > 60) {
-      const { data: bp } = await supabase.from('user_blueprints').select('*').eq('user_id', user.id).single()
-      if (bp && bp.battles) {
-        let battleUpdated = false
-        const updatedBattles = bp.battles.map(battle => {
-          const bName = battle.name?.toLowerCase() || ''
-          if (battle.status !== 'defeated' && (bName.includes('phone') || bName.includes('screen') || bName.includes('addiction'))) {
-            battleUpdated = true
-            return { ...battle, hp: Math.max(0, (battle.hp ?? 100) - 5) }
+    // Update Phone Addiction Battle based on all metrics
+    let hpChange = 0;
+    if (tHours <= 6) hpChange -= 5; else hpChange += 10;
+    if (dMins <= 60) hpChange -= 5; else hpChange += 10;
+    if (sHours <= 2) hpChange -= 5; else hpChange += 10;
+
+    const { data: bp } = await supabase.from('user_blueprints').select('*').eq('user_id', user.id).single()
+    if (bp && bp.battles) {
+      let battleUpdated = false
+      const updatedBattles = bp.battles.map(battle => {
+        const bName = battle.name?.toLowerCase() || ''
+        if (battle.status !== 'defeated' && (bName.includes('phone') || bName.includes('screen') || bName.includes('addiction'))) {
+          battleUpdated = true
+          const oldHp = battle.hp ?? 100
+          const newHp = Math.max(0, Math.min(100, oldHp + hpChange))
+          
+          if (newHp === 0 && oldHp > 0) {
+            finalReason += ' (PHONE WAR WON! 🏆)'
+          } else if (hpChange < 0) {
+            finalReason += ` (${hpChange} Enemy HP)`
+          } else if (hpChange > 0) {
+            finalReason += ` (+${hpChange} Enemy Heal)`
           }
-          return battle
-        })
-        
-        if (battleUpdated) {
-          await supabase.from('user_blueprints').update({ battles: updatedBattles }).eq('id', bp.id)
-          finalReason += ' (-5 HP Phone War)'
+          
+          return { ...battle, hp: newHp, status: newHp === 0 ? 'defeated' : battle.status }
         }
+        return battle
+      })
+      
+      if (battleUpdated) {
+        await supabase.from('user_blueprints').update({ battles: updatedBattles }).eq('id', bp.id)
       }
     }
 
