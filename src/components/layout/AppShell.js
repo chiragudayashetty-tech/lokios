@@ -293,28 +293,35 @@ export default function AppShell({ children }) {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="mobile-nav" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', zIndex: 100 }}>
+      <nav className="mobile-nav" style={{ zIndex: 100 }}>
         {mainItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
           return (
             <Link key={item.href} href={item.href} style={{ flex: 1 }}>
               <div 
-                className={`flex-col flex-center p-3 transition-transform active:scale-90 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
+                className={`flex-col flex-center p-3 transition-all active:scale-90 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
                 style={{ 
                   color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
-                  minHeight: '56px', /* 44px min touch target + padding */
+                  minHeight: '56px',
+                  position: 'relative',
                 }}
               >
+                {isActive && (
+                  <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 24, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
+                )}
                 <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
-                <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{item.label}</span>
+                <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{item.label}</span>
               </div>
             </Link>
           )
         })}
-        <button type="button" style={{ flex: 1, minHeight: '56px', width: '20%' }} className={`flex-col flex-center p-3 transition-transform active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+        <button type="button" style={{ flex: 1, minHeight: '56px', width: '20%', position: 'relative' }} className={`flex-col flex-center p-3 transition-all active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen && (
+            <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 24, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
+          )}
           {mobileMenuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={1.5} />}
-          <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
+          <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
         </button>
       </nav>
 

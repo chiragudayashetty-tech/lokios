@@ -641,8 +641,8 @@ p:last-child {
   bottom: 0;
   left: 0;
   right: 0;
-  height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 20px));
-  padding-bottom: env(safe-area-inset-bottom, 20px);
+  height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   z-index: var(--z-fixed);
@@ -711,6 +711,7 @@ p:last-child {
   min-height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: var(--space-6) var(--space-8);
   position: relative;
   scroll-behavior: smooth;
@@ -3120,7 +3121,7 @@ select:focus {
 
   .main-content {
     padding: var(--space-4) var(--space-3);
-    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 20px) + var(--space-4));
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-4));
   }
 
   .page-title {
@@ -3210,7 +3211,8 @@ select:focus {
 
   .main-content {
     grid-column: 1;
-    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 20px) + var(--space-12));
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-4));
   }
 }
 
