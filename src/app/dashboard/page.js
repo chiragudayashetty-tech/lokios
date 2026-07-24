@@ -362,13 +362,14 @@ export default function MissionControl() {
         .order('date', { ascending: false })
 
       if (stHistory && stHistory.length > 0) {
+        const getDoom = (l) => parseInt(l.doom_scroll_minutes ?? l.doomscroll_minutes) || 0
         const avgScreenNum = stHistory.reduce((s, l) => s + (parseFloat(l.total_hours) || 0), 0) / stHistory.length
         const avgScreen = avgScreenNum.toFixed(1)
-        const avgDoom = Math.round(stHistory.reduce((s, l) => s + (parseInt(l.doomscroll_minutes) || 0), 0) / stHistory.length)
+        const avgDoom = Math.round(stHistory.reduce((s, l) => s + getDoom(l), 0) / stHistory.length)
         const avgStreamingNum = stHistory.reduce((s, l) => s + (parseFloat(l.streaming_hours) || 0), 0) / stHistory.length
         const avgStreaming = avgStreamingNum.toFixed(1)
         const todaySt = stHistory.find(l => l.date === todayStr)
-        const daysClean = stHistory.filter(l => (parseFloat(l.total_hours) || 0) <= 4 && (parseInt(l.doomscroll_minutes) || 0) <= 30).length
+        const daysClean = stHistory.filter(l => (parseFloat(l.total_hours) || 0) <= 4 && getDoom(l) <= 30).length
 
         // Addiction / Threat Score (0 to 100). Higher = worse.
         let addScore = 0
@@ -791,7 +792,7 @@ export default function MissionControl() {
                       if (bName.includes('phone') || bName.includes('screen') || bName.includes('addiction') || bName.includes('execution')) {
                         if (todayScreenTime) {
                           const tHours = parseFloat(todayScreenTime.total_hours) || 0
-                          const dMins  = parseInt(todayScreenTime.doomscroll_minutes) || 0
+                          const dMins  = parseInt(todayScreenTime.doom_scroll_minutes ?? todayScreenTime.doomscroll_minutes) || 0
                           const sHours = parseFloat(todayScreenTime.streaming_hours) || 0
 
                           if (tHours <= 6) {

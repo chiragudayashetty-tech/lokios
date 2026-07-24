@@ -401,7 +401,7 @@ export default function OperatorDashboard() {
                       if (bName.includes('phone') || bName.includes('screen') || bName.includes('addiction') || bName.includes('execution')) {
                         if (todayScreenTime) {
                           const tHours = parseFloat(todayScreenTime.total_hours) || 0
-                          const dMins  = parseInt(todayScreenTime.doomscroll_minutes) || 0
+                          const dMins  = parseInt(todayScreenTime.doom_scroll_minutes ?? todayScreenTime.doomscroll_minutes) || 0
                           const sHours = parseFloat(todayScreenTime.streaming_hours) || 0
 
                           if (tHours <= 6) {
