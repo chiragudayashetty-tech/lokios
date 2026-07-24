@@ -113,11 +113,25 @@ export default function DailyOps() {
     setSleepSaving(true)
     const sb = createClient()
 
-    const isHealthy = liveSleepDuration.totalHours >= 7.0 && (liveSleepDuration.bedHour >= 21 || liveSleepDuration.bedHour === 0 || liveSleepDuration.bedHour === 22 || liveSleepDuration.bedHour === 23)
+    const [bH, bM] = bedtime.split(':').map(Number)
+    const [wH, wM] = wakeTime.split(':').map(Number)
+
+    // User exact targets: Sleep < 12 AM, Wake < 9 AM, Duration <= 10 hrs (and >= 6 hrs)
+    const isSleptBeforeMidnight = bH >= 20 && bH <= 23
+    const isWokeBefore9AM = wH < 9 || (wH === 9 && wM === 0)
+    const isDurationValid = liveSleepDuration.totalHours >= 6.0 && liveSleepDuration.totalHours <= 10.0
+
+    const isHealthy = isSleptBeforeMidnight && isWokeBefore9AM && isDurationValid
     const hpImpact = isHealthy ? -15 : +20
     const xpAmount = isHealthy ? 30 : 0
 
-    // Save to sleep_logs table if available
+    let failReasons = []
+    if (!isSleptBeforeMidnight) failReasons.push('Bedtime past Midnight')
+    if (!isWokeBefore9AM) failReasons.push('Woke up past 9 AM')
+    if (liveSleepDuration.totalHours > 10.0) failReasons.push('Overslept (> 10h)')
+    if (liveSleepDuration.totalHours < 6.0) failReasons.push('Under-slept (< 6h)')
+
+    // Save to sleep_logs table
     await sb.from('sleep_logs').upsert({
       user_id: user.id,
       date: sleepTargetDate,
@@ -138,7 +152,9 @@ export default function DailyOps() {
           if (!battle.combat_logs) battle.combat_logs = []
           battle.combat_logs.unshift({
             date: todayStr,
-            action: isHealthy ? `🌙 Healthy Sleep logged (${liveSleepDuration.totalHours}h)` : `⚠️ Deprived Sleep logged (${liveSleepDuration.totalHours}h)`,
+            action: isHealthy 
+              ? `🌙 Target Sleep met (${liveSleepDuration.totalHours}h)` 
+              : `⚠️ Sleep Target failed: ${failReasons.join(', ')} (${liveSleepDuration.totalHours}h)`,
             hpChange: hpImpact
           })
           return { ...battle, hp: newHp }
@@ -152,7 +168,9 @@ export default function DailyOps() {
       await robustAwardXP(user.id, xpAmount, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
     }
 
-    setSleepMsg(isHealthy ? `✓ Healthy Sleep Logged! (-15 Threat HP / +30 XP)` : `⚠️ Sleep Logged (+20 Threat HP)`)
+    setSleepMsg(isHealthy 
+      ? `✓ Sleep Target Met! Slept before 12, Up before 9am (${liveSleepDuration.totalHours}h) (-15 Threat HP / +30 XP)` 
+      : `⚠️ Target Missed: ${failReasons.join(', ')} (+20 Threat HP)`)
     setSleepSaving(false)
   }
 
@@ -515,12 +533,15 @@ export default function DailyOps() {
             <div className="flex items-center justify-between border-b border-border-color pb-2 mb-3">
               <div className="flex items-center gap-2 text-info">
                 <Moon size={16} />
-                <span className="font-display text-sm uppercase tracking-widest font-bold">DYNAMIC SLEEP TRACKER</span>
+                <div>
+                  <span className="font-display text-sm uppercase tracking-widest font-bold block leading-none">DYNAMIC SLEEP TRACKER</span>
+                  <span className="font-mono text-[8px] text-muted uppercase">TARGET: SLEEP &lt; 12 AM | WAKE &lt; 9 AM | MAX 10 HRS</span>
+                </div>
               </div>
               <button 
                 type="button"
                 onClick={handleDropStaticSleepHabits}
-                className="font-mono text-[9px] text-muted hover:text-danger flex items-center gap-1 uppercase"
+                className="font-mono text-[9px] text-muted hover:text-danger flex items-center gap-1 uppercase shrink-0"
               >
                 <Trash2 size={10} /> Drop Static Habits
               </button>
