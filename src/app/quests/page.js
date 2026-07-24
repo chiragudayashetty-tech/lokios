@@ -44,13 +44,14 @@ export default function DailyOps() {
   const [weightKg, setWeightKg] = useState('')
   const [weightLoggedToday, setWeightLoggedToday] = useState(false)
   const [weightSaving, setWeightSaving] = useState(false)
+  const [weightMsg, setWeightMsg] = useState(null)
 
   // Sleep Tracker Widget State
   const [sleepTargetDate, setSleepTargetDate] = useState(yesterdayStr)
   const [bedtime, setBedtime] = useState('23:30')
   const [wakeTime, setWakeTime] = useState('07:00')
   const [sleepSaving, setSleepSaving] = useState(false)
-  const [sleepMsg, setSleepMsg] = useState('')
+  const [sleepMsg, setSleepMsg] = useState(null)
 
   // Fetch today's weight log
   useEffect(() => {
@@ -103,6 +104,9 @@ export default function DailyOps() {
       if (!weightLoggedToday) {
         await robustAwardXP(user.id, 25, 'Daily Weight Logged')
         setWeightLoggedToday(true)
+        setWeightMsg({ success: true, title: 'BODY WEIGHT LOGGED', subtitle: `${w} kg recorded for today`, xp: 25 })
+      } else {
+        setWeightMsg({ success: true, title: 'BODY WEIGHT UPDATED', subtitle: `Updated to ${w} kg`, xp: 0 })
       }
     }
     setWeightSaving(false)
@@ -122,7 +126,6 @@ export default function DailyOps() {
     const isDurationValid = liveSleepDuration.totalHours >= 6.0 && liveSleepDuration.totalHours <= 10.0
 
     const isHealthy = isSleptBeforeMidnight && isWokeBefore9AM && isDurationValid
-    const hpImpact = isHealthy ? -15 : +20
     const xpAmount = isHealthy ? 30 : 0
 
     let failReasons = []
@@ -141,36 +144,18 @@ export default function DailyOps() {
       status: isHealthy ? 'healthy' : 'deprived'
     }).catch(() => {})
 
-    // Update War Room in user_blueprints
-    const { data: bp } = await sb.from('user_blueprints').select('*').eq('user_id', user.id).single()
-    if (bp && bp.battles) {
-      const updatedBattles = bp.battles.map(battle => {
-        const bName = battle.name?.toLowerCase() || ''
-        if (bName.includes('sleep') || bName.includes('rest') || bName.includes('discipline')) {
-          const oldHp = battle.hp ?? 100
-          const newHp = Math.max(0, Math.min(100, oldHp + hpImpact))
-          if (!battle.combat_logs) battle.combat_logs = []
-          battle.combat_logs.unshift({
-            date: todayStr,
-            action: isHealthy 
-              ? `🌙 Target Sleep met (${liveSleepDuration.totalHours}h)` 
-              : `⚠️ Sleep Target failed: ${failReasons.join(', ')} (${liveSleepDuration.totalHours}h)`,
-            hpChange: hpImpact
-          })
-          return { ...battle, hp: newHp }
-        }
-        return battle
-      })
-      await sb.from('user_blueprints').update({ battles: updatedBattles }).eq('user_id', user.id)
-    }
-
     if (xpAmount > 0) {
       await robustAwardXP(user.id, xpAmount, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
     }
 
-    setSleepMsg(isHealthy 
-      ? `✓ Sleep Target Met! Slept before 12, Up before 9am (${liveSleepDuration.totalHours}h) (-15 Threat HP / +30 XP)` 
-      : `⚠️ Target Missed: ${failReasons.join(', ')} (+20 Threat HP)`)
+    setSleepMsg({
+      success: isHealthy,
+      title: isHealthy ? 'SLEEP TARGET MET' : 'TARGET MISSED',
+      subtitle: isHealthy 
+        ? `Slept before 12 AM · Up before 9 AM · Duration: ${liveSleepDuration.totalHours}h` 
+        : `Reasons: ${failReasons.join(' · ')} (${liveSleepDuration.totalHours}h)`,
+      xp: xpAmount
+    })
     setSleepSaving(false)
   }
 
@@ -528,14 +513,85 @@ export default function DailyOps() {
                 type="button" 
                 onClick={handleSaveWeight}
                 disabled={weightSaving || !weightKg}
-                className={`btn btn-sm font-mono text-xs px-4 whitespace-nowrap ${weightLoggedToday ? 'btn-ghost border-amber text-amber' : 'btn-primary bg-amber text-bg-primary'}`}
+                style={{
+                  background: weightLoggedToday
+                    ? 'transparent'
+                    : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  border: '1px solid #f59e0b',
+                  color: weightLoggedToday ? '#f59e0b' : '#000',
+                  padding: '6px 16px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  cursor: weightSaving || !weightKg ? 'not-allowed' : 'pointer',
+                  opacity: weightSaving || !weightKg ? 0.5 : 1,
+                  borderRadius: '4px',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
               >
-                {weightSaving ? 'SAVING...' : weightLoggedToday ? 'UPDATE WEIGHT' : 'LOG WEIGHT'}
+                {weightSaving ? (
+                  <><span style={{ display: 'inline-block', width: 10, height: 10, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} /> SAVING</>  
+                ) : weightLoggedToday ? (
+                  <>↑ UPDATE</>
+                ) : (
+                  <>+ LOG WEIGHT</>
+                )}
               </button>
             </div>
+
+            {weightMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.05))',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  marginTop: '10px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle2 size={16} style={{ color: '#f59e0b' }} />
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '11px', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase' }}>
+                      {weightMsg.title}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-secondary)' }}>
+                      {weightMsg.subtitle}
+                    </div>
+                  </div>
+                </div>
+                {weightMsg.xp > 0 && (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    color: '#000000',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                    boxShadow: '0 0 10px rgba(245, 158, 11, 0.4)',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    ⚡ +{weightMsg.xp} XP
+                  </div>
+                )}
+              </motion.div>
+            )}
           </HudPanel>
 
-          {/* WIDGET 2: DYNAMIC SLEEP TRACKER (OVERNIGHT & WAR ROOM SYNC) */}
+          {/* WIDGET 2: DYNAMIC SLEEP TRACKER */}
           <HudPanel glow className="p-4 border-info">
             <div className="flex items-center justify-between border-b border-border-color pb-2 mb-3">
               <div className="flex items-center gap-2 text-info">
@@ -598,17 +654,111 @@ export default function DailyOps() {
                 <button 
                   type="button" 
                   onClick={handleSaveSleep}
-                  disabled={sleepSaving}
-                  className="btn btn-primary btn-sm font-mono text-xs py-1 px-3 bg-info text-bg-primary hover:bg-info-glow"
+                  disabled={sleepSaving || !liveSleepDuration}
+                  style={{
+                    background: liveSleepDuration
+                      ? 'linear-gradient(135deg, var(--info), #0ea5e9)'
+                      : 'var(--bg-secondary)',
+                    border: '1px solid var(--info)',
+                    color: liveSleepDuration ? '#000' : 'var(--text-muted)',
+                    padding: '6px 16px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    cursor: sleepSaving || !liveSleepDuration ? 'not-allowed' : 'pointer',
+                    opacity: sleepSaving || !liveSleepDuration ? 0.5 : 1,
+                    borderRadius: '4px',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
                 >
-                  {sleepSaving ? 'SAVING...' : 'SAVE SLEEP & WAR ROOM SYNC'}
+                  {sleepSaving ? (
+                    <><span style={{ display: 'inline-block', width: 10, height: 10, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} /> SAVING</>
+                  ) : (
+                    <>🌙 LOG SLEEP</>
+                  )}
                 </button>
               </div>
 
               {sleepMsg && (
-                <div className={`text-[10px] font-mono p-1.5 border rounded text-center ${sleepMsg.includes('✓') ? 'border-success text-success bg-success/5' : 'border-warning text-warning bg-warning/5'}`}>
-                  {sleepMsg}
-                </div>
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    background: sleepMsg.success 
+                      ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(16, 185, 129, 0.05))' 
+                      : 'linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.05))',
+                    border: `1px solid ${sleepMsg.success ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                    borderRadius: '6px',
+                    padding: '8px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    marginTop: '10px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {sleepMsg.success ? (
+                      <CheckCircle2 size={16} style={{ color: '#22c55e' }} />
+                    ) : (
+                      <AlertTriangle size={16} style={{ color: '#ef4444' }} />
+                    )}
+                    <div>
+                      <div style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: sleepMsg.success ? '#22c55e' : '#ef4444',
+                        textTransform: 'uppercase'
+                      }}>
+                        {sleepMsg.title}
+                      </div>
+                      <div style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '10px',
+                        color: 'var(--text-secondary)'
+                      }}>
+                        {sleepMsg.subtitle}
+                      </div>
+                    </div>
+                  </div>
+
+                  {sleepMsg.xp > 0 ? (
+                    <div style={{
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      color: '#ffffff',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      padding: '3px 10px',
+                      borderRadius: '20px',
+                      boxShadow: '0 0 10px rgba(16, 185, 129, 0.4)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      ⚡ +{sleepMsg.xp} XP
+                    </div>
+                  ) : (
+                    <div style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      color: '#ef4444',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      0 XP
+                    </div>
+                  )}
+                </motion.div>
               )}
             </div>
           </HudPanel>
