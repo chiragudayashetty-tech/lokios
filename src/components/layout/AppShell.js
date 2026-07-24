@@ -300,28 +300,29 @@ export default function AppShell({ children }) {
           return (
             <Link key={item.href} href={item.href} style={{ flex: 1 }}>
               <div 
-                className={`flex-col flex-center p-3 transition-all active:scale-90 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
+                className={`flex-col flex-center py-1 px-1 transition-all active:scale-90 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
                 style={{ 
                   color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
-                  minHeight: '56px',
+                  height: '52px',
                   position: 'relative',
+                  justifyContent: 'center',
                 }}
               >
                 {isActive && (
-                  <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 24, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
+                  <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
                 )}
-                <Icon size={22} strokeWidth={isActive ? 2 : 1.5} />
-                <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{item.label}</span>
+                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <span className="mt-0.5 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{item.label}</span>
               </div>
             </Link>
           )
         })}
-        <button type="button" style={{ flex: 1, minHeight: '56px', width: '20%', position: 'relative' }} className={`flex-col flex-center p-3 transition-all active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+        <button type="button" style={{ flex: 1, height: '52px', width: '20%', position: 'relative' }} className={`flex-col flex-center py-1 px-1 transition-all active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen && (
-            <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 24, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
+            <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
           )}
-          {mobileMenuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={1.5} />}
-          <span className="mt-1 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
+          {mobileMenuOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={1.5} />}
+          <span className="mt-0.5 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
         </button>
       </nav>
 

@@ -493,7 +493,7 @@ export default function MissionControl() {
 
   return (
     <AppShell>
-      <div className="page-container relative max-w-[1600px] pb-10">
+      <div className="page-container relative max-w-[1600px] pb-2 lg:pb-10">
 
         <style dangerouslySetInnerHTML={{ __html: `
           :root { --arc-color: ${arcColor}; }

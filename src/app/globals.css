@@ -184,7 +184,7 @@
   --sidebar-width:     240px;
   --sidebar-collapsed:  64px;
   --topbar-height:      56px;
-  --mobile-nav-height:  64px;
+  --mobile-nav-height:  52px;
   --content-max-width:  1400px;
   --content-narrow:     800px;
 }
@@ -642,11 +642,10 @@ p:last-child {
   left: 0;
   right: 0;
   height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   z-index: var(--z-fixed);
-  padding: 0 var(--space-2) env(safe-area-inset-bottom, 0px);
+  padding: 0 var(--space-1) env(safe-area-inset-bottom, 0px) var(--space-1);
   align-items: center;
   justify-content: space-around;
   backdrop-filter: blur(var(--glass-blur));
@@ -3121,7 +3120,7 @@ select:focus {
 
   .main-content {
     padding: var(--space-4) var(--space-3);
-    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-4));
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-2));
   }
 
   .page-title {
@@ -3212,7 +3211,7 @@ select:focus {
   .main-content {
     grid-column: 1;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-4));
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + var(--space-2));
   }
 }
 
