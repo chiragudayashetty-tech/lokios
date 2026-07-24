@@ -209,6 +209,13 @@ export default function DailyOps() {
     })
   }
 
+  // Edit State
+  const [editingHabit, setEditingHabit] = useState(null)
+  const [showEditForm, setShowEditForm] = useState(false)
+  // Drag states
+  const [addFormDrag, setAddFormDrag] = useState({ x: 0, y: 0 })
+  const [editFormDrag, setEditFormDrag] = useState({ x: 0, y: 0 })
+
   const [editTitle, setEditTitle] = useState('')
   const [editCategory, setEditCategory] = useState('')
   const [editCustomCategory, setEditCustomCategory] = useState('')
