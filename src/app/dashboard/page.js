@@ -85,6 +85,8 @@ export default function MissionControl() {
   const [battles, setBattles] = useState([])
   const [weightData, setWeightData] = useState(null)
   const [latestDebrief, setLatestDebrief] = useState(null)
+  const [todayScreenTime, setTodayScreenTime] = useState(null)
+  const [selectedBattleIntel, setSelectedBattleIntel] = useState(null)
 
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -170,6 +172,18 @@ export default function MissionControl() {
         } else {
           setBattles(blueprints.battles.filter(b => b.status !== 'defeated'))
         }
+      }
+
+      // Fetch today's screen time log for live battle calculations
+      const { data: stLogs } = await sb
+        .from('screen_time_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', todayStr)
+        .limit(1)
+
+      if (stLogs && stLogs.length > 0) {
+        setTodayScreenTime(stLogs[0])
       }
 
       // Handle Strike Back Action for a War Room Battle
@@ -683,42 +697,105 @@ export default function MissionControl() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Swords size={14} className="text-danger animate-pulse" />
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-danger font-bold">War Room // Active Battles</span>
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-danger font-bold">War Room // Live Active Battles</span>
                   </div>
-                  <Link href="/profile" className="font-mono text-[9px] text-muted hover:text-danger flex items-center gap-1">
-                    WAR ROOM <ArrowUpRight size={10} />
-                  </Link>
+                  <span className="font-mono text-[8px] text-muted">CLICK FOR INTEL</span>
                 </div>
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                   {battles.map((battle, idx) => {
                     const Icon       = BATTLE_ICONS[battle.name] || Swords
-                    const hp         = battle.hp ?? 100
-                    const isCritical = hp > 75
                     const sevColor   = SEVERITY_COLORS[battle.severity] || 'var(--info)'
-                    const latestLog  = battle.combat_logs?.[0]
+
+                    // Calculate Live HP & Intel Factors for Today
+                    const liveIntel  = (function() {
+                      let baseHp = 50
+                      const succeeded = []
+                      const failed = []
+
+                      if (battle.linked_habits && battle.linked_habits.length > 0) {
+                        battle.linked_habits.forEach(habitId => {
+                          if (habitId === 'sys_screen_intel') return
+                          const habit = (habits || []).find(h => h.id === habitId)
+                          const log = (todayLogs || []).find(l => l.habit_id === habitId)
+                          const title = habit?.title || 'Linked Habit'
+
+                          if (log?.status === 'completed') {
+                            baseHp -= 15
+                            succeeded.push(`Completed habit "${title}" (-15 HP to threat)`)
+                          } else if (log?.status === 'failed') {
+                            baseHp += 20
+                            failed.push(`Failed habit "${title}" (+20 HP to threat)`)
+                          } else {
+                            baseHp += 5
+                            failed.push(`Pending habit "${title}" (+5 HP threat drift)`)
+                          }
+                        })
+                      }
+
+                      const bName = battle.name?.toLowerCase() || ''
+                      if (bName.includes('phone') || bName.includes('screen') || bName.includes('addiction') || bName.includes('execution')) {
+                        if (todayScreenTime) {
+                          const tHours = parseFloat(todayScreenTime.total_hours) || 0
+                          const dMins  = parseInt(todayScreenTime.doomscroll_minutes) || 0
+                          const sHours = parseFloat(todayScreenTime.streaming_hours) || 0
+
+                          if (tHours <= 6) {
+                            baseHp -= 10
+                            succeeded.push(`Screen Time (${tHours}h) ≤ 6h limit (-10 HP)`)
+                          } else {
+                            baseHp += 15
+                            failed.push(`Screen Time (${tHours}h) > 6h limit (+15 HP)`)
+                          }
+
+                          if (dMins <= 60) {
+                            baseHp -= 10
+                            succeeded.push(`Doomscroll (${dMins}m) ≤ 60m limit (-10 HP)`)
+                          } else {
+                            baseHp += 15
+                            failed.push(`Doomscroll (${dMins}m) > 60m limit (+15 HP)`)
+                          }
+
+                          if (sHours <= 2) {
+                            baseHp -= 5
+                            succeeded.push(`Streaming (${sHours}h) ≤ 2h limit (-5 HP)`)
+                          } else {
+                            baseHp += 10
+                            failed.push(`Streaming (${sHours}h) > 2h limit (+10 HP)`)
+                          }
+                        } else {
+                          failed.push(`No Screen Time logged today (+10 HP threat drift)`)
+                          baseHp += 10
+                        }
+                      }
+
+                      const hp = Math.max(0, Math.min(100, baseHp))
+                      return { hp, succeeded, failed }
+                    })()
+
+                    const hp = liveIntel.hp
+                    const isCritical = hp > 75
 
                     return (
-                      <div key={idx} className="p-3 bg-bg-primary border border-border-color rounded-sm">
+                      <div 
+                        key={idx} 
+                        onClick={() => setSelectedBattleIntel({ battle, intel: liveIntel })}
+                        className="p-3 bg-bg-primary border border-border-color rounded-sm cursor-pointer hover:border-danger transition-colors group"
+                      >
                         <div className="flex items-center gap-3 mb-2">
                           <div className="flex items-center justify-center shrink-0" style={{ width: 26, height: 26, background: `${sevColor}15`, border: `1px solid ${sevColor}50` }}>
                             <Icon size={13} style={{ color: sevColor }} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-display text-primary tracking-tight truncate" style={{ fontSize: '0.95rem' }}>{battle.name}</span>
+                              <span className="font-display text-primary tracking-tight truncate group-hover:text-danger transition-colors" style={{ fontSize: '0.95rem' }}>{battle.name}</span>
                               <span className="font-mono text-[10px] font-bold shrink-0" style={{ color: isCritical ? 'var(--danger)' : 'var(--warning)' }}>
                                 {hp} HP
                               </span>
                             </div>
-                            {latestLog && (
-                              <div className="font-mono text-[8px] text-muted truncate">
-                                {latestLog.action} ({latestLog.hpChange > 0 ? `+${latestLog.hpChange}` : latestLog.hpChange} HP)
-                              </div>
-                            )}
                           </div>
                         </div>
 
-                        <div className="mb-2" style={{ height: '4px', background: 'var(--bg-secondary)', overflow: 'hidden', borderRadius: '2px' }}>
+                        <div style={{ height: '4px', background: 'var(--bg-secondary)', overflow: 'hidden', borderRadius: '2px' }}>
                           <motion.div
                             style={{
                               height: '100%',
@@ -729,14 +806,6 @@ export default function MissionControl() {
                             transition={isCritical ? { repeat: Infinity, duration: 1.5 } : {}}
                           />
                         </div>
-
-                        <button 
-                          type="button" 
-                          onClick={() => window.__strikeBackBattle && window.__strikeBackBattle(battle.name)}
-                          className="btn btn-secondary btn-sm w-full font-mono text-[9px] py-1 flex items-center justify-center gap-1 hover:border-danger hover:text-danger touch-ripple"
-                        >
-                          <Zap size={10} className="text-amber" /> STRIKE BACK (-10 HP / +25 XP)
-                        </button>
                       </div>
                     )
                   })}
@@ -1039,6 +1108,92 @@ export default function MissionControl() {
           </div>
         </div>
       </div>
+      {/* COMBAT INTEL MODAL */}
+      <AnimatePresence>
+        {selectedBattleIntel && (
+          <div className="modal-overlay" onClick={() => setSelectedBattleIntel(null)}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-lg p-6 bg-tertiary border border-danger rounded-sm shadow-2xl relative m-4"
+            >
+              <button 
+                onClick={() => setSelectedBattleIntel(null)}
+                className="absolute top-4 right-4 text-muted hover:text-primary"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex items-center gap-2 text-danger mb-4 border-b border-border-color pb-3">
+                <Swords size={18} className="animate-pulse" />
+                <span className="font-display text-lg uppercase tracking-widest font-bold">
+                  COMBAT INTEL // {selectedBattleIntel.battle.name}
+                </span>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex justify-between font-mono text-xs mb-1">
+                  <span className="text-muted">LIVE REAL-TIME THREAT HP</span>
+                  <span className="font-bold text-danger">{selectedBattleIntel.intel.hp} / 100 HP</span>
+                </div>
+                <div className="h-3 w-full bg-bg-primary border border-border-color rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-danger transition-all duration-500" 
+                    style={{ width: `${selectedBattleIntel.intel.hp}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* WHY SUCCEEDED (GREEN) */}
+              <div className="mb-4 p-3 bg-success/5 border border-success/30 rounded-sm font-mono text-xs">
+                <div className="text-success font-bold uppercase tracking-widest mb-2 flex items-center gap-1">
+                  <Check size={14} /> WHY THREAT HP IS DECREASING (SUCCEEDED)
+                </div>
+                {selectedBattleIntel.intel.succeeded.length > 0 ? (
+                  <ul className="flex flex-col gap-1.5 text-secondary">
+                    {selectedBattleIntel.intel.succeeded.map((reason, i) => (
+                      <li key={i} className="flex items-start gap-1.5">
+                        <span className="text-success font-bold">•</span> {reason}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-muted text-[10px]">No victory factors achieved yet today.</div>
+                )}
+              </div>
+
+              {/* WHY FAILED (RED) */}
+              <div className="mb-6 p-3 bg-danger/5 border border-danger/30 rounded-sm font-mono text-xs">
+                <div className="text-danger font-bold uppercase tracking-widest mb-2 flex items-center gap-1">
+                  <AlertTriangle size={14} /> WHY THREAT HP IS INCREASING (FAILED / PENALTY)
+                </div>
+                {selectedBattleIntel.intel.failed.length > 0 ? (
+                  <ul className="flex flex-col gap-1.5 text-secondary">
+                    {selectedBattleIntel.intel.failed.map((reason, i) => (
+                      <li key={i} className="flex items-start gap-1.5">
+                        <span className="text-danger font-bold">•</span> {reason}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-success text-[10px]">Zero failure penalties active today! Perfect defense.</div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <button 
+                  onClick={() => setSelectedBattleIntel(null)}
+                  className="btn btn-primary btn-sm font-mono text-xs"
+                >
+                  CLOSE INTEL
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AppShell>
   )
 }
