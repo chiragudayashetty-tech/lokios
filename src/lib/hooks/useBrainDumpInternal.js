@@ -60,7 +60,7 @@ export function useBrainDumpInternal(user) {
 
       // Derive unique topics from existing data and merge with defaults
       const existingTopics = Array.from(
-        new Set((data || []).map(i => i.topic || i.type || 'General'))
+        new Set((data || []).map(i => i.topic || (i.type && i.type !== 'note' ? i.type : null) || 'General'))
       ).map(name => ({ name, color: getTopicColor(name) }))
 
       const merged = [...DEFAULT_TOPICS]
@@ -86,7 +86,7 @@ export function useBrainDumpInternal(user) {
         user_id: user.id,
         content,
         topic: topicName,
-        type: topicName,
+        type: 'note', // 'note' satisfies legacy Postgres check constraint 'brain_dump_type_check'
         status: 'inbox'
       }
 
@@ -112,6 +112,8 @@ export function useBrainDumpInternal(user) {
       }
 
       if (newItem) {
+        // Override returned item's topic in local state if database column wasn't updated yet
+        if (!newItem.topic) newItem.topic = topicName
         setItems(prev => [newItem, ...prev])
 
         // Ensure topic is saved in local list
@@ -255,12 +257,12 @@ export function useBrainDumpInternal(user) {
     try {
       const { error } = await supabase
         .from('brain_dump')
-        .update({ topic: newName, type: newName })
+        .update({ topic: newName })
         .eq('user_id', user.id)
-        .or(`topic.eq.${oldName},type.eq.${oldName}`)
+        .eq('topic', oldName)
       if (error) console.warn('Topic update warning:', error)
       setTopics(prev => prev.map(t => t.name === oldName ? { ...t, name: newName } : t))
-      setItems(prev => prev.map(i => (i.topic === oldName || i.type === oldName) ? { ...i, topic: newName, type: newName } : i))
+      setItems(prev => prev.map(i => i.topic === oldName ? { ...i, topic: newName } : i))
     } catch (err) {
       console.error('Error renaming topic:', err)
     }
@@ -272,12 +274,12 @@ export function useBrainDumpInternal(user) {
     try {
       const { error } = await supabase
         .from('brain_dump')
-        .update({ topic: 'General', type: 'General' })
+        .update({ topic: 'General' })
         .eq('user_id', user.id)
-        .or(`topic.eq.${topicName},type.eq.${topicName}`)
+        .eq('topic', topicName)
       if (error) console.warn('Topic delete warning:', error)
       setTopics(prev => prev.filter(t => t.name !== topicName))
-      setItems(prev => prev.map(i => (i.topic === topicName || i.type === topicName) ? { ...i, topic: 'General', type: 'General' } : i))
+      setItems(prev => prev.map(i => i.topic === topicName ? { ...i, topic: 'General' } : i))
     } catch (err) {
       console.error('Error deleting topic:', err)
     }
