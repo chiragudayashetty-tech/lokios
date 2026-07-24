@@ -12,7 +12,7 @@ import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, Che
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
-  const { mainQuest, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
+  const { mainQuest, mainQuests, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
   const { failMission, undoFailMission, deleteMission, tasks: { tasks, completeOperation, deleteTask } } = useOS()
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
@@ -35,7 +35,7 @@ export default function Missions() {
   }, [])
 
   const TABS = [
-    { id: 'main', label: 'PRIMARY', icon: Flag, items: mainQuest ? [mainQuest] : [] },
+    { id: 'main', label: 'PRIMARY', icon: Flag, items: mainQuests || (mainQuest ? [mainQuest] : []) },
     { id: 'side', label: 'SIDE OPS', icon: Target, items: sideQuests },
     { id: 'long', label: 'LONG RANGE', icon: Star, items: longTermGoals },
     { id: 'weekly', label: 'WEEKLY', icon: Clock, items: weeklyGoals },

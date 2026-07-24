@@ -43,9 +43,14 @@ export function useGoalsInternal(user) {
   }, [fetchGoals])
 
   // Grouped goal views
-  const mainQuest = useMemo(
-    () => goals.find((g) => g.type === 'main_quest' && g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed'),
+  const mainQuests = useMemo(
+    () => goals.filter((g) => g.type === 'main_quest' && g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed'),
     [goals]
+  )
+
+  const mainQuest = useMemo(
+    () => mainQuests[0] || null,
+    [mainQuests]
   )
 
   const sideQuests = useMemo(
@@ -345,6 +350,7 @@ export function useGoalsInternal(user) {
   return {
     goals,
     mainQuest,
+    mainQuests,
     sideQuests,
     longTermGoals,
     weeklyGoals,
