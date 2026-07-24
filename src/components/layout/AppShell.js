@@ -19,13 +19,13 @@ const NAV_ITEMS = [
   { href: '/goals', icon: Target, label: 'Missions' },
   { href: '/tasks', icon: CheckSquare, label: 'Operations' },
   { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
-  { href: '/journal', icon: BookOpen, label: 'Daily Journal' },
+  { href: '/journal', icon: BookOpen, label: 'Journal' },
   { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },
   { href: '/calendar', icon: CalendarDays, label: 'Calendar' },
-  { href: '/weekly-review', icon: ClipboardList, label: 'Weekly Review' },
+
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
   { href: '/xp', icon: Trophy, label: 'XP Metrics' },
-  { href: '/weight', icon: Scale, label: 'Body Recon' },
+  { href: '/weight', icon: Scale, label: 'Wellness' },
   { href: '/profile', icon: User, label: 'Operator Profile' }
 ]
 
