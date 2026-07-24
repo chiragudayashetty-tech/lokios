@@ -441,6 +441,7 @@ export default function OperatorDashboard() {
                     const isDefeated = hp <= 0
                     const isCritical = hp > 75
                     const borderColor = isDefeated ? 'var(--text-muted)' : sevColor
+                    const latestLogs = battle.combat_logs?.slice(0, 2) || []
 
                     return (
                       <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.95 }}
