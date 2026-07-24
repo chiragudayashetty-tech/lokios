@@ -40,6 +40,15 @@ const BATTLE_ICONS = {
   'Overthinking':          Brain,
 }
 
+const DEFAULT_BATTLES = [
+  { name: 'Phone Addiction', hp: 80, severity: 'high', notes: 'Primary discipline threat.', linked_habits: [] },
+  { name: 'Porn Consumption', hp: 90, severity: 'high', notes: 'Drain on discipline and self-respect.', linked_habits: [] },
+  { name: 'Inconsistent Execution', hp: 70, severity: 'high', notes: 'Starting strong, dropping off.', linked_habits: [] },
+  { name: 'Fear of Selling', hp: 75, severity: 'medium', notes: 'Hesitation to pitch or ask for money.', linked_habits: [] },
+  { name: 'Poor Sleep Discipline', hp: 85, severity: 'high', notes: 'Sleeping past 12 AM, waking up fatigued.', linked_habits: [] },
+  { name: 'Overthinking', hp: 65, severity: 'medium', notes: 'Analyzing instead of executing.', linked_habits: [] }
+]
+
 const SEVERITY_COLORS = {
   extreme: '#FF3B3B',
   high:    'var(--danger)',
@@ -117,62 +126,18 @@ export default function MissionControl() {
         .eq('user_id', user.id)
         .gte('created_at', thirtyDaysAgoStr)
 
-      // 1b. Fetch Active Battles (War Room) & recalculate HP daily
-      const { data: blueprints } = await sb
+      // 1b. Fetch Active Battles (War Room)
+      const { data: blueprintRows } = await sb
         .from('user_blueprints')
         .select('id, battles, last_evaluated_date')
         .eq('user_id', user.id)
-        .single()
-      if (blueprints?.battles) {
-        // Recalculate battle HP if not yet evaluated today
-        if (blueprints.last_evaluated_date !== todayStr) {
-          const yesterday = new Date()
-          yesterday.setDate(yesterday.getDate() - 1)
-          const yesterdayStr = getLocalDateStr(yesterday)
-          
-          const { data: yesterdayLogs } = await sb
-            .from('habit_logs')
-            .select('habit_id, status')
-            .eq('user_id', user.id)
-            .eq('date', yesterdayStr)
-          
-          const logsMap = new Map((yesterdayLogs || []).map(l => [l.habit_id, l.status]))
-          
-          let needsUpdate = false
-          const updatedBattles = blueprints.battles.map(battle => {
-            if (!battle.linked_habits || battle.linked_habits.length === 0) return battle
-            let hpChange = 0
-            battle.linked_habits.forEach(habitId => {
-              const status = logsMap.get(habitId) || 'none'
-              if (status === 'completed') {
-                hpChange -= 15 // damage to enemy
-              } else if (status !== 'blocked') {
-                hpChange += 20 // enemy heals
-              }
-            })
-            if (hpChange !== 0) {
-              needsUpdate = true
-              return { ...battle, hp: Math.max(0, Math.min(100, (battle.hp ?? 100) + hpChange)) }
-            }
-            return battle
-          })
-          
-          if (needsUpdate) {
-            await sb.from('user_blueprints')
-              .update({ battles: updatedBattles, last_evaluated_date: todayStr })
-              .eq('id', blueprints.id)
-            setBattles(updatedBattles.filter(b => b.status !== 'defeated'))
-          } else {
-            // Still update last_evaluated_date to prevent re-running
-            await sb.from('user_blueprints')
-              .update({ last_evaluated_date: todayStr })
-              .eq('id', blueprints.id)
-            setBattles(blueprints.battles.filter(b => b.status !== 'defeated'))
-          }
-        } else {
-          setBattles(blueprints.battles.filter(b => b.status !== 'defeated'))
-        }
-      }
+
+      const blueprints = blueprintRows?.[0]
+      const rawBattles = (blueprints?.battles && Array.isArray(blueprints.battles) && blueprints.battles.length > 0)
+        ? blueprints.battles
+        : DEFAULT_BATTLES
+
+      setBattles(rawBattles)
 
       // Fetch today's screen time log for live battle calculations
       const { data: stLogs } = await sb
