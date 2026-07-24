@@ -18,13 +18,26 @@ export const TOPIC_COLORS = [
   { name: 'Bronze', value: '#cd7f32' },
 ]
 
-const DEFAULT_TOPICS = [
+export const DEFAULT_TOPICS = [
   { name: 'General',       color: '#94a3b8' },
   { name: 'Startup Ideas', color: '#22d3ee' },
   { name: 'Business',      color: '#f59e0b' },
   { name: 'Health',        color: '#22c55e' },
   { name: 'Learning',      color: '#38bdf8' },
 ]
+
+export function getTopicColor(topicName) {
+  if (!topicName) return '#94a3b8'
+  const match = DEFAULT_TOPICS.find(t => t.name.toLowerCase() === topicName.toLowerCase())
+  if (match) return match.color
+
+  let hash = 0
+  for (let i = 0; i < topicName.length; i++) {
+    hash = topicName.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const idx = Math.abs(hash) % TOPIC_COLORS.length
+  return TOPIC_COLORS[idx].value
+}
 
 export function useBrainDumpInternal(user) {
   const [items, setItems]   = useState([])
@@ -47,10 +60,9 @@ export function useBrainDumpInternal(user) {
 
       // Derive unique topics from existing data and merge with defaults
       const existingTopics = Array.from(
-        new Map((data || []).map(i => [i.topic || 'General', i.topic_color || '#94a3b8'])).entries()
-      ).map(([name, color]) => ({ name, color }))
+        new Set((data || []).map(i => i.topic || i.type || 'General'))
+      ).map(name => ({ name, color: getTopicColor(name) }))
 
-      // Merge: defaults first, then any extra topics from DB
       const merged = [...DEFAULT_TOPICS]
       existingTopics.forEach(et => {
         if (!merged.find(m => m.name === et.name)) merged.push(et)
@@ -66,50 +78,102 @@ export function useBrainDumpInternal(user) {
   useEffect(() => { fetchItems() }, [fetchItems])
 
   // ── Add item ─────────────────────────────────────────────────────────────
-  const addItem = useCallback(async (content, topic = 'General', topicColor = '#94a3b8') => {
-    if (!user) return null
+  const addItem = useCallback(async (content, topic = 'General') => {
+    if (!user) return { error: 'User not authenticated' }
     try {
-      const { data: newItem, error } = await supabase
+      const topicName = topic || 'General'
+      const payload = {
+        user_id: user.id,
+        content,
+        topic: topicName,
+        type: topicName,
+        status: 'inbox'
+      }
+
+      let newItem = null
+      let { data, error } = await supabase
         .from('brain_dump')
-        .insert({ user_id: user.id, content, topic, topic_color: topicColor, status: 'inbox' })
-        .select().single()
-      if (error) throw error
-      setItems(prev => [newItem, ...prev])
+        .insert(payload)
+        .select()
+        .single()
 
-      // Ensure topic is saved in local list
-      setTopics(prev => prev.find(t => t.name === topic) ? prev : [...prev, { name: topic, color: topicColor }])
+      if (error) {
+        // Fallback if 'topic' column is not in DB yet
+        if (error.code === '42703' || error.message?.includes('topic')) {
+          delete payload.topic
+          const retry = await supabase.from('brain_dump').insert(payload).select().single()
+          if (retry.error) throw retry.error
+          newItem = retry.data
+        } else {
+          throw error
+        }
+      } else {
+        newItem = data
+      }
 
-      // Award XP
-      await supabase.rpc('award_xp', {
-        p_user_id: user.id,
-        p_amount: XP_REWARDS.brain_dump_capture || 5,
-        p_source_type: 'brain_dump',
-        p_source_id: newItem.id,
-        p_description: `Intel Drop: ${topic}`,
-        p_stat_category: 'discipline',
-      })
-      return newItem
+      if (newItem) {
+        setItems(prev => [newItem, ...prev])
+
+        // Ensure topic is saved in local list
+        setTopics(prev => prev.find(t => t.name === topicName) ? prev : [...prev, { name: topicName, color: getTopicColor(topicName) }])
+
+        // Award XP
+        try {
+          await supabase.rpc('award_xp', {
+            p_user_id: user.id,
+            p_amount: XP_REWARDS.brain_dump_capture || 5,
+            p_source_type: 'brain_dump',
+            p_source_id: newItem.id,
+            p_description: `Intel Drop: ${topicName}`,
+            p_stat_category: 'discipline',
+          })
+        } catch (xpErr) {
+          console.warn('XP award warning:', xpErr)
+        }
+      }
+
+      return { data: newItem }
     } catch (err) {
       console.error('Error adding brain dump item:', err)
-      return null
+      return { error: err }
     }
   }, [user])
 
   // ── Mark Done ────────────────────────────────────────────────────────────
   const doneItem = useCallback(async (id) => {
-    if (!user) return false
+    if (!user) return { error: 'User not authenticated' }
     try {
-      const { data: updated, error } = await supabase
+      let updated = null
+      let { data, error } = await supabase
         .from('brain_dump')
         .update({ status: 'done', done_at: new Date().toISOString() })
         .eq('id', id).eq('user_id', user.id)
         .select().single()
-      if (error) throw error
-      setItems(prev => prev.map(i => i.id === id ? updated : i))
-      return true
+
+      if (error) {
+        // Fallback for check constraint if 'done' is not yet in constraint
+        if (error.code === '23514' || error.message?.includes('brain_dump_status_check')) {
+          const retry = await supabase
+            .from('brain_dump')
+            .update({ status: 'organized' })
+            .eq('id', id).eq('user_id', user.id)
+            .select().single()
+          if (retry.error) throw retry.error
+          updated = retry.data
+        } else {
+          throw error
+        }
+      } else {
+        updated = data
+      }
+
+      if (updated) {
+        setItems(prev => prev.map(i => i.id === id ? updated : i))
+      }
+      return { data: updated }
     } catch (err) {
       console.error('Error marking done:', err)
-      return false
+      return { error: err }
     }
   }, [user])
 
@@ -185,19 +249,18 @@ export function useBrainDumpInternal(user) {
     }
   }, [user, items, doneItem])
 
-  // ── Rename topic (local only for now) ────────────────────────────────────
+  // ── Rename topic ─────────────────────────────────────────────────────────
   const renameTopic = useCallback(async (oldName, newName) => {
     if (!user || !newName.trim()) return
     try {
-      // Update all items with old topic name
       const { error } = await supabase
         .from('brain_dump')
-        .update({ topic: newName })
+        .update({ topic: newName, type: newName })
         .eq('user_id', user.id)
-        .eq('topic', oldName)
-      if (error) throw error
+        .or(`topic.eq.${oldName},type.eq.${oldName}`)
+      if (error) console.warn('Topic update warning:', error)
       setTopics(prev => prev.map(t => t.name === oldName ? { ...t, name: newName } : t))
-      setItems(prev => prev.map(i => i.topic === oldName ? { ...i, topic: newName } : i))
+      setItems(prev => prev.map(i => (i.topic === oldName || i.type === oldName) ? { ...i, topic: newName, type: newName } : i))
     } catch (err) {
       console.error('Error renaming topic:', err)
     }
@@ -207,15 +270,14 @@ export function useBrainDumpInternal(user) {
   const deleteTopic = useCallback(async (topicName) => {
     if (!user) return
     try {
-      // Move all items under this topic to 'General'
       const { error } = await supabase
         .from('brain_dump')
-        .update({ topic: 'General', topic_color: '#94a3b8' })
+        .update({ topic: 'General', type: 'General' })
         .eq('user_id', user.id)
-        .eq('topic', topicName)
-      if (error) throw error
+        .or(`topic.eq.${topicName},type.eq.${topicName}`)
+      if (error) console.warn('Topic delete warning:', error)
       setTopics(prev => prev.filter(t => t.name !== topicName))
-      setItems(prev => prev.map(i => i.topic === topicName ? { ...i, topic: 'General', topic_color: '#94a3b8' } : i))
+      setItems(prev => prev.map(i => (i.topic === topicName || i.type === topicName) ? { ...i, topic: 'General', type: 'General' } : i))
     } catch (err) {
       console.error('Error deleting topic:', err)
     }
@@ -225,7 +287,6 @@ export function useBrainDumpInternal(user) {
     items, topics, loading,
     addItem, doneItem, discardItem, restoreItem, deleteItem,
     convertToMission, renameTopic, deleteTopic,
-    // legacy compat
     organizeItem: doneItem,
   }
 }

@@ -1,17 +1,18 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import { useBrainDump } from '@/lib/hooks/useBrainDump'
-import { TOPIC_COLORS } from '@/lib/hooks/useBrainDumpInternal'
+import { TOPIC_COLORS, DEFAULT_TOPICS, getTopicColor } from '@/lib/hooks/useBrainDumpInternal'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Zap, CheckCircle2, Trash2, RotateCcw, Flag, ChevronDown,
+  Zap, CheckCircle2, Trash2, RotateCcw, ChevronDown,
   ChevronRight, Search, Plus, X, Pencil, Tag, Settings2, Target
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
+  if (!dateStr) return 'recently'
   const diff = Date.now() - new Date(dateStr).getTime()
   const m = Math.floor(diff / 60000)
   if (m < 1)  return 'just now'
@@ -21,19 +22,15 @@ function timeAgo(dateStr) {
   return `${Math.floor(h / 24)}d ago`
 }
 
-function getNextColor(topics) {
-  const used = topics.map(t => t.color)
-  return TOPIC_COLORS.find(c => !used.includes(c.value))?.value || TOPIC_COLORS[Math.floor(Math.random() * TOPIC_COLORS.length)].value
-}
-
 // ─── Topic Badge ──────────────────────────────────────────────────────────────
 function TopicBadge({ name, color }) {
+  const displayColor = color || getTopicColor(name)
   return (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm font-mono text-[9px] uppercase tracking-widest font-bold"
-      style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}
+      style={{ background: `${displayColor}20`, color: displayColor, border: `1px solid ${displayColor}40` }}
     >
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+      <span style={{ width: 5, height: 5, borderRadius: '50%', background: displayColor, display: 'inline-block', flexShrink: 0 }} />
       {name}
     </span>
   )
@@ -41,7 +38,8 @@ function TopicBadge({ name, color }) {
 
 // ─── Intel Card ───────────────────────────────────────────────────────────────
 function IntelCard({ item, onDone, onDiscard, onRestore, onDelete, onConvertMission, isInbox, isDone }) {
-  const color = item.topic_color || '#94a3b8'
+  const topicName = item.topic || item.type || 'General'
+  const color = getTopicColor(topicName)
   return (
     <motion.div
       layout
@@ -58,7 +56,7 @@ function IntelCard({ item, onDone, onDiscard, onRestore, onDelete, onConvertMiss
     >
       <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-2">
-          <TopicBadge name={item.topic || 'General'} color={color} />
+          <TopicBadge name={topicName} color={color} />
           <span className="font-mono text-[9px] text-muted shrink-0">{timeAgo(item.created_at)}</span>
         </div>
         <p className="font-mono text-sm text-primary leading-relaxed whitespace-pre-wrap">{item.content}</p>
@@ -126,17 +124,18 @@ function IntelCard({ item, onDone, onDiscard, onRestore, onDelete, onConvertMiss
 // ─── Topic Group ──────────────────────────────────────────────────────────────
 function TopicGroup({ topic, color, items, onDone, onDiscard, onRestore, onDelete, onConvertMission, isInbox, isDone }) {
   const [open, setOpen] = useState(true)
+  const displayColor = color || getTopicColor(topic)
   return (
     <div className="mb-4">
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-2 px-3 py-2 rounded-sm mb-2 transition-all hover:opacity-80"
-        style={{ background: `${color}15`, border: `1px solid ${color}30` }}
+        style={{ background: `${displayColor}15`, border: `1px solid ${displayColor}30` }}
       >
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-        <span className="font-mono text-xs uppercase tracking-widest font-bold" style={{ color }}>{topic}</span>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: displayColor, flexShrink: 0 }} />
+        <span className="font-mono text-xs uppercase tracking-widest font-bold" style={{ color: displayColor }}>{topic}</span>
         <span className="font-mono text-[9px] text-muted ml-1">({items.length})</span>
-        <span className="ml-auto" style={{ color }}>{open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</span>
+        <span className="ml-auto" style={{ color: displayColor }}>{open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</span>
       </button>
       <AnimatePresence>
         {open && (
@@ -178,7 +177,7 @@ function TopicManager({ topics, onRename, onDelete, onClose }) {
         <div className="p-4 flex flex-col gap-2 max-h-80 overflow-y-auto">
           {topics.filter(t => t.name !== 'General').map(topic => (
             <div key={topic.name} className="flex items-center gap-3 p-2 rounded-sm" style={{ border: '1px solid var(--border-color)' }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: topic.color, flexShrink: 0 }} />
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: getTopicColor(topic.name), flexShrink: 0 }} />
               {editing?.name === topic.name ? (
                 <input
                   autoFocus
@@ -217,31 +216,49 @@ export default function IntelDrop() {
     convertToMission, renameTopic, deleteTopic,
   } = useBrainDump()
 
-  const [content, setContent]           = useState('')
-  const [selectedTopic, setSelectedTopic] = useState(null) // null = not chosen yet
-  const [freeTypeTopic, setFreeTypeTopic] = useState('')
-  const [isFreeType, setIsFreeType]     = useState(false)
-  const [activeTab, setActiveTab]       = useState('inbox')
-  const [search, setSearch]             = useState('')
-  const [showTopicMgr, setShowTopicMgr] = useState(false)
+  const [content, setContent]               = useState('')
+  const [selectedTopic, setSelectedTopic]   = useState(DEFAULT_TOPICS[0])
+  const [freeTypeTopic, setFreeTypeTopic]   = useState('')
+  const [isFreeType, setIsFreeType]         = useState(false)
+  const [activeTab, setActiveTab]           = useState('inbox')
+  const [search, setSearch]                 = useState('')
+  const [showTopicMgr, setShowTopicMgr]     = useState(false)
+  const [saving, setSaving]                 = useState(false)
 
-  // Resolve the effective topic for submission
+  // Ensure default topic is selected when topics update
+  useEffect(() => {
+    if (!selectedTopic && topics && topics.length > 0) {
+      setSelectedTopic(topics[0])
+    }
+  }, [topics, selectedTopic])
+
+  // Resolve effective topic for submission
   const effectiveTopic = isFreeType
     ? freeTypeTopic.trim()
-    : selectedTopic?.name || ''
+    : (selectedTopic?.name || 'General')
 
-  const effectiveColor = isFreeType
-    ? (topics.find(t => t.name === freeTypeTopic.trim())?.color || getNextColor(topics))
-    : selectedTopic?.color || '#94a3b8'
+  const effectiveColor = getTopicColor(effectiveTopic)
 
-  const canSubmit = content.trim() && effectiveTopic
+  const canSubmit = content.trim().length > 0 && (!isFreeType || freeTypeTopic.trim().length > 0)
 
   const handleCapture = async (e) => {
-    e.preventDefault()
-    if (!canSubmit) return
-    await addItem(content.trim(), effectiveTopic, effectiveColor)
-    setContent('')
-    // keep topic selected for fast re-entry
+    if (e) e.preventDefault()
+    if (!canSubmit || saving) return
+    setSaving(true)
+    const topicToUse = effectiveTopic
+    const res = await addItem(content.trim(), topicToUse)
+    setSaving(false)
+
+    if (res?.error) {
+      alert(`Error capturing intel: ${res.error.message || JSON.stringify(res.error)}`)
+    } else {
+      setContent('')
+      if (isFreeType) {
+        setIsFreeType(false)
+        setFreeTypeTopic('')
+        setSelectedTopic({ name: topicToUse, color: getTopicColor(topicToUse) })
+      }
+    }
   }
 
   // Filter items by tab + search
@@ -250,11 +267,12 @@ export default function IntelDrop() {
     return items.filter(item => {
       const statusMatch =
         activeTab === 'inbox'     ? item.status === 'inbox' :
-        activeTab === 'done'      ? item.status === 'done' :
+        activeTab === 'done'      ? (item.status === 'done' || item.status === 'organized' || item.status === 'converted') :
         item.status === 'discarded'
       if (!statusMatch) return false
       if (!q) return true
-      return item.content.toLowerCase().includes(q) || (item.topic || '').toLowerCase().includes(q)
+      const topicName = item.topic || item.type || ''
+      return item.content.toLowerCase().includes(q) || topicName.toLowerCase().includes(q)
     })
   }, [items, activeTab, search])
 
@@ -262,8 +280,8 @@ export default function IntelDrop() {
   const grouped = useMemo(() => {
     const map = {}
     tabItems.forEach(item => {
-      const t = item.topic || 'General'
-      if (!map[t]) map[t] = { color: item.topic_color || '#94a3b8', items: [] }
+      const t = item.topic || item.type || 'General'
+      if (!map[t]) map[t] = { color: getTopicColor(t), items: [] }
       map[t].items.push(item)
     })
     return map
@@ -271,7 +289,7 @@ export default function IntelDrop() {
 
   const TABS = [
     { id: 'inbox', label: 'INBOX', count: items.filter(i => i.status === 'inbox').length },
-    { id: 'done',  label: 'DONE',  count: items.filter(i => i.status === 'done').length },
+    { id: 'done',  label: 'DONE',  count: items.filter(i => i.status === 'done' || i.status === 'organized' || i.status === 'converted').length },
     { id: 'discarded', label: 'DISCARDED', count: items.filter(i => i.status === 'discarded').length },
   ]
 
@@ -329,7 +347,16 @@ export default function IntelDrop() {
                 <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Topic</span>
                 <button
                   type="button"
-                  onClick={() => { setIsFreeType(v => !v); setFreeTypeTopic(''); setSelectedTopic(null) }}
+                  onClick={() => {
+                    if (isFreeType) {
+                      setIsFreeType(false)
+                      setFreeTypeTopic('')
+                      if (!selectedTopic && topics.length > 0) setSelectedTopic(topics[0])
+                    } else {
+                      setIsFreeType(true)
+                      setFreeTypeTopic('')
+                    }
+                  }}
                   className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-sm font-mono text-[9px] uppercase tracking-widest transition-all"
                   style={{
                     background: isFreeType ? '#f59e0b20' : 'var(--bg-primary)',
@@ -352,22 +379,27 @@ export default function IntelDrop() {
                 />
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {topics.map(topic => (
-                    <button
-                      key={topic.name}
-                      type="button"
-                      onClick={() => setSelectedTopic(topic)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm font-mono text-[10px] uppercase tracking-widest transition-all"
-                      style={{
-                        background: selectedTopic?.name === topic.name ? `${topic.color}25` : 'var(--bg-primary)',
-                        color: selectedTopic?.name === topic.name ? topic.color : 'var(--text-muted)',
-                        border: `1px solid ${selectedTopic?.name === topic.name ? topic.color : 'var(--border-color)'}`,
-                      }}
-                    >
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: topic.color, flexShrink: 0 }} />
-                      {topic.name}
-                    </button>
-                  ))}
+                  {topics.map(topic => {
+                    const isSelected = selectedTopic?.name === topic.name
+                    const color = getTopicColor(topic.name)
+                    return (
+                      <button
+                        key={topic.name}
+                        type="button"
+                        onClick={() => { setSelectedTopic(topic); setIsFreeType(false) }}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm font-mono text-[10px] uppercase tracking-widest transition-all cursor-pointer"
+                        style={{
+                          background: isSelected ? `${color}25` : 'var(--bg-primary)',
+                          color: isSelected ? color : 'var(--text-muted)',
+                          border: `1px solid ${isSelected ? color : 'var(--border-color)'}`,
+                          fontWeight: isSelected ? 700 : 400
+                        }}
+                      >
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                        {topic.name}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -378,17 +410,18 @@ export default function IntelDrop() {
               )}
               <button
                 type="submit"
-                disabled={!canSubmit}
+                disabled={!canSubmit || saving}
                 className="ml-auto flex items-center gap-2 px-4 py-2 font-mono text-xs uppercase tracking-widest rounded-sm transition-all"
                 style={{
                   background: canSubmit ? '#f59e0b' : 'var(--bg-primary)',
                   color: canSubmit ? '#000' : 'var(--text-muted)',
                   border: `1px solid ${canSubmit ? '#f59e0b' : 'var(--border-color)'}`,
-                  cursor: canSubmit ? 'pointer' : 'not-allowed',
+                  cursor: canSubmit && !saving ? 'pointer' : 'not-allowed',
                   fontWeight: 700,
+                  opacity: saving ? 0.7 : 1
                 }}
               >
-                <Zap size={13} /> TRANSMIT
+                <Zap size={13} /> {saving ? 'TRANSMITTING...' : 'TRANSMIT'}
               </button>
             </div>
           </form>
