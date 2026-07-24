@@ -6,7 +6,7 @@ import {
   Target, AlertTriangle, Zap, Swords, Flame, ChevronDown,
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
   Activity, Clock, Terminal, Ghost, Skull, ArrowUpRight, BarChart2,
-  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale
+  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale, X
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
