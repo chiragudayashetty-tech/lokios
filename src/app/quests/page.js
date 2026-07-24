@@ -5,8 +5,12 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf } from 'lucide-react'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Scale, Moon, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { createClient } from '@/lib/supabase/client'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
+import { getLocalDateStr } from '@/lib/utils/dates'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -30,12 +34,162 @@ export default function DailyOps() {
 
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', danger: false, onConfirm: null, onCancel: null, confirmText: 'CONFIRM' })
 
-  // Edit State
-  const [editingHabit, setEditingHabit] = useState(null)
-  const [showEditForm, setShowEditForm] = useState(false)
-  // Drag states
-  const [addFormDrag, setAddFormDrag] = useState({ x: 0, y: 0 })
-  const [editFormDrag, setEditFormDrag] = useState({ x: 0, y: 0 })
+  const { user } = useAuth()
+  const yesterdayDate = new Date()
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterdayStr = getLocalDateStr(yesterdayDate)
+  const todayStr = getLocalDateStr(new Date())
+
+  // Body Weight Widget State
+  const [weightKg, setWeightKg] = useState('')
+  const [weightLoggedToday, setWeightLoggedToday] = useState(false)
+  const [weightSaving, setWeightSaving] = useState(false)
+
+  // Sleep Tracker Widget State
+  const [sleepTargetDate, setSleepTargetDate] = useState(yesterdayStr)
+  const [bedtime, setBedtime] = useState('23:30')
+  const [wakeTime, setWakeTime] = useState('07:00')
+  const [sleepSaving, setSleepSaving] = useState(false)
+  const [sleepMsg, setSleepMsg] = useState('')
+
+  // Fetch today's weight log
+  useEffect(() => {
+    if (!user) return
+    const sb = createClient()
+    sb.from('weight_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('date', todayStr)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setWeightKg(String(data.weight_kg))
+          setWeightLoggedToday(true)
+        }
+      })
+  }, [user, todayStr])
+
+  // Calculate live sleep duration
+  const liveSleepDuration = useMemo(() => {
+    if (!bedtime || !wakeTime) return null
+    const [bH, bM] = bedtime.split(':').map(Number)
+    const [wH, wM] = wakeTime.split(':').map(Number)
+    let bedMins = bH * 60 + bM
+    let wakeMins = wH * 60 + wM
+    if (wakeMins <= bedMins) {
+      wakeMins += 24 * 60
+    }
+    const diffMins = wakeMins - bedMins
+    const hrs = Math.floor(diffMins / 60)
+    const mins = diffMins % 60
+    const totalHours = parseFloat((diffMins / 60).toFixed(1))
+    return { hrs, mins, totalHours, bedHour: bH }
+  }, [bedtime, wakeTime])
+
+  const handleSaveWeight = async () => {
+    if (!user || !weightKg) return
+    const w = parseFloat(weightKg)
+    if (isNaN(w) || w <= 0) return
+    setWeightSaving(true)
+    const sb = createClient()
+
+    const { error: wErr } = await sb.from('weight_logs').upsert({
+      user_id: user.id,
+      date: todayStr,
+      weight_kg: w
+    })
+
+    if (!wErr) {
+      if (!weightLoggedToday) {
+        await robustAwardXP(user.id, 25, 'Daily Weight Logged')
+        setWeightLoggedToday(true)
+      }
+    }
+    setWeightSaving(false)
+  }
+
+  const handleSaveSleep = async () => {
+    if (!user || !liveSleepDuration) return
+    setSleepSaving(true)
+    const sb = createClient()
+
+    const isHealthy = liveSleepDuration.totalHours >= 7.0 && (liveSleepDuration.bedHour >= 21 || liveSleepDuration.bedHour === 0 || liveSleepDuration.bedHour === 22 || liveSleepDuration.bedHour === 23)
+    const hpImpact = isHealthy ? -15 : +20
+    const xpAmount = isHealthy ? 30 : 0
+
+    // Save to sleep_logs table if available
+    await sb.from('sleep_logs').upsert({
+      user_id: user.id,
+      date: sleepTargetDate,
+      bedtime,
+      wake_time: wakeTime,
+      duration_hours: liveSleepDuration.totalHours,
+      status: isHealthy ? 'healthy' : 'deprived'
+    }).catch(() => {})
+
+    // Update War Room in user_blueprints
+    const { data: bp } = await sb.from('user_blueprints').select('*').eq('user_id', user.id).single()
+    if (bp && bp.battles) {
+      const updatedBattles = bp.battles.map(battle => {
+        const bName = battle.name?.toLowerCase() || ''
+        if (bName.includes('sleep') || bName.includes('rest') || bName.includes('discipline')) {
+          const oldHp = battle.hp ?? 100
+          const newHp = Math.max(0, Math.min(100, oldHp + hpImpact))
+          if (!battle.combat_logs) battle.combat_logs = []
+          battle.combat_logs.unshift({
+            date: todayStr,
+            action: isHealthy ? `🌙 Healthy Sleep logged (${liveSleepDuration.totalHours}h)` : `⚠️ Deprived Sleep logged (${liveSleepDuration.totalHours}h)`,
+            hpChange: hpImpact
+          })
+          return { ...battle, hp: newHp }
+        }
+        return battle
+      })
+      await sb.from('user_blueprints').update({ battles: updatedBattles }).eq('user_id', user.id)
+    }
+
+    if (xpAmount > 0) {
+      await robustAwardXP(user.id, xpAmount, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
+    }
+
+    setSleepMsg(isHealthy ? `✓ Healthy Sleep Logged! (-15 Threat HP / +30 XP)` : `⚠️ Sleep Logged (+20 Threat HP)`)
+    setSleepSaving(false)
+  }
+
+  const handleDropStaticSleepHabits = async () => {
+    const sleepHabits = habits.filter(h => {
+      const title = h.title?.toLowerCase() || ''
+      return title.includes('sleep') || title.includes('wake') || title.includes('bedtime')
+    })
+
+    if (sleepHabits.length === 0) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'NO STATIC SLEEP HABITS',
+        message: 'No active static sleep habits were found in your habit list.',
+        danger: false,
+        confirmText: 'OK',
+        onConfirm: () => setConfirmModal({ isOpen: false }),
+        onCancel: () => setConfirmModal({ isOpen: false })
+      })
+      return
+    }
+
+    setConfirmModal({
+      isOpen: true,
+      title: 'DROP STATIC SLEEP HABITS',
+      message: `Found ${sleepHabits.length} old static sleep habit(s): "${sleepHabits.map(h => h.title).join('", "')}". Archive them now and rely on the new Dynamic Sleep Tracker?`,
+      danger: true,
+      confirmText: 'ARCHIVE HABITS',
+      onConfirm: async () => {
+        for (const h of sleepHabits) {
+          await archiveHabit(h.id)
+        }
+        setConfirmModal({ isOpen: false })
+      },
+      onCancel: () => setConfirmModal({ isOpen: false })
+    })
+  }
 
   const [editTitle, setEditTitle] = useState('')
   const [editCategory, setEditCategory] = useState('')
@@ -63,8 +217,6 @@ export default function DailyOps() {
   const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth()
 
   const mobileDays = Array.from({ length: 7 }, (_, i) => mobileWeekStart + i).filter(d => d <= daysInMonth)
-  
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   const mobileDateStr = `${mobileSelectedDate.getFullYear()}-${String(mobileSelectedDate.getMonth() + 1).padStart(2, '0')}-${String(mobileSelectedDate.getDate()).padStart(2, '0')}`
   const isMobileToday = mobileDateStr === todayStr
 
@@ -319,6 +471,122 @@ export default function DailyOps() {
             <Plus size={16} /> ADD ROUTINE
           </button>
         </header>
+        {/* TOP WIDGETS: BODY WEIGHT & DYNAMIC SLEEP TRACKER */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          
+          {/* WIDGET 1: BODY WEIGHT ENTRY */}
+          <HudPanel glow className="p-4 border-amber">
+            <div className="flex items-center justify-between border-b border-border-color pb-2 mb-3">
+              <div className="flex items-center gap-2 text-amber">
+                <Scale size={16} />
+                <span className="font-display text-sm uppercase tracking-widest font-bold">BODY WEIGHT LOGGING</span>
+              </div>
+              <span className="font-mono text-[9px] text-amber bg-amber-subtle px-2 py-0.5 border border-amber-subtle">
+                {weightLoggedToday ? '✓ LOGGED TODAY (+25 XP)' : '+25 XP'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 relative">
+                <input 
+                  type="number" 
+                  step="0.1" 
+                  placeholder="e.g. 74.5"
+                  value={weightKg} 
+                  onChange={e => setWeightKg(e.target.value)}
+                  className="input font-mono text-sm pl-3 pr-10 py-1.5 w-full bg-bg-primary border border-border-color"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted">kg</span>
+              </div>
+
+              <button 
+                type="button" 
+                onClick={handleSaveWeight}
+                disabled={weightSaving || !weightKg}
+                className={`btn btn-sm font-mono text-xs px-4 whitespace-nowrap ${weightLoggedToday ? 'btn-ghost border-amber text-amber' : 'btn-primary bg-amber text-bg-primary'}`}
+              >
+                {weightSaving ? 'SAVING...' : weightLoggedToday ? 'UPDATE WEIGHT' : 'LOG WEIGHT'}
+              </button>
+            </div>
+          </HudPanel>
+
+          {/* WIDGET 2: DYNAMIC SLEEP TRACKER (OVERNIGHT & WAR ROOM SYNC) */}
+          <HudPanel glow className="p-4 border-info">
+            <div className="flex items-center justify-between border-b border-border-color pb-2 mb-3">
+              <div className="flex items-center gap-2 text-info">
+                <Moon size={16} />
+                <span className="font-display text-sm uppercase tracking-widest font-bold">DYNAMIC SLEEP TRACKER</span>
+              </div>
+              <button 
+                type="button"
+                onClick={handleDropStaticSleepHabits}
+                className="font-mono text-[9px] text-muted hover:text-danger flex items-center gap-1 uppercase"
+              >
+                <Trash2 size={10} /> Drop Static Habits
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 font-mono text-xs">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-[9px] text-muted block mb-1 uppercase">SLEEP PERIOD</label>
+                  <select 
+                    value={sleepTargetDate} 
+                    onChange={e => setSleepTargetDate(e.target.value)}
+                    className="select font-mono text-xs py-1 px-2 w-full bg-bg-primary border border-border-color"
+                  >
+                    <option value={yesterdayStr}>Last Night ({yesterdayStr})</option>
+                    <option value={todayStr}>Tonight ({todayStr})</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[9px] text-muted block mb-1 uppercase">BEDTIME</label>
+                  <input 
+                    type="time" 
+                    value={bedtime} 
+                    onChange={e => setBedtime(e.target.value)}
+                    className="input font-mono text-xs py-1 px-2 w-full bg-bg-primary border border-border-color"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[9px] text-muted block mb-1 uppercase">WAKE TIME</label>
+                  <input 
+                    type="time" 
+                    value={wakeTime} 
+                    onChange={e => setWakeTime(e.target.value)}
+                    className="input font-mono text-xs py-1 px-2 w-full bg-bg-primary border border-border-color"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-border-subtle">
+                <div className="flex items-center gap-2">
+                  <Clock size={12} className="text-info" />
+                  <span>TOTAL SLEEP: <strong className="text-primary">{liveSleepDuration ? `${liveSleepDuration.hrs}h ${liveSleepDuration.mins}m` : '--'}</strong></span>
+                </div>
+
+                <button 
+                  type="button" 
+                  onClick={handleSaveSleep}
+                  disabled={sleepSaving}
+                  className="btn btn-primary btn-sm font-mono text-xs py-1 px-3 bg-info text-bg-primary hover:bg-info-glow"
+                >
+                  {sleepSaving ? 'SAVING...' : 'SAVE SLEEP & WAR ROOM SYNC'}
+                </button>
+              </div>
+
+              {sleepMsg && (
+                <div className={`text-[10px] font-mono p-1.5 border rounded text-center ${sleepMsg.includes('✓') ? 'border-success text-success bg-success/5' : 'border-warning text-warning bg-warning/5'}`}>
+                  {sleepMsg}
+                </div>
+              )}
+            </div>
+          </HudPanel>
+
+        </div>
+
         {/* Top Stats Row — pushed to bottom on mobile via CSS order */}
         <div className="grid-2 gap-4 mb-6 quests-stats-row">
           {/* Today's Progress */}
