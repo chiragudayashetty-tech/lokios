@@ -60,7 +60,7 @@ export function useBrainDumpInternal(user) {
 
       // Derive unique topics from existing data and merge with defaults
       const existingTopics = Array.from(
-        new Set((data || []).map(i => i.topic || (i.type && i.type !== 'note' ? i.type : null) || 'General'))
+        new Set((data || []).map(i => i.topic || (i.type && !['note', 'thought', 'idea', 'task', 'goal', 'random'].includes(i.type) ? i.type : null) || 'General'))
       ).map(name => ({ name, color: getTopicColor(name) }))
 
       const merged = [...DEFAULT_TOPICS]
@@ -86,7 +86,7 @@ export function useBrainDumpInternal(user) {
         user_id: user.id,
         content,
         topic: topicName,
-        type: 'note', // 'note' satisfies legacy Postgres check constraint 'brain_dump_type_check'
+        type: 'note',
         status: 'inbox'
       }
 
@@ -98,12 +98,32 @@ export function useBrainDumpInternal(user) {
         .single()
 
       if (error) {
-        // Fallback if 'topic' column is not in DB yet
+        // Fallback 1: If 'topic' column is not in DB yet
         if (error.code === '42703' || error.message?.includes('topic')) {
           delete payload.topic
           const retry = await supabase.from('brain_dump').insert(payload).select().single()
           if (retry.error) throw retry.error
           newItem = retry.data
+        } 
+        // Fallback 2: If type check constraint fails ('brain_dump_type_check')
+        else if (error.code === '23514' || error.message?.includes('brain_dump_type_check')) {
+          const fallbackTypes = ['thought', 'idea', 'task', 'goal', 'random']
+          let success = false
+          for (const ft of fallbackTypes) {
+            payload.type = ft
+            const retry = await supabase.from('brain_dump').insert(payload).select().single()
+            if (!retry.error) {
+              newItem = retry.data
+              success = true
+              break
+            }
+          }
+          if (!success) {
+            delete payload.type
+            const retry = await supabase.from('brain_dump').insert(payload).select().single()
+            if (retry.error) throw retry.error
+            newItem = retry.data
+          }
         } else {
           throw error
         }
@@ -112,14 +132,10 @@ export function useBrainDumpInternal(user) {
       }
 
       if (newItem) {
-        // Override returned item's topic in local state if database column wasn't updated yet
         if (!newItem.topic) newItem.topic = topicName
         setItems(prev => [newItem, ...prev])
-
-        // Ensure topic is saved in local list
         setTopics(prev => prev.find(t => t.name === topicName) ? prev : [...prev, { name: topicName, color: getTopicColor(topicName) }])
 
-        // Award XP
         try {
           await supabase.rpc('award_xp', {
             p_user_id: user.id,
@@ -153,7 +169,6 @@ export function useBrainDumpInternal(user) {
         .select().single()
 
       if (error) {
-        // Fallback for check constraint if 'done' is not yet in constraint
         if (error.code === '23514' || error.message?.includes('brain_dump_status_check')) {
           const retry = await supabase
             .from('brain_dump')
@@ -242,7 +257,6 @@ export function useBrainDumpInternal(user) {
         .select().single()
       if (error) throw error
 
-      // Mark as done
       await doneItem(id)
       return { data }
     } catch (err) {
