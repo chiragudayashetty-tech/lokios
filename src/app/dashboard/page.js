@@ -83,6 +83,7 @@ export default function MissionControl() {
   const [xpTrajectory, setXpTrajectory] = useState([])
   const [battles, setBattles] = useState([])
   const [weightData, setWeightData] = useState(null)
+  const [latestDebrief, setLatestDebrief] = useState(null)
 
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -168,6 +169,19 @@ export default function MissionControl() {
         } else {
           setBattles(blueprints.battles.filter(b => b.status !== 'defeated'))
         }
+      }
+
+      // 1c. Fetch Latest Weekly Debrief (Work Log)
+      const { data: debriefLogs } = await sb
+        .from('work_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .ilike('title', 'Weekly Debrief%')
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (debriefLogs && debriefLogs.length > 0) {
+        setLatestDebrief(debriefLogs[0])
       }
         
       if (xpData) {
@@ -296,20 +310,49 @@ export default function MissionControl() {
 
   const flameColor = currentStreak >= 30 ? '#F59E0B' : currentStreak >= 7 ? '#f97316' : '#ef4444'
 
-  // Momentum Engine: -10 to +10 scale
-  // Streak contributes up to +4, win rate up to +4, weekly XP up to +2
-  const streakComponent = Math.min(4, (currentStreak / 14) * 4)
-  const winRateComponent = ((weeklyWinRate / 100) * 8) - 4 // 0% = -4, 50% = 0, 100% = +4
-  const xpComponent = Math.min(2, (xpThisWeek / 500) * 2)
-  const rawMomentum = streakComponent + winRateComponent + xpComponent
-  const momentumScore = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
-  const momentumColor = momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)'
-  const momentumText = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
+  const todayStr = getLocalDateStr(new Date())
+
+  // ── Dynamic Daily Ops Momentum Engine (-10 to +10) ────────────────────────
+  // 1. Habits Performance (Completed vs Failed Today)
+  const habitsCompletedToday = (todayLogs || []).filter(l => l.date === todayStr && l.status === 'completed').length
+  const habitsFailedToday    = (todayLogs || []).filter(l => l.date === todayStr && l.status === 'failed').length
+  const habitComponent       = (habitsCompletedToday * 1.5) - (habitsFailedToday * 1.5)
+
+  // 2. Operations / Tasks (Completed Today vs Overdue / Procrastinated)
+  const tasksCompletedToday  = (tasks || []).filter(t => t.status === 'completed' && t.completed_at?.startsWith(todayStr)).length
+  const tasksOverdue         = (tasks || []).filter(t => t.status === 'pending' && t.due_date && t.due_date < todayStr).length
+  const opsComponent         = (tasksCompletedToday * 1.0) - (tasksOverdue * 1.0)
+
+  // 3. Missions / Goals (Completed vs Stalled / Overdue)
+  const missionsCompleted    = (sideQuests || []).filter(g => g.status === 'completed').length
+  const missionsStalled      = (sideQuests || []).filter(g => g.status !== 'completed' && g.deadline && g.deadline < todayStr).length
+  const missionsComponent    = (missionsCompleted * 2.0) - (missionsStalled * 1.5)
+
+  // 4. Streak & Weekly Win Rate Inertia
+  const streakComponent      = currentStreak >= 14 ? 3.0 : currentStreak >= 7 ? 2.0 : currentStreak >= 1 ? 1.0 : 0.0
+  const winRateComponent     = weeklyWinRate >= 80 ? 3.0 : weeklyWinRate >= 60 ? 1.5 : weeklyWinRate >= 40 ? 0.0 : -3.0
+
+  const rawMomentum          = habitComponent + opsComponent + missionsComponent + streakComponent + winRateComponent
+  const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
+  const momentumColor        = momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)'
+  const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
+
+  // Parse Next Week Priorities from latest Weekly Debrief log
+  const nextWeekPriorities = (function() {
+    if (!latestDebrief?.description) return null
+    const text = latestDebrief.description
+    const marker = '### Priorities for Next Week'
+    const idx = text.indexOf(marker)
+    if (idx === -1) return null
+    let section = text.substring(idx + marker.length).trim()
+    const nextHeaderIdx = section.indexOf('### ')
+    if (nextHeaderIdx !== -1) section = section.substring(0, nextHeaderIdx).trim()
+    return section
+  })()
 
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
 
-  const todayStr = getLocalDateStr(new Date())
   const lastJournalDate = entries?.[0]?.date
   const journalDoneToday = lastJournalDate === todayStr
 
@@ -634,6 +677,32 @@ export default function MissionControl() {
               </div>
             )}
 
+            {/* NEXT WEEK PRIORITIES // WEEKLY DEBRIEF WIDGET */}
+            <div className="dashboard-card border-info-subtle" style={{ borderLeft: '3px solid var(--info)' }}>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <ClipboardList size={12} color="var(--info)" />
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-info">Next Week Priorities // Weekly Debrief</span>
+                </div>
+                <Link href="/weekly-review" className="font-mono text-[9px] text-muted hover:text-info flex items-center gap-1">
+                  DEBRIEF <ArrowUpRight size={10} />
+                </Link>
+              </div>
+
+              {nextWeekPriorities ? (
+                <div className="font-mono text-xs text-primary whitespace-pre-wrap leading-relaxed p-3 rounded-sm bg-bg-primary border border-border-color">
+                  {nextWeekPriorities}
+                </div>
+              ) : (
+                <div className="p-4 text-center rounded-sm bg-bg-primary border border-dashed border-border-color">
+                  <p className="font-mono text-[10px] text-muted mb-2">No priorities logged for this cycle.</p>
+                  <Link href="/weekly-review" className="btn btn-secondary btn-sm font-mono text-[9px]">
+                    INITIALIZE WEEKLY DEBRIEF
+                  </Link>
+                </div>
+              )}
+            </div>
+
             {/* 30-DAY XP TRAJECTORY GRAPH */}
             <div className="dashboard-card" style={{ paddingBottom: '8px' }}>
               <div className="flex items-center gap-2 mb-3">
@@ -721,16 +790,24 @@ export default function MissionControl() {
                   >
                     <div className="flex flex-col gap-2 font-mono text-[9px] text-muted tracking-widest">
                       <div className="flex justify-between">
-                        <span>STREAK ({currentStreak}d)</span> 
+                        <span>HABITS TODAY ({habitsCompletedToday}/{habitsCompletedToday + habitsFailedToday})</span> 
+                        <span className="font-bold" style={{ color: habitComponent > 0 ? 'var(--success)' : habitComponent < 0 ? 'var(--danger)' : 'inherit' }}>{habitComponent > 0 ? '+' : ''}{habitComponent.toFixed(1)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>OPERATIONS ({tasksCompletedToday} done / {tasksOverdue} overdue)</span> 
+                        <span className="font-bold" style={{ color: opsComponent > 0 ? 'var(--success)' : opsComponent < 0 ? 'var(--danger)' : 'inherit' }}>{opsComponent > 0 ? '+' : ''}{opsComponent.toFixed(1)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>MISSIONS ({missionsCompleted} done / {missionsStalled} stalled)</span> 
+                        <span className="font-bold" style={{ color: missionsComponent > 0 ? 'var(--success)' : missionsComponent < 0 ? 'var(--danger)' : 'inherit' }}>{missionsComponent > 0 ? '+' : ''}{missionsComponent.toFixed(1)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>STREAK INERTIA ({currentStreak}d)</span> 
                         <span className="font-bold" style={{ color: streakComponent > 0 ? 'var(--success)' : 'inherit' }}>{streakComponent > 0 ? '+' : ''}{streakComponent.toFixed(1)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>WIN RATE ({weeklyWinRate}%)</span> 
+                        <span>WEEKLY WIN RATE ({weeklyWinRate}%)</span> 
                         <span className="font-bold" style={{ color: winRateComponent > 0 ? 'var(--success)' : winRateComponent < 0 ? 'var(--danger)' : 'inherit' }}>{winRateComponent > 0 ? '+' : ''}{winRateComponent.toFixed(1)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>WEEKLY XP ({xpThisWeek})</span> 
-                        <span className="font-bold" style={{ color: xpComponent > 0 ? 'var(--info)' : 'inherit' }}>{xpComponent > 0 ? '+' : ''}{xpComponent.toFixed(1)}</span>
                       </div>
                     </div>
                   </motion.div>
