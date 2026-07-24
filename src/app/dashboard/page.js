@@ -346,22 +346,42 @@ export default function MissionControl() {
         .order('date', { ascending: false })
 
       if (stHistory && stHistory.length > 0) {
-        const avgScreen = (stHistory.reduce((s, l) => s + (parseFloat(l.total_hours) || 0), 0) / stHistory.length).toFixed(1)
+        const avgScreenNum = stHistory.reduce((s, l) => s + (parseFloat(l.total_hours) || 0), 0) / stHistory.length
+        const avgScreen = avgScreenNum.toFixed(1)
         const avgDoom = Math.round(stHistory.reduce((s, l) => s + (parseInt(l.doomscroll_minutes) || 0), 0) / stHistory.length)
+        const avgStreamingNum = stHistory.reduce((s, l) => s + (parseFloat(l.streaming_hours) || 0), 0) / stHistory.length
+        const avgStreaming = avgStreamingNum.toFixed(1)
         const todaySt = stHistory.find(l => l.date === todayStr)
-        // Addiction Score: higher = worse (0-100)
-        let addScore = 0
-        if (parseFloat(avgScreen) > 8) addScore += 35
-        else if (parseFloat(avgScreen) > 6) addScore += 20
-        else if (parseFloat(avgScreen) > 4) addScore += 10
-        if (avgDoom > 120) addScore += 35
-        else if (avgDoom > 60) addScore += 20
-        else if (avgDoom > 30) addScore += 10
         const daysClean = stHistory.filter(l => (parseFloat(l.total_hours) || 0) <= 4 && (parseInt(l.doomscroll_minutes) || 0) <= 30).length
-        addScore = Math.min(100, addScore)
-        setAddictionData({ avgScreen, avgDoom, daysClean, addScore, todaySt, total: stHistory.length })
+
+        // Addiction / Threat Score (0 to 100). Higher = worse.
+        let addScore = 0
+        // Factor 1: 7d avg screen time (target <= 4h)
+        if (avgScreenNum > 8) addScore += 35
+        else if (avgScreenNum > 6) addScore += 25
+        else if (avgScreenNum > 4) addScore += 15
+
+        // Factor 2: 7d avg doomscroll (target <= 30m)
+        if (avgDoom > 120) addScore += 35
+        else if (avgDoom > 60) addScore += 25
+        else if (avgDoom > 30) addScore += 15
+
+        // Factor 3: Today's screen time (target <= 4h)
+        if (!todaySt) addScore += 15
+        else if ((parseFloat(todaySt.total_hours) || 0) > 6) addScore += 25
+        else if ((parseFloat(todaySt.total_hours) || 0) > 4) addScore += 15
+
+        // Factor 4: Clean days in last 7 (target >= 5)
+        if (daysClean < 3) addScore += 20
+        else if (daysClean < 5) addScore += 10
+
+        // Factor 5: Streaming avg (target <= 2h)
+        if (avgStreamingNum > 2) addScore += 10
+
+        addScore = Math.min(100, Math.max(0, addScore))
+        setAddictionData({ avgScreen, avgDoom, avgStreaming, daysClean, addScore, todaySt, total: stHistory.length })
       } else {
-        setAddictionData({ avgScreen: '—', avgDoom: 0, daysClean: 0, addScore: 40, todaySt: null, total: 0 })
+        setAddictionData({ avgScreen: '—', avgDoom: 0, avgStreaming: '0', daysClean: 0, addScore: 50, todaySt: null, total: 0 })
       }
     }
     fetchMetrics()
@@ -1177,7 +1197,7 @@ export default function MissionControl() {
                           { label: `7-day avg doomscroll: ${addictionData.avgDoom}m (target ≤30m)`, ok: addictionData.avgDoom <= 30 },
                           { label: `Today logged: ${addictionData.todaySt ? addictionData.todaySt.total_hours + 'h' : 'not logged'}`, ok: !!addictionData.todaySt && (parseFloat(addictionData.todaySt.total_hours) || 0) <= 4 },
                           { label: `Clean days in last 7: ${addictionData.daysClean} (target ≥5)`, ok: addictionData.daysClean >= 5 },
-                          { label: `Streaming avg: ${addictionData.todaySt ? addictionData.todaySt.streaming_hours + 'h' : '?'}h (target ≤2h)`, ok: addictionData.todaySt ? (parseFloat(addictionData.todaySt.streaming_hours) || 0) <= 2 : false },
+                          { label: `Streaming avg: ${addictionData.avgStreaming || '0'}h (target ≤2h)`, ok: parseFloat(addictionData.avgStreaming || 0) <= 2 },
                         ].map((f, i) => (
                           <div key={i} className="flex items-center gap-2">
                             <span style={{ color: f.ok ? 'var(--success)' : 'var(--danger)' }}>{f.ok ? '✓' : '✗'}</span>
