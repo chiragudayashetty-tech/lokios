@@ -11,6 +11,7 @@ import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, 
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
+import NotificationControl from '@/components/ui/NotificationControl'
 
 // ── DEFAULT BLUEPRINT DATA ──
 const DEFAULT_BLUEPRINT = {
@@ -580,8 +581,10 @@ export default function OperatorDashboard() {
             </HudPanel>
           </div>
 
-          {/* ── COLUMN 3: INTEL ── */}
+          {/* ── COLUMN 3: INTEL & SYSTEM SENTINELS ── */}
           <div className="flex flex-col gap-6">
+            <NotificationControl />
+
             <HudPanel className="border-success" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
               <div className="flex items-center gap-2 mb-4 text-success border-b border-border-color pb-2">
                 <Shield size={16} /> <span className="font-display text-lg uppercase tracking-widest">KNOWN ADVANTAGES</span>

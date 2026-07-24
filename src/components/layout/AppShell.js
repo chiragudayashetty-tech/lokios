@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import LokiAI from '@/components/LokiAI'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
+import { initBackgroundReminders } from '@/lib/utils/notifications'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Command Center' },
@@ -44,59 +45,10 @@ export default function AppShell({ children }) {
     return () => window.removeEventListener('keydown', handleEsc)
   }, [])
 
-  // NOTIFICATION MANAGER
+  // NOTIFICATION MANAGER & BACKGROUND SCHEDULER
   useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return
-
-    const requestPerms = async () => {
-      if (Notification.permission === 'default') {
-        await Notification.requestPermission()
-      }
-    }
-    requestPerms()
-
-    const checkAlarms = () => {
-      if (Notification.permission !== 'granted') return
-      
-      const now = new Date()
-      const hours = now.getHours()
-      const minutes = now.getMinutes()
-      const dateStr = now.toDateString()
-
-      // 9:00 AM Morning Briefing
-      if (hours === 9 && minutes === 0) {
-        const key = `notif_morning_${dateStr}`
-        if (!localStorage.getItem(key)) {
-          const dueTasks = todayTasks?.length || 0
-          new Notification('Morning Briefing', {
-            body: `Operator, you have ${dueTasks} Operations and ${habits?.length || 0} Daily Routines to secure today.`,
-            icon: '/icons/icon-192.png'
-          })
-          localStorage.setItem(key, 'true')
-        }
-      }
-
-      // 8:00 PM Evening Warning
-      if (hours === 20 && minutes === 0) {
-        const key = `notif_evening_${dateStr}`
-        if (!localStorage.getItem(key)) {
-          const incompleteHabits = (habits?.length || 0) - (todayLogs?.filter(l => l.status === 'completed')?.length || 0)
-          if (incompleteHabits > 0) {
-            new Notification('Evening Warning', {
-              body: `Midnight approaches. You still have ${incompleteHabits} routines unmarked. Secure them to protect your XP.`,
-              icon: '/icons/icon-192.png'
-            })
-          }
-          localStorage.setItem(key, 'true')
-        }
-      }
-    }
-
-    const interval = setInterval(checkAlarms, 60000) // Check every minute
-    checkAlarms() // Check immediately on mount
-
-    return () => clearInterval(interval)
-  }, [todayTasks, habits, todayLogs])
+    initBackgroundReminders()
+  }, [])
 
   // PWA INSTALL BANNER LOGIC
   const [showPwaInstall, setShowPwaInstall] = useState(false)
