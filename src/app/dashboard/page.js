@@ -96,6 +96,9 @@ export default function MissionControl() {
   const [latestDebrief, setLatestDebrief] = useState(null)
   const [todayScreenTime, setTodayScreenTime] = useState(null)
   const [selectedBattleIntel, setSelectedBattleIntel] = useState(null)
+  const [sleepData, setSleepData] = useState(null)
+  const [addictionData, setAddictionData] = useState(null)
+  const [expandedWidget, setExpandedWidget] = useState(null) // 'sleep' | 'addiction'
 
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -308,6 +311,57 @@ export default function MissionControl() {
             loggedToday: !!todayLog
           })
         }
+      }
+
+      // ── Sleep Sentinel Widget ──
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      const { data: sleepLogs } = await sb.from('sleep_logs')
+        .select('*').eq('user_id', user.id)
+        .gte('date', getLocalDateStr(sevenDaysAgo))
+        .order('date', { ascending: false })
+
+      if (sleepLogs && sleepLogs.length > 0) {
+        const last = sleepLogs[0]
+        const healthy = sleepLogs.filter(l => l.status === 'healthy').length
+        const streak = (() => { let s = 0; for (const l of sleepLogs) { if (l.status === 'healthy') s++; else break; } return s })()
+        // Threat score: 0 = no threat, 100 = critical
+        let threat = 0
+        sleepLogs.slice(0, 3).forEach(l => { if (l.status !== 'healthy') threat += 25 })
+        if (last.status !== 'healthy') threat += 25
+        const [bH, bM] = (last.bedtime || '00:00').split(':').map(Number)
+        if (bH >= 0 && bH < 6) threat += 10 // slept after midnight
+        if (parseFloat(last.duration_hours) > 10) threat += 10 // over-slept
+        threat = Math.min(100, threat)
+        setSleepData({ last, healthy, streak, threat, total: sleepLogs.length })
+      } else {
+        setSleepData({ last: null, healthy: 0, streak: 0, threat: 50, total: 0 })
+      }
+
+      // ── Digital Addiction Widget ──
+      const sevenDaysAgoStr = getLocalDateStr(sevenDaysAgo)
+      const { data: stHistory } = await sb.from('screen_time_logs')
+        .select('*').eq('user_id', user.id)
+        .gte('date', sevenDaysAgoStr)
+        .order('date', { ascending: false })
+
+      if (stHistory && stHistory.length > 0) {
+        const avgScreen = (stHistory.reduce((s, l) => s + (parseFloat(l.total_hours) || 0), 0) / stHistory.length).toFixed(1)
+        const avgDoom = Math.round(stHistory.reduce((s, l) => s + (parseInt(l.doomscroll_minutes) || 0), 0) / stHistory.length)
+        const todaySt = stHistory.find(l => l.date === todayStr)
+        // Addiction Score: higher = worse (0-100)
+        let addScore = 0
+        if (parseFloat(avgScreen) > 8) addScore += 35
+        else if (parseFloat(avgScreen) > 6) addScore += 20
+        else if (parseFloat(avgScreen) > 4) addScore += 10
+        if (avgDoom > 120) addScore += 35
+        else if (avgDoom > 60) addScore += 20
+        else if (avgDoom > 30) addScore += 10
+        const daysClean = stHistory.filter(l => (parseFloat(l.total_hours) || 0) <= 4 && (parseInt(l.doomscroll_minutes) || 0) <= 30).length
+        addScore = Math.min(100, addScore)
+        setAddictionData({ avgScreen, avgDoom, daysClean, addScore, todaySt, total: stHistory.length })
+      } else {
+        setAddictionData({ avgScreen: '—', avgDoom: 0, daysClean: 0, addScore: 40, todaySt: null, total: 0 })
       }
     }
     fetchMetrics()
@@ -975,6 +1029,169 @@ export default function MissionControl() {
                   </div>
                 </div>
               </Link>
+            )}
+
+            {/* ── SLEEP SENTINEL WIDGET ── */}
+            {sleepData !== null && (
+              <div
+                className="dashboard-card cursor-pointer transition-colors hover:border-primary"
+                style={{ borderLeft: `3px solid ${sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)'}` }}
+                onClick={() => setExpandedWidget(expandedWidget === 'sleep' ? null : 'sleep')}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <Moon size={10} style={{ color: sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)' }} />
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Sleep Sentinel</span>
+                  </div>
+                  <span className="font-mono text-[8px] font-bold" style={{ color: sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)' }}>
+                    {sleepData.threat >= 60 ? '⚠ THREAT' : sleepData.threat >= 30 ? 'MONITOR' : '✓ STABLE'}
+                  </span>
+                </div>
+
+                <div className="flex items-end justify-between mb-3">
+                  <div>
+                    <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.8rem', color: sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)' }}>
+                      {sleepData.threat}
+                      <span className="font-mono text-[9px] text-muted ml-1">/ 100</span>
+                    </div>
+                    <div className="font-mono text-[8px] text-muted uppercase mt-1">Threat Score</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono text-[10px] font-bold text-primary">{sleepData.streak}d <span className="text-muted font-normal">streak</span></div>
+                    <div className="font-mono text-[8px] text-muted mt-0.5">{sleepData.healthy}/{sleepData.total} healthy</div>
+                  </div>
+                </div>
+
+                {/* Threat bar */}
+                <div style={{ height: '3px', background: 'var(--bg-primary)', overflow: 'hidden', marginBottom: '8px' }}>
+                  <motion.div
+                    style={{ height: '100%', background: sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)' }}
+                    initial={{ width: 0 }} animate={{ width: `${sleepData.threat}%` }} transition={{ duration: 1, ease: 'easeOut' }}
+                  />
+                </div>
+
+                {/* Last night pill */}
+                {sleepData.last && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-[8px] text-muted">Last night:</span>
+                    <span className="font-mono text-[8px] font-bold" style={{ color: sleepData.last.status === 'healthy' ? 'var(--success)' : 'var(--danger)' }}>
+                      {sleepData.last.bedtime || '?'} → {sleepData.last.wake_time || '?'}
+                    </span>
+                    <span className="font-mono text-[8px] font-bold" style={{ color: sleepData.last.status === 'healthy' ? 'var(--success)' : 'var(--danger)' }}>
+                      {sleepData.last.duration_hours ? `${sleepData.last.duration_hours}h` : ''}
+                    </span>
+                    <span className="ml-auto font-mono text-[8px] px-1.5 py-0.5" style={{ background: sleepData.last.status === 'healthy' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: sleepData.last.status === 'healthy' ? 'var(--success)' : 'var(--danger)' }}>
+                      {sleepData.last.status === 'healthy' ? '✓ CLEAN' : '✗ MISSED'}
+                    </span>
+                  </div>
+                )}
+
+                <AnimatePresence>
+                  {expandedWidget === 'sleep' && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+                      <div className="flex flex-col gap-1.5 font-mono text-[9px]">
+                        <div className="text-muted uppercase tracking-widest mb-1">INTEL BREAKDOWN</div>
+                        {[
+                          { label: 'Target: Sleep before 12 AM', ok: sleepData.last ? (() => { const h = parseInt((sleepData.last.bedtime || '23:00').split(':')[0]); return h >= 20 && h <= 23 })() : false },
+                          { label: 'Target: Wake before 9 AM', ok: sleepData.last ? parseInt((sleepData.last.wake_time || '09:00').split(':')[0]) < 9 : false },
+                          { label: 'Target: Duration 6–10h', ok: sleepData.last ? parseFloat(sleepData.last.duration_hours || 0) >= 6 && parseFloat(sleepData.last.duration_hours || 0) <= 10 : false },
+                          { label: `Clean streak: ${sleepData.streak} nights`, ok: sleepData.streak >= 3 },
+                          { label: `7-day compliance: ${sleepData.healthy}/${sleepData.total}`, ok: sleepData.healthy >= sleepData.total * 0.7 },
+                        ].map((f, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span style={{ color: f.ok ? 'var(--success)' : 'var(--danger)' }}>{f.ok ? '✓' : '✗'}</span>
+                            <span className="text-secondary">{f.label}</span>
+                          </div>
+                        ))}
+                        <div className="mt-2 pt-2" style={{ borderTop: '1px dashed var(--border-color)' }}>
+                          <div className="text-muted">Tonight's directive: In bed by 23:45 · Up by 08:30</div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* ── DIGITAL ADDICTION WIDGET ── */}
+            {addictionData !== null && (
+              <div
+                className="dashboard-card cursor-pointer transition-colors hover:border-primary"
+                style={{ borderLeft: `3px solid ${addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)'}` }}
+                onClick={() => setExpandedWidget(expandedWidget === 'addiction' ? null : 'addiction')}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <Smartphone size={10} style={{ color: addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)' }} />
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Digital Addiction</span>
+                  </div>
+                  <span className="font-mono text-[8px] font-bold" style={{ color: addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)' }}>
+                    {addictionData.addScore >= 55 ? '⚠ HOOKED' : addictionData.addScore >= 30 ? 'DRIFTING' : '✓ CLEAN'}
+                  </span>
+                </div>
+
+                <div className="flex items-end justify-between mb-3">
+                  <div>
+                    <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.8rem', color: addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)' }}>
+                      {addictionData.addScore}
+                      <span className="font-mono text-[9px] text-muted ml-1">/ 100</span>
+                    </div>
+                    <div className="font-mono text-[8px] text-muted uppercase mt-1">Addiction Score</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono text-[10px] font-bold text-primary">{addictionData.avgScreen}h <span className="text-muted font-normal">avg/day</span></div>
+                    <div className="font-mono text-[8px] text-muted mt-0.5">{addictionData.daysClean}d clean (7d)</div>
+                  </div>
+                </div>
+
+                {/* Addiction bar */}
+                <div style={{ height: '3px', background: 'var(--bg-primary)', overflow: 'hidden', marginBottom: '8px' }}>
+                  <motion.div
+                    style={{ height: '100%', background: addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)' }}
+                    initial={{ width: 0 }} animate={{ width: `${addictionData.addScore}%` }} transition={{ duration: 1, ease: 'easeOut' }}
+                  />
+                </div>
+
+                {/* Doomscroll meter */}
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[8px] text-muted">Doomscroll 7d avg:</span>
+                  <span className="font-mono text-[9px] font-bold" style={{ color: addictionData.avgDoom > 60 ? 'var(--danger)' : addictionData.avgDoom > 30 ? 'var(--warning)' : 'var(--success)' }}>
+                    {addictionData.avgDoom}m
+                  </span>
+                  {addictionData.todaySt && (
+                    <span className="ml-auto font-mono text-[8px] px-1.5 py-0.5" style={{ background: (parseFloat(addictionData.todaySt.total_hours) || 0) <= 4 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: (parseFloat(addictionData.todaySt.total_hours) || 0) <= 4 ? 'var(--success)' : 'var(--danger)' }}>
+                      Today: {addictionData.todaySt.total_hours || '?'}h
+                    </span>
+                  )}
+                </div>
+
+                <AnimatePresence>
+                  {expandedWidget === 'addiction' && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+                      <div className="flex flex-col gap-1.5 font-mono text-[9px]">
+                        <div className="text-muted uppercase tracking-widest mb-1">INTEL BREAKDOWN</div>
+                        {[
+                          { label: `7-day avg screen time: ${addictionData.avgScreen}h (target ≤4h)`, ok: parseFloat(addictionData.avgScreen) <= 4 },
+                          { label: `7-day avg doomscroll: ${addictionData.avgDoom}m (target ≤30m)`, ok: addictionData.avgDoom <= 30 },
+                          { label: `Today logged: ${addictionData.todaySt ? addictionData.todaySt.total_hours + 'h' : 'not logged'}`, ok: !!addictionData.todaySt && (parseFloat(addictionData.todaySt.total_hours) || 0) <= 4 },
+                          { label: `Clean days in last 7: ${addictionData.daysClean} (target ≥5)`, ok: addictionData.daysClean >= 5 },
+                          { label: `Streaming avg: ${addictionData.todaySt ? addictionData.todaySt.streaming_hours + 'h' : '?'}h (target ≤2h)`, ok: addictionData.todaySt ? (parseFloat(addictionData.todaySt.streaming_hours) || 0) <= 2 : false },
+                        ].map((f, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span style={{ color: f.ok ? 'var(--success)' : 'var(--danger)' }}>{f.ok ? '✓' : '✗'}</span>
+                            <span className="text-secondary">{f.label}</span>
+                          </div>
+                        ))}
+                        <div className="mt-2 pt-2" style={{ borderTop: '1px dashed var(--border-color)' }}>
+                          <div className="text-muted">Today's directive: ≤4h screen · ≤30m doom · ≤2h streaming</div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
 
             {/* DAY PRESSURE CLOCK */}
