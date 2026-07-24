@@ -15,6 +15,7 @@ import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { RANK_CONFIG } from '@/lib/constants'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
@@ -169,6 +170,47 @@ export default function MissionControl() {
         } else {
           setBattles(blueprints.battles.filter(b => b.status !== 'defeated'))
         }
+      }
+
+      // Handle Strike Back Action for a War Room Battle
+      window.__strikeBackBattle = async (battleName) => {
+        const { data: blueprints } = await sb
+          .from('user_blueprints')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+
+        if (!blueprints || !blueprints.battles) return
+
+        const updatedBattles = [...blueprints.battles]
+        const idx = updatedBattles.findIndex(b => b.name === battleName)
+        if (idx === -1) return
+
+        const target = updatedBattles[idx]
+        const oldHp = target.hp ?? 100
+        const newHp = Math.max(0, oldHp - 10)
+        target.hp = newHp
+
+        if (!target.combat_logs) target.combat_logs = []
+        target.combat_logs.unshift({
+          date: getLocalDateStr(new Date()),
+          action: '⚡ STRIKE BACK EXECUTED',
+          hpChange: -10
+        })
+
+        let xpAward = 25
+        if (newHp === 0 && oldHp > 0) {
+          target.status = 'defeated'
+          xpAward = 200
+        }
+
+        await sb
+          .from('user_blueprints')
+          .update({ battles: updatedBattles })
+          .eq('user_id', user.id)
+
+        await robustAwardXP(user.id, xpAward, `War Room Strike Back: ${target.name}`)
+        setBattles(updatedBattles.filter(b => b.status !== 'defeated'))
       }
 
       // 1c. Fetch Latest Weekly Debrief (Work Log)
@@ -638,9 +680,14 @@ export default function MissionControl() {
             {/* ACTIVE BATTLES (War Room Widget) */}
             {battles.length > 0 && (
               <div className="dashboard-card border-danger-subtle" style={{ borderLeft: '3px solid var(--danger)' }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <Swords size={12} color="var(--danger)" />
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-danger">War Room // Active Battles</span>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Swords size={14} className="text-danger animate-pulse" />
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-danger font-bold">War Room // Active Battles</span>
+                  </div>
+                  <Link href="/profile" className="font-mono text-[9px] text-muted hover:text-danger flex items-center gap-1">
+                    WAR ROOM <ArrowUpRight size={10} />
+                  </Link>
                 </div>
                 <div className="flex flex-col gap-4">
                   {battles.map((battle, idx) => {
@@ -648,18 +695,30 @@ export default function MissionControl() {
                     const hp         = battle.hp ?? 100
                     const isCritical = hp > 75
                     const sevColor   = SEVERITY_COLORS[battle.severity] || 'var(--info)'
+                    const latestLog  = battle.combat_logs?.[0]
+
                     return (
-                      <div key={idx}>
+                      <div key={idx} className="p-3 bg-bg-primary border border-border-color rounded-sm">
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="flex items-center justify-center" style={{ width: 24, height: 24, background: `${sevColor}15`, border: `1px solid ${sevColor}50` }}>
-                            <Icon size={12} style={{ color: sevColor }} />
+                          <div className="flex items-center justify-center shrink-0" style={{ width: 26, height: 26, background: `${sevColor}15`, border: `1px solid ${sevColor}50` }}>
+                            <Icon size={13} style={{ color: sevColor }} />
                           </div>
-                          <span className="font-display text-primary tracking-tight flex-1 truncate" style={{ fontSize: '1rem' }}>{battle.name}</span>
-                          <span className="font-mono text-[10px] font-bold" style={{ color: isCritical ? 'var(--danger)' : 'var(--warning)' }}>
-                            {hp} HP
-                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-display text-primary tracking-tight truncate" style={{ fontSize: '0.95rem' }}>{battle.name}</span>
+                              <span className="font-mono text-[10px] font-bold shrink-0" style={{ color: isCritical ? 'var(--danger)' : 'var(--warning)' }}>
+                                {hp} HP
+                              </span>
+                            </div>
+                            {latestLog && (
+                              <div className="font-mono text-[8px] text-muted truncate">
+                                {latestLog.action} ({latestLog.hpChange > 0 ? `+${latestLog.hpChange}` : latestLog.hpChange} HP)
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ height: '3px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+
+                        <div className="mb-2" style={{ height: '4px', background: 'var(--bg-secondary)', overflow: 'hidden', borderRadius: '2px' }}>
                           <motion.div
                             style={{
                               height: '100%',
@@ -670,6 +729,14 @@ export default function MissionControl() {
                             transition={isCritical ? { repeat: Infinity, duration: 1.5 } : {}}
                           />
                         </div>
+
+                        <button 
+                          type="button" 
+                          onClick={() => window.__strikeBackBattle && window.__strikeBackBattle(battle.name)}
+                          className="btn btn-secondary btn-sm w-full font-mono text-[9px] py-1 flex items-center justify-center gap-1 hover:border-danger hover:text-danger touch-ripple"
+                        >
+                          <Zap size={10} className="text-amber" /> STRIKE BACK (-10 HP / +25 XP)
+                        </button>
                       </div>
                     )
                   })}

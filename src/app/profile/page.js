@@ -9,6 +9,8 @@ import { useHabits } from '@/lib/hooks/useHabits'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, Search, Calendar, Flame, Lock, Unlock, Play, Pause, AlertTriangle, ChevronRight, X, Edit2, Trash2, Plus, Smartphone, Settings, BarChart2, Briefcase, Heart, BookOpen, User as UserIcon, LogOut, Sun, Moon, Cpu, Coffee, Activity, ArrowRight, ShieldAlert, Navigation, Layers, Link as LinkIcon, Database, ArrowUpCircle, Eye, Skull, Rocket, Sparkles, Dumbbell, Swords } from 'lucide-react'
 import { QUEST_CATEGORIES } from '@/lib/constants'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
+import { getLocalDateStr } from '@/lib/utils/dates'
 
 // ── DEFAULT BLUEPRINT DATA ──
 const DEFAULT_BLUEPRINT = {
@@ -91,6 +93,39 @@ export default function OperatorDashboard() {
       setBattles(DEFAULT_BATTLES) // Fallback if no blueprint
     }
     setLoading(false)
+  }
+
+  const handleStrikeBack = async (idx) => {
+    if (!user) return
+    const updated = [...battles]
+    const target = updated[idx]
+    if (!target) return
+
+    const oldHp = target.hp ?? 100
+    const newHp = Math.max(0, oldHp - 10)
+    target.hp = newHp
+
+    if (!target.combat_logs) target.combat_logs = []
+    target.combat_logs.unshift({
+      date: getLocalDateStr(new Date()),
+      action: '⚡ STRIKE BACK EXECUTED',
+      hpChange: -10
+    })
+
+    let xpAward = 25
+    if (newHp === 0 && oldHp > 0) {
+      xpAward = 200
+    }
+
+    setBattles(updated)
+
+    const supabase = createClient()
+    await supabase
+      .from('user_blueprints')
+      .update({ battles: updated })
+      .eq('user_id', user.id)
+
+    await robustAwardXP(user.id, xpAward, `War Room Strike Back: ${target.name}`)
   }
 
   const handleSave = async () => {
@@ -277,9 +312,13 @@ export default function OperatorDashboard() {
           {/* ── COLUMN 2: WAR ROOM / BATTLES ── */}
           <div className="flex flex-col gap-6">
             <HudPanel glow className="border-danger" style={{ clipPath: 'polygon(0 15px, 15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
-              <div className="flex items-center justify-between mb-6 border-b border-danger-subtle pb-3">
+              <div className="flex items-center justify-between mb-4 border-b border-danger-subtle pb-3">
                 <div className="flex items-center gap-2 text-danger">
-                  <Swords size={20} /> <span className="font-display text-xl uppercase tracking-widest font-bold">WAR ROOM</span>
+                  <Swords size={20} className="animate-pulse" /> 
+                  <div>
+                    <span className="font-display text-xl uppercase tracking-widest font-bold block">WAR ROOM</span>
+                    <span className="font-mono text-[9px] text-muted uppercase">Tactical Threat Mitigation & Counter-Measures</span>
+                  </div>
                 </div>
                 {editMode && (
                   <button className="btn btn-ghost btn-sm text-danger hover:bg-danger-subtle flex items-center gap-1" onClick={() => setShowAddBattle(true)}>
@@ -288,11 +327,28 @@ export default function OperatorDashboard() {
                 )}
               </div>
 
+              {/* Threat Status Summary Bar */}
+              <div className="grid grid-cols-3 gap-2 mb-4 p-2 bg-bg-primary border border-border-color rounded-sm font-mono text-[9px] text-center">
+                <div>
+                  <div className="text-muted uppercase">ACTIVE</div>
+                  <div className="font-bold text-amber">{battles.filter(b => b.hp > 0).length}</div>
+                </div>
+                <div>
+                  <div className="text-muted uppercase">CRITICAL (&gt;75 HP)</div>
+                  <div className="font-bold text-danger">{battles.filter(b => b.hp > 75).length}</div>
+                </div>
+                <div>
+                  <div className="text-muted uppercase">SUPPRESSED</div>
+                  <div className="font-bold text-success">{battles.filter(b => b.hp <= 40).length}</div>
+                </div>
+              </div>
+
               <div className="flex flex-col gap-4">
                 <AnimatePresence>
                   {battles.map((battle, idx) => {
                     const isDefeated = battle.hp <= 0;
                     const borderColor = isDefeated ? 'var(--text-muted)' : SEVERITY_COLORS[battle.severity];
+                    const latestLogs = battle.combat_logs?.slice(0, 2) || [];
                     
                     return (
                       <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.95 }}
@@ -306,7 +362,7 @@ export default function OperatorDashboard() {
                             </h3>
                             <span className="font-mono text-[9px] px-2 py-0.5 border uppercase mt-1 inline-block"
                               style={{ color: borderColor, borderColor: borderColor }}>
-                              {isDefeated ? 'DEFEATED' : `THREAT: ${battle.severity}`}
+                              {isDefeated ? 'DEFEATED / SUPPRESSED' : `THREAT: ${battle.severity.toUpperCase()}`}
                             </span>
                           </div>
                           
@@ -321,9 +377,9 @@ export default function OperatorDashboard() {
                           <div className="mt-4 mb-3">
                             <div className="flex justify-between font-mono text-[10px] mb-1">
                               <span className="text-muted">BATTLE HP (HEALS ON FAILURE, TAKES DAMAGE ON SUCCESS)</span>
-                              <span className={battle.hp > 80 ? 'text-danger' : 'text-amber'}>{battle.hp} / 100</span>
+                              <span className={battle.hp > 80 ? 'text-danger font-bold' : 'text-amber font-bold'}>{battle.hp} / 100 HP</span>
                             </div>
-                            <div className="h-2 w-full bg-bg-primary border border-border-color rounded-full overflow-hidden">
+                            <div className="h-2 w-full bg-bg-primary border border-border-color rounded-full overflow-hidden mb-3">
                               <motion.div 
                                 className={`h-full ${battle.hp > 80 ? 'bg-danger' : 'bg-amber'}`} 
                                 initial={{ width: 0 }} 
@@ -331,6 +387,28 @@ export default function OperatorDashboard() {
                                 transition={{ duration: 1 }}
                               />
                             </div>
+
+                            <button 
+                              type="button" 
+                              onClick={() => handleStrikeBack(idx)}
+                              className="btn btn-secondary btn-sm w-full font-mono text-[10px] py-1.5 flex items-center justify-center gap-1.5 hover:border-danger hover:text-danger touch-ripple"
+                            >
+                              <Zap size={12} className="text-amber" /> STRIKE BACK (-10 HP / +25 XP)
+                            </button>
+                          </div>
+                        )}
+
+                        {latestLogs.length > 0 && (
+                          <div className="mt-3 pt-2 border-t border-border-subtle font-mono text-[9px]">
+                            <div className="text-muted mb-1 flex items-center gap-1"><Activity size={10} className="text-info" /> COMBAT HISTORY</div>
+                            {latestLogs.map((log, lIdx) => (
+                              <div key={lIdx} className="flex justify-between text-secondary py-0.5">
+                                <span>{log.date}: {log.action}</span>
+                                <span className={log.hpChange < 0 ? 'text-success font-bold' : 'text-danger font-bold'}>
+                                  {log.hpChange > 0 ? `+${log.hpChange}` : log.hpChange} HP
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         )}
 
