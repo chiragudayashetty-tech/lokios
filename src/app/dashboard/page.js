@@ -324,18 +324,34 @@ export default function MissionControl() {
       if (sleepLogs && sleepLogs.length > 0) {
         const last = sleepLogs[0]
         const healthy = sleepLogs.filter(l => l.status === 'healthy').length
+        const total = sleepLogs.length
         const streak = (() => { let s = 0; for (const l of sleepLogs) { if (l.status === 'healthy') s++; else break; } return s })()
+
+        // Check 5 specific criteria
+        const [bH] = (last.bedtime || '23:00').split(':').map(Number)
+        const [wH, wM] = (last.wake_time || '08:00').split(':').map(Number)
+        const dur = parseFloat(last.duration_hours || 0)
+
+        const isBedtimeOk = bH >= 20 && bH <= 23
+        const isWakeOk = wH < 9 || (wH === 9 && wM === 0)
+        const isDurationOk = dur >= 6.0 && dur <= 10.0
+        const isStreakOk = streak >= 3
+        const isComplianceOk = (healthy / total) >= 0.7
+
         // Threat score: 0 = no threat, 100 = critical
         let threat = 0
-        sleepLogs.slice(0, 3).forEach(l => { if (l.status !== 'healthy') threat += 25 })
-        if (last.status !== 'healthy') threat += 25
-        const [bH, bM] = (last.bedtime || '00:00').split(':').map(Number)
-        if (bH >= 0 && bH < 6) threat += 10 // slept after midnight
-        if (parseFloat(last.duration_hours) > 10) threat += 10 // over-slept
-        threat = Math.min(100, threat)
-        setSleepData({ last, healthy, streak, threat, total: sleepLogs.length })
+        if (!isBedtimeOk) threat += 20
+        if (!isWakeOk) threat += 20
+        if (!isDurationOk) threat += 20
+        if (streak === 0) threat += 20
+        else if (!isStreakOk) threat += 10
+        if ((healthy / total) < 0.5) threat += 20
+        else if (!isComplianceOk) threat += 10
+
+        threat = Math.min(100, Math.max(0, threat))
+        setSleepData({ last, healthy, streak, threat, total, isBedtimeOk, isWakeOk, isDurationOk, isStreakOk, isComplianceOk })
       } else {
-        setSleepData({ last: null, healthy: 0, streak: 0, threat: 50, total: 0 })
+        setSleepData({ last: null, healthy: 0, streak: 0, threat: 50, total: 0, isBedtimeOk: false, isWakeOk: false, isDurationOk: false, isStreakOk: false, isComplianceOk: false })
       }
 
       // ── Digital Addiction Widget ──
@@ -1113,11 +1129,11 @@ export default function MissionControl() {
                       <div className="flex flex-col gap-1.5 font-mono text-[9px]">
                         <div className="text-muted uppercase tracking-widest mb-1">INTEL BREAKDOWN</div>
                         {[
-                          { label: 'Target: Sleep before 12 AM', ok: sleepData.last ? (() => { const h = parseInt((sleepData.last.bedtime || '23:00').split(':')[0]); return h >= 20 && h <= 23 })() : false },
-                          { label: 'Target: Wake before 9 AM', ok: sleepData.last ? parseInt((sleepData.last.wake_time || '09:00').split(':')[0]) < 9 : false },
-                          { label: 'Target: Duration 6–10h', ok: sleepData.last ? parseFloat(sleepData.last.duration_hours || 0) >= 6 && parseFloat(sleepData.last.duration_hours || 0) <= 10 : false },
-                          { label: `Clean streak: ${sleepData.streak} nights`, ok: sleepData.streak >= 3 },
-                          { label: `7-day compliance: ${sleepData.healthy}/${sleepData.total}`, ok: sleepData.healthy >= sleepData.total * 0.7 },
+                          { label: `Target: Sleep before 12 AM ${sleepData.last?.bedtime ? `(${sleepData.last.bedtime})` : ''}`, ok: sleepData.isBedtimeOk },
+                          { label: `Target: Wake before 9 AM ${sleepData.last?.wake_time ? `(${sleepData.last.wake_time})` : ''}`, ok: sleepData.isWakeOk },
+                          { label: `Target: Duration 6–10h ${sleepData.last?.duration_hours ? `(${sleepData.last.duration_hours}h)` : ''}`, ok: sleepData.isDurationOk },
+                          { label: `Clean streak: ${sleepData.streak} night(s) (target ≥3)`, ok: sleepData.isStreakOk },
+                          { label: `7-day compliance: ${sleepData.healthy}/${sleepData.total} healthy (target ≥70%)`, ok: sleepData.isComplianceOk },
                         ].map((f, i) => (
                           <div key={i} className="flex items-center gap-2">
                             <span style={{ color: f.ok ? 'var(--success)' : 'var(--danger)' }}>{f.ok ? '✓' : '✗'}</span>
