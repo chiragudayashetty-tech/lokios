@@ -52,6 +52,29 @@ export default function Missions() {
     EXTREME: { label: 'EXTREME', color: 'var(--danger)' }
   }
 
+  // Helper to group archived goals by Month -> Subheading (Category)
+  const groupArchivedGoals = (goalList) => {
+    const monthsMap = {}
+    goalList.forEach(goal => {
+      const dateStr = goal.completed_at || goal.updated_at || goal.deadline || goal.created_at
+      const d = dateStr ? new Date(dateStr) : new Date()
+      const monthLabel = d.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
+      
+      let cat = goal.category || goal.type || 'GENERAL'
+      if (cat === 'personal') cat = 'PERSONAL MISSION'
+      else if (cat === 'business') cat = 'BEYOND TATVA (BUSINESS)'
+      else if (cat === 'health') cat = 'FITNESS / HEALTH'
+      else if (cat === 'learning') cat = 'LEARNING / SKILLS'
+      else cat = String(cat).toUpperCase().replace('_', ' ')
+
+      if (!monthsMap[monthLabel]) monthsMap[monthLabel] = { total: 0, subheadings: {} }
+      monthsMap[monthLabel].total++
+      if (!monthsMap[monthLabel].subheadings[cat]) monthsMap[monthLabel].subheadings[cat] = []
+      monthsMap[monthLabel].subheadings[cat].push(goal)
+    })
+    return monthsMap
+  }
+
   const handleAdd = async (e) => {
     e.preventDefault()
     if (formData.type === 'long_term' && !formData.deadline) {
@@ -138,6 +161,233 @@ export default function Missions() {
     })
   }
 
+  const renderGoalCard = (goal, i = 0) => {
+    const isPaused = goal.status === 'paused'
+    const isEditing = editingId === goal.id
+    const isExpanded = expandedGoal === goal.id
+    
+    const linkedTasks = tasks.filter(t => t.goal_id === goal.id)
+    const hasLinked = linkedTasks.length > 0
+    const completedLinked = linkedTasks.filter(t => t.status === 'completed').length
+    const displayProgress = hasLinked ? Math.round((completedLinked / linkedTasks.length) * 100) : (goal.progress || 0)
+
+    return (
+      <motion.div
+        key={goal.id}
+        layout
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ delay: i * 0.05 }}
+      >
+        <HudPanel glow={activeTab === 'main' && !isPaused} scanLine={activeTab === 'main' && !isPaused} className={isPaused ? 'opacity-50' : ''}>
+          
+          {/* Header */}
+          <div className="flex-between mb-4 border-b border-border-color pb-2">
+            <div className="flex items-center gap-2">
+              <span className={`badge ${isPaused ? 'bg-secondary text-muted' : 'badge-amber'}`}>
+                {isPaused ? 'PAUSED' : goal.type.replace('_', ' ')}
+              </span>
+              {goal.status !== 'completed' && (
+                <span className="font-mono text-[9px] px-2 py-0.5 border uppercase" 
+                      style={{ color: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color, borderColor: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color }}>
+                  {DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].label}
+                </span>
+              )}
+              {goal.completed_at && (
+                <span className="font-mono text-[9px] text-success font-bold flex items-center gap-1">
+                  COMPLETED {new Date(goal.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
+            </div>
+            
+            {/* Controls */}
+            <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+              <button onClick={() => togglePauseGoal(goal.id, goal.status)} className="btn btn-ghost p-1.5" title={isPaused ? 'Resume' : 'Pause'}>
+                {isPaused ? <Play size={14} /> : <Pause size={14} />}
+              </button>
+              <button onClick={() => startEdit(goal)} className="btn btn-ghost p-1.5 hover:text-amber" title="Edit">
+                <Edit2 size={14} />
+              </button>
+              <button onClick={() => handleDeleteGoal(goal)} className="btn btn-ghost p-1.5 hover:text-danger" title="Delete">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+          
+          {/* Content */}
+          {isEditing ? (
+            <div className="flex-col gap-3 mb-4">
+              <input type="text" className="input font-mono text-lg py-1 border-amber" value={editForm.title} onChange={e=>setEditForm({...editForm, title: e.target.value})} />
+              <textarea className="textarea font-mono text-sm py-1" value={editForm.description} onChange={e=>setEditForm({...editForm, description: e.target.value})} rows={2} />
+              <div className="grid-2 gap-3 mt-3">
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">DIFFICULTY</label>
+                  <select className="select font-mono text-sm py-1" value={editForm.difficulty} onChange={e=>setEditForm({...editForm, difficulty: e.target.value})}>
+                    <option value="EASY">EASY</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="HARD">HARD</option>
+                    <option value="EXTREME">EXTREME</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">DEADLINE</label>
+                  <input type="date" className="input font-mono text-sm py-1" value={editForm.deadline || ''} onChange={e=>setEditForm({...editForm, deadline: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid-2 gap-3 mt-3">
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">CLASSIFICATION</label>
+                  <select className="select font-mono text-sm py-1" value={editForm.type} onChange={e=>setEditForm({...editForm, type: e.target.value})}>
+                    <option value="main_quest">PRIMARY MISSION</option>
+                    <option value="side_quest">SIDE OPERATION</option>
+                    <option value="weekly">WEEKLY TARGET</option>
+                    <option value="long_term">LONG RANGE GOAL</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
+                  <select className="select font-mono text-sm py-1" value={editForm.category} onChange={e=>setEditForm({...editForm, category: e.target.value})}>
+                    <option value="personal">PERSONAL MISSION</option>
+                    <option value="business">BEYOND TATVA (BUSINESS)</option>
+                    <option value="health">FITNESS / HEALTH</option>
+                    <option value="learning">LEARNING / SKILLS</option>
+                    <option value="other">OTHER</option>
+                  </select>
+                </div>
+                {editForm.category === 'other' && (
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="font-mono text-xs text-muted mb-1 block">CUSTOM CATEGORY</label>
+                    <input type="text" className="input font-mono text-sm py-1" placeholder="e.g. Finance" value={editForm.customCategory} onChange={e=>setEditForm({...editForm, customCategory: e.target.value})} />
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <button onClick={() => saveEdit(goal.id)} className="btn btn-primary btn-sm">SAVE</button>
+                <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
+              </div>
+            </div>
+          ) : (
+            <div onClick={() => setExpandedGoal(isExpanded ? null : goal.id)} className="cursor-pointer group">
+              <div className="flex-between">
+                <h3 className={`font-display text-2xl uppercase tracking-wide ${goal.status === 'completed' ? 'text-muted line-through' : 'text-primary group-hover:text-amber transition-colors'}`}>
+                  {goal.title}
+                </h3>
+                {isExpanded ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
+              </div>
+              {goal.description && (
+                <p 
+                  className={`text-sm text-secondary mt-2 font-mono cursor-pointer overflow-hidden transition-all ${isExpanded ? 'whitespace-pre-wrap' : 'whitespace-normal line-clamp-2'}`}
+                  onClick={(e) => {
+                     e.stopPropagation();
+                     setExpandedGoal(isExpanded ? null : goal.id);
+                  }}
+                  title={isExpanded ? "Click to collapse" : "Click to expand"}
+                >
+                  {goal.description}
+                </p>
+              )}
+            </div>
+          )}
+          
+          {/* Expanded Controls: Progress & Milestones */}
+          <AnimatePresence>
+            {isExpanded && !isEditing && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                <div className="mt-6 pt-4 border-t border-border-color flex-col gap-4">
+                  
+                  <div>
+                    <div className="flex-between mb-2">
+                      <label className="font-mono text-xs text-amber">
+                        {hasLinked ? `DYNAMIC PROGRESS: ${displayProgress}%` : `MANUAL PROGRESS: ${displayProgress}%`}
+                      </label>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" max="100" 
+                      value={displayProgress} 
+                      onChange={(e) => !hasLinked && updateProgress(goal.id, parseInt(e.target.value))}
+                      className={`w-full ${hasLinked ? 'accent-success opacity-50 cursor-not-allowed' : 'accent-amber-500'}`}
+                      disabled={hasLinked}
+                    />
+                  </div>
+                  {/* MILESTONES (LINKED TASKS) */}
+                  {tasks.filter(t => t.goal_id === goal.id).length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border-color">
+                      <label className="font-mono text-xs text-info mb-3 block">MISSION MILESTONES (LINKED OPS)</label>
+                      <div className="flex-col gap-2">
+                        {tasks.filter(t => t.goal_id === goal.id).map(task => {
+                          const isCompleted = task.status === 'completed'
+                          return (
+                            <div key={task.id} className={`flex items-center gap-3 p-2 rounded border ${isCompleted ? 'bg-success/5 border-success/30' : 'bg-tertiary border-border-color'}`}>
+                              <button 
+                                onClick={() => !isCompleted && completeOperation(task.id)}
+                                className={`${isCompleted ? 'text-success cursor-default' : 'text-muted hover:text-amber'}`}
+                                disabled={isCompleted}
+                              >
+                                {isCompleted ? <CheckSquare size={16} /> : <Square size={16} />}
+                              </button>
+                              <span className={`font-mono text-sm flex-1 ${isCompleted ? 'text-muted line-through' : 'text-primary'}`}>
+                                {task.title}
+                              </span>
+                              <button onClick={() => deleteTask(task.id)} className="text-muted hover:text-danger p-1 opacity-50 hover:opacity-100 transition-opacity" title="Delete Linked Operation">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions Row */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-border-color">
+                    <div className="flex items-center gap-2">
+                      {goal.deadline && (
+                        <span className="font-mono text-xs text-muted flex items-center gap-1">
+                          <Clock size={12} /> DEADLINE: {new Date(goal.deadline).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {goal.status !== 'completed' && goal.status !== 'failed' && (
+                        <>
+                          <button onClick={() => handleCompleteGoal(goal)} className="btn btn-primary btn-sm flex items-center gap-1">
+                            <Check size={14} /> COMPLETE MISSION
+                          </button>
+                          <button onClick={() => failGoal(goal)} className="btn btn-ghost btn-sm text-danger flex items-center gap-1">
+                            <X size={14} /> FAIL MISSION
+                          </button>
+                        </>
+                      )}
+                      {goal.status === 'completed' && (
+                        <button onClick={() => undoCompleteGoal(goal.id)} className="btn btn-ghost btn-sm text-info flex items-center gap-1">
+                          <RotateCcw size={14} /> RE-OPEN MISSION
+                        </button>
+                      )}
+                      {goal.status === 'failed' && (
+                        <button onClick={() => undoFailMission(goal.id)} className="btn btn-ghost btn-sm text-info flex items-center gap-1">
+                          <RotateCcw size={14} /> RESTORE MISSION
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="mt-6">
+            <TacticalProgress value={displayProgress} color={isPaused ? 'var(--text-muted)' : 'var(--accent-primary)'} label="COMPLETION" />
+          </div>
+
+        </HudPanel>
+      </motion.div>
+    )
+  }
+
   if (error) {
     return (
       <AppShell>
@@ -183,249 +433,57 @@ export default function Missions() {
           })}
         </div>
 
-        <div className="flex-col gap-6">
-          <AnimatePresence mode="popLayout">
-            {activeData.map((goal, i) => {
-              const isPaused = goal.status === 'paused'
-              const isEditing = editingId === goal.id
-              const isExpanded = expandedGoal === goal.id
-              
-              const linkedTasks = tasks.filter(t => t.goal_id === goal.id)
-              const hasLinked = linkedTasks.length > 0
-              const completedLinked = linkedTasks.filter(t => t.status === 'completed').length
-              const displayProgress = hasLinked ? Math.round((completedLinked / linkedTasks.length) * 100) : (goal.progress || 0)
+        {(activeTab === 'completed' || activeTab === 'failed') ? (
+          <div className="flex flex-col gap-6">
+            {Object.keys(groupArchivedGoals(activeData)).length === 0 ? (
+              <div className="text-center py-16">
+                <div className="font-mono text-sm text-muted mb-4">
+                  {activeTab === 'completed' ? 'NO COMPLETED MISSIONS YET.' : 'NO FAILED MISSIONS YET.'}
+                </div>
+                <button type='button' onClick={() => setShowForm(true)} className="btn btn-primary btn-sm">DEPLOY MISSION</button>
+              </div>
+            ) : (
+              Object.entries(groupArchivedGoals(activeData)).map(([monthLabel, { total, subheadings }]) => (
+                <div key={monthLabel} className="mb-4">
+                  <div className="flex items-center gap-2 p-3 rounded-sm bg-bg-secondary border border-border-color mb-4">
+                    <Clock size={14} className="text-amber" />
+                    <span className="font-mono text-xs uppercase tracking-widest font-bold text-amber">{monthLabel}</span>
+                    <span className="font-mono text-[9px] text-muted ml-auto font-bold">({total} {total === 1 ? 'MISSION' : 'MISSIONS'})</span>
+                  </div>
 
-              return (
-                <motion.div
-                  key={goal.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: i * 0.05 }}
-                >
-                  <HudPanel glow={activeTab === 'main' && !isPaused} scanLine={activeTab === 'main' && !isPaused} className={isPaused ? 'opacity-50' : ''}>
-                    
-                    {/* Header */}
-                    <div className="flex-between mb-4 border-b border-border-color pb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`badge ${isPaused ? 'bg-secondary text-muted' : 'badge-amber'}`}>
-                          {isPaused ? 'PAUSED' : goal.type.replace('_', ' ')}
-                        </span>
-                        {goal.status !== 'completed' && (
-                          <span className="font-mono text-[9px] px-2 py-0.5 border uppercase" 
-                                style={{ color: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color, borderColor: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color }}>
-                            {DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].label}
-                          </span>
-                        )}
+                  {Object.entries(subheadings).map(([subheading, subheadingGoals]) => (
+                    <div key={subheading} className="mb-5 pl-2 sm:pl-4 border-l-2 border-border-color">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Target size={11} className="text-info" />
+                        <span className="font-mono text-[10px] uppercase tracking-widest font-bold text-info">{subheading}</span>
+                        <span className="font-mono text-[9px] text-muted">({subheadingGoals.length})</span>
                       </div>
-                      
-                      {/* Controls */}
-                      <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-                        <button onClick={() => togglePauseGoal(goal.id, goal.status)} className="btn btn-ghost p-1.5" title={isPaused ? 'Resume' : 'Pause'}>
-                          {isPaused ? <Play size={14} /> : <Pause size={14} />}
-                        </button>
-                        <button onClick={() => startEdit(goal)} className="btn btn-ghost p-1.5 hover:text-amber" title="Edit">
-                          <Edit2 size={14} />
-                        </button>
-                        <button onClick={() => handleDeleteGoal(goal)} className="btn btn-ghost p-1.5 hover:text-danger" title="Delete">
-                          <Trash2 size={14} />
-                        </button>
+                      <div className="flex flex-col gap-4">
+                        <AnimatePresence mode="popLayout">
+                          {subheadingGoals.map((goal, i) => renderGoalCard(goal, i))}
+                        </AnimatePresence>
                       </div>
                     </div>
-                    
-                    {/* Content */}
-                    {isEditing ? (
-                      <div className="flex-col gap-3 mb-4">
-                        <input type="text" className="input font-mono text-lg py-1 border-amber" value={editForm.title} onChange={e=>setEditForm({...editForm, title: e.target.value})} />
-                        <textarea className="textarea font-mono text-sm py-1" value={editForm.description} onChange={e=>setEditForm({...editForm, description: e.target.value})} rows={2} />
-                        <div className="grid-2 gap-3 mt-3">
-                          <div>
-                            <label className="font-mono text-xs text-muted mb-1 block">DIFFICULTY</label>
-                            <select className="select font-mono text-sm py-1" value={editForm.difficulty} onChange={e=>setEditForm({...editForm, difficulty: e.target.value})}>
-                              <option value="EASY">EASY</option>
-                              <option value="MEDIUM">MEDIUM</option>
-                              <option value="HARD">HARD</option>
-                              <option value="EXTREME">EXTREME</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="font-mono text-xs text-muted mb-1 block">DEADLINE</label>
-                            <input type="date" className="input font-mono text-sm py-1" value={editForm.deadline || ''} onChange={e=>setEditForm({...editForm, deadline: e.target.value})} />
-                          </div>
-                        </div>
-                        <div className="grid-2 gap-3 mt-3">
-                          <div>
-                            <label className="font-mono text-xs text-muted mb-1 block">CLASSIFICATION</label>
-                            <select className="select font-mono text-sm py-1" value={editForm.type} onChange={e=>setEditForm({...editForm, type: e.target.value})}>
-                              <option value="main_quest">PRIMARY MISSION</option>
-                              <option value="side_quest">SIDE OPERATION</option>
-                              <option value="weekly">WEEKLY TARGET</option>
-                              <option value="long_term">LONG RANGE GOAL</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
-                            <select className="select font-mono text-sm py-1" value={editForm.category} onChange={e=>setEditForm({...editForm, category: e.target.value})}>
-                              <option value="personal">PERSONAL MISSION</option>
-                              <option value="business">BEYOND TATVA (BUSINESS)</option>
-                              <option value="health">FITNESS / HEALTH</option>
-                              <option value="learning">LEARNING / SKILLS</option>
-                              <option value="other">OTHER</option>
-                            </select>
-                          </div>
-                          {editForm.category === 'other' && (
-                            <div className="col-span-2 sm:col-span-1">
-                              <label className="font-mono text-xs text-muted mb-1 block">CUSTOM CATEGORY</label>
-                              <input type="text" className="input font-mono text-sm py-1" placeholder="e.g. Finance" value={editForm.customCategory} onChange={e=>setEditForm({...editForm, customCategory: e.target.value})} />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex justify-end gap-2 mt-2">
-                          <button onClick={() => saveEdit(goal.id)} className="btn btn-primary btn-sm">SAVE</button>
-                          <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div onClick={() => setExpandedGoal(isExpanded ? null : goal.id)} className="cursor-pointer group">
-                        <div className="flex-between">
-                          <h3 className={`font-display text-2xl uppercase tracking-wide ${goal.status === 'completed' ? 'text-muted line-through' : 'text-primary group-hover:text-amber transition-colors'}`}>
-                            {goal.title}
-                          </h3>
-                          {isExpanded ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
-                        </div>
-                        {goal.description && (
-                          <p 
-                            className={`text-sm text-secondary mt-2 font-mono cursor-pointer overflow-hidden transition-all ${isExpanded ? 'whitespace-pre-wrap' : 'whitespace-normal line-clamp-2'}`}
-                            onClick={(e) => {
-                               e.stopPropagation();
-                               setExpandedGoal(isExpanded ? null : goal.id);
-                            }}
-                            title={isExpanded ? "Click to collapse" : "Click to expand"}
-                          >
-                            {goal.description}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Expanded Controls: Progress & Milestones */}
-                    <AnimatePresence>
-                      {isExpanded && !isEditing && (
-                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                          <div className="mt-6 pt-4 border-t border-border-color flex-col gap-4">
-                            
-                            <div>
-                              <div className="flex-between mb-2">
-                                <label className="font-mono text-xs text-amber">
-                                  {hasLinked ? `DYNAMIC PROGRESS: ${displayProgress}%` : `MANUAL PROGRESS: ${displayProgress}%`}
-                                </label>
-                              </div>
-                              <input 
-                                type="range" 
-                                min="0" max="100" 
-                                value={displayProgress} 
-                                onChange={(e) => !hasLinked && updateProgress(goal.id, parseInt(e.target.value))}
-                                className={`w-full ${hasLinked ? 'accent-success opacity-50 cursor-not-allowed' : 'accent-amber-500'}`}
-                                disabled={hasLinked}
-                              />
-                            </div>
-                            {/* MILESTONES (LINKED TASKS) */}
-                            {tasks.filter(t => t.goal_id === goal.id).length > 0 && (
-                              <div className="mt-4 pt-4 border-t border-border-color">
-                                <label className="font-mono text-xs text-info mb-3 block">MISSION MILESTONES (LINKED OPS)</label>
-                                <div className="flex-col gap-2">
-                                  {tasks.filter(t => t.goal_id === goal.id).map(task => {
-                                    const isCompleted = task.status === 'completed'
-                                    return (
-                                      <div key={task.id} className={`flex items-center gap-3 p-2 rounded border ${isCompleted ? 'bg-success/5 border-success/30' : 'bg-tertiary border-border-color'}`}>
-                                        <button 
-                                          onClick={() => !isCompleted && completeOperation(task.id)}
-                                          className={`${isCompleted ? 'text-success cursor-default' : 'text-muted hover:text-amber'}`}
-                                          disabled={isCompleted}
-                                        >
-                                          {isCompleted ? <CheckSquare size={16} /> : <Square size={16} />}
-                                        </button>
-                                        <span className={`font-mono text-sm flex-1 ${isCompleted ? 'text-muted line-through' : 'text-primary'}`}>
-                                          {task.title}
-                                        </span>
-                                        <button onClick={() => deleteTask(task.id)} className="text-muted hover:text-danger p-1 opacity-50 hover:opacity-100 transition-opacity" title="Delete Linked Operation">
-                                          <Trash2 size={14} />
-                                        </button>
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                            )}
-
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                    
-                    <div className="mt-6">
-                      <TacticalProgress value={displayProgress} color={isPaused ? 'var(--text-muted)' : 'var(--accent-primary)'} label="COMPLETION" />
-                    </div>
-                    
-                    {goal.status !== 'completed' && goal.status !== 'cancelled' && (
-                      <div className="mt-4 flex justify-end gap-2">
-                        <button onClick={() => {
-                          setConfirmModal({
-                            isOpen: true,
-                            title: 'FAIL MISSION',
-                            message: 'Are you sure? This will permanently fail the mission and apply a massive negative XP penalty based on difficulty.',
-                            danger: true,
-                            confirmText: 'FAIL',
-                            onConfirm: async () => {
-                              await failMission(goal.id)
-                              setConfirmModal({ isOpen: false })
-                            },
-                            onCancel: () => setConfirmModal({ isOpen: false })
-                          })
-                        }} className="btn btn-ghost text-danger btn-sm" disabled={isPaused}>
-                          <X size={14} /> MISSION FAILED
-                        </button>
-                        <button onClick={() => setProofModal({ show: true, goal, url: '' })} className="btn btn-secondary btn-sm" disabled={isPaused}>
-                          <Check size={14} /> COMPLETE MISSION
-                        </button>
-                      </div>
-                    )}
-                    
-                    {goal.status === 'completed' && (
-                      <div className="mt-4 flex justify-between gap-2">
-                        <div className="text-success font-mono text-xs uppercase tracking-widest flex items-center gap-1">
-                          <Check size={14} /> COMPLETED
-                        </div>
-                        <button onClick={() => undoCompleteGoal(goal.id)} className="btn btn-ghost text-amber btn-sm">
-                          <RotateCcw size={14} /> UNDO COMPLETION
-                        </button>
-                      </div>
-                    )}
-                    
-                    {goal.status === 'cancelled' && (
-                      <div className="mt-4 flex justify-between gap-2">
-                        <div className="text-danger font-mono text-xs uppercase tracking-widest flex items-center gap-1">
-                          <AlertTriangle size={14} /> MISSION FAILED
-                        </div>
-                        <button onClick={() => undoFailMission(goal.id)} className="btn btn-ghost text-info btn-sm">
-                          <RotateCcw size={14} /> RESTORE MISSION
-                        </button>
-                      </div>
-                    )}
-                  </HudPanel>
-                </motion.div>
-              )
-            })}
-          </AnimatePresence>
-
-          {activeData.length === 0 && (
-            <div className="empty-state py-12">
-              <Target size={48} className="text-muted mb-4 opacity-20" />
-              <p>NO MISSIONS IN THIS CATEGORY</p>
-            </div>
-          )}
-        </div>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            <AnimatePresence mode="popLayout">
+              {activeData.map((goal, i) => renderGoalCard(goal, i))}
+            </AnimatePresence>
+            {activeData.length === 0 && (
+              <div className="text-center py-16">
+                <div className="font-mono text-sm text-muted mb-4">
+                  NO MISSIONS IN THIS CATEGORY.
+                </div>
+                <button type='button' onClick={() => setShowForm(true)} className="btn btn-primary btn-sm">DEPLOY MISSION</button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Modal Form */}
         <AnimatePresence>

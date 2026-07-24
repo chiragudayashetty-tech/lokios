@@ -213,8 +213,8 @@ export default function Operations() {
     switch (activeTab) {
       case 'today': return [...overdue, ...dueToday]
       case 'upcoming': return upcoming
-      case 'completed': return completed.slice(0, 20)
-      case 'failed': return failedOps.slice(0, 20)
+      case 'completed': return completed
+      case 'failed': return failedOps
       case 'all': return pending
       default: return dueToday
     }
@@ -222,12 +222,209 @@ export default function Operations() {
 
   const activeList = getActiveList()
 
+  // Helper to group archived tasks by Month -> Subheading (Category)
+  const groupArchivedTasks = (taskList) => {
+    const monthsMap = {}
+    taskList.forEach(task => {
+      const dateStr = task.completed_at || task.updated_at || task.due_date || task.created_at
+      const d = dateStr ? new Date(dateStr) : new Date()
+      const monthLabel = d.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
+      
+      let cat = task.category || 'GENERAL'
+      if (cat === 'beyond_tatva') cat = 'BEYOND TATVA'
+      else if (cat === 'personal_mission' || cat === 'personal') cat = 'PERSONAL MISSION'
+      else if (cat === 'learning') cat = 'LEARNING'
+      else cat = String(cat).toUpperCase().replace('_', ' ')
+
+      if (!monthsMap[monthLabel]) monthsMap[monthLabel] = { total: 0, subheadings: {} }
+      monthsMap[monthLabel].total++
+      if (!monthsMap[monthLabel].subheadings[cat]) monthsMap[monthLabel].subheadings[cat] = []
+      monthsMap[monthLabel].subheadings[cat].push(task)
+    })
+    return monthsMap
+  }
+
   const DIFFICULTY_CONFIG = {
     NONE: { label: 'NONE', color: 'var(--muted)', xp: 0 },
     EASY: { label: 'EASY', color: 'var(--info)', xp: 15 },
     MEDIUM: { label: 'MEDIUM', color: 'var(--accent-primary)', xp: 30 },
     HARD: { label: 'HARD', color: 'var(--warning)', xp: 60 },
     EXTREME: { label: 'EXTREME', color: 'var(--danger)', xp: 120 }
+  }
+
+  const renderTaskCard = (task) => {
+    const isCompleted = task.status === 'completed'
+    const isFailed = task.status === 'cancelled' || task.status === 'failed'
+    const isEditing = editingId === task.id
+    const isOverdue = !isCompleted && !isFailed && task.due_date && task.due_date < today
+    const diffKey = (task.difficulty || 'MEDIUM').toUpperCase()
+    const diffConfig = DIFFICULTY_CONFIG[diffKey] || DIFFICULTY_CONFIG.MEDIUM
+    const dynamicXp = isOverdue ? Math.floor(diffConfig.xp * 0.5) : diffConfig.xp
+
+    if (isEditing) {
+      return (
+        <motion.div key={task.id} layout className="col-span-1">
+          <HudPanel className="p-5 border-amber">
+            <div className="flex-col gap-3">
+              <input type="text" className="input font-mono" value={editForm.title}
+                onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
+              <textarea className="textarea font-mono text-sm h-16" value={editForm.description}
+                onChange={e => setEditForm({ ...editForm, description: e.target.value })} placeholder="Description..." />
+              <div className="grid-3 gap-3">
+                <div>
+                  <label className="font-mono text-[10px] text-muted mb-1 block">DUE DATE</label>
+                  <input type="date" className="input font-mono text-xs" value={editForm.due_date}
+                    onChange={e => setEditForm({ ...editForm, due_date: e.target.value })} />
+                </div>
+                <div>
+                  <label className="font-mono text-[10px] text-muted mb-1 block">DIFFICULTY</label>
+                  <select className="select font-mono text-xs" value={editForm.difficulty} onChange={e => setEditForm({ ...editForm, difficulty: e.target.value })}>
+                    <option value="NONE">NONE (0 XP)</option>
+                    <option value="EASY">EASY</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="HARD">HARD</option>
+                    <option value="EXTREME">EXTREME</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-mono text-[10px] text-muted mb-1 block">RECURRENCE</label>
+                  <select className="select font-mono text-xs" value={editForm.recurrence_type}
+                    onChange={e => setEditForm({ ...editForm, recurrence_type: e.target.value, type: e.target.value ? 'recurring' : 'custom' })}>
+                    <option value="">ONE TIME</option>
+                    <option value="daily">DAILY</option>
+                    <option value="weekly">WEEKLY</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end mt-2">
+                <button type='button' onClick={() => handleDeleteTask(task.id)} className="btn btn-ghost btn-sm text-danger mr-auto">DELETE</button>
+                <button type='button' onClick={() => saveEdit(task.id)} className="btn btn-primary btn-sm">SAVE</button>
+                <button type='button' onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
+              </div>
+            </div>
+          </HudPanel>
+        </motion.div>
+      )
+    }
+
+    return (
+      <motion.div key={task.id} layout initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+        className="col-span-1"
+      >
+        <HudPanel glow={!isCompleted && !isFailed} className={`p-4 ${isCompleted ? 'opacity-60' : ''} ${isFailed ? 'opacity-40 border-danger-subtle' : ''}`}>
+          <div className="flex-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-amber px-1.5 py-0.5 border border-amber-subtle bg-bg-secondary">
+                {task.category ? task.category.replace('_', ' ') : 'GENERAL'}
+              </span>
+              <span className="font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 border"
+                    style={{ color: diffConfig.color, borderColor: `${diffConfig.color}40`, background: `${diffConfig.color}10` }}>
+                {diffConfig.label}
+              </span>
+              {task.recurrence_type && (
+                <span className="font-mono text-[9px] text-info uppercase flex items-center gap-1">
+                  <Repeat size={10} /> {task.recurrence_type}
+                </span>
+              )}
+            </div>
+
+            {task.goal_id && (
+              <span className="font-mono text-[9px] text-muted flex items-center gap-1 truncate max-w-[120px]">
+                <Target size={10} className="text-info" /> {goals.find(g => g.id === task.goal_id)?.title || 'Mission'}
+              </span>
+            )}
+          </div>
+
+          <h3 className={`font-mono text-base ${isCompleted ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : 'text-primary'}`}>
+            {task.title}
+          </h3>
+
+          {task.description && (
+            <p className="font-mono text-xs text-muted mt-2 whitespace-pre-wrap">
+              {task.description}
+            </p>
+          )}
+
+          {/* Bottom row */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 pt-3 border-t border-border-subtle gap-4 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {task.due_date && (
+                <span className="font-mono text-[10px] text-muted flex items-center gap-1">
+                  <Calendar size={10} /> {task.due_date}
+                </span>
+              )}
+              {task.completed_at && (
+                <span className="font-mono text-[10px] text-success font-bold flex items-center gap-1">
+                  <CheckCircle2 size={10} /> {new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
+              {task.media_urls && task.media_urls.length > 0 && (
+                <span className="font-mono text-[10px] text-amber">[{task.media_urls.length} PROOF]</span>
+              )}
+              {!isCompleted && (
+                <span className={`font-mono text-[10px] ${isOverdue ? 'text-danger line-through' : 'text-success'}`}>
+                  +{diffConfig.xp} XP
+                </span>
+              )}
+              {!isCompleted && isOverdue && (
+                <span className="font-mono text-[10px] text-danger">+{dynamicXp} XP (PENALTY)</span>
+              )}
+            </div>
+            
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              {!isCompleted && !isFailed && (
+                <>
+                  <button type='button' onClick={() => handleComplete(task)}
+                    className="btn btn-primary flex-1 sm:flex-none py-3 sm:py-2 flex items-center justify-center gap-1.5 px-4 touch-ripple">
+                    <Zap size={14} /> EXECUTE
+                  </button>
+                  <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm touch-ripple bg-bg-secondary" onClick={() => setEditingId(task.id)} title="Edit">
+                    <Edit2 size={16} className="sm:w-[14px] sm:h-[14px]" />
+                  </button>
+                  <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-amber touch-ripple bg-bg-secondary" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
+                    <RotateCcw size={16} className="sm:w-[14px] sm:h-[14px]" />
+                  </button>
+                  <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-danger touch-ripple bg-bg-secondary" onClick={() => failTask(task)} title="Fail Operation">
+                    <X size={16} className="sm:w-[14px] sm:h-[14px]" />
+                  </button>
+                  <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-muted hover:text-danger touch-ripple bg-bg-secondary" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
+                    <Trash2 size={16} className="sm:w-[14px] sm:h-[14px]" />
+                  </button>
+                </>
+              )}
+              {(isCompleted || isFailed) && (
+                <>
+                  <button type="button" className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-danger touch-ripple bg-bg-secondary" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
+                    <Trash2 size={16} className="sm:w-[14px] sm:h-[14px]" />
+                  </button>
+                  {isCompleted && (
+                    <div className="flex-1 flex items-center justify-between ml-2">
+                      <span className="font-mono text-[10px] text-success flex items-center gap-1">
+                        <CheckCircle2 size={12} /> COMPLETED
+                      </span>
+                      <button type='button' className="btn btn-ghost btn-sm text-info touch-ripple" onClick={() => undoCompleteTask(task.id)} title="Undo Operation">
+                        <RotateCcw size={14} /> UNDO
+                      </button>
+                    </div>
+                  )}
+                  {isFailed && (
+                    <div className="flex-1 flex items-center justify-between ml-2">
+                      <span className="font-mono text-[10px] text-danger flex items-center gap-1">
+                        <XCircle size={12} /> FAILED
+                      </span>
+                      <button type='button' className="btn btn-ghost btn-sm text-info touch-ripple" onClick={() => undoFailOperation(task.id)} title="Restore Operation">
+                        <RotateCcw size={14} /> RESTORE
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </HudPanel>
+      </motion.div>
+    )
   }
 
   if (error) {
@@ -297,191 +494,54 @@ export default function Operations() {
         </div>
 
         {/* OPERATIONS GRID */}
-        <div className="grid-2 gap-4 tasks-grid">
-          <AnimatePresence mode="popLayout">
-            {activeList.map((task) => {
-              const isCompleted = task.status === 'completed'
-              const isFailed = task.status === 'cancelled' || task.status === 'failed'
-              const isEditing = editingId === task.id
-              const isOverdue = !isCompleted && !isFailed && task.due_date && task.due_date < today
-              const diffKey = (task.difficulty || 'MEDIUM').toUpperCase()
-              const diffConfig = DIFFICULTY_CONFIG[diffKey] || DIFFICULTY_CONFIG.MEDIUM
-              const dynamicXp = isOverdue ? Math.floor(diffConfig.xp * 0.5) : diffConfig.xp
-
-              if (isEditing) {
-                return (
-                  <motion.div key={task.id} layout className="col-span-1">
-                    <HudPanel className="p-5 border-amber">
-                      <div className="flex-col gap-3">
-                        <input type="text" className="input font-mono" value={editForm.title}
-                          onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
-                        <textarea className="textarea font-mono text-sm h-16" value={editForm.description}
-                          onChange={e => setEditForm({ ...editForm, description: e.target.value })} placeholder="Description..." />
-                        <div className="grid-3 gap-3">
-                          <div>
-                            <label className="font-mono text-[10px] text-muted mb-1 block">DUE DATE</label>
-                            <input type="date" className="input font-mono text-xs" value={editForm.due_date}
-                              onChange={e => setEditForm({ ...editForm, due_date: e.target.value })} />
-                          </div>
-                          <div>
-                            <label className="font-mono text-[10px] text-muted mb-1 block">DIFFICULTY</label>
-                            <select className="select font-mono text-xs" value={editForm.difficulty} onChange={e => setEditForm({ ...editForm, difficulty: e.target.value })}>
-                              <option value="NONE">NONE (0 XP)</option>
-                              <option value="EASY">EASY</option>
-                              <option value="MEDIUM">MEDIUM</option>
-                              <option value="HARD">HARD</option>
-                              <option value="EXTREME">EXTREME</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="font-mono text-[10px] text-muted mb-1 block">RECURRENCE</label>
-                            <select className="select font-mono text-xs" value={editForm.recurrence_type}
-                              onChange={e => setEditForm({ ...editForm, recurrence_type: e.target.value, type: e.target.value ? 'recurring' : 'custom' })}>
-                              <option value="">ONE TIME</option>
-                              <option value="daily">DAILY</option>
-                              <option value="weekly">WEEKLY</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 justify-end mt-2">
-                          <button type='button' onClick={() => handleDeleteTask(task.id)} className="btn btn-ghost btn-sm text-danger mr-auto">DELETE</button>
-                          <button type='button' onClick={() => saveEdit(task.id)} className="btn btn-primary btn-sm">SAVE</button>
-                          <button type='button' onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
-                        </div>
-                      </div>
-                    </HudPanel>
-                  </motion.div>
-                )
-              }
-
-              return (
-                <motion.div key={task.id} layout initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                  className="col-span-1"
-                >
-                  <div className={`relative bg-tertiary border p-5 transition-all duration-200 group ${isFailed ? 'border-danger opacity-50' : isOverdue ? 'border-danger hover:border-danger' : isCompleted ? 'border-border-color opacity-60' : 'border-border-color hover:border-amber'}`}
-                    style={{ borderLeftWidth: '3px', borderLeftColor: diffConfig.color }}>
-
-                    {/* Top row: Difficulty + Actions */}
-                    <div className="flex-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border"
-                          style={{ color: diffConfig.color, borderColor: diffConfig.color, opacity: 0.8 }}>
-                          {diffConfig.label}
-                        </span>
-                        {isOverdue && (
-                          <span className="font-mono text-[9px] text-danger flex items-center gap-1">
-                            <AlertTriangle size={10} /> OVERDUE
-                          </span>
-                        )}
-                        {task.recurrence_type && (
-                          <span className="font-mono text-[9px] text-info flex items-center gap-1">
-                            <Repeat size={10} /> {task.recurrence_type.toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        {!isCompleted && <button type='button' onClick={() => startEdit(task)} className="p-1.5 text-muted hover:text-amber transition-colors"><Edit2 size={13} /></button>}
-                        {isCompleted && <button type='button' onClick={() => undoCompleteTask(task.id)} className="p-1.5 text-muted hover:text-info transition-colors" title="Undo"><RotateCcw size={13} /></button>}
-                      </div>
-                    </div>
-
-                    {/* Title */}
-                    <h3 className={`font-display text-xl uppercase tracking-wider mb-1 ${isCompleted ? 'line-through text-muted' : 'text-primary'}`}>
-                      {task.title}
-                    </h3>
-                    {task.description && (
-                      <p 
-                        className={`font-mono text-xs text-secondary mb-3 cursor-pointer overflow-hidden transition-all ${expandedDescId === task.id ? 'whitespace-pre-wrap' : 'whitespace-normal line-clamp-2'}`}
-                        onClick={(e) => { e.stopPropagation(); setExpandedDescId(expandedDescId === task.id ? null : task.id) }}
-                        title={expandedDescId === task.id ? "Click to collapse" : "Click to expand"}
-                      >
-                        {task.description}
-                      </p>
-                    )}
-
-                    {/* Bottom row */}
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 pt-3 border-t border-border-subtle gap-4 sm:gap-3">
-                      <div className="flex flex-wrap items-center gap-3">
-                        {task.due_date && (
-                          <span className="font-mono text-[10px] text-muted flex items-center gap-1">
-                            <Calendar size={10} /> {task.due_date}
-                          </span>
-                        )}
-                        {task.media_urls && task.media_urls.length > 0 && (
-                          <span className="font-mono text-[10px] text-amber">[{task.media_urls.length} PROOF]</span>
-                        )}
-                        {!isCompleted && (
-                          <span className={`font-mono text-[10px] ${isOverdue ? 'text-danger line-through' : 'text-success'}`}>
-                            +{diffConfig.xp} XP
-                          </span>
-                        )}
-                        {!isCompleted && isOverdue && (
-                          <span className="font-mono text-[10px] text-danger">+{dynamicXp} XP (PENALTY)</span>
-                        )}
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                        {!isCompleted && !isFailed && (
-                          <>
-                            <button type='button' onClick={() => handleComplete(task)}
-                              className="btn btn-primary flex-1 sm:flex-none py-3 sm:py-2 flex items-center justify-center gap-1.5 px-4 touch-ripple">
-                              <Zap size={14} /> EXECUTE
-                            </button>
-                            <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm touch-ripple bg-bg-secondary" onClick={() => setEditingId(task.id)} title="Edit">
-                              <Edit2 size={16} className="sm:w-[14px] sm:h-[14px]" />
-                            </button>
-                            <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-amber touch-ripple bg-bg-secondary" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
-                              <RotateCcw size={16} className="sm:w-[14px] sm:h-[14px]" />
-                            </button>
-                            <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-danger touch-ripple bg-bg-secondary" onClick={() => failTask(task)} title="Fail Operation">
-                              <X size={16} className="sm:w-[14px] sm:h-[14px]" />
-                            </button>
-                            <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-muted hover:text-danger touch-ripple bg-bg-secondary" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
-                              <Trash2 size={16} className="sm:w-[14px] sm:h-[14px]" />
-                            </button>
-                          </>
-                        )}
-                        {(isCompleted || isFailed) && (
-                          <>
-                            <button type="button" className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-danger touch-ripple bg-bg-secondary" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
-                              <Trash2 size={16} className="sm:w-[14px] sm:h-[14px]" />
-                            </button>
-                            {isCompleted && (
-                              <div className="flex-1 flex items-center justify-between ml-2">
-                                <span className="font-mono text-[10px] text-success flex items-center gap-1">
-                                  <CheckCircle2 size={12} /> COMPLETED
-                                </span>
-                                <button type='button' className="btn btn-ghost btn-sm text-info touch-ripple" onClick={() => undoCompleteTask(task.id)} title="Undo Operation">
-                                  <RotateCcw size={14} /> UNDO
-                                </button>
-                              </div>
-                            )}
-                            {isFailed && (
-                              <div className="flex-1 flex items-center justify-between ml-2">
-                                <span className="font-mono text-[10px] text-danger flex items-center gap-1">
-                                  <XCircle size={12} /> FAILED
-                                </span>
-                                <button type='button' className="btn btn-ghost btn-sm text-info touch-ripple" onClick={() => undoFailOperation(task.id)} title="Restore Operation">
-                                  <RotateCcw size={14} /> RESTORE
-                                </button>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
+        {(activeTab === 'completed' || activeTab === 'failed') ? (
+          <div className="flex flex-col gap-6">
+            {Object.keys(groupArchivedTasks(activeTab === 'completed' ? completed : failedOps)).length === 0 ? (
+              <div className="text-center py-16">
+                <div className="font-mono text-sm text-muted mb-4">
+                  {activeTab === 'completed' ? 'NO COMPLETED OPERATIONS YET.' : 'NO FAILED OPERATIONS YET.'}
+                </div>
+                <button type='button' onClick={() => setShowDeploy(true)} className="btn btn-primary btn-sm">DEPLOY OPERATION</button>
+              </div>
+            ) : (
+              Object.entries(groupArchivedTasks(activeTab === 'completed' ? completed : failedOps)).map(([monthLabel, { total, subheadings }]) => (
+                <div key={monthLabel} className="mb-4">
+                  <div className="flex items-center gap-2 p-3 rounded-sm bg-bg-secondary border border-border-color mb-4">
+                    <Calendar size={14} className="text-amber" />
+                    <span className="font-mono text-xs uppercase tracking-widest font-bold text-amber">{monthLabel}</span>
+                    <span className="font-mono text-[9px] text-muted ml-auto font-bold">({total} {total === 1 ? 'OPERATION' : 'OPERATIONS'})</span>
                   </div>
-                </motion.div>
-              )
-            })}
-          </AnimatePresence>
-        </div>
 
-        {activeList.length === 0 && (
+                  {Object.entries(subheadings).map(([subheading, subheadingTasks]) => (
+                    <div key={subheading} className="mb-5 pl-2 sm:pl-4 border-l-2 border-border-color">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Layers size={11} className="text-info" />
+                        <span className="font-mono text-[10px] uppercase tracking-widest font-bold text-info">{subheading}</span>
+                        <span className="font-mono text-[9px] text-muted">({subheadingTasks.length})</span>
+                      </div>
+                      <div className="grid-2 gap-4 tasks-grid">
+                        <AnimatePresence mode="popLayout">
+                          {subheadingTasks.map((task) => renderTaskCard(task))}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="grid-2 gap-4 tasks-grid">
+            <AnimatePresence mode="popLayout">
+              {activeList.map((task) => renderTaskCard(task))}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {activeList.length === 0 && activeTab !== 'completed' && activeTab !== 'failed' && (
           <div className="text-center py-16">
             <div className="font-mono text-sm text-muted mb-4">
-              {activeTab === 'completed' ? 'NO COMPLETED OPERATIONS YET.' : 'NO OPERATIONS IN THIS VIEW.'}
+              NO OPERATIONS IN THIS VIEW.
             </div>
             <button type='button' onClick={() => setShowDeploy(true)} className="btn btn-primary btn-sm">DEPLOY OPERATION</button>
           </div>
