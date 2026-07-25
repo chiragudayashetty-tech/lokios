@@ -198,15 +198,6 @@ export default function XPDashboard() {
             
             {/* Glowing Progress Wave */}
             <div className="relative w-full max-w-2xl mb-2" style={{ height: '160px' }}>
-              {/* Subtle grid background */}
-              <svg className="absolute inset-0 w-full h-full opacity-[0.06]" preserveAspectRatio="none">
-                {Array.from({length: 10}, (_, i) => (
-                  <line key={`v${i}`} x1={`${(i+1) * 9.09}%`} y1="0" x2={`${(i+1) * 9.09}%`} y2="100%" stroke={currentRank.color} strokeWidth="1" />
-                ))}
-                {Array.from({length: 6}, (_, i) => (
-                  <line key={`h${i}`} x1="0" y1={`${(i+1) * 14.28}%`} x2="100%" y2={`${(i+1) * 14.28}%`} stroke={currentRank.color} strokeWidth="1" />
-                ))}
-              </svg>
 
               {/* The wave SVG */}
               <svg
