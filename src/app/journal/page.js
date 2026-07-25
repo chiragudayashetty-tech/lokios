@@ -72,12 +72,28 @@ export default function JournalPage() {
   const [stats, setStats] = useState({ xp: 0, tasks: 0, habits: 0, missions: 0 })
   const [wins, setWins] = useState('')
   const [fails, setFails] = useState('')
-  const [nextActions, setNextActions] = useState('')
+  const [nextGoal1, setNextGoal1] = useState('')
+  const [nextGoal2, setNextGoal2] = useState('')
+  const [nextGoal3, setNextGoal3] = useState('')
   const [savingDebrief, setSavingDebrief] = useState(false)
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [showDebriefHistory, setShowDebriefHistory] = useState(false)
   const [historyLogs, setHistoryLogs] = useState([])
   const [expandedDebrief, setExpandedDebrief] = useState(null)
+
+  const getWordCount = (str) => {
+    if (!str || !str.trim()) return 0
+    return str.trim().split(/\s+/).length
+  }
+
+  const handleGoalChange = (val, setter) => {
+    const words = val.trim().split(/\s+/)
+    if (words.length > 20) {
+      setter(words.slice(0, 20).join(' '))
+    } else {
+      setter(val)
+    }
+  }
 
   useEffect(() => { setEntryDate(getLocalDateStr()) }, [])
 
@@ -122,19 +138,36 @@ export default function JournalPage() {
   const handleSaveDebrief = async (e) => {
     e.preventDefault()
     if (!user || savingDebrief) return
-    if (!wins.trim() || !fails.trim() || !nextActions.trim()) { alert('Please fill out all fields.'); return }
+    const goalsList = [nextGoal1, nextGoal2, nextGoal3].filter(g => g.trim())
+    if (!wins.trim() || !fails.trim() || goalsList.length === 0) { alert('Please fill out wins, fails, and at least 1 Next Week Priority Goal.'); return }
     setSavingDebrief(true)
     const supabase = createClient()
     const todayStr = getLocalDateStr()
-    const formattedContent = `### What went well?\n${wins}\n\n### Bottlenecks & Fails\n${fails}\n\n### Priorities for Next Week\n${nextActions}`
+    const formattedGoals = goalsList.map((g, i) => `${i + 1}. ${g.trim()}`).join('\n')
+    const formattedContent = `### What went well?\n${wins}\n\n### Bottlenecks & Fails\n${fails}\n\n### Priorities for Next Week\n${formattedGoals}`
     try {
       await supabase.from('work_logs').insert([{
         user_id: user.id,
         title: `Weekly Debrief: ${dateRange.start} - ${dateRange.end}`,
         type: 'project_work', description: formattedContent, date: todayStr
       }])
+
+      // Deploy priority goals to tasks table for Command Center widget
+      const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
+      for (const goalText of goalsList) {
+        await supabase.from('tasks').insert([{
+          user_id: user.id,
+          title: goalText.trim(),
+          type: 'custom',
+          category: 'weekly_goal',
+          due_date: endOfWeekStr,
+          status: 'pending',
+          description: '[Weekly Goal] Priority for Next Week (from Weekly Debrief)'
+        }])
+      }
+
       await robustAwardXP(user.id, 5, 'task', todayStr, 'Weekly Review Completed', 'discipline')
-      setWins(''); setFails(''); setNextActions('')
+      setWins(''); setFails(''); setNextGoal1(''); setNextGoal2(''); setNextGoal3('')
       const { data } = await supabase.from('work_logs').select('*').eq('user_id', user.id).ilike('title', 'Weekly Debrief%').order('created_at', { ascending: false })
       if (data) setHistoryLogs(data)
       setShowDebriefHistory(true)
@@ -320,18 +353,51 @@ export default function JournalPage() {
                 {/* Form */}
                 <HudPanel label="WEEKLY DEBRIEF">
                   <form onSubmit={handleSaveDebrief} className="space-y-6">
-                    {[
-                      { label: 'What went well this week?', val: wins, set: setWins, color: 'var(--success)', placeholder: 'Document your victories, breakthroughs, and wins...' },
-                      { label: 'Bottlenecks & Fails', val: fails, set: setFails, color: 'var(--danger)', placeholder: 'What held you back? Where did you fall short?' },
-                      { label: 'Priorities for Next Week', val: nextActions, set: setNextActions, color: 'var(--info)', placeholder: 'What 3 things must get done next week?' }
-                    ].map(f => (
-                      <div key={f.label}>
-                        <label className="font-mono text-xs uppercase tracking-widest mb-3 block" style={{ color: f.color }}>{f.label}</label>
-                        <textarea value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.placeholder}
-                          className="input w-full min-h-[120px] resize-y font-mono text-sm leading-relaxed"
-                          style={{ borderColor: f.val.trim() ? f.color : '' }} />
+                    {/* Section 1: Wins */}
+                    <div>
+                      <label className="font-mono text-xs uppercase tracking-widest mb-2 block text-success">What went well this week?</label>
+                      <textarea value={wins} onChange={e => setWins(e.target.value)} placeholder="Document your victories, breakthroughs, and wins..."
+                        className="input w-full min-h-[120px] resize-y font-mono text-sm leading-relaxed" />
+                    </div>
+
+                    {/* Section 2: Fails */}
+                    <div>
+                      <label className="font-mono text-xs uppercase tracking-widest mb-2 block text-danger">Bottlenecks & Fails</label>
+                      <textarea value={fails} onChange={e => setFails(e.target.value)} placeholder="What held you back? Where did you fall short?"
+                        className="input w-full min-h-[120px] resize-y font-mono text-sm leading-relaxed" />
+                    </div>
+
+                    {/* Section 3: 3 Goal Bars */}
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <label className="font-mono text-xs uppercase tracking-widest block text-info font-bold">Priorities for Next Week</label>
+                        <span className="font-mono text-[9px] text-muted uppercase">MAX 20 WORDS PER GOAL</span>
                       </div>
-                    ))}
+                      <p className="font-mono text-xs text-muted">Enter up to 3 key goals for next week. These will deploy to your Command Center as finishable operations!</p>
+                      
+                      {[
+                        { id: 1, val: nextGoal1, set: setNextGoal1, placeholder: "Goal #1 (e.g., Ship landing page redesign & test payment link)" },
+                        { id: 2, val: nextGoal2, set: setNextGoal2, placeholder: "Goal #2 (e.g., Close 3 client proposals and conduct demo calls)" },
+                        { id: 3, val: nextGoal3, set: setNextGoal3, placeholder: "Goal #3 (e.g., Complete 5 workouts and stick to 8h sleep target)" },
+                      ].map((item) => {
+                        const words = getWordCount(item.val)
+                        return (
+                          <div key={item.id} className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-mono text-[10px] text-amber font-bold uppercase tracking-widest">PRIORITY GOAL #{item.id}</span>
+                              <span className={`font-mono text-[9px] ${words >= 20 ? 'text-danger font-bold' : 'text-muted'}`}>({words}/20 words)</span>
+                            </div>
+                            <input 
+                              type="text"
+                              className="input w-full font-mono text-xs py-2 px-3 bg-bg-primary border border-border-color focus:border-amber rounded"
+                              placeholder={item.placeholder}
+                              value={item.val}
+                              onChange={e => handleGoalChange(e.target.value, item.set)}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
                     <div className="flex-between border-t border-border-color pt-4">
                       <div className="flex items-center gap-2">
                         <Zap size={16} className="text-amber" />

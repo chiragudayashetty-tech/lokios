@@ -196,37 +196,43 @@ export default function XPDashboard() {
           
           <HudPanel className="relative z-10 flex flex-col md:flex-row items-center gap-8 p-8" style={{ borderColor: currentRank.color }}>
             <div className="flex flex-col items-center justify-center shrink-0">
-              <div className="relative w-40 h-40 flex items-center justify-center">
+              {/* Circle Gauge Container */}
+              <div className="relative w-36 h-36 flex items-center justify-center mb-3">
                 {/* Glow ring */}
                 <div 
-                  className="absolute inset-2 rounded-full opacity-20 blur-xl pointer-events-none" 
+                  className="absolute inset-0 rounded-full opacity-20 blur-xl pointer-events-none" 
                   style={{ background: currentRank.color }} 
                 />
                 
                 {/* Circular SVG Gauge */}
-                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 160 160">
-                  <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="6" />
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 144 144">
+                  <circle cx="72" cy="72" r="58" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="5" />
                   <motion.circle 
-                    cx="80" cy="80" r="70" 
+                    cx="72" cy="72" r="58" 
                     fill="none" 
                     stroke={currentRank.color} 
-                    strokeWidth="6"
-                    strokeDasharray={`${2 * Math.PI * 70}`}
-                    initial={{ strokeDashoffset: `${2 * Math.PI * 70}` }}
-                    animate={{ strokeDashoffset: `${2 * Math.PI * 70 * (1 - progressPct / 100)}` }}
+                    strokeWidth="5"
+                    strokeDasharray={`${2 * Math.PI * 58}`}
+                    initial={{ strokeDashoffset: `${2 * Math.PI * 58}` }}
+                    animate={{ strokeDashoffset: `${2 * Math.PI * 58 * (1 - progressPct / 100)}` }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
                     strokeLinecap="round" 
                   />
                 </svg>
 
-                {/* Inner Level Content */}
-                <div className="relative z-10 flex flex-col items-center justify-center text-center pointer-events-none px-2">
+                {/* Inner Level Content: ONLY LEVEL label + Giant Number */}
+                <div className="relative z-10 flex flex-col items-center justify-center text-center pointer-events-none">
                   <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted font-bold mb-0.5">LEVEL</span>
-                  <span className="font-display text-4xl font-extrabold text-primary leading-none tracking-tight mb-1">{currentLevel}</span>
-                  <span className="px-2 py-0.5 rounded-full font-mono text-[8px] font-bold uppercase tracking-widest border" style={{ color: currentRank.color, borderColor: `${currentRank.color}40`, backgroundColor: `${currentRank.color}15` }}>
-                    {currentRank.name}
-                  </span>
+                  <span className="font-display text-4xl font-extrabold text-primary leading-none tracking-tight">{currentLevel}</span>
                 </div>
+              </div>
+
+              {/* Rank / Saga Pill OUTSIDE & BELOW the circle ring */}
+              <div 
+                className="px-3 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-widest border shadow-sm"
+                style={{ color: currentRank.color, borderColor: `${currentRank.color}40`, backgroundColor: `${currentRank.color}15` }}
+              >
+                {currentRank.name}
               </div>
             </div>
 
