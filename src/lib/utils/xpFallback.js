@@ -8,9 +8,9 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
     p_user_id: userId,
     p_amount: amount,
     p_source_type: sourceType,
-    p_source_id: sourceId,
-    p_description: description,
-    p_stat_category: statCategory,
+    p_source_id: sourceId || null,
+    p_description: description || null,
+    p_stat_category: statCategory || 'discipline',
   })
 
   if (!rpcError) return true

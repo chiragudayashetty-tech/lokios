@@ -102,7 +102,8 @@ export default function DailyOps() {
 
     if (!wErr) {
       if (!weightLoggedToday) {
-        await robustAwardXP(user.id, 25, 'Daily Weight Logged')
+        // Fix parameter signature for robustAwardXP
+        await robustAwardXP(user.id, 25, 'weight', null, 'Daily Weight Logged')
         setWeightLoggedToday(true)
         setWeightMsg({ success: true, title: 'BODY WEIGHT LOGGED', subtitle: `${w} kg recorded for today`, xp: 25 })
       } else {
@@ -134,19 +135,21 @@ export default function DailyOps() {
     if (liveSleepDuration.totalHours > 10.0) failReasons.push('Overslept (> 10h)')
     if (liveSleepDuration.totalHours < 6.0) failReasons.push('Under-slept (< 6h)')
 
-    // Save to sleep_logs table
-    await sb.from('sleep_logs').upsert({
+    // Run the sleep log save and the XP award concurrently
+    const savePromise = sb.from('sleep_logs').upsert({
       user_id: user.id,
       date: sleepTargetDate,
       bedtime,
       wake_time: wakeTime,
       duration_hours: liveSleepDuration.totalHours,
       status: isHealthy ? 'healthy' : 'deprived'
-    }).catch(() => {})
+    })
 
-    if (xpAmount > 0) {
-      await robustAwardXP(user.id, xpAmount, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
-    }
+    const xpPromise = xpAmount > 0 
+      ? robustAwardXP(user.id, xpAmount, 'sleep', null, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
+      : Promise.resolve()
+
+    await Promise.allSettled([savePromise, xpPromise])
 
     setSleepMsg({
       success: isHealthy,
