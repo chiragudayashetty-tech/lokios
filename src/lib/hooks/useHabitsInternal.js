@@ -214,12 +214,10 @@ export function useHabitsInternal(user) {
         }
       try { 
         await calculateAndUpdateStreak(user.id, habitId)
-        const { data } = await supabase.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('created_at', { ascending: true })
-        if (data) setHabits(data)
 
         // ── DAILY ALL-HABITS BONUS ──
         // Check if every active habit has a completed log for today
-        if (nextStatus === 'completed' && targetDate === currentTodayStr && data) {
+        if (nextStatus === 'completed' && targetDate === currentTodayStr && habits) {
           const dailyBonusKey = `daily_all_bonus_${currentTodayStr}`
           if (!localStorage.getItem(dailyBonusKey)) {
             // Get the latest monthLogs state to check completion
@@ -232,8 +230,8 @@ export function useHabitsInternal(user) {
                 todayCompletedIds.add(l.habit_id)
               }
             })
-            const allDone = data.every(h => todayCompletedIds.has(h.id))
-            if (allDone && data.length > 0) {
+            const allDone = habits.every(h => todayCompletedIds.has(h.id))
+            if (allDone && habits.length > 0) {
               await robustAwardXP(user.id, XP_REWARDS.daily_all_habits || 25, 'daily_all_complete', currentTodayStr, '🏆 100% OPERATIONAL — All daily ops completed!', 'discipline')
               localStorage.setItem(dailyBonusKey, 'true')
             }

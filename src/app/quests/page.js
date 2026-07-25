@@ -1166,9 +1166,9 @@ export default function DailyOps() {
           <div className="flex-between mb-1 mt-2">
             <span className="font-display text-sm uppercase tracking-widest text-amber">{isMobileToday ? "TODAY'S OPERATIONS" : "OPERATIONS"}</span>
             <div className="flex items-center gap-2">
-              <button onClick={prevMobileDay} className="p-1 hover:text-primary text-muted transition-colors"><ChevronLeft size={16} /></button>
+              <button type="button" onClick={prevMobileDay} className="p-1 hover:text-primary text-muted transition-colors"><ChevronLeft size={16} /></button>
               <span className="font-mono text-[10px] text-muted">{mobileDateStr}</span>
-              <button onClick={nextMobileDay} className="p-1 hover:text-primary text-muted transition-colors"><ChevronRight size={16} /></button>
+              <button type="button" onClick={nextMobileDay} className="p-1 hover:text-primary text-muted transition-colors"><ChevronRight size={16} /></button>
             </div>
           </div>
           {habits.map((habit) => {
@@ -1185,7 +1185,8 @@ export default function DailyOps() {
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="font-mono text-[10px] text-info font-bold">+{habit.xp_per_completion || 25} XP</span>
                   <button 
-                    onClick={() => handleToggle(habit.id, mobileSelectedDate.getDate())}
+                    type="button"
+                    onClick={(e) => { e?.stopPropagation?.(); handleToggle(habit.id, mobileSelectedDate.getDate()) }}
                     className="flex items-center justify-center transition-all active:scale-95"
                     style={{
                       width: '42px', height: '42px',
@@ -1206,7 +1207,7 @@ export default function DailyOps() {
           {habits.length === 0 && (
             <div className="p-8 text-center border border-border-color rounded-2xl border-dashed">
               <div className="font-mono text-sm text-muted mb-4">NO ROUTINES DEPLOYED</div>
-              <button onClick={() => setShowAddForm(true)} className="btn btn-primary btn-sm w-full">ADD ROUTINE</button>
+              <button type="button" onClick={() => setShowAddForm(true)} className="btn btn-primary btn-sm w-full">ADD ROUTINE</button>
             </div>
           )}
         </div>
@@ -1228,7 +1229,8 @@ export default function DailyOps() {
                     <div key={h.id} className={`flex items-center gap-3 p-2 hover:bg-hover transition-colors ${isBlocked ? 'opacity-50 grayscale' : ''}`}>
                       <span className="font-mono text-xs text-muted w-5 text-right">{i + 1}</span>
                       <button 
-                        onClick={() => cycleHabitState(h.id, todayStr)}
+                        type="button"
+                        onClick={(e) => { e?.stopPropagation?.(); cycleHabitState(h.id, todayStr) }}
                         className="flex items-center justify-center transition-all hover:scale-110"
                         style={{
                           width: '24px', height: '24px',
