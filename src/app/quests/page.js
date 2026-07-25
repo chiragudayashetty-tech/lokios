@@ -135,22 +135,7 @@ export default function DailyOps() {
     if (liveSleepDuration.totalHours > 10.0) failReasons.push('Overslept (> 10h)')
     if (liveSleepDuration.totalHours < 6.0) failReasons.push('Under-slept (< 6h)')
 
-    // Run the sleep log save and the XP award concurrently
-    const savePromise = sb.from('sleep_logs').upsert({
-      user_id: user.id,
-      date: sleepTargetDate,
-      bedtime,
-      wake_time: wakeTime,
-      duration_hours: liveSleepDuration.totalHours,
-      status: isHealthy ? 'healthy' : 'deprived'
-    })
-
-    const xpPromise = xpAmount > 0 
-      ? robustAwardXP(user.id, xpAmount, 'sleep', null, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
-      : Promise.resolve()
-
-    await Promise.allSettled([savePromise, xpPromise])
-
+    // 1. Optimistic UI update instantly for immediate user feedback!
     setSleepMsg({
       success: isHealthy,
       title: isHealthy ? 'SLEEP TARGET MET' : 'TARGET MISSED',
@@ -160,6 +145,26 @@ export default function DailyOps() {
       xp: xpAmount
     })
     setSleepSaving(false)
+
+    // 2. Perform DB operations asynchronously in background
+    try {
+      const savePromise = sb.from('sleep_logs').upsert({
+        user_id: user.id,
+        date: sleepTargetDate,
+        bedtime,
+        wake_time: wakeTime,
+        duration_hours: liveSleepDuration.totalHours,
+        status: isHealthy ? 'healthy' : 'deprived'
+      })
+
+      const xpPromise = xpAmount > 0 
+        ? robustAwardXP(user.id, xpAmount, 'sleep', null, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
+        : Promise.resolve()
+
+      await Promise.allSettled([savePromise, xpPromise])
+    } catch (e) {
+      console.error('Async sleep save error:', e)
+    }
   }
 
   const handleDropStaticSleepHabits = async () => {

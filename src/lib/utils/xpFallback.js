@@ -18,32 +18,34 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
   console.warn('award_xp RPC failed, falling back to client insert', rpcError)
 
   // Fallback: manual insert into xp_history
-  const insertPayload = {
-    user_id: userId,
-    amount,
-    source_type: sourceType,
-    source_id: sourceId,
-    description,
-    stat_category: statCategory
-  }
-  
-  const { error: insertErr } = await supabase.from('xp_history').insert(insertPayload)
-  
-  if (insertErr && insertErr.message && insertErr.message.includes('stat_category')) {
-    console.warn('stat_category missing, retrying without it')
-    delete insertPayload.stat_category
-    await supabase.from('xp_history').insert(insertPayload)
-  } else if (insertErr) {
-    console.error('Failed to insert xp_history', insertErr)
+  try {
+    const insertPayload = {
+      user_id: userId,
+      amount,
+      source_type: sourceType,
+      source_id: sourceId || null,
+      description: description || null,
+      stat_category: statCategory || 'discipline'
+    }
+    
+    const { error: insertErr } = await supabase.from('xp_history').insert(insertPayload)
+    if (insertErr && insertErr.message && insertErr.message.includes('stat_category')) {
+      delete insertPayload.stat_category
+      await supabase.from('xp_history').insert(insertPayload)
+    }
+  } catch (e) {
+    console.error('Failed to insert xp_history', e)
   }
 
-  // Fallback: manual update profiles with a local Mutex to prevent read-then-write race conditions
-  await navigator.locks.request('xp_update_lock', async () => {
+  // Fallback: manual update profiles without blocking navigator.locks deadlock on iOS
+  try {
     const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
     if (prof) {
       await supabase.from('profiles').update({ total_xp: (prof.total_xp || 0) + amount }).eq('id', userId)
     }
-  })
+  } catch (e) {
+    console.error('Failed to update profile total_xp', e)
+  }
   
   return true
 }
