@@ -195,23 +195,39 @@ export default function XPDashboard() {
           <div className="absolute top-0 right-0 w-64 h-64 opacity-10 blur-[100px]" style={{ background: currentRank.color }} />
           
           <HudPanel className="relative z-10 flex flex-col md:flex-row items-center gap-8 p-8" style={{ borderColor: currentRank.color }}>
-            <div className="flex-col items-center justify-center shrink-0">
-              <div className="relative w-32 h-32 flex items-center justify-center mb-2">
-                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 128 128">
-                  <circle cx="64" cy="64" r="50" fill="none" stroke="var(--border-strong)" strokeWidth="4" />
-                  <motion.circle cx="64" cy="64" r="50" fill="none" stroke={currentRank.color} strokeWidth="4"
-                    strokeDasharray={`${2 * Math.PI * 50}`}
-                    initial={{ strokeDashoffset: `${2 * Math.PI * 50}` }}
-                    animate={{ strokeDashoffset: `${2 * Math.PI * 50 * (1 - progressPct / 100)}` }}
+            <div className="flex flex-col items-center justify-center shrink-0">
+              <div className="relative w-40 h-40 flex items-center justify-center">
+                {/* Glow ring */}
+                <div 
+                  className="absolute inset-2 rounded-full opacity-20 blur-xl pointer-events-none" 
+                  style={{ background: currentRank.color }} 
+                />
+                
+                {/* Circular SVG Gauge */}
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 160 160">
+                  <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="6" />
+                  <motion.circle 
+                    cx="80" cy="80" r="70" 
+                    fill="none" 
+                    stroke={currentRank.color} 
+                    strokeWidth="6"
+                    strokeDasharray={`${2 * Math.PI * 70}`}
+                    initial={{ strokeDashoffset: `${2 * Math.PI * 70}` }}
+                    animate={{ strokeDashoffset: `${2 * Math.PI * 70 * (1 - progressPct / 100)}` }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
-                    strokeLinecap="round" />
+                    strokeLinecap="round" 
+                  />
                 </svg>
-                <div className="relative z-10 flex flex-col items-center justify-center text-center pointer-events-none">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted leading-none mb-1">LEVEL</span>
-                  <span className="font-display text-3xl font-bold text-primary leading-none drop-shadow-md">{currentLevel}</span>
+
+                {/* Inner Level Content */}
+                <div className="relative z-10 flex flex-col items-center justify-center text-center pointer-events-none px-2">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted font-bold mb-0.5">LEVEL</span>
+                  <span className="font-display text-4xl font-extrabold text-primary leading-none tracking-tight mb-1">{currentLevel}</span>
+                  <span className="px-2 py-0.5 rounded-full font-mono text-[8px] font-bold uppercase tracking-widest border" style={{ color: currentRank.color, borderColor: `${currentRank.color}40`, backgroundColor: `${currentRank.color}15` }}>
+                    {currentRank.name}
+                  </span>
                 </div>
               </div>
-              <div className="font-display text-lg uppercase tracking-widest" style={{ color: currentRank.color }}>{currentRank.name}</div>
             </div>
 
             <div className="flex-1 w-full">

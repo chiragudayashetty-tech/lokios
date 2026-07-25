@@ -358,6 +358,30 @@ export default function DailyOps() {
     }
   }, [viewMonth, viewYear, isCurrentMonth, todayDay])
 
+  // Preserve vertical scroll position during state updates
+  const lastScrollPosRef = useMemo(() => ({ top: 0 }), [])
+
+  useEffect(() => {
+    const mainEl = document.querySelector('.main-content') || window
+    const handleScroll = () => {
+      const currentTop = mainEl.scrollTop !== undefined ? mainEl.scrollTop : window.scrollY
+      if (currentTop > 0) {
+        lastScrollPosRef.top = currentTop
+      }
+    }
+    mainEl.addEventListener('scroll', handleScroll, { passive: true })
+    return () => mainEl.removeEventListener('scroll', handleScroll)
+  }, [lastScrollPosRef])
+
+  useEffect(() => {
+    if (lastScrollPosRef.top > 0) {
+      const mainEl = document.querySelector('.main-content') || window
+      if (mainEl.scrollTo) {
+        mainEl.scrollTo({ top: lastScrollPosRef.top, behavior: 'instant' })
+      }
+    }
+  }, [monthLogs, todayLogs, habits, weightLoggedToday, sleepMsg, lastScrollPosRef])
+
   // Auto-scroll grid to today
   useEffect(() => {
     const timer = setTimeout(() => {
