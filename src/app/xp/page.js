@@ -197,33 +197,37 @@ export default function XPDashboard() {
           <HudPanel className="relative z-10 p-8 md:p-10 flex flex-col items-center text-center" style={{ borderColor: `${currentRank.color}50` }}>
             
             {/* Glowing Progress Wave */}
-            <div className="relative w-full max-w-md h-24 md:h-32 mb-2 overflow-hidden">
+            <div className="relative w-full max-w-2xl mb-2" style={{ height: '160px' }}>
               {/* Subtle grid background */}
               <svg className="absolute inset-0 w-full h-full opacity-[0.06]" preserveAspectRatio="none">
-                {Array.from({length: 8}, (_, i) => (
-                  <line key={`v${i}`} x1={`${(i+1) * 12.5}%`} y1="0" x2={`${(i+1) * 12.5}%`} y2="100%" stroke={currentRank.color} strokeWidth="1" />
+                {Array.from({length: 10}, (_, i) => (
+                  <line key={`v${i}`} x1={`${(i+1) * 9.09}%`} y1="0" x2={`${(i+1) * 9.09}%`} y2="100%" stroke={currentRank.color} strokeWidth="1" />
                 ))}
-                {Array.from({length: 5}, (_, i) => (
-                  <line key={`h${i}`} x1="0" y1={`${(i+1) * 20}%`} x2="100%" y2={`${(i+1) * 20}%`} stroke={currentRank.color} strokeWidth="1" />
+                {Array.from({length: 6}, (_, i) => (
+                  <line key={`h${i}`} x1="0" y1={`${(i+1) * 14.28}%`} x2="100%" y2={`${(i+1) * 14.28}%`} stroke={currentRank.color} strokeWidth="1" />
                 ))}
               </svg>
 
-              {/* The wave SVG — viewBox padded at top so apex dot stays inside */}
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 130" preserveAspectRatio="none">
+              {/* The wave SVG */}
+              <svg
+                className="absolute inset-0 w-full h-full"
+                viewBox="0 0 600 160"
+                preserveAspectRatio="xMidYMid meet"
+              >
                 <defs>
                   <linearGradient id="waveGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={currentRank.color} stopOpacity="0.25" />
+                    <stop offset="0%" stopColor={currentRank.color} stopOpacity="0.30" />
                     <stop offset="100%" stopColor={currentRank.color} stopOpacity="0" />
                   </linearGradient>
-                  <filter id="glowDot">
-                    <feGaussianBlur stdDeviation="3" result="blur" />
+                  <filter id="glowDot" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="5" result="blur" />
                     <feMerge>
                       <feMergeNode in="blur" />
                       <feMergeNode in="SourceGraphic" />
                     </feMerge>
                   </filter>
-                  <filter id="lineGlow">
-                    <feGaussianBlur stdDeviation="1.5" result="blur" />
+                  <filter id="lineGlow" x="-20%" y="-100%" width="140%" height="300%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
                     <feMerge>
                       <feMergeNode in="blur" />
                       <feMergeNode in="SourceGraphic" />
@@ -233,7 +237,7 @@ export default function XPDashboard() {
 
                 {/* Fill area under curve */}
                 <motion.path
-                  d="M0,110 C60,110 120,105 160,90 C200,70 220,30 240,22 C260,15 280,30 300,60 C340,100 370,110 400,110 L400,130 L0,130 Z"
+                  d="M0,140 C80,140 160,135 230,115 C280,100 310,60 340,28 C360,12 380,20 410,55 C450,100 510,138 600,140 L600,160 L0,160 Z"
                   fill="url(#waveGrad)"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -242,7 +246,7 @@ export default function XPDashboard() {
 
                 {/* Main curve line */}
                 <motion.path
-                  d="M0,110 C60,110 120,105 160,90 C200,70 220,30 240,22 C260,15 280,30 300,60 C340,100 370,110 400,110"
+                  d="M0,140 C80,140 160,135 230,115 C280,100 310,60 340,28 C360,12 380,20 410,55 C450,100 510,138 600,140"
                   fill="none"
                   stroke={currentRank.color}
                   strokeWidth="2.5"
@@ -255,7 +259,7 @@ export default function XPDashboard() {
 
                 {/* Bright apex dot */}
                 <motion.circle
-                  cx="240" cy="22" r="5"
+                  cx="340" cy="28" r="6"
                   fill="#ffffff"
                   filter="url(#glowDot)"
                   initial={{ opacity: 0, scale: 0 }}
@@ -265,14 +269,13 @@ export default function XPDashboard() {
 
                 {/* Colored outer glow ring at apex */}
                 <motion.circle
-                  cx="240" cy="22" r="8"
+                  cx="340" cy="28" r="11"
                   fill="none"
                   stroke={currentRank.color}
                   strokeWidth="1.5"
-                  opacity="0.5"
                   filter="url(#glowDot)"
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 0.5, scale: 1 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.6 }}
                   transition={{ delay: 1.6, duration: 0.5 }}
                 />
               </svg>
