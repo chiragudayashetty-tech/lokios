@@ -196,15 +196,85 @@ export default function XPDashboard() {
           
           <HudPanel className="relative z-10 p-8 md:p-10 flex flex-col items-center text-center" style={{ borderColor: `${currentRank.color}50` }}>
             
-            {/* Geometric Pixel Emblem Icon */}
-            <div className="relative w-16 h-16 flex items-center justify-center mb-3">
-              <div className="absolute inset-0 rounded-full opacity-30 blur-xl" style={{ background: currentRank.color }} />
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-lg">
-                <path d="M12 2L17 7L12 12L7 7L12 2Z" fill={currentRank.color} opacity="0.9" />
-                <path d="M12 12L17 17L12 22L7 17L12 12Z" fill={currentRank.color} opacity="0.6" />
-                <path d="M2 12L7 7L12 12L7 17L2 12Z" fill={currentRank.color} opacity="0.75" />
-                <path d="M12 12L17 7L22 12L17 17L12 12Z" fill={currentRank.color} opacity="0.75" />
-                <circle cx="12" cy="12" r="2.5" fill="#ffffff" />
+            {/* Glowing Progress Wave */}
+            <div className="relative w-full max-w-md h-32 mb-4 overflow-visible">
+              {/* Subtle grid background */}
+              <svg className="absolute inset-0 w-full h-full opacity-[0.06]" preserveAspectRatio="none">
+                {Array.from({length: 8}, (_, i) => (
+                  <line key={`v${i}`} x1={`${(i+1) * 12.5}%`} y1="0" x2={`${(i+1) * 12.5}%`} y2="100%" stroke={currentRank.color} strokeWidth="1" />
+                ))}
+                {Array.from({length: 5}, (_, i) => (
+                  <line key={`h${i}`} x1="0" y1={`${(i+1) * 20}%`} x2="100%" y2={`${(i+1) * 20}%`} stroke={currentRank.color} strokeWidth="1" />
+                ))}
+              </svg>
+
+              {/* The wave SVG */}
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 120" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+                <defs>
+                  <linearGradient id="waveGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={currentRank.color} stopOpacity="0.25" />
+                    <stop offset="100%" stopColor={currentRank.color} stopOpacity="0" />
+                  </linearGradient>
+                  <filter id="glowDot">
+                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  <filter id="lineGlow">
+                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                {/* Fill area under curve */}
+                <motion.path
+                  d="M0,100 C60,100 120,95 160,80 C200,60 220,15 240,10 C260,5 280,15 300,50 C340,90 370,100 400,100 L400,120 L0,120 Z"
+                  fill="url(#waveGrad)"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 1.2 }}
+                />
+
+                {/* Main curve line */}
+                <motion.path
+                  d="M0,100 C60,100 120,95 160,80 C200,60 220,15 240,10 C260,5 280,15 300,50 C340,90 370,100 400,100"
+                  fill="none"
+                  stroke={currentRank.color}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  filter="url(#lineGlow)"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 2, ease: "easeInOut" }}
+                />
+
+                {/* Bright apex dot */}
+                <motion.circle
+                  cx="240" cy="10" r="5"
+                  fill="#ffffff"
+                  filter="url(#glowDot)"
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 1.5, duration: 0.5, ease: "easeOut" }}
+                />
+
+                {/* Colored outer glow ring at apex */}
+                <motion.circle
+                  cx="240" cy="10" r="8"
+                  fill="none"
+                  stroke={currentRank.color}
+                  strokeWidth="1.5"
+                  opacity="0.5"
+                  filter="url(#glowDot)"
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 0.5, scale: 1 }}
+                  transition={{ delay: 1.6, duration: 0.5 }}
+                />
               </svg>
             </div>
 
