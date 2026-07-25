@@ -73,13 +73,29 @@ export default function WeeklyReview() {
   
   const [wins, setWins] = useState('')
   const [fails, setFails] = useState('')
-  const [nextActions, setNextActions] = useState('')
+  const [nextGoal1, setNextGoal1] = useState('')
+  const [nextGoal2, setNextGoal2] = useState('')
+  const [nextGoal3, setNextGoal3] = useState('')
   const [saving, setSaving] = useState(false)
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   
   const [showHistory, setShowHistory] = useState(false)
   const [historyLogs, setHistoryLogs] = useState([])
   const [expandedArchive, setExpandedArchive] = useState(null)
+
+  const getWordCount = (str) => {
+    if (!str || !str.trim()) return 0
+    return str.trim().split(/\s+/).length
+  }
+
+  const handleGoalChange = (val, setter) => {
+    const words = val.trim().split(/\s+/)
+    if (words.length > 20) {
+      setter(words.slice(0, 20).join(' '))
+    } else {
+      setter(val)
+    }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -133,8 +149,9 @@ export default function WeeklyReview() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!user || saving) return
-    if (!wins.trim() || !fails.trim() || !nextActions.trim()) {
-      alert('Please fill out all fields to complete your review.')
+    const goalsList = [nextGoal1, nextGoal2, nextGoal3].filter(g => g.trim())
+    if (!wins.trim() || !fails.trim() || goalsList.length === 0) {
+      alert('Please fill out wins, fails, and at least 1 Next Week Priority Goal.')
       return
     }
 
@@ -142,7 +159,8 @@ export default function WeeklyReview() {
     const supabase = createClient()
     const todayStr = getLocalDateStr()
 
-    // Format the description as structured text so it renders nicely in Proof of Work
+    const formattedGoals = goalsList.map((g, i) => `${i + 1}. ${g.trim()}`).join('\n')
+
     const formattedContent = `### What went well?
 ${wins}
 
@@ -150,7 +168,7 @@ ${wins}
 ${fails}
 
 ### Priorities for Next Week
-${nextActions}`
+${formattedGoals}`
 
     try {
       const payload = {
@@ -163,11 +181,28 @@ ${nextActions}`
 
       const { error: insertError } = await supabase.from('work_logs').insert([payload])
       if (insertError) throw insertError
+
+      // Deploy the priority goals as finishable operations to the tasks table
+      const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
+      for (const goalText of goalsList) {
+        await supabase.from('tasks').insert([{
+          user_id: user.id,
+          title: goalText.trim(),
+          type: 'custom',
+          category: 'weekly_goal',
+          due_date: endOfWeekStr,
+          status: 'pending',
+          description: '[Weekly Goal] Priority for Next Week (from Weekly Debrief)'
+        }])
+      }
+
       await robustAwardXP(user.id, 5, 'task', todayStr, `Weekly Review Completed`, 'discipline')
       
       setWins('')
       setFails('')
-      setNextActions('')
+      setNextGoal1('')
+      setNextGoal2('')
+      setNextGoal3('')
       setShowHistory(true)
       
       // refresh history
@@ -291,17 +326,39 @@ ${nextActions}`
               />
             </div>
 
-            <div className="space-y-3">
-              <label className="font-display uppercase tracking-widest text-lg flex items-center gap-2 text-primary">
-                <ArrowRight size={20} /> Priorities for Next Week
-              </label>
-              <p className="font-mono text-xs text-muted">List the top 1-3 things that MUST get done next week to move the needle.</p>
-              <textarea 
-                className="input w-full min-h-[120px] resize-y"
-                placeholder="1.&#10;2.&#10;3."
-                value={nextActions}
-                onChange={e => setNextActions(e.target.value)}
-              />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="font-display uppercase tracking-widest text-lg flex items-center gap-2 text-primary">
+                  <ArrowRight size={20} /> Priorities for Next Week
+                </label>
+                <span className="font-mono text-[10px] text-muted uppercase tracking-wider">MAX 20 WORDS PER GOAL</span>
+              </div>
+              <p className="font-mono text-xs text-muted">Enter up to 3 key goals for next week. These will automatically deploy to your Command Center as finishable operations!</p>
+              
+              <div className="space-y-3 mt-2">
+                {[
+                  { id: 1, val: nextGoal1, set: setNextGoal1, placeholder: "Goal #1 (e.g., Ship landing page redesign & test payment link)" },
+                  { id: 2, val: nextGoal2, set: setNextGoal2, placeholder: "Goal #2 (e.g., Close 3 client proposals and conduct demo calls)" },
+                  { id: 3, val: nextGoal3, set: setNextGoal3, placeholder: "Goal #3 (e.g., Complete 5 workouts and stick to 8h sleep target)" },
+                ].map((item) => {
+                  const words = getWordCount(item.val)
+                  return (
+                    <div key={item.id} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] text-amber font-bold uppercase tracking-widest">PRIORITY GOAL #{item.id}</span>
+                        <span className={`font-mono text-[9px] ${words >= 20 ? 'text-danger font-bold' : 'text-muted'}`}>({words}/20 words)</span>
+                      </div>
+                      <input 
+                        type="text"
+                        className="input w-full font-mono text-xs py-2 px-3 bg-bg-primary border border-border-color focus:border-amber rounded"
+                        placeholder={item.placeholder}
+                        value={item.val}
+                        onChange={e => handleGoalChange(e.target.value, item.set)}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="pt-4 border-t border-border-color flex items-center justify-between">

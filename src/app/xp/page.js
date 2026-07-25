@@ -196,19 +196,19 @@ export default function XPDashboard() {
           
           <HudPanel className="relative z-10 flex flex-col md:flex-row items-center gap-8 p-8" style={{ borderColor: currentRank.color }}>
             <div className="flex-col items-center justify-center shrink-0">
-              <div className="relative w-32 h-32 flex-center mb-2">
-                <svg className="absolute inset-0 w-full h-full -rotate-90">
-                  <circle cx="64" cy="64" r="60" fill="none" stroke="var(--border-strong)" strokeWidth="4" />
-                  <motion.circle cx="64" cy="64" r="60" fill="none" stroke={currentRank.color} strokeWidth="4"
-                    strokeDasharray={`${2 * Math.PI * 60}`}
-                    initial={{ strokeDashoffset: `${2 * Math.PI * 60}` }}
-                    animate={{ strokeDashoffset: `${2 * Math.PI * 60 * (1 - progressPct / 100)}` }}
+              <div className="relative w-32 h-32 flex items-center justify-center mb-2">
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 128 128">
+                  <circle cx="64" cy="64" r="50" fill="none" stroke="var(--border-strong)" strokeWidth="4" />
+                  <motion.circle cx="64" cy="64" r="50" fill="none" stroke={currentRank.color} strokeWidth="4"
+                    strokeDasharray={`${2 * Math.PI * 50}`}
+                    initial={{ strokeDashoffset: `${2 * Math.PI * 50}` }}
+                    animate={{ strokeDashoffset: `${2 * Math.PI * 50 * (1 - progressPct / 100)}` }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
                     strokeLinecap="round" />
                 </svg>
-                <div className="flex-col items-center text-center">
-                  <span className="font-mono text-xs uppercase tracking-widest text-muted">LEVEL</span>
-                  <span className="font-display text-4xl text-primary drop-shadow-md">{currentLevel}</span>
+                <div className="relative z-10 flex flex-col items-center justify-center text-center pointer-events-none">
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted leading-none mb-1">LEVEL</span>
+                  <span className="font-display text-3xl font-bold text-primary leading-none drop-shadow-md">{currentLevel}</span>
                 </div>
               </div>
               <div className="font-display text-lg uppercase tracking-widest" style={{ color: currentRank.color }}>{currentRank.name}</div>

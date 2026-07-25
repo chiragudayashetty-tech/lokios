@@ -77,8 +77,11 @@ export default function MissionControl() {
     goals:   { mainQuest, sideQuests, longTermGoals },
     habits:  { todayLogs, habits },
     tasks:   { tasks },
-    journal: { entries }
+    journal: { entries },
+    completeOperation
   } = useOS()
+
+  const weeklyGoalTasks = tasks.filter(t => t.category === 'weekly_goal' && t.status !== 'cancelled')
 
   const [currentTime, setCurrentTime] = useState(new Date())
   const [xpToday, setXpToday]         = useState(0)
@@ -889,7 +892,39 @@ export default function MissionControl() {
                 </Link>
               </div>
 
-              {nextWeekPriorities ? (
+              {weeklyGoalTasks.length > 0 ? (
+                <div className="space-y-2">
+                  {weeklyGoalTasks.slice(0, 3).map((gt) => {
+                    const isDone = gt.status === 'completed'
+                    return (
+                      <div key={gt.id} className="flex items-center justify-between gap-3 p-2.5 rounded bg-bg-primary border border-border-color">
+                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isDone) completeOperation(gt.id)
+                            }}
+                            disabled={isDone}
+                            className={`w-6 h-6 rounded flex items-center justify-center shrink-0 transition-all ${
+                              isDone ? 'bg-success text-bg-primary border-none' : 'border border-border-strong hover:border-success text-muted'
+                            }`}
+                          >
+                            {isDone ? <Check size={14} strokeWidth={3} /> : <div className="w-2 h-2 rounded-full bg-border-strong" />}
+                          </button>
+                          <span className={`font-mono text-xs truncate ${isDone ? 'text-muted line-through opacity-70' : 'text-primary font-medium'}`}>
+                            {gt.title}
+                          </span>
+                        </div>
+                        {isDone ? (
+                          <span className="font-mono text-[9px] text-success font-bold shrink-0">FINISHED</span>
+                        ) : (
+                          <span className="font-mono text-[9px] text-amber shrink-0">+25 XP</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : nextWeekPriorities ? (
                 <div className="font-mono text-xs text-primary whitespace-pre-wrap leading-relaxed p-3 rounded-sm bg-bg-primary border border-border-color">
                   {nextWeekPriorities}
                 </div>
