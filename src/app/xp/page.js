@@ -197,7 +197,7 @@ export default function XPDashboard() {
           <HudPanel className="relative z-10 p-8 md:p-10 flex flex-col items-center text-center" style={{ borderColor: `${currentRank.color}50` }}>
             
             {/* Glowing Progress Wave */}
-            <div className="relative w-full max-w-md h-32 mb-4 overflow-visible">
+            <div className="relative w-full max-w-md h-24 md:h-32 mb-2 overflow-hidden">
               {/* Subtle grid background */}
               <svg className="absolute inset-0 w-full h-full opacity-[0.06]" preserveAspectRatio="none">
                 {Array.from({length: 8}, (_, i) => (
@@ -208,22 +208,22 @@ export default function XPDashboard() {
                 ))}
               </svg>
 
-              {/* The wave SVG */}
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 120" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+              {/* The wave SVG — viewBox padded at top so apex dot stays inside */}
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 130" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="waveGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={currentRank.color} stopOpacity="0.25" />
                     <stop offset="100%" stopColor={currentRank.color} stopOpacity="0" />
                   </linearGradient>
                   <filter id="glowDot">
-                    <feGaussianBlur stdDeviation="4" result="blur" />
+                    <feGaussianBlur stdDeviation="3" result="blur" />
                     <feMerge>
                       <feMergeNode in="blur" />
                       <feMergeNode in="SourceGraphic" />
                     </feMerge>
                   </filter>
                   <filter id="lineGlow">
-                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feGaussianBlur stdDeviation="1.5" result="blur" />
                     <feMerge>
                       <feMergeNode in="blur" />
                       <feMergeNode in="SourceGraphic" />
@@ -233,7 +233,7 @@ export default function XPDashboard() {
 
                 {/* Fill area under curve */}
                 <motion.path
-                  d="M0,100 C60,100 120,95 160,80 C200,60 220,15 240,10 C260,5 280,15 300,50 C340,90 370,100 400,100 L400,120 L0,120 Z"
+                  d="M0,110 C60,110 120,105 160,90 C200,70 220,30 240,22 C260,15 280,30 300,60 C340,100 370,110 400,110 L400,130 L0,130 Z"
                   fill="url(#waveGrad)"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -242,7 +242,7 @@ export default function XPDashboard() {
 
                 {/* Main curve line */}
                 <motion.path
-                  d="M0,100 C60,100 120,95 160,80 C200,60 220,15 240,10 C260,5 280,15 300,50 C340,90 370,100 400,100"
+                  d="M0,110 C60,110 120,105 160,90 C200,70 220,30 240,22 C260,15 280,30 300,60 C340,100 370,110 400,110"
                   fill="none"
                   stroke={currentRank.color}
                   strokeWidth="2.5"
@@ -255,7 +255,7 @@ export default function XPDashboard() {
 
                 {/* Bright apex dot */}
                 <motion.circle
-                  cx="240" cy="10" r="5"
+                  cx="240" cy="22" r="5"
                   fill="#ffffff"
                   filter="url(#glowDot)"
                   initial={{ opacity: 0, scale: 0 }}
@@ -265,7 +265,7 @@ export default function XPDashboard() {
 
                 {/* Colored outer glow ring at apex */}
                 <motion.circle
-                  cx="240" cy="10" r="8"
+                  cx="240" cy="22" r="8"
                   fill="none"
                   stroke={currentRank.color}
                   strokeWidth="1.5"
