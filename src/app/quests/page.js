@@ -212,22 +212,22 @@ export default function DailyOps() {
         status: isHealthy ? 'healthy' : 'deprived'
       }
 
-      const { data: existingLog } = await sb.from('sleep_logs')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('date', sleepTargetDate)
-        .maybeSingle()
-
-      let savePromise
-      if (existingLog) {
-        savePromise = sb.from('sleep_logs').update(payload).eq('id', existingLog.id)
-      } else {
-        savePromise = sb.from('sleep_logs').insert(payload)
-      }
+      // Use upsert for rock-solid save/override across all RLS policies
+      const savePromise = sb.from('sleep_logs').upsert(payload, { onConflict: 'user_id,date' }).then(({ error }) => {
+        if (error) {
+          console.warn('Upsert onConflict error, falling back to direct upsert:', error)
+          return sb.from('sleep_logs').upsert(payload)
+        }
+      })
 
       const xpPromise = robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, `Sleep Logged (${liveSleepDuration.totalHours}h)`)
 
       await Promise.allSettled([savePromise, xpPromise])
+
+      // Dispatch global custom event to notify all listeners/components across the app
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lokios_sleep_updated', { detail: payload }))
+      }
     } catch (e) {
       console.error('Async sleep save error:', e)
     }

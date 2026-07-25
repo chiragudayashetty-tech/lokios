@@ -59,31 +59,43 @@ export default function WellnessPage() {
   const fetchSleepData = useCallback(async () => {
     if (!user) return
     setLoadingSleep(true)
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    const thirtyDaysAgoStr = getLocalDateStr(thirtyDaysAgo)
 
-    const [sleepRes, bpRes] = await Promise.all([
-      supabase.from('sleep_logs').select('*').eq('user_id', user.id)
-        .gte('date', thirtyDaysAgoStr).order('date', { ascending: true }),
-      supabase.from('user_blueprints').select('battles').eq('user_id', user.id)
-    ])
+    try {
+      const [sleepRes, bpRes] = await Promise.all([
+        supabase.from('sleep_logs').select('*').eq('user_id', user.id).order('date', { ascending: true }),
+        supabase.from('user_blueprints').select('battles').eq('user_id', user.id)
+      ])
 
-    if (sleepRes.data) setSleepLogs(sleepRes.data)
+      if (sleepRes.data) {
+        setSleepLogs(sleepRes.data)
+      } else if (sleepRes.error) {
+        console.error('Error fetching sleep_logs:', sleepRes.error)
+      }
 
-    const bp = bpRes.data?.[0]
-    if (bp?.battles) {
-      const sleepBattle = bp.battles.find(b => {
-        const n = b.name?.toLowerCase() || ''
-        return n.includes('sleep') || n.includes('rest') || n.includes('discipline')
-      })
-      if (sleepBattle) setWarRoomHp(sleepBattle.hp ?? 100)
+      const bp = bpRes.data?.[0]
+      if (bp?.battles) {
+        const sleepBattle = bp.battles.find(b => {
+          const n = b.name?.toLowerCase() || ''
+          return n.includes('sleep') || n.includes('rest') || n.includes('discipline')
+        })
+        if (sleepBattle) setWarRoomHp(sleepBattle.hp ?? 100)
+      }
+    } catch (err) {
+      console.error('fetchSleepData failed:', err)
+    } finally {
+      setLoadingSleep(false)
     }
-    setLoadingSleep(false)
   }, [user])
 
   useEffect(() => { fetchBodyData(); fetchSleepData(); }, [fetchBodyData, fetchSleepData])
   useEffect(() => { if (activeTab === 'sleep') fetchSleepData() }, [activeTab, fetchSleepData])
+
+  // Listen for live sleep updates dispatched anywhere in app
+  useEffect(() => {
+    const handleSleepUpdate = () => { fetchSleepData() }
+    window.addEventListener('lokios_sleep_updated', handleSleepUpdate)
+    return () => window.removeEventListener('lokios_sleep_updated', handleSleepUpdate)
+  }, [fetchSleepData])
 
   // ─── BODY HANDLERS ───
   const handleSetup = async () => {
