@@ -191,73 +191,70 @@ export default function XPDashboard() {
 
         {/* Level Up Banner / Core Stats */}
         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-bg-tertiary to-transparent z-0" />
-          <div className="absolute top-0 right-0 w-64 h-64 opacity-10 blur-[100px]" style={{ background: currentRank.color }} />
+          <div className="absolute inset-0 bg-gradient-to-b from-bg-tertiary to-transparent z-0" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 opacity-15 blur-[120px] pointer-events-none" style={{ background: currentRank.color }} />
           
-          <HudPanel className="relative z-10 flex flex-col md:flex-row items-center gap-8 p-8" style={{ borderColor: currentRank.color }}>
-            <div className="flex flex-col items-center justify-center shrink-0">
-              {/* Circle Gauge Container */}
-              <div className="relative w-36 h-36 flex items-center justify-center mb-3">
-                {/* Glow ring */}
-                <div 
-                  className="absolute inset-0 rounded-full opacity-20 blur-xl pointer-events-none" 
-                  style={{ background: currentRank.color }} 
-                />
-                
-                {/* Circular SVG Gauge */}
-                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 144 144">
-                  <circle cx="72" cy="72" r="58" fill="none" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="5" />
-                  <motion.circle 
-                    cx="72" cy="72" r="58" 
-                    fill="none" 
-                    stroke={currentRank.color} 
-                    strokeWidth="5"
-                    strokeDasharray={`${2 * Math.PI * 58}`}
-                    initial={{ strokeDashoffset: `${2 * Math.PI * 58}` }}
-                    animate={{ strokeDashoffset: `${2 * Math.PI * 58 * (1 - progressPct / 100)}` }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    strokeLinecap="round" 
-                  />
-                </svg>
+          <HudPanel className="relative z-10 p-8 md:p-10 flex flex-col items-center text-center" style={{ borderColor: `${currentRank.color}50` }}>
+            
+            {/* Geometric Pixel Emblem Icon */}
+            <div className="relative w-16 h-16 flex items-center justify-center mb-3">
+              <div className="absolute inset-0 rounded-full opacity-30 blur-xl" style={{ background: currentRank.color }} />
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-lg">
+                <path d="M12 2L17 7L12 12L7 7L12 2Z" fill={currentRank.color} opacity="0.9" />
+                <path d="M12 12L17 17L12 22L7 17L12 12Z" fill={currentRank.color} opacity="0.6" />
+                <path d="M2 12L7 7L12 12L7 17L2 12Z" fill={currentRank.color} opacity="0.75" />
+                <path d="M12 12L17 7L22 12L17 17L12 12Z" fill={currentRank.color} opacity="0.75" />
+                <circle cx="12" cy="12" r="2.5" fill="#ffffff" />
+              </svg>
+            </div>
 
-                {/* Inner Level Content: ONLY LEVEL label + Giant Number */}
-                <div className="relative z-10 flex flex-col items-center justify-center text-center pointer-events-none">
-                  <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted font-bold mb-0.5">LEVEL</span>
-                  <span className="font-display text-4xl font-extrabold text-primary leading-none tracking-tight">{currentLevel}</span>
+            {/* Level Title & Rank Subtitle */}
+            <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-1">
+              Level {currentLevel}
+            </h2>
+            <span className="font-mono text-xs uppercase tracking-[0.35em] font-semibold text-muted mb-8">
+              {currentRank.name}
+            </span>
+
+            {/* Progress Card (Matching Reference Image) */}
+            <div className="w-full max-w-2xl bg-bg-primary/80 border border-border-color rounded-2xl p-6 shadow-2xl backdrop-blur-md mb-8 text-left">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: `${currentRank.color}20`, border: `1px solid ${currentRank.color}40` }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2L22 12L12 22L2 12L12 2Z" fill={currentRank.color} />
+                    </svg>
+                  </div>
+                  <span className="font-display text-lg font-bold text-white">Level {currentLevel}</span>
                 </div>
+                <span className="font-mono text-xs font-bold text-muted tracking-wider">{current} / {required} XP</span>
               </div>
 
-              {/* Rank / Saga Pill OUTSIDE & BELOW the circle ring */}
-              <div 
-                className="px-3 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-widest border shadow-sm"
-                style={{ color: currentRank.color, borderColor: `${currentRank.color}40`, backgroundColor: `${currentRank.color}15` }}
-              >
-                {currentRank.name}
+              <div className="mb-4">
+                <TacticalProgress value={progressPct} height={8} showValue={false} color={currentRank.color} />
+              </div>
+
+              <p className="font-mono text-xs text-muted leading-relaxed">
+                {currentRank.flavor || "You are proficient in executing daily disciplines, completing missions, and maintaining high operational performance."}
+              </p>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
+              <div className="bg-bg-tertiary border border-border-color p-4 rounded-xl flex flex-col items-center text-center">
+                <span className="font-display text-2xl text-success font-bold">{timeline.filter(t => t.amount > 0).length}</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">POSITIVE ACTIONS</span>
+              </div>
+              <div className="bg-bg-tertiary border border-border-color p-4 rounded-xl flex flex-col items-center text-center">
+                <span className="font-display text-2xl text-danger font-bold">{timeline.filter(t => t.amount < 0).length}</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">PENALTIES</span>
+              </div>
+              <div className="bg-bg-tertiary border border-border-color p-4 rounded-xl flex flex-col items-center text-center">
+                <span className="font-display text-2xl text-info font-bold">{daysTracked}</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">DAYS TRACKED</span>
               </div>
             </div>
 
-            <div className="flex-1 w-full">
-              <div className="flex-between mb-2">
-                <span className="font-mono text-xs text-amber uppercase tracking-widest flex items-center gap-2"><Star size={12}/> TOTAL XP: {totalXp}</span>
-                <span className="font-mono text-xs text-muted uppercase tracking-widest">{current} / {required} TO LV.{currentLevel + 1}</span>
-              </div>
-              <TacticalProgress value={progressPct} height={8} showValue={false} color={currentRank.color} />
-              
-              <div className="grid-3 gap-4 mt-6">
-                <div className="bg-bg-tertiary border border-border-color p-4 flex-col text-center">
-                  <span className="font-display text-2xl text-success">{timeline.filter(t => t.amount > 0).length}</span>
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-muted">POSITIVE ACTIONS</span>
-                </div>
-                <div className="bg-bg-tertiary border border-border-color p-4 flex-col text-center">
-                  <span className="font-display text-2xl text-danger">{timeline.filter(t => t.amount < 0).length}</span>
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-muted">PENALTIES</span>
-                </div>
-                <div className="bg-bg-tertiary border border-border-color p-4 flex-col text-center">
-                  <span className="font-display text-2xl text-info">{daysTracked}</span>
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-muted">DAYS TRACKED</span>
-                </div>
-              </div>
-            </div>
           </HudPanel>
         </motion.div>
 
