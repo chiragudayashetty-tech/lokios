@@ -589,7 +589,7 @@ body > * {
   }
 
   .main-content {
-    padding: max(16px, env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));
+    padding: max(16px, env(safe-area-inset-top)) 16px calc(68px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .hud-panel {
@@ -796,7 +796,7 @@ body > * {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     height: auto;
-    padding: max(16px, env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom)) !important;
+    padding: max(16px, env(safe-area-inset-top)) 16px calc(68px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .mobile-nav {

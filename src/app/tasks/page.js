@@ -313,25 +313,26 @@ export default function Operations() {
         className="col-span-1"
       >
         <HudPanel glow={!isCompleted && !isFailed} className={`p-4 ${isCompleted ? 'opacity-60' : ''} ${isFailed ? 'opacity-40 border-danger-subtle' : ''}`}>
-          <div className="flex-between gap-2 mb-2">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-amber px-1.5 py-0.5 border border-amber-subtle bg-bg-secondary">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-amber px-1.5 py-0.5 border border-amber-subtle bg-bg-secondary whitespace-nowrap shrink-0">
                 {task.category ? task.category.replace('_', ' ') : 'GENERAL'}
               </span>
-              <span className="font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 border"
+              <span className="font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 border whitespace-nowrap shrink-0"
                     style={{ color: diffConfig.color, borderColor: `${diffConfig.color}40`, background: `${diffConfig.color}10` }}>
                 {diffConfig.label}
               </span>
               {task.recurrence_type && (
-                <span className="font-mono text-[9px] text-info uppercase flex items-center gap-1">
+                <span className="font-mono text-[9px] text-info uppercase flex items-center gap-1 whitespace-nowrap shrink-0">
                   <Repeat size={10} /> {task.recurrence_type}
                 </span>
               )}
             </div>
 
             {task.goal_id && (
-              <span className="font-mono text-[9px] text-muted flex items-center gap-1 truncate max-w-[120px]">
-                <Target size={10} className="text-info" /> {goals.find(g => g.id === task.goal_id)?.title || 'Mission'}
+              <span className="font-mono text-[9px] text-muted flex items-center gap-1 truncate max-w-full sm:max-w-[160px]">
+                <Target size={10} className="text-info shrink-0" />
+                <span className="truncate">{goals.find(g => g.id === task.goal_id)?.title || 'Mission'}</span>
               </span>
             )}
           </div>
