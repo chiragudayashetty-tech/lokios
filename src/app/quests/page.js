@@ -46,12 +46,41 @@ export default function DailyOps() {
   const [weightSaving, setWeightSaving] = useState(false)
   const [weightMsg, setWeightMsg] = useState(null)
 
-  // Sleep Tracker Widget State
-  const [sleepTargetDate, setSleepTargetDate] = useState(yesterdayStr)
-  const [bedtime, setBedtime] = useState('23:30')
-  const [wakeTime, setWakeTime] = useState('07:00')
+  // Sleep Tracker Widget State (Persisted in localStorage across tab switches)
+  const [sleepTargetDate, setSleepTargetDate] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lokios_sleep_target_date') || yesterdayStr
+    }
+    return yesterdayStr
+  })
+  const [bedtime, setBedtime] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lokios_last_bedtime') || '23:30'
+    }
+    return '23:30'
+  })
+  const [wakeTime, setWakeTime] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lokios_last_waketime') || '07:00'
+    }
+    return '07:00'
+  })
   const [sleepSaving, setSleepSaving] = useState(false)
   const [sleepMsg, setSleepMsg] = useState(null)
+
+  // Save state choices to localStorage
+  const handleSetSleepTargetDate = (dateVal) => {
+    setSleepTargetDate(dateVal)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_sleep_target_date', dateVal)
+  }
+  const handleSetBedtime = (val) => {
+    setBedtime(val)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_last_bedtime', val)
+  }
+  const handleSetWakeTime = (val) => {
+    setWakeTime(val)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_last_waketime', val)
+  }
 
   // Fetch today's weight log
   useEffect(() => {
@@ -81,14 +110,14 @@ export default function DailyOps() {
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          if (data.bedtime) setBedtime(data.bedtime)
-          if (data.wake_time) setWakeTime(data.wake_time)
+          if (data.bedtime) handleSetBedtime(data.bedtime)
+          if (data.wake_time) handleSetWakeTime(data.wake_time)
           const isHealthy = data.status === 'healthy'
           setSleepMsg({
             success: isHealthy,
-            title: isHealthy ? 'SLEEP TARGET MET' : 'TARGET MISSED',
+            title: isHealthy ? 'SLEEP TARGET MET (+30 XP)' : 'SLEEP LOGGED (+15 XP)',
             subtitle: `Logged for ${data.date}: ${data.bedtime} to ${data.wake_time} (${data.duration_hours}h)`,
-            xp: isHealthy ? 30 : 0
+            xp: isHealthy ? 30 : 15
           })
         } else {
           setSleepMsg(null)
@@ -152,7 +181,8 @@ export default function DailyOps() {
     const isDurationValid = liveSleepDuration.totalHours >= 5.5 && liveSleepDuration.totalHours <= 10.5
 
     const isHealthy = isBedtimeOk && isWokeBefore10AM && isDurationValid
-    const xpAmount = isHealthy ? 30 : 0
+    // Always award XP for tracking sleep! (+15 base XP + +15 bonus for meeting target = +30 XP total)
+    const xpAmount = isHealthy ? 30 : 15
 
     let failReasons = []
     if (!isBedtimeOk) failReasons.push('Bedtime past 2 AM')
@@ -162,16 +192,16 @@ export default function DailyOps() {
 
     // 1. Optimistic UI update instantly for immediate user feedback!
     setSleepMsg({
-      success: isHealthy,
-      title: isHealthy ? 'SLEEP TARGET MET' : 'TARGET MISSED',
+      success: true,
+      title: isHealthy ? 'SLEEP TARGET MET (+30 XP)' : 'SLEEP LOGGED (+15 XP)',
       subtitle: isHealthy 
-        ? `Slept before 12 AM · Up before 9 AM · Duration: ${liveSleepDuration.totalHours}h` 
-        : `Reasons: ${failReasons.join(' · ')} (${liveSleepDuration.totalHours}h)`,
+        ? `Slept before 2 AM · Up before 10 AM · Duration: ${liveSleepDuration.totalHours}h` 
+        : `Logged: ${liveSleepDuration.totalHours}h (${failReasons.join(' · ')})`,
       xp: xpAmount
     })
     setSleepSaving(false)
 
-    // 2. Perform DB operations asynchronously in background (check existing ID to allow overrides)
+    // 2. Perform DB operations asynchronously in background
     try {
       const payload = {
         user_id: user.id,
@@ -195,9 +225,7 @@ export default function DailyOps() {
         savePromise = sb.from('sleep_logs').insert(payload)
       }
 
-      const xpPromise = xpAmount > 0 
-        ? robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
-        : Promise.resolve()
+      const xpPromise = robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, `Sleep Logged (${liveSleepDuration.totalHours}h)`)
 
       await Promise.allSettled([savePromise, xpPromise])
     } catch (e) {
@@ -662,7 +690,7 @@ export default function DailyOps() {
                   <label className="text-[9px] text-muted block mb-1 uppercase">SLEEP PERIOD</label>
                   <select 
                     value={sleepTargetDate} 
-                    onChange={e => setSleepTargetDate(e.target.value)}
+                    onChange={e => handleSetSleepTargetDate(e.target.value)}
                     className="select font-mono text-xs py-1 px-2 w-full bg-bg-primary border border-border-color"
                   >
                     <option value={yesterdayStr}>Last Night ({yesterdayStr})</option>
@@ -675,7 +703,7 @@ export default function DailyOps() {
                   <input 
                     type="time" 
                     value={bedtime} 
-                    onChange={e => setBedtime(e.target.value)}
+                    onChange={e => handleSetBedtime(e.target.value)}
                     className="input font-mono text-xs py-1 px-2 w-full bg-bg-primary border border-border-color"
                   />
                 </div>
@@ -685,7 +713,7 @@ export default function DailyOps() {
                   <input 
                     type="time" 
                     value={wakeTime} 
-                    onChange={e => setWakeTime(e.target.value)}
+                    onChange={e => handleSetWakeTime(e.target.value)}
                     className="input font-mono text-xs py-1 px-2 w-full bg-bg-primary border border-border-color"
                   />
                 </div>
