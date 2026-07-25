@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 export function useProfileInternal(user) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const supabase = createClient()
 
   const fetchProfile = useCallback(async () => {
@@ -16,7 +17,7 @@ export function useProfileInternal(user) {
     }
 
     try {
-      setLoading(true)
+      if (!initialized) setLoading(true)
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -30,8 +31,9 @@ export function useProfileInternal(user) {
       setProfile(null)
     } finally {
       setLoading(false)
+      setInitialized(true)
     }
-  }, [user])
+  }, [user, initialized])
 
   useEffect(() => {
     fetchProfile()

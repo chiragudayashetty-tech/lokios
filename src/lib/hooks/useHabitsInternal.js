@@ -32,7 +32,9 @@ export function useHabitsInternal(user) {
     }
 
     try {
-      setLoading(true)
+      if (!initialized) {
+        setLoading(true)
+      }
       setError(null)
 
       // Calculate month range

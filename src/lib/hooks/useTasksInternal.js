@@ -10,6 +10,7 @@ export function useTasksInternal(user) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [initialized, setInitialized] = useState(false)
   const supabase = createClient()
 
   const fetchTasks = useCallback(async () => {
@@ -20,7 +21,7 @@ export function useTasksInternal(user) {
     }
 
     try {
-      setLoading(true)
+      if (!initialized) setLoading(true)
       setError(null)
       const { data, error } = await supabase
         .from('tasks')
@@ -35,8 +36,9 @@ export function useTasksInternal(user) {
       setError('Failed to load data. Please refresh and try again.')
     } finally {
       setLoading(false)
+      setInitialized(true)
     }
-  }, [user])
+  }, [user, initialized])
 
   useEffect(() => {
     fetchTasks()
