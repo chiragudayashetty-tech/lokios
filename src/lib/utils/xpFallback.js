@@ -11,20 +11,31 @@ import { createClient } from '@/lib/supabase/client'
 export async function robustAwardXP(userId, amount, sourceType, sourceId, description, statCategory = 'discipline') {
   const supabase = createClient()
 
-  // Step 1: Find and remove ALL previous XP entries for this source_type + source_id
+  // Step 1: Find and remove ALL previous XP entries for this source_type
+  // This catches BOTH new entries (with source_id) AND legacy entries (source_id=NULL)
   if (sourceId) {
     try {
-      const { data: existing, error: findErr } = await supabase.from('xp_history')
+      // 1a: Delete entries matching exact source_type + source_id
+      const { data: exact } = await supabase.from('xp_history')
         .select('id, amount')
         .eq('user_id', userId)
         .eq('source_type', sourceType)
         .eq('source_id', sourceId)
       
-      if (!findErr && existing && existing.length > 0) {
-        const oldXpTotal = existing.reduce((sum, r) => sum + (r.amount || 0), 0)
-        const ids = existing.map(r => r.id)
+      // 1b: Also find legacy entries with NULL source_id for same source_type
+      const { data: legacy } = await supabase.from('xp_history')
+        .select('id, amount')
+        .eq('user_id', userId)
+        .eq('source_type', sourceType)
+        .is('source_id', null)
+
+      const allOld = [...(exact || []), ...(legacy || [])]
+      
+      if (allOld.length > 0) {
+        const oldXpTotal = allOld.reduce((sum, r) => sum + (r.amount || 0), 0)
+        const ids = allOld.map(r => r.id)
         
-        // Delete old records
+        // Delete ALL old records (both exact match and legacy null)
         await supabase.from('xp_history').delete().in('id', ids)
 
         // Deduct old XP from profile
