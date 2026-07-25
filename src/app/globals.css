@@ -707,12 +707,8 @@ p:last-child {
 .main-content {
   grid-column: 2;
   min-height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
   padding: var(--space-6) var(--space-8);
   position: relative;
-  scroll-behavior: smooth;
 }
 
 .main-content-full {
