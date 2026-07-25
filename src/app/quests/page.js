@@ -371,7 +371,7 @@ export default function DailyOps() {
       }
     }, 300)
     return () => clearTimeout(timer)
-  }, [viewMonth, viewYear, habits.length])
+  }, [viewMonth, viewYear])
 
   // Build a lookup map: "habitId::YYYY-MM-DD" -> status
   const logMap = useMemo(() => {
@@ -911,7 +911,6 @@ export default function DailyOps() {
               type="button"
               className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover text-primary'}`}
               onClick={() => setActiveTool('cycle')}
-              onTouchStart={(e) => { e.preventDefault(); setActiveTool('cycle'); }}
             >
               <RotateCcw size={13} /> CYCLE
             </button>
@@ -919,7 +918,6 @@ export default function DailyOps() {
               type="button"
               className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover text-success'}`}
               onClick={() => setActiveTool('completed')}
-              onTouchStart={(e) => { e.preventDefault(); setActiveTool('completed'); }}
             >
               <Check size={13} /> DONE
             </button>
@@ -927,7 +925,6 @@ export default function DailyOps() {
               type="button"
               className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover text-danger'}`}
               onClick={() => setActiveTool('failed')}
-              onTouchStart={(e) => { e.preventDefault(); setActiveTool('failed'); }}
             >
               <X size={13} /> FAIL
             </button>
@@ -936,7 +933,6 @@ export default function DailyOps() {
               className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'text-bg-primary' : 'active:bg-hover'}`}
               style={activeTool === 'blocked' ? { backgroundColor: 'var(--warning)' } : { color: 'var(--warning)' }}
               onClick={() => setActiveTool('blocked')}
-              onTouchStart={(e) => { e.preventDefault(); setActiveTool('blocked'); }}
             >
               <Leaf size={13} /> BLOCK
             </button>
@@ -944,7 +940,6 @@ export default function DailyOps() {
               type="button"
               className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover text-muted'}`}
               onClick={() => setActiveTool('none')}
-              onTouchStart={(e) => { e.preventDefault(); setActiveTool('none'); }}
             >
               <Trash2 size={13} /> CLEAR
             </button>
