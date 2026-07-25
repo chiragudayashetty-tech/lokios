@@ -149,20 +149,19 @@ export default function DailyOps() {
     setWeightSaving(true)
     const sb = createClient()
 
-    const { error: wErr } = await sb.from('weight_logs').upsert({
+    // Delete any existing weight log for today, then insert fresh (like habits)
+    await sb.from('weight_logs').delete().eq('user_id', user.id).eq('date', todayStr)
+    const { error: wErr } = await sb.from('weight_logs').insert({
       user_id: user.id,
       date: todayStr,
       weight_kg: w
     })
 
     if (!wErr) {
-      if (!weightLoggedToday) {
-        await robustAwardXP(user.id, 2, 'weight', null, 'Daily Weight Logged')
-        setWeightLoggedToday(true)
-        setWeightMsg({ success: true, title: 'BODY WEIGHT LOGGED', subtitle: `${w} kg recorded for today`, xp: 2 })
-      } else {
-        setWeightMsg({ success: true, title: 'BODY WEIGHT UPDATED', subtitle: `Updated to ${w} kg`, xp: 0 })
-      }
+      // sourceId = todayStr so robustAwardXP can deduplicate per day
+      await robustAwardXP(user.id, 2, 'weight', todayStr, 'Daily Weight Logged')
+      setWeightLoggedToday(true)
+      setWeightMsg({ success: true, title: 'BODY WEIGHT LOGGED', subtitle: `${w} kg recorded for today`, xp: 2 })
     }
     setWeightSaving(false)
   }
@@ -181,7 +180,6 @@ export default function DailyOps() {
     const isDurationValid = liveSleepDuration.totalHours >= 5.5 && liveSleepDuration.totalHours <= 10.5
 
     const isHealthy = isBedtimeOk && isWokeBefore10AM && isDurationValid
-    // Always award XP for tracking sleep! (+15 base XP + +15 bonus for meeting target = +30 XP total)
     const xpAmount = isHealthy ? 30 : 15
 
     let failReasons = []
@@ -190,7 +188,7 @@ export default function DailyOps() {
     if (liveSleepDuration.totalHours > 10.5) failReasons.push('Overslept (> 10.5h)')
     if (liveSleepDuration.totalHours < 5.5) failReasons.push('Under-slept (< 5.5h)')
 
-    // 1. Optimistic UI update instantly for immediate user feedback!
+    // 1. Optimistic UI update
     setSleepMsg({
       success: true,
       title: isHealthy ? 'SLEEP TARGET MET (+30 XP)' : 'SLEEP LOGGED (+15 XP)',
@@ -201,35 +199,32 @@ export default function DailyOps() {
     })
     setSleepSaving(false)
 
-    // 2. Perform DB operations asynchronously in background
+    // 2. Save to DB: Delete old entry for this date, then insert fresh (like habits)
     try {
-      const payload = {
+      // Delete any existing sleep log for this date first
+      await sb.from('sleep_logs').delete().eq('user_id', user.id).eq('date', sleepTargetDate)
+
+      // Insert fresh entry
+      const { error: insertErr } = await sb.from('sleep_logs').insert({
         user_id: user.id,
         date: sleepTargetDate,
         bedtime,
         wake_time: wakeTime,
         duration_hours: liveSleepDuration.totalHours,
         status: isHealthy ? 'healthy' : 'deprived'
-      }
-
-      // Use upsert for rock-solid save/override across all RLS policies
-      const savePromise = sb.from('sleep_logs').upsert(payload, { onConflict: 'user_id,date' }).then(({ error }) => {
-        if (error) {
-          console.warn('Upsert onConflict error, falling back to direct upsert:', error)
-          return sb.from('sleep_logs').upsert(payload)
-        }
       })
 
-      const xpPromise = robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, `Sleep Logged (${liveSleepDuration.totalHours}h)`)
+      if (insertErr) console.error('Sleep log insert error:', insertErr)
 
-      await Promise.allSettled([savePromise, xpPromise])
+      // Award XP (robustAwardXP handles dedup by deleting old XP for this date)
+      await robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, `Sleep Logged (${liveSleepDuration.totalHours}h)`)
 
-      // Dispatch global custom event to notify all listeners/components across the app
+      // Notify other components
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('lokios_sleep_updated', { detail: payload }))
+        window.dispatchEvent(new CustomEvent('lokios_sleep_updated'))
       }
     } catch (e) {
-      console.error('Async sleep save error:', e)
+      console.error('Sleep save error:', e)
     }
   }
 

@@ -42,40 +42,51 @@ export function OSProvider({ children }) {
     }
   }, [auth.loading, profile.loading, habits.loading, tasks.loading])
 
-  // Realtime & Window Focus Cross-Device Sync Subscription
+  // Stable refs so the sync callback always calls the latest functions
+  // without causing the useEffect to re-run (infinite loop fix)
+  const profileRef = React.useRef(profile)
+  const habitsRef = React.useRef(habits)
+  const tasksRef = React.useRef(tasks)
+  profileRef.current = profile
+  habitsRef.current = habits
+  tasksRef.current = tasks
+
+  // Cross-device sync: Supabase Realtime + window focus/visibility
   useEffect(() => {
     if (!auth.user) return
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
     
-    const handleSync = () => {
-      if (profile?.fetchProfile) profile.fetchProfile()
-      if (habits?.fetchHabits) habits.fetchHabits()
-      if (tasks?.fetchTasks) tasks.fetchTasks()
+    let syncTimeout = null
+    const debouncedSync = () => {
+      if (syncTimeout) clearTimeout(syncTimeout)
+      syncTimeout = setTimeout(() => {
+        profileRef.current?.fetchProfile?.()
+        habitsRef.current?.fetchHabits?.()
+        tasksRef.current?.fetchTasks?.()
+      }, 300)
     }
 
-    const channel = supabase.channel(`os_realtime_${auth.user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, handleSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, handleSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, handleSync)
+    const channel = supabase.channel(`os_sync_${auth.user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
       .subscribe()
 
-    const handleFocus = () => {
-      handleSync()
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') debouncedSync()
     }
-
-    window.addEventListener('focus', handleFocus)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') handleSync()
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', debouncedSync)
+    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
+      if (syncTimeout) clearTimeout(syncTimeout)
       supabase.removeChannel(channel)
-      window.removeEventListener('focus', handleFocus)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', debouncedSync)
+      document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [auth.user, profile, habits, tasks])
+  }, [auth.user])
 
   const osState = {
     auth,
