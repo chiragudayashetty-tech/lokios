@@ -70,6 +70,32 @@ export default function DailyOps() {
       })
   }, [user, todayStr])
 
+  // Fetch existing sleep log when selected date changes
+  useEffect(() => {
+    if (!user || !sleepTargetDate) return
+    const sb = createClient()
+    sb.from('sleep_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('date', sleepTargetDate)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          if (data.bedtime) setBedtime(data.bedtime)
+          if (data.wake_time) setWakeTime(data.wake_time)
+          const isHealthy = data.status === 'healthy'
+          setSleepMsg({
+            success: isHealthy,
+            title: isHealthy ? 'SLEEP TARGET MET' : 'TARGET MISSED',
+            subtitle: `Logged for ${data.date}: ${data.bedtime} to ${data.wake_time} (${data.duration_hours}h)`,
+            xp: isHealthy ? 30 : 0
+          })
+        } else {
+          setSleepMsg(null)
+        }
+      })
+  }, [user, sleepTargetDate])
+
   // Calculate live sleep duration
   const liveSleepDuration = useMemo(() => {
     if (!bedtime || !wakeTime) return null
@@ -145,19 +171,32 @@ export default function DailyOps() {
     })
     setSleepSaving(false)
 
-    // 2. Perform DB operations asynchronously in background
+    // 2. Perform DB operations asynchronously in background (check existing ID to allow overrides)
     try {
-      const savePromise = sb.from('sleep_logs').upsert({
+      const payload = {
         user_id: user.id,
         date: sleepTargetDate,
         bedtime,
         wake_time: wakeTime,
         duration_hours: liveSleepDuration.totalHours,
         status: isHealthy ? 'healthy' : 'deprived'
-      })
+      }
+
+      const { data: existingLog } = await sb.from('sleep_logs')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('date', sleepTargetDate)
+        .maybeSingle()
+
+      let savePromise
+      if (existingLog) {
+        savePromise = sb.from('sleep_logs').update(payload).eq('id', existingLog.id)
+      } else {
+        savePromise = sb.from('sleep_logs').insert(payload)
+      }
 
       const xpPromise = xpAmount > 0 
-        ? robustAwardXP(user.id, xpAmount, 'sleep', null, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
+        ? robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, `Sleep Target Met (${liveSleepDuration.totalHours}h)`)
         : Promise.resolve()
 
       await Promise.allSettled([savePromise, xpPromise])
