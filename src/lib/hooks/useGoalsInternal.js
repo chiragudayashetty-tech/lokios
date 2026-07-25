@@ -9,6 +9,7 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 export function useGoalsInternal(user) {
   const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const [error, setError] = useState(null)
   const supabase = createClient()
 
@@ -20,7 +21,7 @@ export function useGoalsInternal(user) {
     }
 
     try {
-      setLoading(true)
+      if (!initialized) setLoading(true)
       setError(null)
       const { data, error } = await supabase
         .from('goals')
@@ -35,8 +36,9 @@ export function useGoalsInternal(user) {
       setError('Failed to load data. Please refresh and try again.')
     } finally {
       setLoading(false)
+      setInitialized(true)
     }
-  }, [user])
+  }, [user, initialized])
 
   useEffect(() => {
     fetchGoals()

@@ -38,10 +38,13 @@ export default function WellnessPage() {
   const [loadingSleep, setLoadingSleep] = useState(true)
   const [warRoomHp, setWarRoomHp] = useState(null)
 
+  const initializedBody = useRef(false)
+  const initializedSleep = useRef(false)
+
   // ─── FETCH BODY DATA ───
   const fetchBodyData = useCallback(async () => {
     if (!user) return
-    setLoadingBody(true)
+    if (!initializedBody.current) setLoadingBody(true)
     const [configRes, logsRes] = await Promise.all([
       supabase.from('weight_config').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('weight_logs').select('*').eq('user_id', user.id).order('date', { ascending: true })
@@ -53,12 +56,13 @@ export default function WellnessPage() {
       if (todayLog) { setLoggedToday(true); setTodayWeight(String(todayLog.weight_kg)) }
     }
     setLoadingBody(false)
+    initializedBody.current = true
   }, [user, todayStr])
 
   // ─── FETCH SLEEP DATA ───
   const fetchSleepData = useCallback(async () => {
     if (!user) return
-    setLoadingSleep(true)
+    if (!initializedSleep.current) setLoadingSleep(true)
 
     try {
       // Use a fresh client per call to avoid stale auth tokens
@@ -99,6 +103,7 @@ export default function WellnessPage() {
       console.error('fetchSleepData exception:', err)
     } finally {
       setLoadingSleep(false)
+      initializedSleep.current = true
     }
   }, [user])
 

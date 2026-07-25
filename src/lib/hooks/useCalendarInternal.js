@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 export function useCalendarInternal(user, year = new Date().getFullYear(), month = new Date().getMonth()) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const supabase = createClient()
 
   const fetchEvents = useCallback(async () => {
@@ -16,7 +17,7 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
     }
 
     try {
-      setLoading(true)
+      if (!initialized) setLoading(true)
 
       // Build date range for the given month
       const startDate = new Date(year, month, 1).toISOString()
@@ -36,8 +37,9 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
       console.error('Error fetching calendar events:', error)
     } finally {
       setLoading(false)
+      setInitialized(true)
     }
-  }, [user, year, month])
+  }, [user, year, month, initialized])
 
   useEffect(() => {
     fetchEvents()
