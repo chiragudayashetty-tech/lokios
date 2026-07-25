@@ -38,12 +38,32 @@ export function OSProvider({ children }) {
   // Wait for critical systems to load before rendering the OS
   useEffect(() => {
     if (!auth.loading && !profile.loading && !habits.loading && !tasks.loading) {
-      
-      // Temporal Sync removed: Penalties are now strictly handled by useHabitsInternal.js runAutoFail
-      
       setBooting(false)
     }
   }, [auth.loading, profile.loading, habits.loading, tasks.loading])
+
+  // Realtime Cross-Device Sync Subscription
+  useEffect(() => {
+    if (!auth.user) return
+    const { createClient } = require('@/lib/supabase/client')
+    const supabase = createClient()
+    const channel = supabase.channel(`os_realtime_${auth.user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, () => {
+        if (profile?.fetchProfile) profile.fetchProfile()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, () => {
+        if (profile?.fetchProfile) profile.fetchProfile()
+        if (xp?.fetchXP) xp.fetchXP()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, () => {
+        if (profile?.fetchProfile) profile.fetchProfile()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [auth.user, profile, xp])
 
   const osState = {
     auth,

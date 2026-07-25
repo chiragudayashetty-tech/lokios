@@ -2,6 +2,16 @@ import { createClient } from '@/lib/supabase/client'
 
 export async function robustAwardXP(userId, amount, sourceType, sourceId, description, statCategory = 'discipline') {
   const supabase = createClient()
+
+  // Clean up any existing XP record for this specific source_id (e.g. overriding sleep log for same date)
+  if (sourceId) {
+    await supabase.from('xp_history')
+      .delete()
+      .eq('user_id', userId)
+      .eq('source_type', sourceType)
+      .eq('source_id', sourceId)
+      .catch(() => {})
+  }
   
   // Try RPC first
   const { error: rpcError } = await supabase.rpc('award_xp', {
