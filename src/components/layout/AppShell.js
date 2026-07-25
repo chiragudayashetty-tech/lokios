@@ -255,7 +255,7 @@ export default function AppShell({ children }) {
                 className={`flex-col flex-center py-1 px-1 transition-all active:scale-90 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
                 style={{ 
                   color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
-                  height: '52px',
+                  height: '48px',
                   position: 'relative',
                   justifyContent: 'center',
                 }}
@@ -269,7 +269,7 @@ export default function AppShell({ children }) {
             </Link>
           )
         })}
-        <button type="button" style={{ flex: 1, height: '52px', width: '20%', position: 'relative' }} className={`flex-col flex-center py-1 px-1 transition-all active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+        <button type="button" style={{ flex: 1, height: '48px', width: '20%', position: 'relative' }} className={`flex-col flex-center py-1 px-1 transition-all active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen && (
             <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
           )}
