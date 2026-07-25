@@ -102,10 +102,9 @@ export default function DailyOps() {
 
     if (!wErr) {
       if (!weightLoggedToday) {
-        // Fix parameter signature for robustAwardXP
-        await robustAwardXP(user.id, 25, 'weight', null, 'Daily Weight Logged')
+        await robustAwardXP(user.id, 2, 'weight', null, 'Daily Weight Logged')
         setWeightLoggedToday(true)
-        setWeightMsg({ success: true, title: 'BODY WEIGHT LOGGED', subtitle: `${w} kg recorded for today`, xp: 25 })
+        setWeightMsg({ success: true, title: 'BODY WEIGHT LOGGED', subtitle: `${w} kg recorded for today`, xp: 2 })
       } else {
         setWeightMsg({ success: true, title: 'BODY WEIGHT UPDATED', subtitle: `Updated to ${w} kg`, xp: 0 })
       }
