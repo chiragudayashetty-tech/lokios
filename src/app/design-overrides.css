@@ -778,7 +778,13 @@ body > * {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background-color: #040507;
+  }
+
   .sidebar {
     width: min(84vw, 320px);
   }
@@ -786,24 +792,34 @@ body > * {
   .app-shell {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
     width: 100%;
+    overflow: hidden;
+    position: relative;
+    background: #040507;
   }
 
   .main-content {
     flex: 1;
     width: 100%;
-    padding: max(16px, env(safe-area-inset-top)) 16px calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: max(16px, env(safe-area-inset-top)) 16px calc(76px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .mobile-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    z-index: 1050;
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: auto !important;
+    background: #0a0c10 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.9) !important;
+    z-index: 1050 !important;
+    padding: 6px 4px max(env(safe-area-inset-bottom, 0px), 8px) 4px !important;
   }
 
   .hud-panel {
