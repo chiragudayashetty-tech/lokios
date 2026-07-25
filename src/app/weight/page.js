@@ -82,7 +82,7 @@ export default function WellnessPage() {
     setLoadingSleep(false)
   }, [user])
 
-  useEffect(() => { fetchBodyData() }, [fetchBodyData])
+  useEffect(() => { fetchBodyData(); fetchSleepData(); }, [fetchBodyData, fetchSleepData])
   useEffect(() => { if (activeTab === 'sleep') fetchSleepData() }, [activeTab, fetchSleepData])
 
   // ─── BODY HANDLERS ───
@@ -519,7 +519,7 @@ export default function WellnessPage() {
                 )}
 
                 {/* Sleep Duration Chart */}
-                {sleepChartData.length >= 2 ? (
+                {sleepChartData.length >= 1 ? (
                   <div className="p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
                     <div className="flex items-center gap-2 mb-3">
                       <BarChart2 size={10} color="var(--info)" />
