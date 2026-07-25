@@ -172,31 +172,43 @@ export default function WellnessPage() {
   }) : []
 
   // ─── SLEEP DERIVED DATA ───
+  const isLogHealthy = (l) => {
+    if (!l) return false
+    if (l.status === 'healthy') return true
+    const [bH] = (l.bedtime || '23:00').split(':').map(Number)
+    const [wH, wM] = (l.wake_time || '08:00').split(':').map(Number)
+    const dur = parseFloat(l.duration_hours || 0)
+    const bOk = bH >= 20 || bH <= 2
+    const wOk = wH < 10 || (wH === 10 && wM === 0)
+    const dOk = dur >= 5.5 && dur <= 10.5
+    return bOk && wOk && dOk
+  }
+
   const sleepChartData = sleepLogs.map(l => ({
     date: new Date(l.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     hours: parseFloat(l.duration_hours) || 0,
-    status: l.status
+    status: isLogHealthy(l) ? 'healthy' : 'deprived'
   }))
   const avgSleep = sleepLogs.length > 0 ? (sleepLogs.reduce((s, l) => s + (parseFloat(l.duration_hours) || 0), 0) / sleepLogs.length).toFixed(1) : null
-  const healthyNights = sleepLogs.filter(l => l.status === 'healthy').length
+  const healthyNights = sleepLogs.filter(isLogHealthy).length
   const totalNights = sleepLogs.length
   const bedtimeScore = totalNights > 0 ? Math.round((sleepLogs.filter(l => {
     const [h] = (l.bedtime || '00:00').split(':').map(Number)
-    return h >= 20 && h <= 23
+    return h >= 20 || h <= 2
   }).length / totalNights) * 100) : null
   const wakeScore = totalNights > 0 ? Math.round((sleepLogs.filter(l => {
-    const [h] = (l.wake_time || '09:00').split(':').map(Number)
-    return h < 9
+    const [h, m] = (l.wake_time || '09:00').split(':').map(Number)
+    return h < 10 || (h === 10 && m === 0)
   }).length / totalNights) * 100) : null
 
   // Streak calc
   let currentStreak = 0, bestStreak = 0, streak = 0
   const sorted = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date))
   sorted.forEach(l => {
-    if (l.status === 'healthy') { streak++; if (streak > bestStreak) bestStreak = streak }
+    if (isLogHealthy(l)) { streak++; if (streak > bestStreak) bestStreak = streak }
     else streak = 0
   })
-  if (sorted.length > 0 && sorted[sorted.length - 1]?.status === 'healthy') currentStreak = streak
+  if (sorted.length > 0 && isLogHealthy(sorted[sorted.length - 1])) currentStreak = streak
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload?.length) {
@@ -574,7 +586,7 @@ export default function WellnessPage() {
                                 {log.duration_hours ? `${log.duration_hours}h` : '—'}
                               </td>
                               <td className="py-2">
-                                {log.status === 'healthy'
+                                {isLogHealthy(log)
                                   ? <span className="flex items-center gap-1 text-success"><CheckCircle2 size={10} /> Healthy</span>
                                   : <span className="flex items-center gap-1 text-danger"><XCircle size={10} /> Missed</span>
                                 }
