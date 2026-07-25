@@ -3,14 +3,33 @@ import { createClient } from '@/lib/supabase/client'
 export async function robustAwardXP(userId, amount, sourceType, sourceId, description, statCategory = 'discipline') {
   const supabase = createClient()
 
-  // Clean up any existing XP record for this specific source_id (e.g. overriding sleep log for same date)
+  // Clean up and replace any existing XP record for this specific date/source_id (e.g. overriding sleep or weight for same day)
   if (sourceId) {
-    await supabase.from('xp_history')
-      .delete()
-      .eq('user_id', userId)
-      .eq('source_type', sourceType)
-      .eq('source_id', sourceId)
-      .catch(() => {})
+    try {
+      const { data: existing } = await supabase.from('xp_history')
+        .select('id, amount')
+        .eq('user_id', userId)
+        .eq('source_type', sourceType)
+        .eq('source_id', sourceId)
+      
+      if (existing && existing.length > 0) {
+        const oldXpSum = existing.reduce((sum, item) => sum + (item.amount || 0), 0)
+        const ids = existing.map(item => item.id)
+        
+        // Delete old XP records from xp_history
+        await supabase.from('xp_history').delete().in('id', ids)
+
+        // Deduct old XP from profile total_xp to avoid double-counting
+        if (oldXpSum > 0) {
+          const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
+          if (prof) {
+            await supabase.from('profiles').update({ total_xp: Math.max(0, (prof.total_xp || 0) - oldXpSum) }).eq('id', userId)
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to clean up old XP entry for override:', err)
+    }
   }
   
   // Try RPC first

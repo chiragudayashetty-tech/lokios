@@ -42,28 +42,40 @@ export function OSProvider({ children }) {
     }
   }, [auth.loading, profile.loading, habits.loading, tasks.loading])
 
-  // Realtime Cross-Device Sync Subscription
+  // Realtime & Window Focus Cross-Device Sync Subscription
   useEffect(() => {
     if (!auth.user) return
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
+    
+    const handleSync = () => {
+      if (profile?.fetchProfile) profile.fetchProfile()
+      if (habits?.fetchHabits) habits.fetchHabits()
+      if (tasks?.fetchTasks) tasks.fetchTasks()
+    }
+
     const channel = supabase.channel(`os_realtime_${auth.user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, () => {
-        if (profile?.fetchProfile) profile.fetchProfile()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, () => {
-        if (profile?.fetchProfile) profile.fetchProfile()
-        if (xp?.fetchXP) xp.fetchXP()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, () => {
-        if (profile?.fetchProfile) profile.fetchProfile()
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, handleSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, handleSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, handleSync)
       .subscribe()
+
+    const handleFocus = () => {
+      handleSync()
+    }
+
+    window.addEventListener('focus', handleFocus)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') handleSync()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       supabase.removeChannel(channel)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [auth.user, profile, xp])
+  }, [auth.user, profile, habits, tasks])
 
   const osState = {
     auth,
