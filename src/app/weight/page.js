@@ -61,18 +61,33 @@ export default function WellnessPage() {
     setLoadingSleep(true)
 
     try {
-      const [sleepRes, bpRes] = await Promise.all([
-        supabase.from('sleep_logs').select('*').eq('user_id', user.id).order('date', { ascending: true }),
-        supabase.from('user_blueprints').select('battles').eq('user_id', user.id)
-      ])
+      // Use a fresh client per call to avoid stale auth tokens
+      const sb = createClient()
 
-      if (sleepRes.data) {
-        setSleepLogs(sleepRes.data)
-      } else if (sleepRes.error) {
-        console.error('Error fetching sleep_logs:', sleepRes.error)
+      const { data: sleepData, error: sleepErr } = await sb
+        .from('sleep_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: true })
+
+      if (sleepErr) {
+        console.error('sleep_logs SELECT error:', sleepErr)
+      }
+      
+      if (sleepData && sleepData.length > 0) {
+        setSleepLogs(sleepData)
+      } else {
+        console.warn('sleep_logs returned empty for user:', user.id, 'error:', sleepErr)
+        setSleepLogs([])
       }
 
-      const bp = bpRes.data?.[0]
+      // Fetch war room data
+      const { data: bpData } = await sb
+        .from('user_blueprints')
+        .select('battles')
+        .eq('user_id', user.id)
+
+      const bp = bpData?.[0]
       if (bp?.battles) {
         const sleepBattle = bp.battles.find(b => {
           const n = b.name?.toLowerCase() || ''
@@ -81,7 +96,7 @@ export default function WellnessPage() {
         if (sleepBattle) setWarRoomHp(sleepBattle.hp ?? 100)
       }
     } catch (err) {
-      console.error('fetchSleepData failed:', err)
+      console.error('fetchSleepData exception:', err)
     } finally {
       setLoadingSleep(false)
     }
@@ -90,7 +105,7 @@ export default function WellnessPage() {
   useEffect(() => { fetchBodyData(); fetchSleepData(); }, [fetchBodyData, fetchSleepData])
   useEffect(() => { if (activeTab === 'sleep') fetchSleepData() }, [activeTab, fetchSleepData])
 
-  // Listen for live sleep updates dispatched anywhere in app
+  // Listen for live sleep updates dispatched from quests page
   useEffect(() => {
     const handleSleepUpdate = () => { fetchSleepData() }
     window.addEventListener('lokios_sleep_updated', handleSleepUpdate)

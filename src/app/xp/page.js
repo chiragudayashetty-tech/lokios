@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts'
 import { Flame, Star, Activity, Trophy, ArrowUp, RotateCcw } from 'lucide-react'
 import { RANK_CONFIG } from '@/lib/constants'
+import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
 
 export default function XPDashboard() {
   const { user } = useAuth()
@@ -24,6 +25,10 @@ export default function XPDashboard() {
     const fetchData = async () => {
       const supabase = createClient()
       
+      // Auto-clean any invisible duplicate XP entries for sleep/weight
+      const cleaned = await cleanupAllDuplicateXP(user.id)
+      if (cleaned > 0) console.log(`Cleaned ${cleaned} duplicate XP entries`)
+
       const { data: profile } = await supabase.from('profiles').select('total_xp').eq('id', user.id).single()
       if (profile) setTotalXp(profile.total_xp || 0)
 
@@ -55,15 +60,19 @@ export default function XPDashboard() {
     setLoading(true)
     const supabase = createClient()
     
+    // 1. Clean sleep/weight duplicates
+    await cleanupAllDuplicateXP(user.id)
+
+    // 2. Clean habit duplicates (legacy logic)
     const { data: allHistory } = await supabase.from('xp_history').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
-    if (!allHistory) return
+    if (!allHistory) { window.location.reload(); return }
     
     const xpByDayAndRoutine = {}
     for (const item of allHistory) {
       if (!item.source_type?.startsWith('habit_')) continue
       
-      const isComplete = item.description.startsWith('Completed routine: ')
-      const isFail = item.description.startsWith('Failed routine: ')
+      const isComplete = item.description?.startsWith('Completed routine: ')
+      const isFail = item.description?.startsWith('Failed routine: ')
       if (!isComplete && !isFail) continue
       
       const routineName = item.description.replace('Completed routine: ', '').replace('Failed routine: ', '')

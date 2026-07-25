@@ -201,20 +201,34 @@ export default function DailyOps() {
 
     // 2. Save to DB: Delete old entry for this date, then insert fresh (like habits)
     try {
-      // Delete any existing sleep log for this date first
-      await sb.from('sleep_logs').delete().eq('user_id', user.id).eq('date', sleepTargetDate)
-
-      // Insert fresh entry
-      const { error: insertErr } = await sb.from('sleep_logs').insert({
+      const sleepPayload = {
         user_id: user.id,
         date: sleepTargetDate,
         bedtime,
         wake_time: wakeTime,
         duration_hours: liveSleepDuration.totalHours,
         status: isHealthy ? 'healthy' : 'deprived'
-      })
+      }
 
-      if (insertErr) console.error('Sleep log insert error:', insertErr)
+      // Try delete first (may fail due to RLS — that's OK)
+      const { error: delErr } = await sb.from('sleep_logs').delete().eq('user_id', user.id).eq('date', sleepTargetDate)
+      if (delErr) console.warn('Sleep delete warning (non-fatal):', delErr.message)
+
+      // Insert fresh entry
+      const { error: insertErr } = await sb.from('sleep_logs').insert(sleepPayload)
+
+      if (insertErr) {
+        console.error('Sleep log insert failed:', insertErr.message)
+        // If insert failed (maybe duplicate row still exists), try upsert as fallback
+        const { error: upsertErr } = await sb.from('sleep_logs').upsert(sleepPayload)
+        if (upsertErr) console.error('Sleep log upsert fallback also failed:', upsertErr.message)
+      }
+
+      // Verify the data actually persisted
+      const { data: verifyData } = await sb.from('sleep_logs').select('id').eq('user_id', user.id).eq('date', sleepTargetDate).maybeSingle()
+      if (!verifyData) {
+        console.error('CRITICAL: Sleep log was NOT persisted for date:', sleepTargetDate)
+      }
 
       // Award XP (robustAwardXP handles dedup by deleting old XP for this date)
       await robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, `Sleep Logged (${liveSleepDuration.totalHours}h)`)
