@@ -121,19 +121,19 @@ export default function DailyOps() {
     const [bH, bM] = bedtime.split(':').map(Number)
     const [wH, wM] = wakeTime.split(':').map(Number)
 
-    // User exact targets: Sleep < 12 AM, Wake < 9 AM, Duration <= 10 hrs (and >= 6 hrs)
-    const isSleptBeforeMidnight = bH >= 20 && bH <= 23
-    const isWokeBefore9AM = wH < 9 || (wH === 9 && wM === 0)
-    const isDurationValid = liveSleepDuration.totalHours >= 6.0 && liveSleepDuration.totalHours <= 10.0
+    // Healthy sleep targets: Bedtime 8 PM - 2 AM, Wake before 10 AM, Duration 5.5h - 10.5h
+    const isBedtimeOk = bH >= 20 || bH <= 2
+    const isWokeBefore10AM = wH < 10 || (wH === 10 && wM === 0)
+    const isDurationValid = liveSleepDuration.totalHours >= 5.5 && liveSleepDuration.totalHours <= 10.5
 
-    const isHealthy = isSleptBeforeMidnight && isWokeBefore9AM && isDurationValid
+    const isHealthy = isBedtimeOk && isWokeBefore10AM && isDurationValid
     const xpAmount = isHealthy ? 30 : 0
 
     let failReasons = []
-    if (!isSleptBeforeMidnight) failReasons.push('Bedtime past Midnight')
-    if (!isWokeBefore9AM) failReasons.push('Woke up past 9 AM')
-    if (liveSleepDuration.totalHours > 10.0) failReasons.push('Overslept (> 10h)')
-    if (liveSleepDuration.totalHours < 6.0) failReasons.push('Under-slept (< 6h)')
+    if (!isBedtimeOk) failReasons.push('Bedtime past 2 AM')
+    if (!isWokeBefore10AM) failReasons.push('Woke up past 10 AM')
+    if (liveSleepDuration.totalHours > 10.5) failReasons.push('Overslept (> 10.5h)')
+    if (liveSleepDuration.totalHours < 5.5) failReasons.push('Under-slept (< 5.5h)')
 
     // 1. Optimistic UI update instantly for immediate user feedback!
     setSleepMsg({

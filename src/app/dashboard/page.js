@@ -323,18 +323,26 @@ export default function MissionControl() {
 
       if (sleepLogs && sleepLogs.length > 0) {
         const last = sleepLogs[0]
-        const healthy = sleepLogs.filter(l => l.status === 'healthy').length
-        const total = sleepLogs.length
-        const streak = (() => { let s = 0; for (const l of sleepLogs) { if (l.status === 'healthy') s++; else break; } return s })()
+        const isLogHealthy = (l) => {
+          if (l.status === 'healthy') return true
+          const [bH] = (l.bedtime || '23:00').split(':').map(Number)
+          const [wH, wM] = (l.wake_time || '08:00').split(':').map(Number)
+          const dur = parseFloat(l.duration_hours || 0)
+          return (bH >= 20 || bH <= 2) && (wH < 10 || (wH === 10 && wM === 0)) && (dur >= 5.5 && dur <= 10.5)
+        }
 
-        // Check 5 specific criteria
+        const healthy = sleepLogs.filter(isLogHealthy).length
+        const total = sleepLogs.length
+        const streak = (() => { let s = 0; for (const l of sleepLogs) { if (isLogHealthy(l)) s++; else break; } return s })()
+
+        // Check criteria for latest log
         const [bH] = (last.bedtime || '23:00').split(':').map(Number)
         const [wH, wM] = (last.wake_time || '08:00').split(':').map(Number)
         const dur = parseFloat(last.duration_hours || 0)
 
-        const isBedtimeOk = bH >= 20 && bH <= 23
-        const isWakeOk = wH < 9 || (wH === 9 && wM === 0)
-        const isDurationOk = dur >= 6.0 && dur <= 10.0
+        const isBedtimeOk = bH >= 20 || bH <= 2
+        const isWakeOk = wH < 10 || (wH === 10 && wM === 0)
+        const isDurationOk = dur >= 5.5 && dur <= 10.5
         const isStreakOk = streak >= 3
         const isComplianceOk = (healthy / total) >= 0.7
 
