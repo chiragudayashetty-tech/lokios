@@ -12,31 +12,41 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
   const supabase = createClient()
 
   // Step 1: Find and remove ALL previous XP entries for this source_type
-  // This catches BOTH new entries (with source_id) AND legacy entries (source_id=NULL)
   if (sourceId) {
     try {
-      // 1a: Delete entries matching exact source_type + source_id
-      const { data: exact } = await supabase.from('xp_history')
-        .select('id, amount')
-        .eq('user_id', userId)
-        .eq('source_type', sourceType)
-        .eq('source_id', sourceId)
+      let allOld = []
+      
+      // 1a: Try finding entries matching exact source_type + source_id
+      try {
+        const { data: exact, error: exactErr } = await supabase.from('xp_history')
+          .select('id, amount')
+          .eq('user_id', userId)
+          .eq('source_type', sourceType)
+          .eq('source_id', sourceId)
+        if (!exactErr && exact) allOld.push(...exact)
+      } catch (e) {
+        // source_id column might not exist
+      }
       
       // 1b: Also find legacy entries with NULL source_id for same source_type
-      const { data: legacy } = await supabase.from('xp_history')
-        .select('id, amount')
-        .eq('user_id', userId)
-        .eq('source_type', sourceType)
-        .is('source_id', null)
+      try {
+        const { data: legacy, error: legacyErr } = await supabase.from('xp_history')
+          .select('id, amount')
+          .eq('user_id', userId)
+          .eq('source_type', sourceType)
+          .is('source_id', null)
+        if (!legacyErr && legacy) allOld.push(...legacy)
+      } catch (e) {
+        // source_id column might not exist
+      }
 
-      const allOld = [...(exact || []), ...(legacy || [])]
+      // Deduplicate IDs
+      const uniqueIds = Array.from(new Set(allOld.map(r => r.id)))
+      const recordsToDelete = allOld.filter((r, idx) => allOld.findIndex(x => x.id === r.id) === idx)
       
-      if (allOld.length > 0) {
-        const oldXpTotal = allOld.reduce((sum, r) => sum + (r.amount || 0), 0)
-        const ids = allOld.map(r => r.id)
-        
-        // Delete ALL old records (both exact match and legacy null)
-        await supabase.from('xp_history').delete().in('id', ids)
+      if (recordsToDelete.length > 0) {
+        const oldXpTotal = recordsToDelete.reduce((sum, r) => sum + (r.amount || 0), 0)
+        await supabase.from('xp_history').delete().in('id', uniqueIds)
 
         // Deduct old XP from profile
         if (oldXpTotal > 0) {
@@ -53,33 +63,36 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
     }
   }
 
-  // Step 2: Insert exactly one new XP entry (skip RPC to avoid double-insert)
-  const payload = {
+  // Step 2: Insert into xp_history with progressive fallbacks for missing schema columns
+  const fullPayload = {
     user_id: userId,
     amount,
     source_type: sourceType,
     source_id: sourceId || null,
     description: description || null,
-  }
-
-  // Try with stat_category first
-  let { error: insertErr } = await supabase.from('xp_history').insert({
-    ...payload,
     stat_category: statCategory || 'discipline'
-  })
-
-  // If stat_category column doesn't exist, retry without it
-  if (insertErr && insertErr.message && insertErr.message.includes('stat_category')) {
-    const { error: retry } = await supabase.from('xp_history').insert(payload)
-    insertErr = retry
   }
+
+  let { error: insertErr } = await supabase.from('xp_history').insert(fullPayload)
 
   if (insertErr) {
-    console.error('XP insert failed:', insertErr)
-    return false
+    console.warn('Full payload XP insert failed, retrying without stat_category:', insertErr.message || insertErr)
+    const payloadNoCat = { ...fullPayload }
+    delete payloadNoCat.stat_category
+    let { error: err2 } = await supabase.from('xp_history').insert(payloadNoCat)
+    
+    if (err2) {
+      console.warn('Insert without stat_category failed, retrying minimal payload without source_id:', err2.message || err2)
+      const payloadMinimal = { ...payloadNoCat }
+      delete payloadMinimal.source_id
+      let { error: err3 } = await supabase.from('xp_history').insert(payloadMinimal)
+      if (err3) {
+        console.error('All xp_history insert fallbacks failed:', err3.message || err3)
+      }
+    }
   }
 
-  // Step 3: Add to profiles.total_xp
+  // Step 3: ALWAYS update profiles.total_xp so XP is NEVER lost!
   try {
     const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
     if (prof) {
