@@ -94,36 +94,6 @@ export default function AppShell({ children }) {
         </div>
       )}
 
-      {/* Mobile Top Header Bar */}
-      <header className="mobile-header sm:hidden">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-amber/10 border border-amber/30 flex items-center justify-center text-amber font-display font-bold text-sm shadow-sm shadow-amber/20">
-            C
-          </div>
-          <div className="flex flex-col">
-            <span className="font-display text-xs tracking-widest text-primary uppercase font-bold">ChiragOS</span>
-            <span className="font-mono text-[8px] text-muted tracking-wider">PRIVATE OPERATING SYSTEM</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-bg-tertiary border border-border-color">
-            <Shield size={12} color={profile ? getRankForXp(profile.total_xp || 0).colorHex : "var(--accent-primary)"} />
-            <span className="font-mono text-[9px] font-bold text-primary">
-              LV.{profile ? calculateLevel(profile.total_xp || 0) : 1}
-            </span>
-          </div>
-          <button 
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="p-1.5 rounded-md bg-bg-tertiary border border-border-color text-muted hover:text-primary active:scale-95 transition-all"
-            title="Open Menu"
-          >
-            <Menu size={18} />
-          </button>
-        </div>
-      </header>
-
       {/* Mobile Full-Screen Takeover Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
@@ -275,48 +245,36 @@ export default function AppShell({ children }) {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="mobile-nav sm:hidden">
+      <nav className="mobile-nav" style={{ zIndex: 100 }}>
         {mainItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
           return (
-            <Link key={item.href} href={item.href} className="flex-1">
+            <Link key={item.href} href={item.href} style={{ flex: 1 }}>
               <div 
-                className={`flex flex-col items-center justify-center py-1 px-1 transition-all active:scale-95 ${
-                  isActive ? 'text-amber font-bold' : 'text-muted opacity-70 hover:opacity-100'
-                }`}
-                style={{ height: '52px', position: 'relative' }}
+                className={`flex-col flex-center py-1 px-1 transition-all active:scale-90 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
+                style={{ 
+                  color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
+                  height: '48px',
+                  position: 'relative',
+                  justifyContent: 'center',
+                }}
               >
                 {isActive && (
-                  <motion.div
-                    layoutId="mobileActiveTab"
-                    className="absolute top-0 w-6 h-[2.5px] bg-amber rounded-b-sm"
-                    style={{ boxShadow: '0 0 10px var(--amber-glow)' }}
-                  />
+                  <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
                 )}
-                <Icon size={19} strokeWidth={isActive ? 2.2 : 1.5} />
-                <span className="mt-0.5 font-display uppercase tracking-wider text-[9px] truncate max-w-full text-center">
-                  {item.label}
-                </span>
+                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <span className="mt-0.5 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{item.label}</span>
               </div>
             </Link>
           )
         })}
-        <button 
-          type="button" 
-          className={`flex-1 flex flex-col items-center justify-center py-1 px-1 transition-all active:scale-95 ${
-            mobileMenuOpen ? 'text-amber' : 'text-muted opacity-70 hover:opacity-100'
-          }`} 
-          style={{ height: '52px', position: 'relative' }}
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
+        <button type="button" style={{ flex: 1, height: '48px', width: '20%', position: 'relative' }} className={`flex-col flex-center py-1 px-1 transition-all active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen && (
-            <div className="absolute top-0 w-6 h-[2.5px] bg-amber rounded-b-sm" style={{ boxShadow: '0 0 10px var(--amber-glow)' }} />
+            <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
           )}
-          {mobileMenuOpen ? <X size={19} strokeWidth={2.2} /> : <Menu size={19} strokeWidth={1.5} />}
-          <span className="mt-0.5 font-display uppercase tracking-wider text-[9px] truncate max-w-full text-center">
-            {mobileMenuOpen ? 'Close' : 'More'}
-          </span>
+          {mobileMenuOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={1.5} />}
+          <span className="mt-0.5 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
         </button>
       </nav>
 
