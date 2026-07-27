@@ -395,52 +395,37 @@ export default function WellnessPage() {
                   )}
                 </AnimatePresence>
 
-                {/* Stats Row */}
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { label: 'Start', val: config.starting_weight, accent: false },
-                    { label: 'Current', val: latestWeight || '—', accent: true },
-                    { label: 'Target', val: config.target_weight, accent: false }
-                  ].map(s => (
-                    <div key={s.label} className="text-center p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                      <div className="font-display font-bold text-primary tracking-tighter" style={{ fontSize: 'clamp(1.4rem,4vw,2rem)', lineHeight: 1, color: s.accent && latestWeight ? 'var(--text-primary)' : 'var(--text-primary)' }}>{s.val}</div>
-                      <div className="font-mono text-[8px] uppercase tracking-widest text-muted mt-1.5">{s.label}</div>
-                    </div>
-                  ))}
+                {/* Compact Stats Strip (Start, Current, Target) */}
+                <div className="p-3.5 rounded-xl border border-border-color bg-bg-tertiary flex items-center justify-between gap-2 font-mono text-xs shadow-sm">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted text-[10px] uppercase font-bold tracking-wider">START:</span>
+                    <span className="font-bold text-primary text-sm">{config.starting_weight}</span>
+                  </div>
+                  <div className="h-4 w-px bg-white/10" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-amber text-[10px] uppercase font-bold tracking-wider">CURRENT:</span>
+                    <span className="font-bold text-amber font-mono text-base">{latestWeight || '—'}</span>
+                  </div>
+                  <div className="h-4 w-px bg-white/10" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-success text-[10px] uppercase font-bold tracking-wider">TARGET:</span>
+                    <span className="font-bold text-success text-sm">{config.target_weight}</span>
+                  </div>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
+                <div className="p-4 rounded-xl" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-mono text-[10px] font-bold" style={{ color: parseFloat(totalLost) > 0 ? 'var(--success)' : 'var(--danger)' }}>
                       {parseFloat(totalLost) > 0 ? `▼ ${totalLost} kg lost` : parseFloat(totalLost) < 0 ? `▲ ${Math.abs(totalLost)} kg gained` : 'No change'}
                     </span>
                     <span className="font-mono text-[10px] font-bold text-primary">{Math.round(progressPct)}%</span>
                   </div>
-                  <div style={{ height: '4px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-                    <motion.div style={{ height: '100%', background: progressPct >= 100 ? 'var(--success)' : 'var(--accent-primary)' }}
+                  <div style={{ height: '6px', background: 'var(--bg-primary)', overflow: 'hidden', borderRadius: '4px' }}>
+                    <motion.div style={{ height: '100%', background: progressPct >= 100 ? 'var(--success)' : 'var(--accent-primary)', borderRadius: '4px' }}
                       initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 1, ease: 'easeOut' }} />
                   </div>
                   {weekChange !== null && <div className="font-mono text-[9px] text-muted mt-2">This week: {parseFloat(weekChange) <= 0 ? `▼ ${Math.abs(weekChange)} kg` : `▲ ${weekChange} kg`}</div>}
-                </div>
-
-                {/* Daily Log */}
-                <div className="p-4" style={{ background: loggedToday ? 'rgba(34,197,94,0.05)' : 'linear-gradient(135deg,#111,#0a0a0a)', border: `1px solid ${loggedToday ? 'rgba(34,197,94,0.3)' : 'var(--border-color)'}`, borderLeft: `3px solid ${loggedToday ? 'var(--success)' : 'var(--accent-primary)'}` }}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Scale size={10} color={loggedToday ? 'var(--success)' : 'var(--accent-primary)'} />
-                    <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: loggedToday ? 'var(--success)' : 'var(--text-muted)' }}>{loggedToday ? '✓ Today Logged' : "Today's Weight"}</span>
-                    <span className="ml-auto font-mono text-[9px]" style={{ color: 'var(--accent-primary)' }}>+2 XP</span>
-                  </div>
-                  <div className="flex gap-3">
-                    <input type="number" step="0.1" value={todayWeight} onChange={e => setTodayWeight(e.target.value)} placeholder="Enter weight"
-                      disabled={loggedToday} className="flex-1 p-3 font-mono text-lg text-primary border border-border-color outline-none"
-                      style={{ background: 'var(--bg-primary)', opacity: loggedToday ? 0.6 : 1 }} />
-                    <button onClick={handleLogWeight} disabled={loggedToday || !todayWeight || saving}
-                      className="px-5 py-3 font-display font-bold uppercase tracking-widest text-sm shrink-0 transition-all"
-                      style={{ background: loggedToday ? 'var(--success)' : 'var(--accent-primary)', color: '#0a0a0a', opacity: loggedToday || !todayWeight || saving ? 0.5 : 1 }}>
-                      {loggedToday ? '✓ Done' : saving ? '...' : 'Log'}
-                    </button>
-                  </div>
                 </div>
 
                 {/* Chart */}
