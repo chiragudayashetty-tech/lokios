@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useHabits } from '@/lib/hooks/useHabits'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, Search, Calendar, Flame, Lock, Unlock, Play, Pause, AlertTriangle, ChevronRight, X, Edit2, Trash2, Plus, Smartphone, Settings, BarChart2, Briefcase, Heart, BookOpen, User as UserIcon, LogOut, Sun, Moon, Cpu, Coffee, Activity, ArrowRight, ShieldAlert, Navigation, Layers, Link as LinkIcon, Database, ArrowUpCircle, Eye, Skull, Rocket, Sparkles, Dumbbell, Swords } from 'lucide-react'
+import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, Search, Calendar, Flame, Lock, Unlock, Play, Pause, AlertTriangle, ChevronRight, ChevronDown, ChevronUp, X, Edit2, Trash2, Plus, Smartphone, Settings, BarChart2, Briefcase, Heart, BookOpen, User as UserIcon, LogOut, Sun, Moon, Cpu, Coffee, Activity, ArrowRight, ShieldAlert, Navigation, Layers, Link as LinkIcon, Database, ArrowUpCircle, Eye, Skull, Rocket, Sparkles, Dumbbell, Swords } from 'lucide-react'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -37,6 +37,20 @@ export default function OperatorDashboard() {
   const [blueprint, setBlueprint] = useState(null)
   const [saving, setSaving] = useState(false)
   const [editMode, setEditMode] = useState(false)
+  
+  const [openSections, setOpenSections] = useState({
+    identity: false,
+    mission: false,
+    endgame: false,
+    warroom: true,
+    advantages: false,
+    vulnerabilities: false,
+    code: false
+  })
+
+  const toggleSection = (key) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
+  }
   
   const [battles, setBattles] = useState(DEFAULT_BATTLES)
   const [showAddBattle, setShowAddBattle] = useState(false)
@@ -299,44 +313,110 @@ export default function OperatorDashboard() {
           
           {/* ── COLUMN 1: IDENTITY ── */}
           <div className="flex flex-col gap-6">
-            <HudPanel glow className="border-info" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
-              <div className="flex items-center gap-2 mb-4 text-info border-b border-border-color pb-2">
-                <UserIcon size={16} /> <span className="font-display text-lg uppercase tracking-widest">IDENTITY</span>
+            <HudPanel glow className="border-info">
+              <div 
+                onClick={() => toggleSection('identity')}
+                className="flex items-center justify-between gap-3 text-info border-b border-border-color pb-2 cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <UserIcon size={16} /> <span className="font-display text-lg uppercase tracking-widest font-bold">IDENTITY</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!openSections.identity && !editMode && (
+                    <span className="font-mono text-[10px] text-muted truncate max-w-[140px] hidden sm:inline-block">
+                      {form.identity}
+                    </span>
+                  )}
+                  <button type="button" className="p-1 text-muted hover:text-info transition-colors shrink-0">
+                    {openSections.identity || editMode ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                </div>
               </div>
-              {editMode ? (
-                <textarea className="textarea h-32 font-mono text-xs" value={form.identity} onChange={e => setForm({...form, identity: e.target.value})} />
-              ) : (
-                <div className="font-mono text-sm leading-relaxed text-secondary">{form.identity}</div>
-              )}
+              <AnimatePresence>
+                {(openSections.identity || editMode) && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-4">
+                    {editMode ? (
+                      <textarea className="textarea h-32 font-mono text-xs w-full" value={form.identity} onChange={e => setForm({...form, identity: e.target.value})} />
+                    ) : (
+                      <div className="font-mono text-sm leading-relaxed text-secondary">{form.identity}</div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </HudPanel>
 
-            <HudPanel className="border-amber" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
-              <div className="flex items-center gap-2 mb-4 text-amber border-b border-border-color pb-2">
-                <Target size={16} /> <span className="font-display text-lg uppercase tracking-widest">MISSION</span>
+            <HudPanel className="border-amber">
+              <div 
+                onClick={() => toggleSection('mission')}
+                className="flex items-center justify-between gap-3 text-amber border-b border-border-color pb-2 cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <Target size={16} /> <span className="font-display text-lg uppercase tracking-widest font-bold">MISSION</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!openSections.mission && !editMode && (
+                    <span className="font-mono text-[10px] text-muted truncate max-w-[140px] hidden sm:inline-block">
+                      {form.mission}
+                    </span>
+                  )}
+                  <button type="button" className="p-1 text-muted hover:text-amber transition-colors shrink-0">
+                    {openSections.mission || editMode ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                </div>
               </div>
-              {editMode ? (
-                <textarea className="textarea h-48 font-mono text-xs" value={form.mission} onChange={e => setForm({...form, mission: e.target.value})} />
-              ) : (
-                <div className="font-mono text-sm leading-relaxed text-primary">{form.mission}</div>
-              )}
+              <AnimatePresence>
+                {(openSections.mission || editMode) && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-4">
+                    {editMode ? (
+                      <textarea className="textarea h-48 font-mono text-xs w-full" value={form.mission} onChange={e => setForm({...form, mission: e.target.value})} />
+                    ) : (
+                      <div className="font-mono text-sm leading-relaxed text-primary bg-amber/5 p-3 rounded border border-amber/20">{form.mission}</div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </HudPanel>
 
-            <HudPanel className="border-border-color" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
-              <div className="flex items-center gap-2 mb-4 text-muted border-b border-border-color pb-2">
-                <Eye size={16} /> <span className="font-display text-lg uppercase tracking-widest">5-YEAR ENDGAME</span>
+            <HudPanel className="border-border-color">
+              <div 
+                onClick={() => toggleSection('endgame')}
+                className="flex items-center justify-between gap-3 text-muted border-b border-border-color pb-2 cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <Eye size={16} /> <span className="font-display text-lg uppercase tracking-widest font-bold">5-YEAR ENDGAME</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!openSections.endgame && !editMode && (
+                    <span className="font-mono text-[10px] text-muted truncate max-w-[140px] hidden sm:inline-block">
+                      {form.future_vision}
+                    </span>
+                  )}
+                  <button type="button" className="p-1 text-muted hover:text-primary transition-colors shrink-0">
+                    {openSections.endgame || editMode ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                </div>
               </div>
-              {editMode ? (
-                <textarea className="textarea h-48 font-mono text-xs" value={form.future_vision} onChange={e => setForm({...form, future_vision: e.target.value})} />
-              ) : (
-                <div className="font-mono text-xs leading-relaxed text-secondary whitespace-pre-wrap">{form.future_vision}</div>
-              )}
+              <AnimatePresence>
+                {(openSections.endgame || editMode) && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-4">
+                    {editMode ? (
+                      <textarea className="textarea h-48 font-mono text-xs w-full" value={form.future_vision} onChange={e => setForm({...form, future_vision: e.target.value})} />
+                    ) : (
+                      <div className="font-mono text-xs leading-relaxed text-secondary whitespace-pre-wrap">{form.future_vision}</div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </HudPanel>
           </div>
 
           {/* ── COLUMN 2: WAR ROOM / BATTLES ── */}
           <div className="flex flex-col gap-6">
-            <HudPanel glow className="border-danger" style={{ clipPath: 'polygon(0 15px, 15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
-              <div className="flex items-center justify-between mb-4 border-b border-danger-subtle pb-3">
+            <HudPanel glow className="border-danger">
+              <div 
+                onClick={() => toggleSection('warroom')}
+                className="flex items-center justify-between border-b border-danger-subtle pb-3 cursor-pointer select-none"
+              >
                 <div className="flex items-center gap-2 text-danger">
                   <Swords size={20} className="animate-pulse" /> 
                   <div>
@@ -344,12 +424,24 @@ export default function OperatorDashboard() {
                     <span className="font-mono text-[9px] text-muted uppercase">Tactical Threat Mitigation & Counter-Measures</span>
                   </div>
                 </div>
-                {editMode && (
-                  <button className="btn btn-ghost btn-sm text-danger hover:bg-danger-subtle flex items-center gap-1" onClick={() => setShowAddBattle(true)}>
-                    <Plus size={14} /> DEPLOY BATTLE
+                <div className="flex items-center gap-2">
+                  {editMode && (
+                    <button 
+                      className="btn btn-ghost btn-sm text-danger hover:bg-danger-subtle flex items-center gap-1" 
+                      onClick={(e) => { e.stopPropagation(); setShowAddBattle(true); }}
+                    >
+                      <Plus size={14} /> DEPLOY BATTLE
+                    </button>
+                  )}
+                  <button type="button" className="p-1 text-muted hover:text-danger transition-colors shrink-0">
+                    {openSections.warroom || editMode ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                   </button>
-                )}
+                </div>
               </div>
+
+              <AnimatePresence>
+                {(openSections.warroom || editMode) && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-4">
 
               {/* Threat Status Summary Bar */}
               <div className="grid grid-cols-3 gap-2 mb-4 p-2 bg-bg-primary border border-border-color rounded-sm font-mono text-[9px] text-center">
@@ -578,6 +670,9 @@ export default function OperatorDashboard() {
                   )}
                 </AnimatePresence>
               </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </HudPanel>
           </div>
 
@@ -585,51 +680,117 @@ export default function OperatorDashboard() {
           <div className="flex flex-col gap-6">
             <NotificationControl />
 
-            <HudPanel className="border-success" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
-              <div className="flex items-center gap-2 mb-4 text-success border-b border-border-color pb-2">
-                <Shield size={16} /> <span className="font-display text-lg uppercase tracking-widest">KNOWN ADVANTAGES</span>
+            {/* Known Advantages */}
+            <HudPanel className="border-success">
+              <div 
+                onClick={() => toggleSection('advantages')}
+                className="flex items-center justify-between gap-3 text-success border-b border-border-color pb-2 cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <Shield size={16} /> <span className="font-display text-lg uppercase tracking-widest font-bold">KNOWN ADVANTAGES</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!openSections.advantages && !editMode && (
+                    <span className="font-mono text-[10px] text-muted truncate max-w-[120px] hidden sm:inline-block">
+                      {form.strengths.split('\n').filter(Boolean).length} ADVANTAGES
+                    </span>
+                  )}
+                  <button type="button" className="p-1 text-muted hover:text-success transition-colors shrink-0">
+                    {openSections.advantages || editMode ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                </div>
               </div>
-              {editMode ? (
-                <textarea className="textarea h-40 font-mono text-xs" value={form.strengths} onChange={e => setForm({...form, strengths: e.target.value})} />
-              ) : (
-                <ul className="flex flex-col gap-2 font-mono text-xs text-secondary">
-                  {form.strengths.split('\n').filter(Boolean).map((s, i) => (
-                    <li key={i} className="flex gap-2"><span className="text-success">■</span> {s}</li>
-                  ))}
-                </ul>
-              )}
+              <AnimatePresence>
+                {(openSections.advantages || editMode) && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-4">
+                    {editMode ? (
+                      <textarea className="textarea h-40 font-mono text-xs w-full" value={form.strengths} onChange={e => setForm({...form, strengths: e.target.value})} />
+                    ) : (
+                      <ul className="flex flex-col gap-2 font-mono text-xs text-secondary">
+                        {form.strengths.split('\n').filter(Boolean).map((s, i) => (
+                          <li key={i} className="flex gap-2 p-2 border border-border-color bg-tertiary rounded"><span className="text-success">■</span> {s}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </HudPanel>
 
-            <HudPanel className="border-danger" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
-              <div className="flex items-center gap-2 mb-4 text-danger border-b border-border-color pb-2">
-                <AlertTriangle size={16} /> <span className="font-display text-lg uppercase tracking-widest">VULNERABILITIES</span>
+            {/* Vulnerabilities */}
+            <HudPanel className="border-danger">
+              <div 
+                onClick={() => toggleSection('vulnerabilities')}
+                className="flex items-center justify-between gap-3 text-danger border-b border-border-color pb-2 cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} /> <span className="font-display text-lg uppercase tracking-widest font-bold">VULNERABILITIES</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!openSections.vulnerabilities && !editMode && (
+                    <span className="font-mono text-[10px] text-muted truncate max-w-[120px] hidden sm:inline-block">
+                      {form.weaknesses.split('\n').filter(Boolean).length} THREATS
+                    </span>
+                  )}
+                  <button type="button" className="p-1 text-muted hover:text-danger transition-colors shrink-0">
+                    {openSections.vulnerabilities || editMode ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                </div>
               </div>
-              {editMode ? (
-                <textarea className="textarea h-40 font-mono text-xs" value={form.weaknesses} onChange={e => setForm({...form, weaknesses: e.target.value})} />
-              ) : (
-                <ul className="flex flex-col gap-2 font-mono text-xs text-secondary">
-                  {form.weaknesses.split('\n').filter(Boolean).map((w, i) => (
-                    <li key={i} className="flex gap-2"><span className="text-danger">■</span> {w}</li>
-                  ))}
-                </ul>
-              )}
+              <AnimatePresence>
+                {(openSections.vulnerabilities || editMode) && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-4">
+                    {editMode ? (
+                      <textarea className="textarea h-40 font-mono text-xs w-full" value={form.weaknesses} onChange={e => setForm({...form, weaknesses: e.target.value})} />
+                    ) : (
+                      <ul className="flex flex-col gap-2 font-mono text-xs text-secondary">
+                        {form.weaknesses.split('\n').filter(Boolean).map((w, i) => (
+                          <li key={i} className="flex gap-2 p-2 border border-border-color bg-tertiary rounded"><span className="text-danger">■</span> {w}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </HudPanel>
 
-            <HudPanel glow className="border-amber" style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%)' }}>
-              <div className="flex items-center gap-2 mb-4 text-amber border-b border-border-color pb-2">
-                <Flame size={16} /> <span className="font-display text-lg uppercase tracking-widest">THE CODE (NON-NEGOTIABLES)</span>
+            {/* The Code */}
+            <HudPanel glow className="border-amber">
+              <div 
+                onClick={() => toggleSection('code')}
+                className="flex items-center justify-between gap-3 text-amber border-b border-border-color pb-2 cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <Flame size={16} /> <span className="font-display text-lg uppercase tracking-widest font-bold">THE CODE (NON-NEGOTIABLES)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!openSections.code && !editMode && (
+                    <span className="font-mono text-[10px] text-muted truncate max-w-[120px] hidden sm:inline-block">
+                      {form.values_list.split('\n').filter(Boolean).length} RULES
+                    </span>
+                  )}
+                  <button type="button" className="p-1 text-muted hover:text-amber transition-colors shrink-0">
+                    {openSections.code || editMode ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                </div>
               </div>
-              {editMode ? (
-                <textarea className="textarea h-40 font-mono text-xs" value={form.values_list} onChange={e => setForm({...form, values_list: e.target.value})} />
-              ) : (
-                <ul className="flex flex-col gap-3 font-mono text-xs text-primary">
-                  {form.values_list.split('\n').filter(Boolean).map((v, i) => (
-                    <li key={i} className="flex gap-2 p-2 border border-border-color bg-tertiary">
-                      <span className="text-amber">{String(i+1).padStart(2, '0')}</span> {v}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <AnimatePresence>
+                {(openSections.code || editMode) && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-4">
+                    {editMode ? (
+                      <textarea className="textarea h-40 font-mono text-xs w-full" value={form.values_list} onChange={e => setForm({...form, values_list: e.target.value})} />
+                    ) : (
+                      <ul className="flex flex-col gap-3 font-mono text-xs text-primary">
+                        {form.values_list.split('\n').filter(Boolean).map((v, i) => (
+                          <li key={i} className="flex gap-2 p-2 border border-border-color bg-tertiary rounded">
+                            <span className="text-amber">{String(i+1).padStart(2, '0')}</span> {v}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </HudPanel>
           </div>
 
