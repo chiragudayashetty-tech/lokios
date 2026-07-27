@@ -17,7 +17,7 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { RANK_CONFIG } from '@/lib/constants'
-import { getLocalDateStr } from '@/lib/utils/dates'
+import { getLocalDateStr, getEndOfWeek } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
@@ -475,6 +475,23 @@ export default function MissionControl() {
     return section
   })()
 
+  // Split raw debrief priorities string into up to 3 separate priority tasks
+  const parsedPriorities = useMemo(() => {
+    if (!nextWeekPriorities) return []
+    const rawItems = nextWeekPriorities
+      .split(/(?=\b\d+[\.\)])|\n+/)
+      .map(s => s.replace(/^\d+[\.\)]\s*/, '').trim())
+      .filter(Boolean)
+    if (rawItems.length === 0 && nextWeekPriorities.trim()) {
+      return [{ id: 'p1', title: nextWeekPriorities.trim(), status: 'pending' }]
+    }
+    return rawItems.slice(0, 3).map((title, idx) => ({
+      id: `p-${idx + 1}`,
+      title,
+      status: 'pending'
+    }))
+  }, [nextWeekPriorities])
+
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
 
@@ -894,11 +911,59 @@ export default function MissionControl() {
                 </Link>
               </div>
 
-              {weeklyGoalTasks.length > 0 ? (
+              {(weeklyGoalTasks.length > 0 || parsedPriorities.length > 0) ? (
                 <div className="space-y-2">
-                  {weeklyGoalTasks.slice(0, 3).map((gt) => {
+                  {(weeklyGoalTasks.length > 0 ? weeklyGoalTasks.slice(0, 3) : parsedPriorities).map((gt) => {
                     const isDone = gt.status === 'completed'
                     const isFailed = gt.status === 'failed'
+
+                    const handleMarkDone = async () => {
+                      if (gt.category === 'weekly_goal') {
+                        await completeOperation(gt.id)
+                      } else if (user) {
+                        const sb = createClient()
+                        const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
+                        const { data: newT } = await sb.from('tasks').insert([{
+                          user_id: user.id,
+                          title: gt.title,
+                          type: 'custom',
+                          category: 'weekly_goal',
+                          due_date: endOfWeekStr,
+                          status: 'completed',
+                          completed_at: new Date().toISOString(),
+                          description: '[Weekly Goal] Priority for Next Week'
+                        }]).select().single()
+                        if (newT) {
+                          await robustAwardXP(user.id, 25, 'task_complete', newT.id, `Completed Priority Goal: ${gt.title}`)
+                        }
+                      }
+                    }
+
+                    const handleMarkFailed = async () => {
+                      if (gt.category === 'weekly_goal') {
+                        await failOperation(gt.id)
+                      } else if (user) {
+                        const sb = createClient()
+                        const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
+                        await sb.from('tasks').insert([{
+                          user_id: user.id,
+                          title: gt.title,
+                          type: 'custom',
+                          category: 'weekly_goal',
+                          due_date: endOfWeekStr,
+                          status: 'failed',
+                          description: '[Weekly Goal] Priority for Next Week'
+                        }])
+                      }
+                    }
+
+                    const handleReopen = async () => {
+                      if (gt.category === 'weekly_goal') {
+                        if (isDone) await undoCompleteTask(gt.id)
+                        else if (isFailed) await undoFailOperation(gt.id)
+                      }
+                    }
+
                     return (
                       <div key={gt.id} className={`flex items-center justify-between gap-3 p-2.5 rounded bg-bg-primary border ${
                         isDone ? 'border-success/40 bg-success/5' : isFailed ? 'border-danger/40 bg-danger/5' : 'border-border-color'
@@ -909,10 +974,7 @@ export default function MissionControl() {
                             {isDone || isFailed ? (
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (isDone) undoCompleteTask(gt.id)
-                                  else if (isFailed) undoFailOperation(gt.id)
-                                }}
+                                onClick={handleReopen}
                                 title="Re-open Priority Goal"
                                 className="w-6 h-6 rounded flex items-center justify-center border border-border-color hover:border-info text-info bg-bg-tertiary transition-all"
                               >
@@ -922,7 +984,7 @@ export default function MissionControl() {
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => completeOperation(gt.id)}
+                                  onClick={handleMarkDone}
                                   title="Mark Completed (+25 XP)"
                                   className="w-6 h-6 rounded flex items-center justify-center border border-success/60 hover:bg-success text-success hover:text-bg-primary transition-all"
                                 >
@@ -930,7 +992,7 @@ export default function MissionControl() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => failOperation(gt.id)}
+                                  onClick={handleMarkFailed}
                                   title="Mark Failed"
                                   className="w-6 h-6 rounded flex items-center justify-center border border-danger/60 hover:bg-danger text-danger hover:text-white transition-all"
                                 >
@@ -955,10 +1017,6 @@ export default function MissionControl() {
                       </div>
                     )
                   })}
-                </div>
-              ) : nextWeekPriorities ? (
-                <div className="font-mono text-xs text-primary whitespace-pre-wrap leading-relaxed p-3 rounded-sm bg-bg-primary border border-border-color">
-                  {nextWeekPriorities}
                 </div>
               ) : (
                 <div className="p-4 text-center rounded-sm bg-bg-primary border border-dashed border-border-color">
