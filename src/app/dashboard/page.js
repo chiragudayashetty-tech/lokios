@@ -382,31 +382,32 @@ export default function MissionControl() {
         const avgStreamingNum = stHistory.reduce((s, l) => s + (parseFloat(l.streaming_hours) || 0), 0) / stHistory.length
         const avgStreaming = avgStreamingNum.toFixed(1)
         const todaySt = stHistory.find(l => l.date === todayStr)
-        const daysClean = stHistory.filter(l => (parseFloat(l.total_hours) || 0) <= 4 && getDoom(l) <= 30).length
+        // Clean day definition: Screen Time < 6h, Doomscroll < 60m, Streaming < 1h
+        const daysClean = stHistory.filter(l => (parseFloat(l.total_hours) || 0) < 6 && getDoom(l) < 60 && (parseFloat(l.streaming_hours) || 0) < 1).length
 
         // Addiction / Threat Score (0 to 100). Higher = worse.
         let addScore = 0
-        // Factor 1: 7d avg screen time (target <= 4h)
-        if (avgScreenNum > 8) addScore += 35
-        else if (avgScreenNum > 6) addScore += 25
-        else if (avgScreenNum > 4) addScore += 15
+        // Factor 1: 7d avg screen time (target < 6h)
+        if (avgScreenNum > 10) addScore += 35
+        else if (avgScreenNum > 8) addScore += 25
+        else if (avgScreenNum >= 6) addScore += 15
 
-        // Factor 2: 7d avg doomscroll (target <= 30m)
+        // Factor 2: 7d avg doomscroll (target < 60m)
         if (avgDoom > 120) addScore += 35
-        else if (avgDoom > 60) addScore += 25
-        else if (avgDoom > 30) addScore += 15
+        else if (avgDoom > 90) addScore += 25
+        else if (avgDoom >= 60) addScore += 15
 
-        // Factor 3: Today's screen time (target <= 4h)
+        // Factor 3: Today's screen time (target < 6h)
         if (!todaySt) addScore += 15
-        else if ((parseFloat(todaySt.total_hours) || 0) > 6) addScore += 25
-        else if ((parseFloat(todaySt.total_hours) || 0) > 4) addScore += 15
+        else if ((parseFloat(todaySt.total_hours) || 0) > 8) addScore += 25
+        else if ((parseFloat(todaySt.total_hours) || 0) >= 6) addScore += 15
 
         // Factor 4: Clean days in last 7 (target >= 5)
         if (daysClean < 3) addScore += 20
         else if (daysClean < 5) addScore += 10
 
-        // Factor 5: Streaming avg (target <= 2h)
-        if (avgStreamingNum > 2) addScore += 10
+        // Factor 5: Streaming avg (target < 1h)
+        if (avgStreamingNum >= 1) addScore += 10
 
         addScore = Math.min(100, Math.max(0, addScore))
         setAddictionData({ avgScreen, avgDoom, avgStreaming, daysClean, addScore, todaySt, total: stHistory.length })
@@ -794,7 +795,7 @@ export default function MissionControl() {
 
                     // Calculate Live HP & Intel Factors for Today
                     const liveIntel  = (function() {
-                      let baseHp = 50
+                      let baseHp = battle.hp !== undefined ? battle.hp : 50
                       const succeeded = []
                       const failed = []
 
@@ -825,28 +826,28 @@ export default function MissionControl() {
                           const dMins  = parseInt(todayScreenTime.doom_scroll_minutes ?? todayScreenTime.doomscroll_minutes) || 0
                           const sHours = parseFloat(todayScreenTime.streaming_hours) || 0
 
-                          if (tHours <= 6) {
+                          if (tHours < 6) {
                             baseHp -= 10
-                            succeeded.push(`Screen Time (${tHours}h) ≤ 6h limit (-10 HP)`)
+                            succeeded.push(`Screen Time (${tHours}h) < 6h limit (-10 HP)`)
                           } else {
                             baseHp += 15
-                            failed.push(`Screen Time (${tHours}h) > 6h limit (+15 HP)`)
+                            failed.push(`Screen Time (${tHours}h) ≥ 6h limit (+15 HP)`)
                           }
 
-                          if (dMins <= 60) {
+                          if (dMins < 60) {
                             baseHp -= 10
-                            succeeded.push(`Doomscroll (${dMins}m) ≤ 60m limit (-10 HP)`)
+                            succeeded.push(`Doomscroll (${dMins}m) < 60m limit (-10 HP)`)
                           } else {
                             baseHp += 15
-                            failed.push(`Doomscroll (${dMins}m) > 60m limit (+15 HP)`)
+                            failed.push(`Doomscroll (${dMins}m) ≥ 60m limit (+15 HP)`)
                           }
 
-                          if (sHours <= 2) {
+                          if (sHours < 1) {
                             baseHp -= 5
-                            succeeded.push(`Streaming (${sHours}h) ≤ 2h limit (-5 HP)`)
+                            succeeded.push(`Streaming (${sHours}h) < 1h limit (-5 HP)`)
                           } else {
                             baseHp += 10
-                            failed.push(`Streaming (${sHours}h) > 2h limit (+10 HP)`)
+                            failed.push(`Streaming (${sHours}h) ≥ 1h limit (+10 HP)`)
                           }
                         } else {
                           failed.push(`No Screen Time logged today (+10 HP threat drift)`)

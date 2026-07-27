@@ -148,8 +148,8 @@ export default function ScreenIntel() {
       reasons.push(`Focus: ${focusXp > 0 ? '+' : ''}${focusXp}`)
     }
 
-    // 4. Streaming Hours: Target 2
-    const streamingDiff = 2 - sHours
+    // 4. Streaming Hours: Target 1h (60 min)
+    const streamingDiff = 1 - sHours
     const streamingXp = Math.round(streamingDiff * 10)
     if (streamingXp !== 0) {
       xpAmount += streamingXp
