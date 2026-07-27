@@ -906,7 +906,7 @@ export default function MissionControl() {
                   <ClipboardList size={12} color="var(--info)" />
                   <span className="font-mono text-[9px] uppercase tracking-widest text-info">Next Week Priorities // Weekly Debrief</span>
                 </div>
-                <Link href="/weekly-review" className="font-mono text-[9px] text-muted hover:text-info flex items-center gap-1">
+                <Link href="/journal" className="font-mono text-[9px] text-muted hover:text-info flex items-center gap-1">
                   DEBRIEF <ArrowUpRight size={10} />
                 </Link>
               </div>
@@ -1021,7 +1021,7 @@ export default function MissionControl() {
               ) : (
                 <div className="p-4 text-center rounded-sm bg-bg-primary border border-dashed border-border-color">
                   <p className="font-mono text-[10px] text-muted mb-2">No priorities logged for this cycle.</p>
-                  <Link href="/weekly-review" className="btn btn-secondary btn-sm font-mono text-[9px]">
+                  <Link href="/journal" className="btn btn-secondary btn-sm font-mono text-[9px]">
                     INITIALIZE WEEKLY DEBRIEF
                   </Link>
                 </div>
@@ -1170,7 +1170,7 @@ export default function MissionControl() {
 
             {/* BODY RECON WIDGET */}
             {weightData && (
-              <Link href="/weight">
+              <Link href="/quests">
                 <div className="dashboard-card hover:border-amber transition-colors cursor-pointer" style={{ borderLeft: '3px solid var(--accent-primary)' }}>
                   <div className="flex items-center gap-1.5 mb-3">
                     <Scale size={10} color="var(--accent-primary)" />
@@ -1441,7 +1441,7 @@ export default function MissionControl() {
                 </div>
               </Link>
               
-              <Link href="/weekly-review" className="flex-1">
+              <Link href="/journal" className="flex-1">
                 <div style={{
                   padding: '12px', textAlign: 'center', cursor: 'pointer',
                   background: new Date().getDay() === 0 ? 'rgba(245,158,11,0.08)' : 'var(--bg-tertiary)', 

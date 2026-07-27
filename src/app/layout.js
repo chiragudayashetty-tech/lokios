@@ -27,7 +27,6 @@ export const viewport = {
 }
 
 import { OSProvider } from '@/lib/context/OSContext'
-import ParticlesWrapper from '@/components/ui/ParticlesWrapper'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function RootLayout({ children }) {
@@ -35,7 +34,6 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <ErrorBoundary>
-          <ParticlesWrapper />
           <OSProvider>
             {children}
           </OSProvider>

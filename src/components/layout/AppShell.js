@@ -26,7 +26,7 @@ const NAV_ITEMS = [
 
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
   { href: '/xp', icon: Trophy, label: 'XP Metrics' },
-  { href: '/weight', icon: Scale, label: 'Wellness' },
+  { href: '/quests', icon: Scale, label: 'Wellness' },
   { href: '/profile', icon: User, label: 'Operator Profile' }
 ]
 
