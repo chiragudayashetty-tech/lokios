@@ -501,39 +501,28 @@ export default function WellnessPage() {
               </div>
             ) : (
               <>
-                {/* Stats Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { label: 'Avg Sleep', val: avgSleep ? `${avgSleep}h` : '—', icon: Clock, color: 'var(--info)' },
-                    { label: 'Healthy Nights', val: totalNights > 0 ? `${healthyNights}/${totalNights}` : '—', icon: CheckCircle2, color: 'var(--success)' },
-                    { label: 'Bedtime Score', val: bedtimeScore !== null ? `${bedtimeScore}%` : '—', icon: Moon, color: 'var(--accent-primary)' },
-                    { label: 'Best Streak', val: bestStreak > 0 ? `${bestStreak}d` : '—', icon: Flame, color: 'var(--amber)' }
-                  ].map(stat => (
-                    <div key={stat.label} className="p-4 flex items-center gap-3" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                      <stat.icon size={20} style={{ color: stat.color, flexShrink: 0 }} />
-                      <div>
-                        <div className="font-display font-bold text-primary text-xl leading-none">{stat.val}</div>
-                        <div className="font-mono text-[8px] text-muted uppercase tracking-widest mt-0.5">{stat.label}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* War Room Sync Badge */}
-                {warRoomHp !== null && (
-                  <div className="p-4 flex items-center gap-4" style={{ background: warRoomHp > 60 ? 'rgba(239,68,68,0.07)' : 'rgba(34,197,94,0.07)', border: `1px solid ${warRoomHp > 60 ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`, borderLeft: `3px solid ${warRoomHp > 60 ? 'var(--danger)' : 'var(--success)'}` }}>
-                    <Swords size={20} style={{ color: warRoomHp > 60 ? 'var(--danger)' : 'var(--success)', flexShrink: 0 }} />
-                    <div className="flex-1">
-                      <div className="font-mono text-[9px] uppercase tracking-widest text-muted mb-1">WAR ROOM // POOR SLEEP DISCIPLINE THREAT</div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
-                          <div className="h-full transition-all duration-700" style={{ width: `${warRoomHp}%`, background: warRoomHp > 60 ? 'var(--danger)' : warRoomHp > 30 ? 'var(--warning)' : 'var(--success)' }} />
-                        </div>
-                        <span className="font-mono text-xs font-bold" style={{ color: warRoomHp > 60 ? 'var(--danger)' : 'var(--success)' }}>{warRoomHp} HP</span>
-                      </div>
-                    </div>
+                {/* Compact Sleep Stats Strip */}
+                <div className="p-3.5 rounded-xl border border-border-color bg-bg-tertiary flex items-center justify-between gap-2 font-mono text-xs shadow-sm overflow-x-auto">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-info text-[9px] uppercase font-bold tracking-wider">AVG SLEEP:</span>
+                    <span className="font-bold text-info font-mono text-sm">{avgSleep ? `${avgSleep}h` : '—'}</span>
                   </div>
-                )}
+                  <div className="h-4 w-px bg-white/10 shrink-0" />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-success text-[9px] uppercase font-bold tracking-wider">HEALTHY:</span>
+                    <span className="font-bold text-success font-mono text-sm">{totalNights > 0 ? `${healthyNights}/${totalNights}` : '—'}</span>
+                  </div>
+                  <div className="h-4 w-px bg-white/10 shrink-0" />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-primary text-[9px] uppercase font-bold tracking-wider">BEDTIME:</span>
+                    <span className="font-bold text-primary font-mono text-sm">{bedtimeScore !== null ? `${bedtimeScore}%` : '—'}</span>
+                  </div>
+                  <div className="h-4 w-px bg-white/10 shrink-0" />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-amber text-[9px] uppercase font-bold tracking-wider">STREAK:</span>
+                    <span className="font-bold text-amber font-mono text-sm">{bestStreak > 0 ? `${bestStreak}d` : '—'}</span>
+                  </div>
+                </div>
 
                 {/* Sleep Duration Chart */}
                 {sleepChartData.length >= 1 ? (
