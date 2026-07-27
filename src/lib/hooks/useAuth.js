@@ -28,8 +28,12 @@ export function useAuth() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null)
+      (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+        } else if (session?.user) {
+          setUser(session.user)
+        }
         setLoading(false)
       }
     )
