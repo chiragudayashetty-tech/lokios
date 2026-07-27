@@ -169,16 +169,107 @@ export default function Missions() {
     await failMission(goal.id)
   }
 
-  const renderGoalCard = (goal, i = 0) => {
+  const renderGoalCard = (goal, i) => {
     const isPaused = goal.status === 'paused'
     const isEditing = editingId === goal.id
     const isExpanded = expandedGoal === goal.id
-    
-    const linkedTasks = tasks.filter(t => t.goal_id === goal.id)
-    const hasLinked = linkedTasks.length > 0
-    const completedLinked = linkedTasks.filter(t => t.status === 'completed').length
-    const displayProgress = hasLinked ? Math.round((completedLinked / linkedTasks.length) * 100) : (goal.progress || 0)
+    const hasLinked = tasks.some(t => t.goal_id === goal.id)
+    const linkedCount = tasks.filter(t => t.goal_id === goal.id).length
+    const linkedCompleted = tasks.filter(t => t.goal_id === goal.id && t.status === 'completed').length
+    const displayProgress = hasLinked 
+      ? Math.round((linkedCompleted / linkedCount) * 100) 
+      : (goal.progress || 0)
 
+    // ── THIN STRIP LAYOUT FOR COMPLETED & FAILED MISSIONS ──
+    if (goal.status === 'completed' || goal.status === 'failed') {
+      const isCompleted = goal.status === 'completed'
+      const dateStr = goal.completed_at 
+        ? new Date(goal.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) 
+        : (goal.updated_at ? new Date(goal.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null)
+
+      return (
+        <motion.div
+          key={goal.id}
+          layout
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="col-span-1"
+        >
+          <div className={`p-3 rounded-lg border transition-all ${
+            isCompleted ? 'bg-success/5 border-success/30 hover:border-success/60' : 'bg-danger/5 border-danger/30 hover:border-danger/60'
+          }`}>
+            <div 
+              onClick={() => setExpandedGoal(isExpanded ? null : goal.id)}
+              className="flex items-center justify-between gap-3 cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                  isCompleted ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'
+                }`}>
+                  {isCompleted ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
+                </span>
+                <span className={`font-mono text-sm font-semibold truncate ${isCompleted ? 'text-muted line-through opacity-80' : 'text-danger line-through'}`}>
+                  {goal.title}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {dateStr && (
+                  <span className="font-mono text-[10px] text-muted hidden sm:inline">
+                    {isCompleted ? `COMPLETED ${dateStr}` : `FAILED ${dateStr}`}
+                  </span>
+                )}
+                <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded border uppercase ${
+                  isCompleted ? 'bg-success/10 text-success border-success/30' : 'bg-danger/10 text-danger border-danger/30'
+                }`}>
+                  {isCompleted ? 'DONE' : 'FAILED'}
+                </span>
+                <button type="button" className="p-1 text-muted hover:text-primary transition-colors">
+                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Expanded Details */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <div className="mt-3 pt-3 border-t border-border-color/40 flex flex-col gap-3 font-mono text-xs">
+                    {goal.description && (
+                      <p className="text-secondary whitespace-pre-wrap">{goal.description}</p>
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted pt-1">
+                      <div>
+                        <span className="uppercase">TYPE: {goal.type?.replace('_', ' ')}</span>
+                        {goal.category && <span className="ml-3 uppercase">CAT: {goal.category}</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isCompleted && (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); undoCompleteGoal(goal.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
+                            <RotateCcw size={12} /> RE-OPEN MISSION
+                          </button>
+                        )}
+                        {!isCompleted && (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); undoFailMission(goal.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
+                            <RotateCcw size={12} /> RESTORE MISSION
+                          </button>
+                        )}
+                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteGoal(goal); }} className="btn btn-ghost btn-xs text-danger p-1" title="Delete">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      )
+    }
+
+    // ── CLEAN CARD LAYOUT FOR ACTIVE MISSIONS ──
     return (
       <motion.div
         key={goal.id}
@@ -190,37 +281,29 @@ export default function Missions() {
       >
         <HudPanel glow={activeTab === 'main' && !isPaused} scanLine={activeTab === 'main' && !isPaused} className={isPaused ? 'opacity-50' : ''}>
           
-          {/* Header */}
-          <div className="flex-between mb-4 border-b border-border-color pb-2">
-            <div className="flex items-center gap-2">
-              <span className={`badge ${isPaused ? 'bg-secondary text-muted' : 'badge-amber'}`}>
+          {/* Header Tag Row: Flex wrap ensures tags NEVER collide or overlap */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-border-color">
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+              <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-semibold uppercase tracking-wider ${
+                isPaused ? 'bg-secondary text-muted border border-border-color' : 'bg-amber/10 text-amber border border-amber/30'
+              }`}>
                 {isPaused ? 'PAUSED' : goal.type.replace('_', ' ')}
               </span>
-              {goal.status !== 'completed' && (
-                <span className="font-mono text-[9px] px-2 py-0.5 border uppercase" 
-                      style={{ color: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color, borderColor: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color }}>
-                  {DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].label}
-                </span>
-              )}
-              {goal.completed_at && (
-                <span className="font-mono text-[9px] text-success font-bold flex items-center gap-1">
-                  COMPLETED {new Date(goal.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+
+              <span className="px-2 py-0.5 rounded text-[9px] font-mono font-semibold uppercase tracking-wider border" 
+                    style={{ color: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color, borderColor: `${DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color}40`, background: `${DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color}10` }}>
+                {DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].label}
+              </span>
+
+              {goal.category && (
+                <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase text-muted bg-bg-primary border border-border-color">
+                  {goal.category}
                 </span>
               )}
             </div>
             
-            {/* Controls */}
+            {/* Top-Right Control Buttons */}
             <div className="flex items-center gap-1 opacity-80 sm:opacity-60 hover:opacity-100 transition-opacity">
-              {goal.status !== 'completed' && goal.status !== 'failed' && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleCompleteGoal(goal); }}
-                  className="btn btn-primary btn-xs flex items-center gap-1 sm:hidden text-[9px] py-1 px-2 font-mono font-bold"
-                  title="Complete Mission"
-                >
-                  <Check size={12} /> COMPLETE
-                </button>
-              )}
               <button type="button" onClick={(e) => { e.stopPropagation(); togglePauseGoal(goal.id, goal.status); }} className="btn btn-ghost p-1.5" title={isPaused ? 'Resume' : 'Pause'}>
                 {isPaused ? <Play size={14} /> : <Pause size={14} />}
               </button>
@@ -288,7 +371,7 @@ export default function Missions() {
           ) : (
             <div onClick={() => setExpandedGoal(isExpanded ? null : goal.id)} className="cursor-pointer group">
               <div className="flex-between">
-                <h3 className={`font-display text-2xl uppercase tracking-wide ${goal.status === 'completed' ? 'text-muted line-through' : 'text-primary group-hover:text-amber transition-colors'}`}>
+                <h3 className="font-display text-2xl uppercase tracking-wide text-primary group-hover:text-amber transition-colors">
                   {goal.title}
                 </h3>
                 {isExpanded ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
@@ -308,98 +391,81 @@ export default function Missions() {
             </div>
           )}
           
-          {/* Expanded Controls: Progress & Milestones */}
-          <AnimatePresence>
-            {isExpanded && !isEditing && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-visible">
-                <div className="mt-6 pt-4 border-t border-border-color flex-col gap-4">
-                  
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <div className="flex-between mb-2">
-                      <label className="font-mono text-xs text-amber">
-                        {hasLinked ? `DYNAMIC PROGRESS: ${displayProgress}%` : `MANUAL PROGRESS: ${displayProgress}%`}
-                      </label>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="0" max="100" 
-                      value={displayProgress} 
-                      onChange={(e) => !hasLinked && updateProgress(goal.id, parseInt(e.target.value))}
-                      className={`w-full ${hasLinked ? 'accent-success opacity-50 cursor-not-allowed' : 'accent-amber-500'}`}
-                      disabled={hasLinked}
-                    />
-                  </div>
-                  {/* MILESTONES (LINKED TASKS) */}
-                  {tasks.filter(t => t.goal_id === goal.id).length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-border-color" onClick={(e) => e.stopPropagation()}>
-                      <label className="font-mono text-xs text-info mb-3 block">MISSION MILESTONES (LINKED OPS)</label>
-                      <div className="flex-col gap-2">
-                        {tasks.filter(t => t.goal_id === goal.id).map(task => {
-                          const isCompleted = task.status === 'completed'
-                          return (
-                            <div key={task.id} className={`flex items-center gap-3 p-2 rounded border ${isCompleted ? 'bg-success/5 border-success/30' : 'bg-tertiary border-border-color'}`}>
-                              <button 
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); if (!isCompleted) completeOperation(task.id) }}
-                                className={`${isCompleted ? 'text-success cursor-default' : 'text-muted hover:text-amber'}`}
-                                disabled={isCompleted}
-                              >
-                                {isCompleted ? <CheckSquare size={16} /> : <Square size={16} />}
-                              </button>
-                              <span className={`font-mono text-sm flex-1 ${isCompleted ? 'text-muted line-through' : 'text-primary'}`}>
-                                {task.title}
-                              </span>
-                              <button type="button" onClick={(e) => { e.stopPropagation(); deleteTask(task.id) }} className="text-muted hover:text-danger p-1 opacity-50 hover:opacity-100 transition-opacity" title="Delete Linked Operation">
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
+          {/* Expanded Controls & Action Buttons */}
+          <div className="mt-4 pt-3 border-t border-border-color flex flex-col gap-4">
+            <div>
+              <div className="flex-between mb-1.5">
+                <label className="font-mono text-xs text-amber font-semibold">
+                  {hasLinked ? `DYNAMIC PROGRESS: ${displayProgress}%` : `MANUAL PROGRESS: ${displayProgress}%`}
+                </label>
+              </div>
+              <input 
+                type="range" 
+                min="0" max="100" 
+                value={displayProgress} 
+                onChange={(e) => !hasLinked && updateProgress(goal.id, parseInt(e.target.value))}
+                className={`w-full ${hasLinked ? 'accent-success opacity-50 cursor-not-allowed' : 'accent-amber-500'}`}
+                disabled={hasLinked}
+              />
+            </div>
 
-                  {/* Actions Row */}
-                  <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-border-color" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2">
-                      {goal.deadline && (
-                        <span className="font-mono text-xs text-muted flex items-center gap-1">
-                          <Clock size={12} /> DEADLINE: {new Date(goal.deadline).toLocaleDateString()}
+            {/* Linked Milestones */}
+            {isExpanded && tasks.filter(t => t.goal_id === goal.id).length > 0 && (
+              <div className="pt-2 border-t border-border-color" onClick={(e) => e.stopPropagation()}>
+                <label className="font-mono text-xs text-info mb-2 block font-semibold">MISSION MILESTONES (LINKED OPS)</label>
+                <div className="flex flex-col gap-2">
+                  {tasks.filter(t => t.goal_id === goal.id).map(task => {
+                    const isCompleted = task.status === 'completed'
+                    return (
+                      <div key={task.id} className={`flex items-center gap-3 p-2 rounded border ${isCompleted ? 'bg-success/5 border-success/30' : 'bg-tertiary border-border-color'}`}>
+                        <button 
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); if (!isCompleted) completeOperation(task.id) }}
+                          className={`${isCompleted ? 'text-success cursor-default' : 'text-muted hover:text-amber'}`}
+                          disabled={isCompleted}
+                        >
+                          {isCompleted ? <CheckSquare size={16} /> : <Square size={16} />}
+                        </button>
+                        <span className={`font-mono text-sm flex-1 ${isCompleted ? 'text-muted line-through' : 'text-primary'}`}>
+                          {task.title}
                         </span>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {goal.status !== 'completed' && goal.status !== 'failed' && (
-                        <>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); handleCompleteGoal(goal); }} className="btn btn-primary btn-sm flex items-center gap-1">
-                            <Check size={14} /> COMPLETE MISSION
-                          </button>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); failGoal(goal); }} className="btn btn-ghost btn-sm text-danger flex items-center gap-1">
-                            <X size={14} /> FAIL MISSION
-                          </button>
-                        </>
-                      )}
-                      {goal.status === 'completed' && (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); undoCompleteGoal(goal.id); }} className="btn btn-ghost btn-sm text-info flex items-center gap-1">
-                          <RotateCcw size={14} /> RE-OPEN MISSION
+                        <button type="button" onClick={(e) => { e.stopPropagation(); deleteTask(task.id) }} className="text-muted hover:text-danger p-1 opacity-50 hover:opacity-100 transition-opacity" title="Delete Linked Operation">
+                          <Trash2 size={14} />
                         </button>
-                      )}
-                      {goal.status === 'failed' && (
-                        <button type="button" onClick={(e) => { e.stopPropagation(); undoFailMission(goal.id); }} className="btn btn-ghost btn-sm text-info flex items-center gap-1">
-                          <RotateCcw size={14} /> RESTORE MISSION
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
+                      </div>
+                    )
+                  })}
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
-          <div className="mt-6">
-            <TacticalProgress value={displayProgress} color={isPaused ? 'var(--text-muted)' : 'var(--accent-primary)'} label="COMPLETION" />
+            {/* Bottom Primary Action Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-color" onClick={(e) => e.stopPropagation()}>
+              <div>
+                {goal.deadline && (
+                  <span className="font-mono text-xs text-muted flex items-center gap-1">
+                    <Clock size={12} /> DEADLINE: {new Date(goal.deadline).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button 
+                  type="button" 
+                  onClick={(e) => { e.stopPropagation(); handleCompleteGoal(goal); }} 
+                  className="btn btn-primary btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1.5 font-bold"
+                >
+                  <Check size={14} strokeWidth={2.5} /> COMPLETE MISSION
+                </button>
+                <button 
+                  type="button" 
+                  onClick={(e) => { e.stopPropagation(); failGoal(goal); }} 
+                  className="btn btn-ghost btn-sm text-danger flex items-center justify-center gap-1 font-mono"
+                >
+                  <X size={14} /> FAIL
+                </button>
+              </div>
+            </div>
           </div>
 
         </HudPanel>

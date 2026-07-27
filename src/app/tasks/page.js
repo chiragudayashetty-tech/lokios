@@ -260,6 +260,7 @@ export default function Operations() {
     const diffKey = (task.difficulty || 'MEDIUM').toUpperCase()
     const diffConfig = DIFFICULTY_CONFIG[diffKey] || DIFFICULTY_CONFIG.MEDIUM
     const dynamicXp = isOverdue ? Math.floor(diffConfig.xp * 0.5) : diffConfig.xp
+    const isExpanded = expandedDescId === task.id
 
     if (isEditing) {
       return (
@@ -307,37 +308,124 @@ export default function Operations() {
       )
     }
 
+    // ── THIN STRIP ACCORDION FOR COMPLETED & FAILED OPERATIONS ──
+    if (isCompleted || isFailed) {
+      const dateStr = task.completed_at 
+        ? new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) 
+        : (task.due_date ? task.due_date : null)
+
+      return (
+        <motion.div key={task.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="col-span-1">
+          <div className={`p-3 rounded-lg border transition-all ${
+            isCompleted ? 'bg-success/5 border-success/30 hover:border-success/60' : 'bg-danger/5 border-danger/30 hover:border-danger/60'
+          }`}>
+            <div 
+              onClick={() => setExpandedDescId(isExpanded ? null : task.id)}
+              className="flex items-center justify-between gap-3 cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                  isCompleted ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'
+                }`}>
+                  {isCompleted ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
+                </span>
+                <span className={`font-mono text-sm font-semibold truncate ${isCompleted ? 'text-muted line-through opacity-80' : 'text-danger line-through'}`}>
+                  {task.title}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {dateStr && (
+                  <span className="font-mono text-[10px] text-muted hidden sm:inline">
+                    {isCompleted ? `DONE ${dateStr}` : `FAILED ${dateStr}`}
+                  </span>
+                )}
+                <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded border uppercase ${
+                  isCompleted ? 'bg-success/10 text-success border-success/30' : 'bg-danger/10 text-danger border-danger/30'
+                }`}>
+                  {isCompleted ? 'DONE' : 'FAILED'}
+                </span>
+                <button type="button" className="p-1 text-muted hover:text-primary transition-colors">
+                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Expanded Details */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <div className="mt-3 pt-3 border-t border-border-color/40 flex flex-col gap-3 font-mono text-xs">
+                    {task.description && (
+                      <p className="text-secondary whitespace-pre-wrap">{task.description}</p>
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted pt-1">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="uppercase">CAT: {task.category || 'GENERAL'}</span>
+                        {task.due_date && <span>DUE: {task.due_date}</span>}
+                        {task.media_urls && task.media_urls.length > 0 && (
+                          <span className="text-amber font-semibold">[{task.media_urls.length} PROOF ATTACHED]</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isCompleted && (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); undoCompleteTask(task.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
+                            <RotateCcw size={12} /> UNDO / RE-OPEN OP
+                          </button>
+                        )}
+                        {isFailed && (
+                          <button type="button" onClick={(e) => { e.stopPropagation(); undoFailOperation(task.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
+                            <RotateCcw size={12} /> RESTORE OP
+                          </button>
+                        )}
+                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteOperation(task); }} className="btn btn-ghost btn-xs text-danger p-1" title="Delete">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      )
+    }
+
+    // ── CLEAN CARD LAYOUT FOR ACTIVE OPERATIONS ──
     return (
       <motion.div key={task.id} layout initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
         className="col-span-1"
       >
-        <HudPanel glow={!isCompleted && !isFailed} className={`p-4 ${isCompleted ? 'opacity-60' : ''} ${isFailed ? 'opacity-40 border-danger-subtle' : ''}`}>
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <HudPanel glow className="p-4">
+          
+          {/* Header Tag Row: Flex wrap ensures tags NEVER collide or overlap */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-border-color">
             <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-amber px-1.5 py-0.5 border border-amber-subtle bg-bg-secondary whitespace-nowrap shrink-0">
+              <span className="px-2 py-0.5 rounded text-[9px] font-mono font-semibold uppercase tracking-wider bg-amber/10 text-amber border border-amber/30 shrink-0">
                 {task.category ? task.category.replace('_', ' ') : 'GENERAL'}
               </span>
-              <span className="font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 border whitespace-nowrap shrink-0"
+              <span className="px-2 py-0.5 rounded text-[9px] font-mono font-semibold uppercase tracking-wider border shrink-0"
                     style={{ color: diffConfig.color, borderColor: `${diffConfig.color}40`, background: `${diffConfig.color}10` }}>
                 {diffConfig.label}
               </span>
               {task.recurrence_type && (
-                <span className="font-mono text-[9px] text-info uppercase flex items-center gap-1 whitespace-nowrap shrink-0">
+                <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase text-info bg-info/10 border border-info/30 flex items-center gap-1 shrink-0">
                   <Repeat size={10} /> {task.recurrence_type}
                 </span>
               )}
             </div>
 
             {task.goal_id && (
-              <span className="font-mono text-[9px] text-muted flex items-center gap-1 truncate max-w-full sm:max-w-[160px]">
+              <span className="px-2 py-0.5 rounded text-[9px] font-mono text-muted bg-bg-primary border border-border-color flex items-center gap-1 truncate max-w-[180px]">
                 <Target size={10} className="text-info shrink-0" />
                 <span className="truncate">{goals.find(g => g.id === task.goal_id)?.title || 'Mission'}</span>
               </span>
             )}
           </div>
 
-          <h3 className={`font-mono text-base ${isCompleted ? 'text-muted line-through' : isFailed ? 'text-danger line-through' : 'text-primary'}`}>
+          <h3 className="font-mono text-base font-bold text-primary">
             {task.title}
           </h3>
 
@@ -347,80 +435,43 @@ export default function Operations() {
             </p>
           )}
 
-          {/* Bottom row */}
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 pt-3 border-t border-border-subtle gap-4 sm:gap-3">
-            <div className="flex flex-wrap items-center gap-3">
+          {/* Bottom Action Footer */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 pt-3 border-t border-border-subtle gap-3">
+            <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] text-muted">
               {task.due_date && (
-                <span className="font-mono text-[10px] text-muted flex items-center gap-1">
+                <span className="flex items-center gap-1">
                   <Calendar size={10} /> {task.due_date}
                 </span>
               )}
-              {task.completed_at && (
-                <span className="font-mono text-[10px] text-success font-bold flex items-center gap-1">
-                  <CheckCircle2 size={10} /> {new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-              )}
               {task.media_urls && task.media_urls.length > 0 && (
-                <span className="font-mono text-[10px] text-amber">[{task.media_urls.length} PROOF]</span>
+                <span className="text-amber">[{task.media_urls.length} PROOF]</span>
               )}
-              {!isCompleted && (
-                <span className={`font-mono text-[10px] ${isOverdue ? 'text-danger line-through' : 'text-success'}`}>
-                  +{diffConfig.xp} XP
-                </span>
-              )}
-              {!isCompleted && isOverdue && (
-                <span className="font-mono text-[10px] text-danger">+{dynamicXp} XP (PENALTY)</span>
+              <span className={isOverdue ? 'text-danger line-through' : 'text-success font-semibold'}>
+                +{diffConfig.xp} XP
+              </span>
+              {isOverdue && (
+                <span className="text-danger">+{dynamicXp} XP (PENALTY)</span>
               )}
             </div>
             
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-              {!isCompleted && !isFailed && (
-                <>
-                  <button type='button' onClick={() => handleComplete(task)}
-                    className="btn btn-primary flex-1 sm:flex-none py-3 sm:py-2 flex items-center justify-center gap-1.5 px-4 touch-ripple">
-                    <Zap size={14} /> EXECUTE
-                  </button>
-                  <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm touch-ripple bg-bg-secondary" onClick={() => setEditingId(task.id)} title="Edit">
-                    <Edit2 size={16} className="sm:w-[14px] sm:h-[14px]" />
-                  </button>
-                  <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-amber touch-ripple bg-bg-secondary" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
-                    <RotateCcw size={16} className="sm:w-[14px] sm:h-[14px]" />
-                  </button>
-                  <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-danger touch-ripple bg-bg-secondary" onClick={() => failTask(task)} title="Fail Operation">
-                    <X size={16} className="sm:w-[14px] sm:h-[14px]" />
-                  </button>
-                  <button type='button' className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-muted hover:text-danger touch-ripple bg-bg-secondary" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
-                    <Trash2 size={16} className="sm:w-[14px] sm:h-[14px]" />
-                  </button>
-                </>
-              )}
-              {(isCompleted || isFailed) && (
-                <>
-                  <button type="button" className="btn btn-ghost p-3 sm:p-2 sm:btn-sm text-danger touch-ripple bg-bg-secondary" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
-                    <Trash2 size={16} className="sm:w-[14px] sm:h-[14px]" />
-                  </button>
-                  {isCompleted && (
-                    <div className="flex-1 flex items-center justify-between ml-2">
-                      <span className="font-mono text-[10px] text-success flex items-center gap-1">
-                        <CheckCircle2 size={12} /> COMPLETED
-                      </span>
-                      <button type='button' className="btn btn-ghost btn-sm text-info touch-ripple" onClick={() => undoCompleteTask(task.id)} title="Undo Operation">
-                        <RotateCcw size={14} /> UNDO
-                      </button>
-                    </div>
-                  )}
-                  {isFailed && (
-                    <div className="flex-1 flex items-center justify-between ml-2">
-                      <span className="font-mono text-[10px] text-danger flex items-center gap-1">
-                        <XCircle size={12} /> FAILED
-                      </span>
-                      <button type='button' className="btn btn-ghost btn-sm text-info touch-ripple" onClick={() => undoFailOperation(task.id)} title="Restore Operation">
-                        <RotateCcw size={14} /> RESTORE
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
+            {/* Primary Action Button Group: Execute, Edit, Push, Fail, Delete */}
+            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+              <button type='button' onClick={() => handleComplete(task)}
+                className="btn btn-primary btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 font-bold">
+                <Zap size={14} /> EXECUTE
+              </button>
+              <button type='button' className="p-2 rounded border border-border-color hover:bg-bg-tertiary text-muted hover:text-amber transition-colors" onClick={() => setEditingId(task.id)} title="Edit">
+                <Edit2 size={14} />
+              </button>
+              <button type='button' className="p-2 rounded border border-border-color hover:bg-bg-tertiary text-muted hover:text-amber transition-colors" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
+                <RotateCcw size={14} />
+              </button>
+              <button type='button' className="p-2 rounded border border-border-color hover:bg-bg-tertiary text-muted hover:text-danger transition-colors" onClick={() => failTask(task)} title="Fail Operation">
+                <X size={14} />
+              </button>
+              <button type='button' className="p-2 rounded border border-border-color hover:bg-bg-tertiary text-muted hover:text-danger transition-colors" onClick={() => handleDeleteOperation(task)} title="Delete Operation">
+                <Trash2 size={14} />
+              </button>
             </div>
           </div>
         </HudPanel>
