@@ -249,11 +249,28 @@ export default function JournalPage() {
                         {MOODS.map(m => {
                           const isSelected = mood === m.id
                           return (
-                            <button key={m.id} type="button" onClick={() => setMood(m.id)}
-                              className={`flex items-center justify-center w-12 h-12 rounded-xl text-2xl border transition-all active:scale-95 ${
-                                isSelected ? 'scale-110 border-amber shadow-lg shadow-amber/20 bg-amber/15' : 'border-border-color/60 bg-bg-tertiary/60 opacity-60 hover:opacity-100'
-                              }`}>
+                            <button 
+                              key={m.id} 
+                              type="button" 
+                              onClick={() => setMood(m.id)}
+                              className="relative flex items-center justify-center w-14 h-14 rounded-2xl text-2xl border-2 transition-all active:scale-95 cursor-pointer"
+                              style={{
+                                borderColor: isSelected ? m.color : 'rgba(255, 255, 255, 0.1)',
+                                backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 20, 30, 0.6)',
+                                boxShadow: isSelected ? `0 0 16px ${m.color}88, inset 0 0 10px ${m.color}44` : 'none',
+                                transform: isSelected ? 'scale(1.12)' : 'scale(1)',
+                                opacity: isSelected ? 1 : 0.55
+                              }}
+                            >
                               <span>{m.emoji}</span>
+                              {isSelected && (
+                                <span 
+                                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-black shadow"
+                                  style={{ backgroundColor: m.color }}
+                                >
+                                  ✓
+                                </span>
+                              )}
                             </button>
                           )
                         })}
