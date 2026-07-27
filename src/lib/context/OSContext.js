@@ -64,14 +64,22 @@ export function OSProvider({ children }) {
         profileRef.current?.fetchProfile?.()
         habitsRef.current?.fetchHabits?.()
         tasksRef.current?.fetchTasks?.()
+      }, 500)
+    }
+
+    let xpSyncTimeout = null
+    const debouncedXpSync = () => {
+      if (xpSyncTimeout) clearTimeout(xpSyncTimeout)
+      xpSyncTimeout = setTimeout(() => {
+        profileRef.current?.fetchProfile?.()
       }, 300)
     }
 
     const channel = supabase.channel(`os_sync_${auth.user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedXpSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, debouncedXpSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, debouncedXpSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedXpSync)
       .subscribe()
 
     const handleVisibility = () => {

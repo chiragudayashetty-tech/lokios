@@ -420,6 +420,10 @@ export default function DailyOps() {
   }
 
   const handleToggle = (habitId, day) => {
+    const mainEl = document.querySelector('.main-content') || window
+    const currentTop = mainEl.scrollTop !== undefined ? mainEl.scrollTop : window.scrollY
+    if (currentTop > 0) lastScrollPosRef.top = currentTop
+
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     if (activeTool === 'cycle') {
       cycleHabitState(habitId, dateStr)

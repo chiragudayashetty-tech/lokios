@@ -6,7 +6,7 @@ import {
   Target, AlertTriangle, Zap, Swords, Flame, ChevronDown,
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
   Activity, Clock, Terminal, Ghost, Skull, ArrowUpRight, BarChart2,
-  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale, X
+  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale, X, RotateCcw
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
@@ -76,9 +76,11 @@ export default function MissionControl() {
     profile: { profile },
     goals:   { mainQuest, sideQuests, longTermGoals },
     habits:  { todayLogs, habits },
-    tasks:   { tasks },
+    tasks:   { tasks, undoCompleteTask },
     journal: { entries },
-    completeOperation
+    completeOperation,
+    failOperation,
+    undoFailOperation
   } = useOS()
 
   const weeklyGoalTasks = tasks.filter(t => t.category === 'weekly_goal' && t.status !== 'cancelled')
@@ -896,29 +898,59 @@ export default function MissionControl() {
                 <div className="space-y-2">
                   {weeklyGoalTasks.slice(0, 3).map((gt) => {
                     const isDone = gt.status === 'completed'
+                    const isFailed = gt.status === 'failed'
                     return (
-                      <div key={gt.id} className="flex items-center justify-between gap-3 p-2.5 rounded bg-bg-primary border border-border-color">
+                      <div key={gt.id} className={`flex items-center justify-between gap-3 p-2.5 rounded bg-bg-primary border ${
+                        isDone ? 'border-success/40 bg-success/5' : isFailed ? 'border-danger/40 bg-danger/5' : 'border-border-color'
+                      }`}>
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!isDone) completeOperation(gt.id)
-                            }}
-                            disabled={isDone}
-                            className={`w-6 h-6 rounded flex items-center justify-center shrink-0 transition-all ${
-                              isDone ? 'bg-success text-bg-primary border-none' : 'border border-border-strong hover:border-success text-muted'
-                            }`}
-                          >
-                            {isDone ? <Check size={14} strokeWidth={3} /> : <div className="w-2 h-2 rounded-full bg-border-strong" />}
-                          </button>
-                          <span className={`font-mono text-xs truncate ${isDone ? 'text-muted line-through opacity-70' : 'text-primary font-medium'}`}>
+                          {/* Interactive Action Buttons */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {isDone || isFailed ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isDone) undoCompleteTask(gt.id)
+                                  else if (isFailed) undoFailOperation(gt.id)
+                                }}
+                                title="Re-open Priority Goal"
+                                className="w-6 h-6 rounded flex items-center justify-center border border-border-color hover:border-info text-info bg-bg-tertiary transition-all"
+                              >
+                                <RotateCcw size={12} />
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => completeOperation(gt.id)}
+                                  title="Mark Completed (+25 XP)"
+                                  className="w-6 h-6 rounded flex items-center justify-center border border-success/60 hover:bg-success text-success hover:text-bg-primary transition-all"
+                                >
+                                  <Check size={13} strokeWidth={2.5} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => failOperation(gt.id)}
+                                  title="Mark Failed"
+                                  className="w-6 h-6 rounded flex items-center justify-center border border-danger/60 hover:bg-danger text-danger hover:text-white transition-all"
+                                >
+                                  <X size={13} strokeWidth={2.5} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                          <span className={`font-mono text-xs truncate ${
+                            isDone ? 'text-muted line-through opacity-70' : isFailed ? 'text-danger line-through opacity-80' : 'text-primary font-medium'
+                          }`}>
                             {gt.title}
                           </span>
                         </div>
                         {isDone ? (
-                          <span className="font-mono text-[9px] text-success font-bold shrink-0">FINISHED</span>
+                          <span className="font-mono text-[9px] text-success font-bold shrink-0 px-2 py-0.5 rounded bg-success/10 border border-success/30">DONE (+25 XP)</span>
+                        ) : isFailed ? (
+                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-2 py-0.5 rounded bg-danger/10 border border-danger/30">FAILED</span>
                         ) : (
-                          <span className="font-mono text-[9px] text-amber shrink-0">+25 XP</span>
+                          <span className="font-mono text-[9px] text-amber shrink-0 font-semibold">+25 XP</span>
                         )}
                       </div>
                     )

@@ -210,14 +210,24 @@ export default function Missions() {
             </div>
             
             {/* Controls */}
-            <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-              <button onClick={() => togglePauseGoal(goal.id, goal.status)} className="btn btn-ghost p-1.5" title={isPaused ? 'Resume' : 'Pause'}>
+            <div className="flex items-center gap-1 opacity-80 sm:opacity-60 hover:opacity-100 transition-opacity">
+              {goal.status !== 'completed' && goal.status !== 'failed' && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleCompleteGoal(goal); }}
+                  className="btn btn-primary btn-xs flex items-center gap-1 sm:hidden text-[9px] py-1 px-2 font-mono font-bold"
+                  title="Complete Mission"
+                >
+                  <Check size={12} /> COMPLETE
+                </button>
+              )}
+              <button type="button" onClick={(e) => { e.stopPropagation(); togglePauseGoal(goal.id, goal.status); }} className="btn btn-ghost p-1.5" title={isPaused ? 'Resume' : 'Pause'}>
                 {isPaused ? <Play size={14} /> : <Pause size={14} />}
               </button>
-              <button onClick={() => startEdit(goal)} className="btn btn-ghost p-1.5 hover:text-amber" title="Edit">
+              <button type="button" onClick={(e) => { e.stopPropagation(); startEdit(goal); }} className="btn btn-ghost p-1.5 hover:text-amber" title="Edit">
                 <Edit2 size={14} />
               </button>
-              <button onClick={() => handleDeleteGoal(goal)} className="btn btn-ghost p-1.5 hover:text-danger" title="Delete">
+              <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteGoal(goal); }} className="btn btn-ghost p-1.5 hover:text-danger" title="Delete">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -225,7 +235,7 @@ export default function Missions() {
           
           {/* Content */}
           {isEditing ? (
-            <div className="flex-col gap-3 mb-4">
+            <div className="flex-col gap-3 mb-4" onClick={(e) => e.stopPropagation()}>
               <input type="text" className="input font-mono text-lg py-1 border-amber" value={editForm.title} onChange={e=>setEditForm({...editForm, title: e.target.value})} />
               <textarea className="textarea font-mono text-sm py-1" value={editForm.description} onChange={e=>setEditForm({...editForm, description: e.target.value})} rows={2} />
               <div className="grid-2 gap-3 mt-3">
@@ -271,8 +281,8 @@ export default function Missions() {
                 )}
               </div>
               <div className="flex justify-end gap-2 mt-2">
-                <button onClick={() => saveEdit(goal.id)} className="btn btn-primary btn-sm">SAVE</button>
-                <button onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
+                <button type="button" onClick={() => saveEdit(goal.id)} className="btn btn-primary btn-sm">SAVE</button>
+                <button type="button" onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
               </div>
             </div>
           ) : (
@@ -301,10 +311,10 @@ export default function Missions() {
           {/* Expanded Controls: Progress & Milestones */}
           <AnimatePresence>
             {isExpanded && !isEditing && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-visible">
                 <div className="mt-6 pt-4 border-t border-border-color flex-col gap-4">
                   
-                  <div>
+                  <div onClick={(e) => e.stopPropagation()}>
                     <div className="flex-between mb-2">
                       <label className="font-mono text-xs text-amber">
                         {hasLinked ? `DYNAMIC PROGRESS: ${displayProgress}%` : `MANUAL PROGRESS: ${displayProgress}%`}
@@ -321,7 +331,7 @@ export default function Missions() {
                   </div>
                   {/* MILESTONES (LINKED TASKS) */}
                   {tasks.filter(t => t.goal_id === goal.id).length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-border-color">
+                    <div className="mt-4 pt-4 border-t border-border-color" onClick={(e) => e.stopPropagation()}>
                       <label className="font-mono text-xs text-info mb-3 block">MISSION MILESTONES (LINKED OPS)</label>
                       <div className="flex-col gap-2">
                         {tasks.filter(t => t.goal_id === goal.id).map(task => {
@@ -329,7 +339,8 @@ export default function Missions() {
                           return (
                             <div key={task.id} className={`flex items-center gap-3 p-2 rounded border ${isCompleted ? 'bg-success/5 border-success/30' : 'bg-tertiary border-border-color'}`}>
                               <button 
-                                onClick={() => !isCompleted && completeOperation(task.id)}
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); if (!isCompleted) completeOperation(task.id) }}
                                 className={`${isCompleted ? 'text-success cursor-default' : 'text-muted hover:text-amber'}`}
                                 disabled={isCompleted}
                               >
@@ -338,7 +349,7 @@ export default function Missions() {
                               <span className={`font-mono text-sm flex-1 ${isCompleted ? 'text-muted line-through' : 'text-primary'}`}>
                                 {task.title}
                               </span>
-                              <button onClick={() => deleteTask(task.id)} className="text-muted hover:text-danger p-1 opacity-50 hover:opacity-100 transition-opacity" title="Delete Linked Operation">
+                              <button type="button" onClick={(e) => { e.stopPropagation(); deleteTask(task.id) }} className="text-muted hover:text-danger p-1 opacity-50 hover:opacity-100 transition-opacity" title="Delete Linked Operation">
                                 <Trash2 size={14} />
                               </button>
                             </div>
@@ -349,7 +360,7 @@ export default function Missions() {
                   )}
 
                   {/* Actions Row */}
-                  <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-border-color">
+                  <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-border-color" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
                       {goal.deadline && (
                         <span className="font-mono text-xs text-muted flex items-center gap-1">
@@ -361,21 +372,21 @@ export default function Missions() {
                     <div className="flex items-center gap-2">
                       {goal.status !== 'completed' && goal.status !== 'failed' && (
                         <>
-                          <button onClick={() => handleCompleteGoal(goal)} className="btn btn-primary btn-sm flex items-center gap-1">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); handleCompleteGoal(goal); }} className="btn btn-primary btn-sm flex items-center gap-1">
                             <Check size={14} /> COMPLETE MISSION
                           </button>
-                          <button onClick={() => failGoal(goal)} className="btn btn-ghost btn-sm text-danger flex items-center gap-1">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); failGoal(goal); }} className="btn btn-ghost btn-sm text-danger flex items-center gap-1">
                             <X size={14} /> FAIL MISSION
                           </button>
                         </>
                       )}
                       {goal.status === 'completed' && (
-                        <button onClick={() => undoCompleteGoal(goal.id)} className="btn btn-ghost btn-sm text-info flex items-center gap-1">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); undoCompleteGoal(goal.id); }} className="btn btn-ghost btn-sm text-info flex items-center gap-1">
                           <RotateCcw size={14} /> RE-OPEN MISSION
                         </button>
                       )}
                       {goal.status === 'failed' && (
-                        <button onClick={() => undoFailMission(goal.id)} className="btn btn-ghost btn-sm text-info flex items-center gap-1">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); undoFailMission(goal.id); }} className="btn btn-ghost btn-sm text-info flex items-center gap-1">
                           <RotateCcw size={14} /> RESTORE MISSION
                         </button>
                       )}
