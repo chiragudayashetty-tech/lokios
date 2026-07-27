@@ -537,18 +537,29 @@ export default function WellnessPage() {
                     </div>
                     <div style={{ width: '100%', height: '200px' }}>
                       <ResponsiveContainer>
-                        <BarChart data={sleepChartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                        <AreaChart data={sleepChartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorSleepHours" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.35} />
+                              <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
                           <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                           <YAxis domain={[0, 12]} tick={{ fontSize: 9, fill: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }} tickLine={false} axisLine={false} />
                           <Tooltip content={<CustomTooltip />} />
-                          <ReferenceLine y={7} stroke="var(--success)" strokeDasharray="4 4" strokeOpacity={0.5} />
-                          <ReferenceLine y={10} stroke="var(--warning)" strokeDasharray="4 4" strokeOpacity={0.5} />
-                          <Bar dataKey="hours" radius={[2, 2, 0, 0]}>
-                            {sleepChartData.map((entry, index) => (
-                              <Cell key={index} fill={entry.status === 'healthy' ? 'var(--success)' : 'var(--danger)'} fillOpacity={0.8} />
-                            ))}
-                          </Bar>
-                        </BarChart>
+                          <ReferenceLine y={7} stroke="var(--success)" strokeDasharray="4 4" strokeOpacity={0.6} />
+                          <ReferenceLine y={10} stroke="var(--warning)" strokeDasharray="4 4" strokeOpacity={0.6} />
+                          <Area 
+                            type="monotone" 
+                            dataKey="hours" 
+                            stroke="#38bdf8" 
+                            strokeWidth={2.5} 
+                            fillOpacity={1} 
+                            fill="url(#colorSleepHours)" 
+                            dot={{ fill: '#38bdf8', r: 3, strokeWidth: 1, stroke: '#0a0a0a' }}
+                            activeDot={{ r: 5, fill: '#38bdf8', stroke: '#fff', strokeWidth: 2 }}
+                          />
+                        </AreaChart>
                       </ResponsiveContainer>
                     </div>
                     <div className="flex items-center gap-6 mt-2 flex-wrap">
