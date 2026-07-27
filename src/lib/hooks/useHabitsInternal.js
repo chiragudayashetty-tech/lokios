@@ -6,6 +6,39 @@ import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateAndUpdateStreak } from '@/lib/utils/streakCalc'
 
+/**
+ * Calculates prior consecutive missed/failed scheduled days before targetDateStr for a habit.
+ * Returns count of prior consecutive missed days.
+ */
+function getConsecutiveMisses(habitId, targetDateStr, allLogs, habit) {
+  if (!habit) return 0
+  const freqDays = habit.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+  let consecutiveMisses = 0
+
+  const cur = new Date(targetDateStr)
+  for (let i = 1; i <= 30; i++) {
+    cur.setDate(cur.getDate() - 1)
+    const curStr = getLocalDateStr(cur)
+    const dayOfWeek = cur.getDay()
+
+    // Skip non-scheduled days for this habit
+    if (!freqDays.includes(dayOfWeek)) continue
+
+    const log = (allLogs || []).find(l => l.habit_id === habitId && l.date === curStr)
+    const status = log ? log.status : null
+
+    if (status === 'completed') {
+      // Habit was completed on this scheduled day -> breaks consecutive miss chain
+      break
+    } else if (status === 'failed' || !status || status === 'none') {
+      // Habit was missed or failed on a scheduled day
+      consecutiveMisses++
+    }
+  }
+
+  return consecutiveMisses
+}
+
 export function useHabitsInternal(user) {
   const [habits, setHabits] = useState([])
   const [monthLogs, setMonthLogs] = useState([])
@@ -209,7 +242,13 @@ export function useHabitsInternal(user) {
           if (nextStatus === 'completed') {
             await robustAwardXP(user.id, isBlocked ? 0 : (habit?.xp_per_completion || 25), 'habit_complete', newLog.id, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
           } else if (nextStatus === 'failed') {
-            await robustAwardXP(user.id, isBlocked ? 0 : -15, 'habit_failed', newLog.id, `Failed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
+            const priorMisses = getConsecutiveMisses(habitId, targetDate, monthLogs, habit)
+            const isDoublePenalty = priorMisses >= 1
+            const penaltyXP = isBlocked ? 0 : (isDoublePenalty ? -30 : -15)
+            const reason = isDoublePenalty 
+              ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${habit?.title || 'Unknown'}` 
+              : `Failed routine: ${habit?.title || 'Unknown'}`
+            await robustAwardXP(user.id, penaltyXP, 'habit_failed', newLog.id, reason, habit?.stat_category || 'discipline')
           }
         }
       try { 
@@ -446,7 +485,14 @@ export function useHabitsInternal(user) {
             const procKey = `${h.id}_${dateStr}_autofail`
             if (!processingRef.current.has(procKey)) {
               processingRef.current.add(procKey)
-              await robustAwardXP(user.id, -15, 'habit_failed', h.id, `Missed routine: ${h.title}`, h.stat_category || 'discipline')
+              
+              const priorMisses = getConsecutiveMisses(h.id, dateStr, recentLogs, h)
+              const isDoublePenalty = priorMisses >= 1
+              const penaltyXP = isDoublePenalty ? -30 : -15
+              const reason = isDoublePenalty 
+                ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${h.title}` 
+                : `Missed routine: ${h.title}`
+              await robustAwardXP(user.id, penaltyXP, 'habit_failed', h.id, reason, h.stat_category || 'discipline')
               
               const failId = `virtual_fail_${h.id}_auto_${Date.now()}_${Math.random()}`
               newVirtualLogs.push({ id: failId, habit_id: h.id, date: dateStr, status: 'failed' })

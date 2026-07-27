@@ -176,7 +176,7 @@ export async function robustRemoveXP(userId, sourceType, sourceId) {
 
   await supabase.from('xp_history').delete().in('id', ids)
 
-  if (totalDeduction > 0) {
+  if (totalDeduction !== 0) {
     try {
       const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
       if (prof) {

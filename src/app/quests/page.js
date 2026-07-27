@@ -1408,7 +1408,7 @@ export default function DailyOps() {
                 <div>
                   <label className="font-mono text-xs text-muted mb-1 block">XP REWARD / PENALTY</label>
                   <input type="number" className="input" value={editXp} onChange={(e) => setEditXp(Number(e.target.value))} required min="5" max="100" step="5" />
-                  <p className="font-mono text-[10px] text-muted mt-1">XP earned when complete. Penalty for failing is currently fixed at -15 XP.</p>
+                  <p className="font-mono text-[10px] text-muted mt-1">XP earned when complete. Penalty for failing is -15 XP (-30 XP if missed 2+ days in a row).</p>
                 </div>
                 <div>
                   <label className="font-mono text-xs text-muted mb-1 block">ACTIVE DAYS</label>
