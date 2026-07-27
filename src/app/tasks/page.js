@@ -7,7 +7,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle } from 'lucide-react'
+import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
 
 export default function Operations() {
   const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, pushTaskToTomorrow, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation, undoFailOperation, goals: { goals } } = useOS()
