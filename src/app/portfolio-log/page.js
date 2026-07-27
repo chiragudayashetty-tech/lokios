@@ -8,13 +8,14 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText, Clock } from 'lucide-react'
+import { Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText, Clock, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 
 export default function ProofOfWork() {
   const { user } = useAuth()
   const { profile } = useProfile()
   const [activeTab, setActiveTab] = useState('timeline') // timeline | projects | resume | reviews
   const [expandedReview, setExpandedReview] = useState(null)
+  const [expandedLogId, setExpandedLogId] = useState(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -53,6 +54,14 @@ export default function ProofOfWork() {
     }).eq('id', id)
     setEditingLogId(null)
     fetchData()
+  }
+
+  const handleDeleteLog = async (id) => {
+    if (confirm("Are you sure you want to delete this work log?")) {
+      const supabase = createClient()
+      await supabase.from('work_logs').delete().eq('id', id)
+      setLogs(prev => prev.filter(l => l.id !== id))
+    }
   }
 
   // New Log Form State
@@ -259,51 +268,78 @@ export default function ProofOfWork() {
                       </div>
                     ) : (
                       <>
-                        <div className="flex-between mb-2">
-                          <span className="font-mono text-xs text-amber">{String(log.date || '')}</span>
-                          <span className="badge">{String(log.type || 'OTHER').replace('_', ' ').toUpperCase()}</span>
-                        </div>
-                        
-                        <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-2 break-words">{log.title}</h3>
-                        {log.description && <p className="font-mono text-sm text-secondary mb-3 break-words whitespace-pre-wrap">{log.description}</p>}
-                        
-                        <div className="font-mono text-[10px] text-muted flex items-center gap-1 mb-4">
-                          <Clock size={10} />
-                          {log.duration_hours ? (log.duration_hours >= 24 && log.duration_hours % 24 === 0 ? `DURATION: ${log.duration_hours / 24} DAYS` : `DURATION: ${log.duration_hours} HOURS`) : 'NO DURATION LOGGED'}
-                        </div>
-                        
-                        {Array.isArray(log.media_urls) && log.media_urls.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {log.media_urls.map((url, idx) => (
-                              <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-mono text-[10px] text-amber hover:text-primary transition-colors bg-bg-primary border border-amber px-2 py-1">
-                                <ExternalLink size={10} /> PROOF {idx + 1}
-                              </a>
-                            ))}
+                        <div 
+                          onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                          className="cursor-pointer select-none"
+                        >
+                          <div className="flex-between mb-2">
+                            <span className="font-mono text-xs text-amber font-semibold">{String(log.date || '')}</span>
+                            <span className="badge">{String(log.type || 'OTHER').replace('_', ' ').toUpperCase()}</span>
                           </div>
-                        )}
+                          
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="font-display text-xl uppercase tracking-wider text-primary break-words flex-1">{log.title}</h3>
+                            <button type="button" className="p-1 text-muted hover:text-primary transition-colors shrink-0">
+                              {expandedLogId === log.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                            </button>
+                          </div>
 
-                        <div className="flex justify-between items-center border-t border-border-color pt-3 mt-2">
-                          <span className="font-mono text-xs text-muted">
-                            {log.duration_hours ? `DURATION: ${log.duration_hours}H` : 'NO DURATION LOGGED'}
-                          </span>
-                          <div className="flex gap-3">
-                            <button onClick={() => startEditLog(log)} className="font-mono text-[10px] text-muted hover:text-amber flex items-center gap-1">
-                              <Edit2 size={10} /> EDIT
-                            </button>
-                            <button onClick={() => setEditingId(editingId === log.id ? null : log.id)} className="font-mono text-[10px] text-muted hover:text-primary flex items-center gap-1">
-                              <Plus size={10} /> ADD PROOF
-                            </button>
+                          <div className="font-mono text-[10px] text-muted flex items-center gap-3 mt-2">
+                            <span className="flex items-center gap-1">
+                              <Clock size={10} />
+                              {log.duration_hours ? (log.duration_hours >= 24 && log.duration_hours % 24 === 0 ? `${log.duration_hours / 24} DAYS` : `${log.duration_hours} HOURS`) : 'NO DURATION LOGGED'}
+                            </span>
+                            {Array.isArray(log.media_urls) && log.media_urls.length > 0 && (
+                              <span className="text-amber font-semibold">[{log.media_urls.length} PROOF ATTACHED]</span>
+                            )}
                           </div>
                         </div>
 
-                        {editingId === log.id && (
-                          <div className="mt-4 flex gap-2">
-                            <input type="url" placeholder="https://..." className="input font-mono text-xs flex-1 py-1" value={newMediaUrl} onChange={e => setNewMediaUrl(e.target.value)} />
-                            <button onClick={() => handleAddMedia(log.id, log.media_urls)} className="btn btn-primary btn-sm flex items-center gap-1">
-                              <Save size={12} /> SAVE
-                            </button>
-                          </div>
-                        )}
+                        {/* Expanded Accordion: Description, Proof Links, Actions */}
+                        <AnimatePresence>
+                          {expandedLogId === log.id && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="mt-4 pt-3 border-t border-border-color flex flex-col gap-3 font-mono text-xs">
+                                {log.description && (
+                                  <p className="text-secondary whitespace-pre-wrap leading-relaxed">{log.description}</p>
+                                )}
+                                
+                                {Array.isArray(log.media_urls) && log.media_urls.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {log.media_urls.map((url, idx) => (
+                                      <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-mono text-[10px] text-amber hover:text-primary transition-colors bg-bg-primary border border-amber/40 px-2 py-1 rounded">
+                                        <ExternalLink size={10} /> PROOF {idx + 1}
+                                      </a>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="flex justify-between items-center border-t border-border-color/60 pt-3 mt-2">
+                                  <div className="flex gap-3">
+                                    <button onClick={() => startEditLog(log)} className="font-mono text-[10px] text-muted hover:text-amber flex items-center gap-1">
+                                      <Edit2 size={10} /> EDIT LOG
+                                    </button>
+                                    <button onClick={() => setEditingId(editingId === log.id ? null : log.id)} className="font-mono text-[10px] text-muted hover:text-primary flex items-center gap-1">
+                                      <Plus size={10} /> ADD PROOF
+                                    </button>
+                                  </div>
+                                  <button onClick={() => handleDeleteLog(log.id)} className="font-mono text-[10px] text-danger hover:text-danger/80 flex items-center gap-1">
+                                    <Trash2 size={10} /> DELETE
+                                  </button>
+                                </div>
+
+                                {editingId === log.id && (
+                                  <div className="mt-2 flex gap-2">
+                                    <input type="url" placeholder="https://..." className="input font-mono text-xs flex-1 py-1" value={newMediaUrl} onChange={e => setNewMediaUrl(e.target.value)} />
+                                    <button onClick={() => handleAddMedia(log.id, log.media_urls)} className="btn btn-primary btn-sm flex items-center gap-1">
+                                      <Save size={12} /> SAVE
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </>
                     )}
                   </div>
