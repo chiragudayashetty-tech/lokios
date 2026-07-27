@@ -46,72 +46,75 @@ function IntelCard({ item, onDone, onDiscard, onRestore, onDelete, onConvertMiss
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
-      className="rounded-sm mb-3"
+      className="rounded-xl mb-3 overflow-hidden shadow-sm"
       style={{
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border-color)',
-        borderLeft: `3px solid ${color}`,
-        opacity: item.status === 'discarded' ? 0.6 : 1,
+        background: 'rgba(12, 15, 22, 0.85)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderLeft: `4px solid ${color}`,
+        opacity: item.status === 'discarded' ? 0.65 : 1,
       }}
     >
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3 mb-2">
+      <div className="p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3 mb-3">
           <TopicBadge name={topicName} color={color} />
-          <span className="font-mono text-[9px] text-muted shrink-0">{timeAgo(item.created_at)}</span>
+          <span className="font-mono text-[10px] text-muted tracking-wider shrink-0">{timeAgo(item.created_at)}</span>
         </div>
         <p className="font-mono text-sm text-primary leading-relaxed whitespace-pre-wrap">{item.content}</p>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+        {/* Actions Row with clean spacing & touch buttons */}
+        <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/10">
           {isInbox && (
             <>
-              <button
-                onClick={() => onDone(item.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-all hover:opacity-80"
-                style={{ background: '#22c55e20', color: '#22c55e', border: '1px solid #22c55e40' }}
-              >
-                <CheckCircle2 size={12} /> Done
-              </button>
-              <button
-                onClick={() => onConvertMission(item.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-all hover:opacity-80"
-                style={{ background: '#38bdf820', color: '#38bdf8', border: '1px solid #38bdf840' }}
-              >
-                <Target size={12} /> Mission
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onDone(item.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95"
+                  style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.35)' }}
+                >
+                  <CheckCircle2 size={13} /> Done
+                </button>
+                <button
+                  onClick={() => onConvertMission(item.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95"
+                  style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)' }}
+                >
+                  <Target size={13} /> Mission
+                </button>
+              </div>
               <button
                 onClick={() => onDiscard(item.id)}
-                className="ml-auto flex items-center gap-1.5 px-2 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-all hover:opacity-80"
-                style={{ background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440' }}
+                className="p-2 font-mono text-[10px] uppercase rounded-lg transition-all active:scale-95 hover:opacity-80"
+                style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.35)' }}
+                title="Discard Intel"
               >
-                <Trash2 size={12} />
+                <Trash2 size={14} />
               </button>
             </>
           )}
           {isDone && (
             <button
               onClick={() => onRestore(item.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-all hover:opacity-80 ml-auto"
-              style={{ background: '#f59e0b20', color: '#f59e0b', border: '1px solid #f59e0b40' }}
+              className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95 ml-auto"
+              style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.35)' }}
             >
-              <RotateCcw size={12} /> Restore
+              <RotateCcw size={13} /> Restore
             </button>
           )}
           {!isInbox && !isDone && (
             <>
               <button
                 onClick={() => onRestore(item.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-all hover:opacity-80"
-                style={{ background: '#f59e0b20', color: '#f59e0b', border: '1px solid #f59e0b40' }}
+                className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95"
+                style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.35)' }}
               >
-                <RotateCcw size={12} /> Restore
+                <RotateCcw size={13} /> Restore
               </button>
               <button
                 onClick={() => onDelete(item.id)}
-                className="ml-auto flex items-center gap-1.5 px-2 py-1.5 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-all hover:opacity-80"
-                style={{ background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440' }}
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95"
+                style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.35)' }}
               >
-                <Trash2 size={12} /> Delete
+                <Trash2 size={13} /> Delete
               </button>
             </>
           )}
@@ -126,16 +129,16 @@ function TopicGroup({ topic, color, items, onDone, onDiscard, onRestore, onDelet
   const [open, setOpen] = useState(true)
   const displayColor = color || getTopicColor(topic)
   return (
-    <div className="mb-4">
+    <div className="mb-5">
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-sm mb-2 transition-all hover:opacity-80"
-        style={{ background: `${displayColor}15`, border: `1px solid ${displayColor}30` }}
+        className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg mb-3 transition-all hover:opacity-90 active:scale-[0.99]"
+        style={{ background: `${displayColor}12`, border: `1px solid ${displayColor}35` }}
       >
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: displayColor, flexShrink: 0 }} />
         <span className="font-mono text-xs uppercase tracking-widest font-bold" style={{ color: displayColor }}>{topic}</span>
-        <span className="font-mono text-[9px] text-muted ml-1">({items.length})</span>
-        <span className="ml-auto" style={{ color: displayColor }}>{open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}</span>
+        <span className="font-mono text-[10px] text-muted font-bold ml-1">({items.length})</span>
+        <span className="ml-auto" style={{ color: displayColor }}>{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
       </button>
       <AnimatePresence>
         {open && (
@@ -328,11 +331,11 @@ export default function IntelDrop() {
         </header>
 
         {/* ── Capture Form ── */}
-        <div className="rounded-sm mb-6" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+        <div className="rounded-xl mb-6 overflow-hidden shadow-sm" style={{ background: 'rgba(12, 15, 22, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
           <form onSubmit={handleCapture}>
             <textarea
-              className="w-full bg-transparent p-4 font-mono text-sm text-primary resize-none outline-none"
-              style={{ minHeight: 80, caretColor: 'var(--amber)', borderBottom: '1px solid var(--border-color)' }}
+              className="w-full bg-transparent p-4 font-mono text-sm text-primary resize-none outline-none placeholder:text-muted/50"
+              style={{ minHeight: 90, caretColor: '#f59e0b', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}
               placeholder="Awaiting intel transmission..."
               value={content}
               onChange={e => setContent(e.target.value)}
@@ -341,10 +344,10 @@ export default function IntelDrop() {
             />
 
             {/* Topic Selector */}
-            <div className="p-3" style={{ borderBottom: '1px solid var(--border-color)' }}>
-              <div className="flex items-center gap-1.5 mb-2">
-                <Tag size={10} className="text-muted" />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Topic</span>
+            <div className="p-3 sm:p-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <Tag size={12} className="text-muted" />
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted font-bold">Topic</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -357,22 +360,22 @@ export default function IntelDrop() {
                       setFreeTypeTopic('')
                     }
                   }}
-                  className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-sm font-mono text-[9px] uppercase tracking-widest transition-all"
+                  className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-md font-mono text-[9px] uppercase tracking-wider font-bold transition-all active:scale-95"
                   style={{
-                    background: isFreeType ? '#f59e0b20' : 'var(--bg-primary)',
+                    background: isFreeType ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-primary)',
                     color: isFreeType ? '#f59e0b' : 'var(--text-muted)',
-                    border: `1px solid ${isFreeType ? '#f59e0b50' : 'var(--border-color)'}`,
+                    border: `1px solid ${isFreeType ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
                   }}
                 >
-                  <Plus size={9} /> New Topic
+                  <Plus size={10} /> New Topic
                 </button>
               </div>
 
               {isFreeType ? (
                 <input
                   autoFocus
-                  className="w-full bg-transparent font-mono text-sm text-primary outline-none px-2 py-1.5 rounded-sm"
-                  style={{ border: '1px solid #f59e0b60', caretColor: '#f59e0b' }}
+                  className="w-full bg-transparent font-mono text-sm text-primary outline-none px-3 py-1.5 rounded-md"
+                  style={{ border: '1px solid rgba(245, 158, 11, 0.6)', caretColor: '#f59e0b' }}
                   placeholder="Type new topic name..."
                   value={freeTypeTopic}
                   onChange={e => setFreeTypeTopic(e.target.value)}
@@ -387,12 +390,12 @@ export default function IntelDrop() {
                         key={topic.name}
                         type="button"
                         onClick={() => { setSelectedTopic(topic); setIsFreeType(false) }}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm font-mono text-[10px] uppercase tracking-widest transition-all cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer active:scale-95"
                         style={{
-                          background: isSelected ? `${color}25` : 'var(--bg-primary)',
+                          background: isSelected ? `${color}25` : 'rgba(255, 255, 255, 0.03)',
                           color: isSelected ? color : 'var(--text-muted)',
-                          border: `1px solid ${isSelected ? color : 'var(--border-color)'}`,
-                          fontWeight: isSelected ? 700 : 400
+                          border: `1px solid ${isSelected ? color : 'rgba(255, 255, 255, 0.08)'}`,
+                          fontWeight: isSelected ? 700 : 500
                         }}
                       >
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
@@ -404,18 +407,18 @@ export default function IntelDrop() {
               )}
             </div>
 
-            <div className="p-3 flex items-center gap-2">
-              {effectiveTopic && (
+            <div className="p-3 sm:p-4 flex items-center justify-between gap-3">
+              {effectiveTopic ? (
                 <TopicBadge name={effectiveTopic} color={effectiveColor} />
-              )}
+              ) : <div />}
               <button
                 type="submit"
                 disabled={!canSubmit || saving}
-                className="ml-auto flex items-center gap-2 px-4 py-2 font-mono text-xs uppercase tracking-widest rounded-sm transition-all"
+                className="flex items-center gap-2 px-5 py-2 font-mono text-xs uppercase tracking-widest rounded-lg transition-all active:scale-95"
                 style={{
-                  background: canSubmit ? '#f59e0b' : 'var(--bg-primary)',
+                  background: canSubmit ? '#f59e0b' : 'rgba(255, 255, 255, 0.05)',
                   color: canSubmit ? '#000' : 'var(--text-muted)',
-                  border: `1px solid ${canSubmit ? '#f59e0b' : 'var(--border-color)'}`,
+                  border: `1px solid ${canSubmit ? '#f59e0b' : 'rgba(255, 255, 255, 0.1)'}`,
                   cursor: canSubmit && !saving ? 'pointer' : 'not-allowed',
                   fontWeight: 700,
                   opacity: saving ? 0.7 : 1
@@ -428,41 +431,49 @@ export default function IntelDrop() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border-color)' }}>
+        <div className="flex items-center gap-4 mb-5 border-b border-white/10 pb-1 overflow-x-auto">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="px-4 py-2.5 font-mono text-[10px] uppercase tracking-widest transition-all relative"
+              className="flex items-center gap-2 py-2 px-1 font-mono text-xs uppercase tracking-widest transition-all relative shrink-0"
               style={{
                 color: activeTab === tab.id ? '#f59e0b' : 'var(--text-muted)',
                 background: 'transparent',
                 border: 'none',
+                fontWeight: activeTab === tab.id ? 700 : 500
               }}
             >
-              {tab.label}
+              <span>{tab.label}</span>
               {tab.count > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 rounded-full font-bold" style={{ fontSize: 8, background: activeTab === tab.id ? '#f59e0b' : 'var(--bg-secondary)', color: activeTab === tab.id ? '#000' : 'var(--text-muted)' }}>
+                <span 
+                  className="px-2 py-0.5 rounded-full font-mono text-[9px] font-bold inline-flex items-center justify-center" 
+                  style={{ 
+                    background: activeTab === tab.id ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.08)', 
+                    color: activeTab === tab.id ? '#f59e0b' : 'var(--text-muted)',
+                    border: `1px solid ${activeTab === tab.id ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`
+                  }}
+                >
                   {tab.count}
                 </span>
               )}
               {activeTab === tab.id && (
-                <motion.div layoutId="tabUnderline" className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: '#f59e0b' }} />
+                <motion.div layoutId="tabUnderline" className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#f59e0b' }} />
               )}
             </button>
           ))}
         </div>
 
         {/* ── Search ── */}
-        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-sm" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-          <Search size={12} className="text-muted shrink-0" />
+        <div className="flex items-center gap-2.5 mb-6 px-4 py-2.5 rounded-xl border border-white/10" style={{ background: 'rgba(12, 15, 22, 0.8)' }}>
+          <Search size={14} className="text-muted shrink-0" />
           <input
-            className="flex-1 bg-transparent font-mono text-xs text-primary outline-none"
-            placeholder="Search intel..."
+            className="flex-1 bg-transparent font-mono text-xs text-primary outline-none placeholder:text-muted/60"
+            placeholder="Search intel transmissions..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          {search && <button onClick={() => setSearch('')} className="text-muted hover:text-primary"><X size={12} /></button>}
+          {search && <button onClick={() => setSearch('')} className="text-muted hover:text-primary"><X size={14} /></button>}
         </div>
 
         {/* ── Intel List ── */}
