@@ -15,11 +15,11 @@ import {
 } from 'lucide-react'
 
 const MOODS = [
-  { id: 'excellent', icon: Flame, color: 'var(--amber)', label: 'Locked In' },
-  { id: 'good', icon: Smile, color: 'var(--success)', label: 'Solid' },
-  { id: 'neutral', icon: Meh, color: 'var(--info)', label: 'Average' },
-  { id: 'bad', icon: Frown, color: 'var(--warning)', label: 'Struggling' },
-  { id: 'exhausted', icon: ShieldAlert, color: 'var(--danger)', label: 'Exhausted' }
+  { id: 'excellent', emoji: '🔥', color: 'var(--amber)' },
+  { id: 'good', emoji: '😊', color: 'var(--success)' },
+  { id: 'neutral', emoji: '😐', color: 'var(--info)' },
+  { id: 'bad', emoji: '🙁', color: 'var(--warning)' },
+  { id: 'exhausted', emoji: '😫', color: 'var(--danger)' }
 ]
 
 function RenderDebrief({ text }) {
@@ -247,31 +247,31 @@ export default function JournalPage() {
                       <label className="font-mono text-xs text-muted uppercase tracking-widest mb-3 block">Mental State Vector</label>
                       <div className="flex flex-wrap gap-3">
                         {MOODS.map(m => {
-                          const Icon = m.icon; const isSelected = mood === m.id
+                          const isSelected = mood === m.id
                           return (
                             <button key={m.id} type="button" onClick={() => setMood(m.id)}
-                              className={`flex items-center gap-2 px-4 py-2 border transition-all ${isSelected ? 'scale-105' : 'border-border-color opacity-60 hover:opacity-100'}`}
-                              style={{ borderColor: isSelected ? m.color : '', backgroundColor: isSelected ? `${m.color}15` : '', color: isSelected ? m.color : 'var(--text-muted)' }}>
-                              <Icon size={16} /><span className="font-mono text-xs uppercase tracking-wider">{m.label}</span>
+                              className={`flex items-center justify-center w-12 h-12 rounded-xl text-2xl border transition-all active:scale-95 ${
+                                isSelected ? 'scale-110 border-amber shadow-lg shadow-amber/20 bg-amber/15' : 'border-border-color/60 bg-bg-tertiary/60 opacity-60 hover:opacity-100'
+                              }`}>
+                              <span>{m.emoji}</span>
                             </button>
                           )
                         })}
                       </div>
                     </div>
                     <div>
-                      <label className="font-mono text-xs text-muted uppercase tracking-widest mb-3 flex-between">
-                        <span>Reflection Log</span>
-                        <span className={content.length >= 100 ? 'text-success' : 'text-danger'}>Min 100 chars for +30 XP (Current: {content.length})</span>
+                      <label className="font-mono text-xs text-muted uppercase tracking-widest mb-3 block">
+                        Reflection Log
                       </label>
                       <textarea value={content} onChange={e => setContent(e.target.value)}
                         placeholder="Document your thoughts, struggles, and victories today..."
-                        className="input w-full min-h-[250px] resize-y font-mono text-sm leading-relaxed" />
+                        className="input w-full min-h-[300px] p-4 resize-y font-mono text-sm leading-relaxed" />
                     </div>
                     <div className="flex-between border-t border-border-color pt-4">
                       <div className="flex items-center gap-2">
-                        <Zap size={16} className={isFullEntry ? 'text-success' : 'text-warning'} />
+                        <Zap size={16} className="text-amber" />
                         <span className="font-mono text-xs text-muted">
-                          REWARD: <span className={isFullEntry ? 'text-success font-bold' : 'text-warning'}>{isFullEntry ? '+30 XP (Full Log)' : '+10 XP (Partial Log)'}</span>
+                          REWARD: <span className="text-amber font-bold">+30 XP</span>
                         </span>
                       </div>
                       <button type="submit" disabled={saving} className="btn btn-primary btn-lg flex items-center gap-2">
@@ -288,7 +288,6 @@ export default function JournalPage() {
                 ) : (
                   entries.map((entry, index) => {
                     const moodObj = MOODS.find(m => m.id === entry.mood) || MOODS[2]
-                    const MoodIcon = moodObj.icon
                     const dayNumber = entries.length - index
                     return (
                       <HudPanel key={entry.id} className="cursor-pointer" onClick={() => setExpandedArchive(expandedArchive === entry.id ? null : entry.id)}>
@@ -297,9 +296,9 @@ export default function JournalPage() {
                             <span className="font-display text-lg text-primary tracking-widest">DAY {dayNumber}</span>
                             <span className="font-mono text-sm text-amber opacity-80">{entry.date}</span>
                           </div>
-                          <div className="flex items-center gap-1 font-mono text-xs uppercase px-2 py-1 rounded border"
+                          <div className="flex items-center justify-center text-base px-2.5 py-1 rounded border"
                             style={{ color: moodObj.color, borderColor: moodObj.color, backgroundColor: `${moodObj.color}15` }}>
-                            <MoodIcon size={12} /> {moodObj.label}
+                            <span>{moodObj.emoji}</span>
                           </div>
                         </div>
                         {expandedArchive === entry.id && (
