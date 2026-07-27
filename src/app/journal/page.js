@@ -305,7 +305,7 @@ export default function JournalPage() {
                         {expandedArchive === entry.id && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
                             className="font-mono text-secondary whitespace-pre-wrap text-sm">
-                            {entry.content || '—'}
+                            {entry.content || entry.what_did_i_do || entry.reflection || entry.description || '—'}
                           </motion.div>
                         )}
                       </HudPanel>

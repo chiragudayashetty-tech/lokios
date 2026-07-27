@@ -27,7 +27,11 @@ export function useJournalInternal(user) {
         .order('date', { ascending: false })
 
       if (error) throw error
-      setEntries(data || [])
+      const normalized = (data || []).map(item => ({
+        ...item,
+        content: item.content || item.what_did_i_do || item.reflection || item.description || ''
+      }))
+      setEntries(normalized)
     } catch (error) {
       console.error('Error fetching journal entries:', error)
     } finally {
@@ -66,7 +70,11 @@ export function useJournalInternal(user) {
 
         if (error) throw error
         result = newEntry
-        setEntries((prev) => [newEntry, ...prev])
+        const normalizedNew = {
+          ...newEntry,
+          content: newEntry.content || newEntry.what_did_i_do || newEntry.reflection || newEntry.description || data.content || ''
+        }
+        setEntries((prev) => [normalizedNew, ...prev])
 
         // Award XP only for new entries
         const isFull = data.content && data.content.length >= 100 && data.mood

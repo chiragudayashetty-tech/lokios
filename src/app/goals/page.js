@@ -161,6 +161,14 @@ export default function Missions() {
     })
   }
 
+  const handleCompleteGoal = (goal) => {
+    setProofModal({ show: true, goal, url: '' })
+  }
+
+  const failGoal = async (goal) => {
+    await failMission(goal.id)
+  }
+
   const renderGoalCard = (goal, i = 0) => {
     const isPaused = goal.status === 'paused'
     const isEditing = editingId === goal.id
