@@ -123,11 +123,27 @@ export default function XPDashboard() {
 
   const currentRank = getRankForXp(totalXp)
 
-  // Radar Chart Data
-  const categories = ['founder', 'discipline', 'communication', 'learning', 'creation', 'strength']
-  const radarData = categories.map(cat => {
-    const amount = timeline.filter(t => t.stat_category === cat && t.amount > 0).reduce((acc, curr) => acc + curr.amount, 0)
-    return { subject: cat.toUpperCase(), A: amount, fullMark: 1000 }
+  // STAT DISTRIBUTION Calculations
+  const STAT_CONFIG = [
+    { key: 'founder', label: 'FOUNDER', icon: '👑', color: '#f59e0b' },
+    { key: 'discipline', label: 'DISCIPLINE', icon: '⚡', color: '#22c55e' },
+    { key: 'communication', label: 'COMMUNICATION', icon: '💬', color: '#38bdf8' },
+    { key: 'learning', label: 'LEARNING', icon: '🧠', color: '#a855f7' },
+    { key: 'creation', label: 'CREATION', icon: '🎨', color: '#ec4899' },
+    { key: 'strength', label: 'STRENGTH', icon: '💪', color: '#ef4444' }
+  ]
+
+  const statBreakdown = STAT_CONFIG.map(cfg => {
+    const amount = timeline.filter(t => (t.stat_category || '').toLowerCase() === cfg.key && t.amount > 0).reduce((acc, curr) => acc + curr.amount, 0)
+    return { ...cfg, amount }
+  })
+
+  const maxStatXp = Math.max(...statBreakdown.map(s => s.amount), 100)
+  const dominantStat = statBreakdown.reduce((max, s) => s.amount > max.amount ? s : max, statBreakdown[0])
+
+  const radarData = STAT_CONFIG.map(cfg => {
+    const statObj = statBreakdown.find(s => s.key === cfg.key)
+    return { subject: cfg.label, A: statObj ? statObj.amount : 0, fullMark: 1000 }
   })
 
   // Timeline Area Chart Data (aggregate by day)
@@ -349,19 +365,77 @@ export default function XPDashboard() {
           </div>
 
           <div>
-            <HudPanel label="STAT DISTRIBUTION" style={{ height: '400px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
-                  <PolarGrid stroke="var(--border-strong)" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-secondary)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 'dataMax + 100']} tick={false} axisLine={false} />
-                  <Radar name="XP Earned" dataKey="A" stroke="var(--amber)" fill="var(--amber)" fillOpacity={0.4} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '0' }}
-                    itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--amber)' }}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
+            <HudPanel label="STAT DISTRIBUTION" glow>
+              <div className="flex flex-col gap-4">
+                {/* Holographic Radar Chart */}
+                <div className="h-[240px] w-full relative flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="60%" data={radarData}>
+                      <PolarGrid stroke="rgba(255, 255, 255, 0.12)" />
+                      <PolarAngleAxis 
+                        dataKey="subject" 
+                        tick={({ payload, x, y, textAnchor }) => {
+                          const label = payload.value === 'COMMUNICATION' ? 'COMM.' : payload.value
+                          return (
+                            <text x={x} y={y} textAnchor={textAnchor} fill="#f59e0b" fontSize={9} fontFamily="var(--font-mono)" fontWeight={700}>
+                              {label}
+                            </text>
+                          )
+                        }} 
+                      />
+                      <PolarRadiusAxis angle={30} domain={[0, 'dataMax + 50']} tick={false} axisLine={false} />
+                      <Radar name="XP Earned" dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.35} strokeWidth={2} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'rgba(12, 15, 22, 0.95)', borderColor: '#f59e0b', borderRadius: '8px' }}
+                        itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: '#f59e0b' }}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Dominant Attribute Badge */}
+                {dominantStat && (
+                  <div className="p-2.5 rounded-xl border border-amber/30 bg-amber/10 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{dominantStat.icon}</span>
+                      <div>
+                        <span className="font-mono text-[8px] uppercase tracking-widest text-amber font-bold block">DOMINANT ATTRIBUTE</span>
+                        <span className="font-display text-xs font-bold text-white tracking-wider">{dominantStat.label}</span>
+                      </div>
+                    </div>
+                    <span className="font-mono text-[10px] font-bold text-amber bg-amber/20 px-2 py-0.5 rounded border border-amber/40">
+                      {dominantStat.amount} XP
+                    </span>
+                  </div>
+                )}
+
+                {/* 6-Card RPG Attribute Breakdown */}
+                <div className="grid grid-cols-2 gap-2">
+                  {statBreakdown.map(stat => {
+                    const pct = Math.min(100, Math.round((stat.amount / maxStatXp) * 100))
+                    return (
+                      <div 
+                        key={stat.key} 
+                        className="p-2 rounded-lg border flex flex-col gap-1 transition-all"
+                        style={{ background: 'rgba(255, 255, 255, 0.02)', borderColor: `${stat.color}30` }}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="flex items-center gap-1 font-mono text-[9px] font-bold uppercase tracking-wider" style={{ color: stat.color }}>
+                            <span>{stat.icon}</span> {stat.label === 'COMMUNICATION' ? 'COMM.' : stat.label}
+                          </span>
+                          <span className="font-mono text-[9px] font-bold text-white/80">{stat.amount}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                          <div 
+                            className="h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${pct}%`, background: stat.color }} 
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </HudPanel>
           </div>
         </div>
