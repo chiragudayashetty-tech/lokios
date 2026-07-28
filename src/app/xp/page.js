@@ -9,10 +9,34 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, CartesianGrid } from 'recharts'
 import { Flame, Star, Activity, Trophy, ArrowUp, RotateCcw } from 'lucide-react'
 import { RANK_CONFIG } from '@/lib/constants'
 import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
+
+// Custom Glassmorphic Tooltip for XP Timeline
+function CustomXpTooltip({ active, payload, label }) {
+  if (active && payload && payload.length) {
+    const dailyGain = payload.find(p => p.dataKey === 'dailyGain')?.value || 0
+    const total = payload.find(p => p.dataKey === 'total')?.value || 0
+
+    return (
+      <div className="p-3 bg-bg-secondary/95 border border-border-color rounded-xl shadow-2xl backdrop-blur-md font-mono text-xs space-y-1.5 min-w-[140px]">
+        <div className="font-display font-bold text-primary border-b border-border-color pb-1 flex justify-between items-center">
+          <span>{label}</span>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${dailyGain >= 0 ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>
+            {dailyGain >= 0 ? `+${dailyGain} XP` : `${dailyGain} XP`}
+          </span>
+        </div>
+        <div className="flex justify-between items-center text-muted text-[11px] pt-0.5">
+          <span>Cumulative XP:</span>
+          <span className="font-bold text-info">{total.toLocaleString()} XP</span>
+        </div>
+      </div>
+    )
+  }
+  return null
+}
 
 export default function XPDashboard() {
   const { user } = useAuth()
@@ -342,23 +366,44 @@ export default function XPDashboard() {
           <div style={{ gridColumn: 'span 2 / span 2' }}>
             <HudPanel label="XP TIMELINE (14 DAYS)" glow style={{ height: '400px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={areaData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                <AreaChart data={areaData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={currentRank.color} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={currentRank.color} stopOpacity={0}/>
+                      <stop offset="5%" stopColor={currentRank.color} stopOpacity={0.45} />
+                      <stop offset="95%" stopColor={currentRank.color} stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="colorDaily" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                     </linearGradient>
                   </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    cursor={{stroke: 'var(--border-strong)'}}
-                    contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '0' }}
-                    itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-                    labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+                  <Tooltip content={<CustomXpTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '4 4' }} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }} />
+                  <Area
+                    type="monotone"
+                    dataKey="dailyGain"
+                    name="Daily Net XP"
+                    stroke="#22c55e"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorDaily)"
+                    dot={{ fill: '#22c55e', r: 3.5 }}
+                    activeDot={{ r: 6, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }}
                   />
-                  <Area type="monotone" dataKey="dailyGain" stroke="var(--success)" fillOpacity={0} strokeWidth={2} name="Daily Gain" />
-                  <Area type="monotone" dataKey="total" stroke={currentRank.color} fillOpacity={1} fill="url(#colorTotal)" name="Total XP" />
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    name="Cumulative Total XP"
+                    stroke={currentRank.color}
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorTotal)"
+                    dot={{ fill: currentRank.color, r: 4 }}
+                    activeDot={{ r: 7, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </HudPanel>

@@ -8,7 +8,7 @@ import { useOS } from '@/lib/context/OSContext'
 import { XP_RULES } from '@/lib/xpRules'
 import { robustRemoveXP } from '@/lib/utils/xpFallback'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
 import { Shield, Target, AlertTriangle } from 'lucide-react'
 
 export default function ScreenIntel() {
@@ -276,20 +276,35 @@ export default function ScreenIntel() {
           <HudPanel label="7-DAY ANALYSIS" style={{ height: '400px' }}>
             <div style={{ width: '100%', height: '350px', minHeight: '300px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorFocus" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorStream" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip 
-                    cursor={{fill: 'var(--bg-tertiary)'}}
-                    contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '0' }}
+                    cursor={{stroke: 'rgba(255,255,255,0.2)'}}
+                    contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '8px' }}
                     itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
                     labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
                   />
-                  <Legend iconType="square" wrapperStyle={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }} />
-                  <Bar dataKey="total" name="Total (h)" fill="var(--border-strong)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="focus" name="Focus (h)" fill="var(--info)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="streaming" name="Streaming (h)" fill="var(--amber)" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }} />
+                  <Area type="monotone" dataKey="total" name="Total (h)" stroke="#94a3b8" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" dot={{ fill: '#94a3b8', r: 3 }} />
+                  <Area type="monotone" dataKey="focus" name="Focus (h)" stroke="#38bdf8" strokeWidth={2.5} fillOpacity={1} fill="url(#colorFocus)" dot={{ fill: '#38bdf8', r: 3.5 }} />
+                  <Area type="monotone" dataKey="streaming" name="Streaming (h)" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorStream)" dot={{ fill: '#f59e0b', r: 3 }} />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </HudPanel>
@@ -298,21 +313,24 @@ export default function ScreenIntel() {
         <HudPanel label="DOOMSCROLL TREND (MINUTES)" style={{ height: '300px' }}>
           <div style={{ width: '100%', height: '250px', minHeight: '200px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorDoom" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  cursor={{fill: 'var(--bg-tertiary)'}}
-                  contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '0' }}
+                  cursor={{stroke: 'rgba(239,68,68,0.4)'}}
+                  contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--danger)', borderRadius: '8px' }}
                   itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
                   labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
                 />
-                <Bar dataKey="doom" name="Doomscroll (m)" radius={[4, 4, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.doom >= 60 ? 'var(--danger)' : entry.doom > 0 ? 'var(--warning)' : 'var(--success)'} />
-                  ))}
-                </Bar>
-              </BarChart>
+                <Area type="monotone" dataKey="doom" name="Doomscroll (m)" stroke="#ef4444" strokeWidth={2.5} fillOpacity={1} fill="url(#colorDoom)" dot={{ fill: '#ef4444', r: 4 }} activeDot={{ r: 6, fill: '#ef4444', stroke: '#fff', strokeWidth: 2 }} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </HudPanel>
