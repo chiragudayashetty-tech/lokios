@@ -259,7 +259,13 @@ export default function Operations() {
     const isOverdue = !isCompleted && !isFailed && task.due_date && task.due_date < today
     const diffKey = (task.difficulty || 'MEDIUM').toUpperCase()
     const diffConfig = DIFFICULTY_CONFIG[diffKey] || DIFFICULTY_CONFIG.MEDIUM
-    const dynamicXp = isOverdue ? Math.floor(diffConfig.xp * 0.5) : diffConfig.xp
+    let dynamicXp = diffConfig.xp
+    if (isOverdue && task.due_date) {
+      const dueMs = new Date(task.due_date).getTime()
+      const todayMs = new Date(today).getTime()
+      const daysOverdue = Math.max(1, Math.floor((todayMs - dueMs) / (1000 * 60 * 60 * 24)))
+      dynamicXp = Math.max(0, diffConfig.xp - (daysOverdue * 5))
+    }
     const isExpanded = expandedDescId === task.id
 
     if (isEditing) {

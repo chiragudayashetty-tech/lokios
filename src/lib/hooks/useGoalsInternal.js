@@ -157,7 +157,21 @@ export function useGoalsInternal(user) {
           weekly: XP_REWARDS.goal_complete_weekly,
           long_term: XP_REWARDS.goal_complete_long_term,
         }
-        const xpAmount = xpMap[goal.type] || XP_REWARDS.goal_complete_side
+        let xpAmount = xpMap[goal.type] || XP_REWARDS.goal_complete_side
+
+        // Check if overdue: -5 XP per calendar day past deadline (target_date or due_date)
+        const deadline = goal.target_date || goal.due_date
+        if (deadline) {
+          const todayStr = getLocalDateStr()
+          const deadlineStr = getLocalDateStr(new Date(deadline))
+          if (deadlineStr < todayStr) {
+            const deadlineMs = new Date(deadlineStr).getTime()
+            const todayMs = new Date(todayStr).getTime()
+            const daysOverdue = Math.max(1, Math.floor((todayMs - deadlineMs) / (1000 * 60 * 60 * 24)))
+            const penaltyDeduction = daysOverdue * 5
+            xpAmount = Math.max(0, xpAmount - penaltyDeduction)
+          }
+        }
 
         await robustAwardXP(
           user.id,

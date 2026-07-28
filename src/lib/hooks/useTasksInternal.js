@@ -109,20 +109,21 @@ export function useTasksInternal(user) {
 
       if (error) throw error
 
-      // Dynamic XP Calculation based on Difficulty and Deadlines
-      
-      // Default to MEDIUM if no difficulty set
+      // Dynamic XP Calculation based on Difficulty and Overdue Days (-5 XP per day past deadline)
       const diffKey = (task?.difficulty || 'MEDIUM').toUpperCase()
       const difficultyData = DIFFICULTY_LEVELS[diffKey] || DIFFICULTY_LEVELS.MEDIUM
       let xpAward = difficultyData.xp
 
-      // Check if overdue
+      // Check if overdue: -5 XP per calendar day past deadline
       if (task?.due_date) {
-        const today = getLocalDateStr()
-        const dueDate = getLocalDateStr(new Date(task.due_date))
-        if (dueDate < today) {
-          // Overdue: Only award 50% XP
-          xpAward = Math.floor(xpAward * 0.5)
+        const todayStr = getLocalDateStr()
+        const dueDateStr = getLocalDateStr(new Date(task.due_date))
+        if (dueDateStr < todayStr) {
+          const dueMs = new Date(dueDateStr).getTime()
+          const todayMs = new Date(todayStr).getTime()
+          const daysOverdue = Math.max(1, Math.floor((todayMs - dueMs) / (1000 * 60 * 60 * 24)))
+          const penaltyDeduction = daysOverdue * 5
+          xpAward = Math.max(0, xpAward - penaltyDeduction)
         }
       }
 
