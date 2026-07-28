@@ -596,54 +596,41 @@ export default function DailyOps() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           
           {/* WIDGET 1: BODY WEIGHT ENTRY */}
-          <HudPanel glow className="p-4 border-amber">
-            <div className="flex items-center justify-between border-b border-border-color pb-2 mb-3">
+          <HudPanel glow className="p-3 border-amber">
+            <div className="flex items-center justify-between border-b border-border-color pb-2 mb-2.5">
               <div className="flex items-center gap-2 text-amber">
-                <Scale size={16} />
-                <span className="font-display text-sm uppercase tracking-widest font-bold">BODY WEIGHT LOGGING</span>
+                <Scale size={15} />
+                <span className="font-display text-xs uppercase tracking-widest font-bold">BODY WEIGHT LOGGING</span>
               </div>
-              <span className="font-mono text-[9px] text-amber bg-amber-subtle px-2 py-0.5 border border-amber-subtle">
+              <span className="font-mono text-[9px] text-amber bg-amber-subtle px-2 py-0.5 border border-amber-subtle rounded-sm">
                 {weightLoggedToday ? '✓ LOGGED TODAY (+2 XP)' : '+2 XP'}
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex-1 relative">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-1 min-w-[140px] relative">
                 <input 
                   type="number" 
                   step="0.1" 
                   placeholder="e.g. 74.5"
                   value={weightKg} 
                   onChange={e => setWeightKg(e.target.value)}
-                  className="input font-mono text-sm pl-3 pr-10 py-1.5 w-full bg-bg-primary border border-border-color"
+                  className="input font-mono text-xs pl-3 pr-8 py-1 h-8 w-full bg-bg-primary border border-border-color rounded"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted">kg</span>
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted">kg</span>
               </div>
 
               <button 
                 type="button" 
                 onClick={handleSaveWeight}
                 disabled={weightSaving || !weightKg}
+                className="h-8 px-4 font-mono text-xs font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1.5 shrink-0"
                 style={{
-                  background: weightLoggedToday
-                    ? 'transparent'
-                    : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                  background: weightLoggedToday ? 'transparent' : 'linear-gradient(135deg, #f59e0b, #d97706)',
                   border: '1px solid #f59e0b',
                   color: weightLoggedToday ? '#f59e0b' : '#000',
-                  padding: '6px 16px',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  cursor: weightSaving || !weightKg ? 'not-allowed' : 'pointer',
                   opacity: weightSaving || !weightKg ? 0.5 : 1,
-                  borderRadius: '4px',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
+                  cursor: weightSaving || !weightKg ? 'not-allowed' : 'pointer'
                 }}
               >
                 {weightSaving ? (
@@ -660,75 +647,49 @@ export default function DailyOps() {
               <motion.div
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
-                style={{
-                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.05))',
-                  border: '1px solid rgba(245, 158, 11, 0.4)',
-                  borderRadius: '6px',
-                  padding: '8px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  marginTop: '10px'
-                }}
+                className="p-2 mt-2 rounded border bg-amber-subtle flex items-center justify-between gap-2 font-mono text-[10px]"
+                style={{ borderColor: 'rgba(245, 158, 11, 0.4)' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CheckCircle2 size={16} style={{ color: '#f59e0b' }} />
-                  <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '11px', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase' }}>
-                      {weightMsg.title}
-                    </div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-secondary)' }}>
-                      {weightMsg.subtitle}
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2 text-amber">
+                  <CheckCircle2 size={14} />
+                  <span>{weightMsg.title} — {weightMsg.subtitle}</span>
                 </div>
                 {weightMsg.xp > 0 && (
-                  <div style={{
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                    color: '#000000',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '11px',
-                    fontWeight: 800,
-                    padding: '3px 10px',
-                    borderRadius: '20px',
-                    boxShadow: '0 0 10px rgba(245, 158, 11, 0.4)',
-                    whiteSpace: 'nowrap'
-                  }}>
+                  <span className="px-2 py-0.5 rounded-full font-bold bg-amber text-bg-primary text-[9px] shrink-0">
                     ⚡ +{weightMsg.xp} XP
-                  </div>
+                  </span>
                 )}
               </motion.div>
             )}
           </HudPanel>
 
           {/* WIDGET 2: DYNAMIC SLEEP TRACKER */}
-          <HudPanel glow className="p-4 border-info">
-            <div className="flex items-center justify-between border-b border-border-color pb-2 mb-3">
+          <HudPanel glow className="p-3 border-info">
+            <div className="flex items-center justify-between border-b border-border-color pb-2 mb-2.5">
               <div className="flex items-center gap-2 text-info">
-                <Moon size={16} />
+                <Moon size={15} />
                 <div>
-                  <span className="font-display text-sm uppercase tracking-widest font-bold block leading-none">DYNAMIC SLEEP TRACKER</span>
+                  <span className="font-display text-xs uppercase tracking-widest font-bold block leading-none">DYNAMIC SLEEP TRACKER</span>
                   <span className="font-mono text-[8px] text-muted uppercase">TARGET: SLEEP &lt; 12 AM | WAKE &lt; 9 AM | MAX 10 HRS</span>
                 </div>
               </div>
               <button 
                 type="button"
                 onClick={handleDropStaticSleepHabits}
-                className="font-mono text-[9px] text-muted hover:text-danger flex items-center gap-1 uppercase shrink-0"
+                className="font-mono text-[8px] text-muted hover:text-danger flex items-center gap-1 uppercase shrink-0"
               >
-                <Trash2 size={10} /> Drop Static Habits
+                <Trash2 size={9} /> Drop Static Habits
               </button>
             </div>
 
-            <div className="flex flex-col gap-3 font-mono text-xs">
-              <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col gap-2 font-mono text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
-                  <label className="text-[9px] text-muted block mb-1 uppercase">SLEEP PERIOD</label>
+                  <label className="text-[8px] text-muted block mb-0.5 uppercase">SLEEP PERIOD</label>
                   <select 
                     value={sleepTargetDate} 
                     onChange={e => handleSetSleepTargetDate(e.target.value)}
-                    className="select font-mono text-xs py-1 px-2 w-full bg-bg-primary border border-border-color"
+                    className="select font-mono text-xs py-1 px-2 h-8 w-full bg-bg-primary border border-border-color rounded"
                   >
                     <option value={yesterdayStr}>Last Night ({yesterdayStr})</option>
                     <option value={todayStr}>Tonight ({todayStr})</option>
@@ -736,56 +697,43 @@ export default function DailyOps() {
                 </div>
 
                 <div>
-                  <label className="text-[9px] text-muted block mb-1 uppercase">BEDTIME</label>
+                  <label className="text-[8px] text-muted block mb-0.5 uppercase">BEDTIME</label>
                   <input 
                     type="time" 
                     value={bedtime} 
                     onChange={e => handleSetBedtime(e.target.value)}
-                    className="input font-mono text-xs py-1 px-2 w-full bg-bg-primary border border-border-color"
+                    className="input font-mono text-xs py-1 px-2 h-8 w-full bg-bg-primary border border-border-color rounded"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[9px] text-muted block mb-1 uppercase">WAKE TIME</label>
+                  <label className="text-[8px] text-muted block mb-0.5 uppercase">WAKE TIME</label>
                   <input 
                     type="time" 
                     value={wakeTime} 
                     onChange={e => handleSetWakeTime(e.target.value)}
-                    className="input font-mono text-xs py-1 px-2 w-full bg-bg-primary border border-border-color"
+                    className="input font-mono text-xs py-1 px-2 h-8 w-full bg-bg-primary border border-border-color rounded"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1 border-t border-border-subtle">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between pt-1 border-t border-border-subtle flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 text-[11px]">
                   <Clock size={12} className="text-info" />
-                  <span>TOTAL SLEEP: <strong className="text-primary">{liveSleepDuration ? `${liveSleepDuration.hrs}h ${liveSleepDuration.mins}m` : '--'}</strong></span>
+                  <span className="text-muted">TOTAL SLEEP: <strong className="text-primary font-bold">{liveSleepDuration ? `${liveSleepDuration.hrs}h ${liveSleepDuration.mins}m` : '--'}</strong></span>
                 </div>
 
                 <button 
                   type="button" 
                   onClick={handleSaveSleep}
                   disabled={sleepSaving || !liveSleepDuration}
+                  className="h-8 px-4 font-mono text-xs font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1.5 shrink-0"
                   style={{
-                    background: liveSleepDuration
-                      ? 'linear-gradient(135deg, var(--info), #0ea5e9)'
-                      : 'var(--bg-secondary)',
+                    background: liveSleepDuration ? 'linear-gradient(135deg, var(--info), #0ea5e9)' : 'var(--bg-secondary)',
                     border: '1px solid var(--info)',
                     color: liveSleepDuration ? '#000' : 'var(--text-muted)',
-                    padding: '6px 16px',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    cursor: sleepSaving || !liveSleepDuration ? 'not-allowed' : 'pointer',
                     opacity: sleepSaving || !liveSleepDuration ? 0.5 : 1,
-                    borderRadius: '4px',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
+                    cursor: sleepSaving || !liveSleepDuration ? 'not-allowed' : 'pointer'
                   }}
                 >
                   {sleepSaving ? (
@@ -800,74 +748,21 @@ export default function DailyOps() {
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
+                  className="p-2 mt-1 rounded border flex items-center justify-between gap-2 font-mono text-[10px]"
                   style={{
-                    background: sleepMsg.success 
-                      ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(16, 185, 129, 0.05))' 
-                      : 'linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(245, 158, 11, 0.05))',
-                    border: `1px solid ${sleepMsg.success ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
-                    borderRadius: '6px',
-                    padding: '8px 12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    marginTop: '10px'
+                    background: sleepMsg.success ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    borderColor: sleepMsg.success ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)',
+                    color: sleepMsg.success ? 'var(--success)' : 'var(--danger)'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {sleepMsg.success ? (
-                      <CheckCircle2 size={16} style={{ color: '#22c55e' }} />
-                    ) : (
-                      <AlertTriangle size={16} style={{ color: '#ef4444' }} />
-                    )}
-                    <div>
-                      <div style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        color: sleepMsg.success ? '#22c55e' : '#ef4444',
-                        textTransform: 'uppercase'
-                      }}>
-                        {sleepMsg.title}
-                      </div>
-                      <div style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '10px',
-                        color: 'var(--text-secondary)'
-                      }}>
-                        {sleepMsg.subtitle}
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    {sleepMsg.success ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+                    <span>{sleepMsg.title}: {sleepMsg.subtitle}</span>
                   </div>
-
-                  {sleepMsg.xp > 0 ? (
-                    <div style={{
-                      background: 'linear-gradient(135deg, #10b981, #059669)',
-                      color: '#ffffff',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      padding: '3px 10px',
-                      borderRadius: '20px',
-                      boxShadow: '0 0 10px rgba(16, 185, 129, 0.4)',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      ⚡ +{sleepMsg.xp} XP
-                    </div>
-                  ) : (
-                    <div style={{
-                      background: 'rgba(239, 68, 68, 0.15)',
-                      color: '#ef4444',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      padding: '3px 8px',
-                      borderRadius: '4px',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      0 XP
-                    </div>
+                  {sleepMsg.xp !== 0 && (
+                    <span className="px-2 py-0.5 rounded-full font-bold text-[9px] shrink-0" style={{ background: sleepMsg.success ? 'var(--success)' : 'var(--danger)', color: '#000' }}>
+                      {sleepMsg.xp > 0 ? `+${sleepMsg.xp} XP` : `${sleepMsg.xp} XP`}
+                    </span>
                   )}
                 </motion.div>
               )}
