@@ -593,7 +593,7 @@ export default function DailyOps() {
           </button>
         </header>
         {/* TOP WIDGETS: BODY WEIGHT & DYNAMIC SLEEP TRACKER */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           
           {/* WIDGET 1: BODY WEIGHT ENTRY */}
           <HudPanel glow className="p-3 border-amber">
@@ -608,16 +608,16 @@ export default function DailyOps() {
             </div>
 
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2 max-w-[200px] flex-1 relative">
+              <div className="flex items-center bg-bg-primary border border-border-color rounded h-8 px-2.5 max-w-[180px] flex-1">
                 <input 
                   type="number" 
                   step="0.1" 
                   placeholder="e.g. 74.5"
                   value={weightKg} 
                   onChange={e => setWeightKg(e.target.value)}
-                  className="input font-mono text-xs pl-3 pr-8 py-1 h-8 w-full bg-bg-primary border border-border-color rounded"
+                  className="bg-transparent border-none outline-none font-mono text-xs text-primary w-full pr-1"
                 />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted">kg</span>
+                <span className="font-mono text-[10px] text-muted select-none shrink-0">kg</span>
               </div>
 
               <button 
