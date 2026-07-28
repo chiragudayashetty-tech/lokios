@@ -868,20 +868,17 @@ export default function DailyOps() {
 
         {/* The Spreadsheet Grid */}
         <style dangerouslySetInnerHTML={{__html: `
-          .col-habit { width: 150px; min-width: 150px; max-width: 150px; }
-          .col-xp { width: 40px; min-width: 40px; max-width: 40px; left: 150px; }
-          .col-global { width: 150px; min-width: 150px; max-width: 150px; }
-          @media (min-width: 768px) {
-            .col-habit { width: 260px; min-width: 260px; max-width: 260px; }
-            .col-xp { width: 50px; min-width: 50px; max-width: 50px; left: 260px; }
-            .col-global { width: 260px; min-width: 260px; max-width: 260px; }
-          }
+          .col-habit { width: 220px !important; min-width: 220px !important; max-width: 220px !important; left: 0 !important; }
+          .col-xp { width: 45px !important; min-width: 45px !important; max-width: 45px !important; left: 220px !important; }
+          .col-stat-done { width: 55px !important; min-width: 55px !important; max-width: 55px !important; }
+          .col-stat-goal { width: 55px !important; min-width: 55px !important; max-width: 55px !important; }
+          .col-stat-pct { width: 65px !important; min-width: 65px !important; max-width: 65px !important; }
         `}} />
-        <HudPanel className="p-0 hidden-mobile" id="quests-scroll-container" style={{ width: '100%', maxWidth: 'calc(100vw - var(--space-6))', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '900px' }}>
+        <HudPanel className="p-0 hidden-mobile overflow-x-auto" id="quests-scroll-container" style={{ width: '100%', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '1100px' }}>
             <thead>
               <tr>
-                <th className="sticky z-20 col-habit" style={{ left: 0, background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)', resize: 'horizontal', overflow: 'hidden', minWidth: '200px', width: '250px', maxWidth: '500px' }}>
+                <th className="sticky z-20 col-habit" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
                   <div className="w-full" style={{ padding: '10px 16px', textAlign: 'left' }}>
                     <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
                   </div>
@@ -906,13 +903,13 @@ export default function DailyOps() {
                   )
                 })}
                 {/* Stats columns */}
-                <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderLeft: '2px solid var(--border-color)', background: 'var(--bg-tertiary)', minWidth: '45px' }}>
+                <th className="col-stat-done" style={{ padding: '10px 6px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', borderLeft: '2px solid var(--border-color)', background: 'var(--bg-tertiary)' }}>
                   <span className="font-mono text-[9px] text-success">DONE</span>
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', minWidth: '45px' }}>
+                <th className="col-stat-goal" style={{ padding: '10px 6px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }}>
                   <span className="font-mono text-[9px] text-muted">GOAL</span>
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', minWidth: '50px', borderTopRightRadius: 'var(--radius-lg)' }}>
+                <th className="col-stat-pct" style={{ padding: '10px 6px', textAlign: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', borderTopRightRadius: 'var(--radius-lg)' }}>
                   <span className="font-mono text-[9px] text-info">%</span>
                 </th>
               </tr>
@@ -925,13 +922,12 @@ export default function DailyOps() {
                   <tr key={habit.id} className="group hover:bg-hover transition-colors">
                     {/* Habit Name */}
                     <td className="sticky z-10 col-habit group" style={{
-                      left: 0,
                       background: 'var(--bg-secondary)',
                       padding: 0,
                       borderBottom: '1px solid var(--border-subtle)',
                       borderRight: '2px solid var(--border-color)',
                     }}>
-                      <div className="w-full" style={{ padding: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="w-full" style={{ padding: '8px', display: 'flex', itemsCenter: 'center', gap: '8px' }}>
                         
                         {/* Left Icons - Always reserve space, invisible until hover/mobile */}
                         <div style={{ width: '20px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '4px', borderRight: '1px solid var(--border-subtle)', paddingRight: '4px' }}>
@@ -940,7 +936,7 @@ export default function DailyOps() {
                           <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 md:opacity-20 hover:!opacity-100 group-hover:opacity-100 text-muted transition-opacity" title="Move Down" style={{ display: 'flex', justifyContent: 'center' }}><ArrowDown size={14} /></button>
                         </div>
                         
-                        {/* Grip Icon Overlay (Visual only, matches reference image) */}
+                        {/* Grip Icon Overlay */}
                         <div className="absolute left-[8px] pointer-events-none opacity-40 md:opacity-20 group-hover:opacity-0 transition-opacity hidden md:flex" style={{ width: '20px', height: '100%', alignItems: 'center', justifyContent: 'center', top: 0 }}>
                           <GripVertical size={14} />
                         </div>
@@ -949,12 +945,12 @@ export default function DailyOps() {
                         <div style={{ width: '4px', height: '32px', borderRadius: '999px', background: cat.color, flexShrink: 0 }} />
                         
                         {/* Text */}
-                        <div style={{ flex: '1 1 0', minWidth: 0, cursor: 'pointer' }} onClick={() => openEditModal(habit)}>
-                          <div className="font-mono text-[10px] md:text-xs text-primary transition-colors hover:text-amber" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ flex: '1 1 0', minWidth: 0, cursor: 'pointer' }} onClick={() => openEditModal(habit)} title={habit.title}>
+                          <div className="font-mono text-[10px] md:text-xs text-primary transition-colors hover:text-amber truncate">
                             {habit.title}
                           </div>
                           <div className="font-mono text-[8px] md:text-[9px] text-muted uppercase hidden md:flex items-center gap-2 mt-[2px]">
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
+                            <span className="truncate">{cat.name}</span>
                             <span className="opacity-50">|</span>
                             <div className="flex gap-[3px]">
                               {['S','M','T','W','T','F','S'].map((day, i) => (
@@ -1012,13 +1008,13 @@ export default function DailyOps() {
                       )
                     })}
                     {/* Stats cells */}
-                    <td style={{ textAlign: 'center', borderLeft: '2px solid var(--border-color)', borderBottom: '1px solid var(--border-subtle)', padding: '6px' }}>
+                    <td className="col-stat-done" style={{ textAlign: 'center', borderLeft: '2px solid var(--border-color)', borderBottom: '1px solid var(--border-subtle)', padding: '6px', background: 'var(--bg-secondary)' }}>
                       <span className="font-mono text-[10px] text-success font-bold">{stats.completed}</span>
                     </td>
-                    <td style={{ textAlign: 'center', borderBottom: '1px solid var(--border-subtle)', padding: '6px' }}>
+                    <td className="col-stat-goal" style={{ textAlign: 'center', borderBottom: '1px solid var(--border-subtle)', padding: '6px', background: 'var(--bg-secondary)' }}>
                       <span className="font-mono text-[10px] text-muted">{stats.goal}</span>
                     </td>
-                    <td style={{ textAlign: 'center', borderBottom: '1px solid var(--border-subtle)', padding: '6px' }}>
+                    <td className="col-stat-pct" style={{ textAlign: 'center', borderBottom: '1px solid var(--border-subtle)', padding: '6px', background: 'var(--bg-secondary)' }}>
                       <span className={`font-mono text-xs font-bold ${stats.pct >= 80 ? 'text-success' : stats.pct >= 50 ? 'text-amber' : 'text-danger'}`}>
                         {stats.pct}%
                       </span>
@@ -1030,9 +1026,9 @@ export default function DailyOps() {
               {/* Global Progress Row */}
               {habits.length > 0 && (
                 <tr style={{ borderTop: '2px solid var(--accent-primary)' }}>
-                  <td className="sticky z-[5] col-habit" style={{ left: 0, background: 'var(--bg-tertiary)', padding: 0, borderRight: '2px solid var(--border-color)' }}>
+                  <td className="sticky z-[5] col-habit" style={{ background: 'var(--bg-tertiary)', padding: 0, borderRight: '2px solid var(--border-color)' }}>
                     <div className="w-full" style={{ padding: '10px 12px' }}>
-                      <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-amber block" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>GLOBAL PROGRESS</span>
+                      <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-amber block truncate">GLOBAL PROGRESS</span>
                     </div>
                   </td>
                   <td className="sticky z-[5] col-xp" style={{ background: 'var(--bg-tertiary)', padding: 0, borderRight: '2px solid var(--border-color)' }}>
@@ -1054,13 +1050,13 @@ export default function DailyOps() {
                       </td>
                     )
                   })}
-                  <td style={{ textAlign: 'center', borderLeft: '2px solid var(--border-color)', background: 'var(--bg-tertiary)', padding: '6px' }}>
+                  <td className="col-stat-done" style={{ textAlign: 'center', borderLeft: '2px solid var(--border-color)', background: 'var(--bg-tertiary)', padding: '6px' }}>
                     <span className="font-mono text-xs text-success font-bold">{globalStats.completed}</span>
                   </td>
-                  <td style={{ textAlign: 'center', background: 'var(--bg-tertiary)', padding: '6px' }}>
+                  <td className="col-stat-goal" style={{ textAlign: 'center', background: 'var(--bg-tertiary)', padding: '6px' }}>
                     <span className="font-mono text-xs text-muted">{globalStats.goal - globalStats.completed}</span>
                   </td>
-                  <td style={{ textAlign: 'center', background: 'var(--bg-tertiary)', padding: '6px' }}>
+                  <td className="col-stat-pct" style={{ textAlign: 'center', background: 'var(--bg-tertiary)', padding: '6px' }}>
                     <span className={`font-mono text-xs font-bold ${globalStats.pct >= 80 ? 'text-success' : 'text-primary'}`}>{globalStats.pct}%</span>
                   </td>
                 </tr>
