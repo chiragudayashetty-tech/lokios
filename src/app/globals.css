@@ -3209,12 +3209,18 @@ select:focus {
 
   .mobile-nav {
     display: flex;
+    padding: 6px var(--space-2) max(env(safe-area-inset-bottom, 14px), 14px) var(--space-2);
+    min-height: 60px;
   }
 
   .main-content {
     grid-column: 1;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(110px + env(safe-area-inset-bottom, 24px)) !important;
+  }
+
+  .page-container {
+    padding-bottom: calc(36px + env(safe-area-inset-bottom, 16px));
   }
 }
 

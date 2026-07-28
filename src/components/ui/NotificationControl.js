@@ -10,7 +10,7 @@ import {
   saveStoredNotifPrefs,
   isNotificationSupported
 } from '@/lib/utils/notifications'
-import { Smartphone, Bell, CheckCircle, AlertTriangle, Send, Moon, Shield, Calendar, Clock } from 'lucide-react'
+import { Smartphone, Bell, CheckCircle, AlertTriangle, Send, Moon, Shield, Calendar, Clock, Sun, Zap, Droplet, Share } from 'lucide-react'
 
 export default function NotificationControl() {
   const [permission, setPermission] = useState('default')
@@ -18,11 +18,16 @@ export default function NotificationControl() {
   const [prefs, setPrefs] = useState(getStoredNotifPrefs())
   const [testing, setTesting] = useState(false)
   const [msg, setMsg] = useState('')
+  const [isIos, setIsIos] = useState(false)
 
   useEffect(() => {
     setSupported(isNotificationSupported())
     setPermission(getNotificationPermission())
     setPrefs(getStoredNotifPrefs())
+    if (typeof window !== 'undefined') {
+      const iosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+      setIsIos(iosDevice)
+    }
   }, [])
 
   const handleEnable = async () => {
@@ -37,7 +42,7 @@ export default function NotificationControl() {
         setMsg('⚠ Permission denied in browser settings. Please allow notifications in device settings.')
       }
     } catch (e) {
-      setMsg(`⚠ Error: ${e.message}`)
+      setMsg(`⚠ Note: ${e.message}`)
     }
   }
 
@@ -68,7 +73,7 @@ export default function NotificationControl() {
           <Smartphone size={18} />
           <div>
             <span className="font-display text-lg uppercase tracking-widest font-bold block leading-none">PHONE NOTIFICATIONS SENTINEL</span>
-            <span className="font-mono text-[9px] text-muted uppercase">PWA Web Push & Tactical Reminders</span>
+            <span className="font-mono text-[9px] text-muted uppercase">iPhone & Android Web Push Reminders</span>
           </div>
         </div>
         <span
@@ -83,9 +88,23 @@ export default function NotificationControl() {
         </span>
       </div>
 
+      {/* iPhone iOS Specific Helper Banner */}
+      {isIos && (
+        <div className="p-3 bg-info/10 border border-info/30 rounded font-mono text-xs text-info mb-4 space-y-1">
+          <div className="font-bold flex items-center gap-1.5 text-primary">
+            <Share size={14} className="text-info" />  iPhone Web Push Requirement:
+          </div>
+          <div className="text-[11px] leading-relaxed text-secondary">
+            On iOS (iPhone), Apple requires adding Loki OS to your Home Screen first:
+            <br />
+            <strong>Tap Share icon in Safari ➔ &quot;Add to Home Screen&quot;</strong>, then open from Home Screen to tap Enable below!
+          </div>
+        </div>
+      )}
+
       {!supported ? (
         <div className="p-3 bg-danger/10 border border-danger/30 rounded font-mono text-xs text-danger mb-3">
-          ⚠ Web notifications are not supported on this browser context. On iOS, please add Loki OS to your Home Screen as a PWA first!
+          ⚠ Web notifications require Web Push API support. On iPhone, add Loki OS to your Home Screen as a PWA first!
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -96,7 +115,7 @@ export default function NotificationControl() {
               <button
                 type="button"
                 onClick={handleEnable}
-                className="btn btn-primary btn-sm flex items-center gap-2 bg-info text-bg-primary font-mono text-xs py-1.5 px-4"
+                className="btn btn-primary btn-sm flex items-center gap-2 bg-info text-bg-primary font-mono text-xs py-2 px-4"
               >
                 <Bell size={14} /> ENABLE PHONE NOTIFICATIONS
               </button>
@@ -105,7 +124,7 @@ export default function NotificationControl() {
                 type="button"
                 onClick={handleTest}
                 disabled={testing}
-                className="btn btn-secondary btn-sm flex items-center gap-2 font-mono text-xs py-1.5 px-4 border-info text-info hover:bg-info/10"
+                className="btn btn-secondary btn-sm flex items-center gap-2 font-mono text-xs py-2 px-4 border-info text-info hover:bg-info/10"
               >
                 <Send size={13} /> {testing ? 'SENDING...' : 'TRIGGER TEST DIRECTIVE'}
               </button>
@@ -120,14 +139,17 @@ export default function NotificationControl() {
 
           {/* Individual Reminder Toggles */}
           <div className="pt-2 border-t border-border-color flex flex-col gap-2.5 font-mono text-xs">
-            <div className="text-muted text-[10px] uppercase tracking-widest mb-1">AUTOMATED TACTICAL REMINDERS</div>
+            <div className="text-muted text-[10px] uppercase tracking-widest mb-1 font-bold">AUTOMATED TACTICAL REMINDERS</div>
 
             {[
-              { key: 'bedtimeAlert', icon: Moon, title: '🌙 Bedtime Wind-Down Alert (23:15)', desc: 'Warns 45m before 12 AM bedtime limit' },
-              { key: 'dailyOpsAlert', icon: Shield, title: '⚔️ Daily Ops Audit (21:00)', desc: 'Prompts habit logging & weight entry' },
-              { key: 'screenTimeAlert', icon: Clock, title: '📱 Screen Time Check (19:00)', desc: 'Audits total hours & doomscroll limit' },
-              { key: 'debriefAlert', icon: Calendar, title: '📋 Sunday Debrief Prompt (Sun 18:00)', desc: 'Alerts to complete weekly review (+40 XP)' },
-            ].map(({ key, title, desc }) => {
+              { key: 'morningAlert', icon: Sun, title: '🌅 Morning Protocol (07:30 AM)', desc: 'Routines & daily priority check' },
+              { key: 'middayAlert', icon: Zap, title: '⚡ Mid-Day Focus Sprint (13:00 / 1:00 PM)', desc: 'High-impact task sprint prompt' },
+              { key: 'hydrationAlert', icon: Droplet, title: '💧 Hydration & Recon Check (16:00 / 4:00 PM)', desc: 'Movement & hydration break' },
+              { key: 'screenTimeAlert', icon: Clock, title: '📱 Digital Addiction Check (19:00 / 7:00 PM)', desc: 'Audits screen hours & doomscroll limit' },
+              { key: 'dailyOpsAlert', icon: Shield, title: '⚔️ Daily Ops Audit (21:00 / 9:00 PM)', desc: 'Prompts habit matrix & weight entry' },
+              { key: 'bedtimeAlert', icon: Moon, title: '🌙 Bedtime Sentinel Alert (23:15 / 11:15 PM)', desc: 'Warns 45m before 12 AM sleep limit' },
+              { key: 'debriefAlert', icon: Calendar, title: '📋 Sunday Debrief Prompt (Sun 18:00)', desc: 'Alerts for weekly debrief (+40 XP)' },
+            ].map(({ key, title, desc, icon: Icon }) => {
               const active = prefs[key]
               return (
                 <div
@@ -135,12 +157,15 @@ export default function NotificationControl() {
                   onClick={() => handleTogglePref(key)}
                   className="flex items-center justify-between p-2.5 bg-bg-primary border border-border-color rounded cursor-pointer hover:border-info transition-colors"
                 >
-                  <div>
-                    <div className="font-bold text-primary text-[11px]">{title}</div>
-                    <div className="text-[9px] text-muted">{desc}</div>
+                  <div className="flex items-center gap-2.5">
+                    <Icon size={15} className="text-info shrink-0" />
+                    <div>
+                      <div className="font-bold text-primary text-[11px]">{title}</div>
+                      <div className="text-[9px] text-muted">{desc}</div>
+                    </div>
                   </div>
                   <div
-                    className="w-9 h-5 rounded-full relative transition-colors"
+                    className="w-9 h-5 rounded-full relative transition-colors shrink-0"
                     style={{ background: active && isGranted ? 'var(--info)' : 'var(--bg-tertiary)' }}
                   >
                     <div
