@@ -483,9 +483,6 @@ export default function OperatorDashboard() {
                           } else if (log?.status === 'failed') {
                             baseHp += 20
                             failed.push(`Failed habit "${title}" (+20 HP to threat)`)
-                          } else {
-                            baseHp += 5
-                            failed.push(`Pending habit "${title}" (+5 HP threat drift)`)
                           }
                         })
                       }
