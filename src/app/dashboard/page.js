@@ -846,9 +846,6 @@ export default function MissionControl() {
                             baseHp += 10
                             failed.push(`Streaming (${sHours}h) ≥ 1h limit (+10 HP)`)
                           }
-                        } else {
-                          failed.push(`No Screen Time logged today (+10 HP threat drift)`)
-                          baseHp += 10
                         }
                       }
 

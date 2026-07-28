@@ -466,7 +466,7 @@ export default function OperatorDashboard() {
 
                     // Calculate Live HP & Intel Factors for Today
                     const liveIntel = (function() {
-                      let baseHp = 50
+                      let baseHp = battle.hp !== undefined ? battle.hp : 50
                       const succeeded = []
                       const failed = []
 
@@ -517,9 +517,6 @@ export default function OperatorDashboard() {
                             baseHp += 10
                             failed.push(`Streaming (${sHours}h) > 2h limit (+10 HP)`)
                           }
-                        } else {
-                          failed.push(`No Screen Time logged today (+10 HP threat drift)`)
-                          baseHp += 10
                         }
                       }
 
