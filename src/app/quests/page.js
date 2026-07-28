@@ -608,7 +608,7 @@ export default function DailyOps() {
             </div>
 
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2 flex-1 min-w-[140px] relative">
+              <div className="flex items-center gap-2 max-w-[200px] flex-1 relative">
                 <input 
                   type="number" 
                   step="0.1" 
@@ -668,10 +668,7 @@ export default function DailyOps() {
             <div className="flex items-center justify-between border-b border-border-color pb-2 mb-2.5">
               <div className="flex items-center gap-2 text-info">
                 <Moon size={15} />
-                <div>
-                  <span className="font-display text-xs uppercase tracking-widest font-bold block leading-none">DYNAMIC SLEEP TRACKER</span>
-                  <span className="font-mono text-[8px] text-muted uppercase">TARGET: SLEEP &lt; 12 AM | WAKE &lt; 9 AM | MAX 10 HRS</span>
-                </div>
+                <span className="font-display text-xs uppercase tracking-widest font-bold">DYNAMIC SLEEP TRACKER</span>
               </div>
               <button 
                 type="button"
