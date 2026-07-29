@@ -465,15 +465,19 @@ export default function DailyOps() {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const dateObj = new Date(viewYear, viewMonth, day)
     const habit = habits.find(h => h.id === habitId)
-    const freqDays = habit?.frequency_days || [0,1,2,3,4,5,6]
+    if (!habit) return 'none'
+
+    const freqDays = habit.frequency_days || [0,1,2,3,4,5,6]
     
     const explicitStatus = logMap.get(`${habitId}::${dateStr}`)
     if (explicitStatus) return explicitStatus
     
-    // Automatically block days prior to habit creation date
-    if (habit?.created_at) {
-      const createdDateStr = getLocalDateStr(new Date(habit.created_at))
-      if (dateStr < createdDateStr) return 'blocked'
+    // Automatically block days prior to habit creation date (fallback to today if missing)
+    const rawCreatedAt = habit.created_at || habit.created_date
+    const createdDateStr = rawCreatedAt ? getLocalDateStr(new Date(rawCreatedAt)) : getLocalDateStr()
+    
+    if (createdDateStr && !isNaN(new Date(createdDateStr).getTime()) && dateStr < createdDateStr) {
+      return 'blocked'
     }
 
     // Automatically block days not in the active days array
