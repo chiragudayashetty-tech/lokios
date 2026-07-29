@@ -20,7 +20,7 @@ export default function SessionTimelineViewer({ session, compact = false }) {
   const timeline = session.timeline;
   
   // Calculate stats
-  let totalDuration = session.actual_duration || 0;
+  let totalDuration = (session.actual_duration_minutes || 0) * 60;
   let activeTime = 0;
   let pausesCount = 0;
   

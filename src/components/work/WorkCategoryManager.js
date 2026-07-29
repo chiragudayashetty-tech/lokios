@@ -24,7 +24,7 @@ export default function WorkCategoryManager() {
       name: newCatName,
       icon: newCatIcon,
       color: newCatColor,
-      display_order: categories.length
+      display_order: (categories || []).length
     })
     setNewCatName('')
     setIsAddingCat(false)
@@ -147,8 +147,8 @@ export default function WorkCategoryManager() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <AnimatePresence>
-          {categories.filter(c => !c.is_archived).map(category => {
-            const catMetrics = metrics.filter(m => m.category_id === category.id && !m.is_archived)
+          {(categories || []).filter(c => !c.is_archived).map(category => {
+            const catMetrics = (metrics || []).filter(m => m.category_id === category.id && !m.is_archived)
             const isExpanded = expandedCat === category.id
 
             return (

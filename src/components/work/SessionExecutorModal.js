@@ -6,7 +6,7 @@ import { useWork } from '@/lib/hooks/useWork';
 import { Play, Pause, Square, X, CheckCircle, AlertCircle, Lightbulb, Clock } from 'lucide-react';
 
 export default function SessionExecutorModal({ session, isOpen, onClose }) {
-  const { startSession, pauseSession, resumeSession, completeSession, cancelSession, categories, projects } = useWork();
+  const { startSession, pauseSession, resumeSession, completeSession, cancelSession, saveReflection, updateSession, categories, projects } = useWork();
   
   const [elapsed, setElapsed] = useState(0);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -60,20 +60,20 @@ export default function SessionExecutorModal({ session, isOpen, onClose }) {
   const handleComplete = async () => {
     try {
       const actualDuration = elapsed; // Or from timeline
-      const plannedDuration = session.planned_duration || 1;
+      const plannedDuration = (session.planned_duration_minutes || 1) * 60;
       const accuracy = (plannedDuration / actualDuration) * 100;
       
-      await completeSession(session.id, {
-        actual_duration: actualDuration,
+      await updateSession(session.id, {
+        actual_duration_minutes: Math.round(actualDuration / 60),
         actual_output_text: actualOutput,
-        metadata: {
-          ...session.metadata,
-          notes,
-          reflection,
-          planning_accuracy_pct: accuracy,
-          time_variance_minutes: (actualDuration - plannedDuration) / 60
-        }
+        notes,
+        planning_accuracy_pct: accuracy,
+        time_variance_minutes: (actualDuration - plannedDuration) / 60
       });
+      if (reflection.went_well || reflection.went_wrong || reflection.next_improvement) {
+        await saveReflection(session.id, reflection);
+      }
+      await completeSession(session.id);
       onClose();
     } catch (e) { console.error(e); }
   };
@@ -116,7 +116,7 @@ export default function SessionExecutorModal({ session, isOpen, onClose }) {
               </div>
               <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', marginTop: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                  <Clock size={16} /> Planned: {formatTime(session.planned_duration || 0)}
+                  <Clock size={16} /> Planned: {formatTime((session.planned_duration_minutes || 0) * 60)}
                 </div>
               </div>
             </div>

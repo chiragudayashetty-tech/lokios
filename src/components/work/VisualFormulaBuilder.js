@@ -32,7 +32,7 @@ export default function VisualFormulaBuilder() {
   const getExpressionText = () => {
     return tokens.map(t => {
       if (t.type === 'metric') {
-        const metric = metrics.find(m => m.key === t.value)
+        const metric = (metrics || []).find(m => m.key === t.value)
         return `[${metric?.name || t.value}]`
       }
       return t.value
@@ -128,7 +128,7 @@ export default function VisualFormulaBuilder() {
                 color: 'var(--text-primary)'
               }}
             >
-              {token.type === 'metric' ? metrics.find(m => m.key === token.value)?.name || token.value : token.value}
+              {token.type === 'metric' ? (metrics || []).find(m => m.key === token.value)?.name || token.value : token.value}
               <button onClick={() => removeToken(token.id)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
                 <X size={14} />
               </button>
@@ -142,7 +142,7 @@ export default function VisualFormulaBuilder() {
         <div>
           <div style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '12px', fontFamily: 'var(--font-display)' }}>Variables (Metrics)</div>
           <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '8px' }}>
-            {metrics.filter(m => !m.is_archived).map(metric => (
+            {(metrics || []).filter(m => !m.is_archived).map(metric => (
               <button
                 key={metric.id}
                 onClick={() => addToken('metric', metric.key)}

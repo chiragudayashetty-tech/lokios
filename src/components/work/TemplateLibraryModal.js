@@ -49,7 +49,7 @@ export default function TemplateLibraryModal({ isOpen, onClose }) {
     if (!selectedTemplate) return;
     setIsApplying(true);
     try {
-      await applyTemplate(selectedTemplate.id);
+      await applyTemplate(selectedTemplate);
       setTimeout(() => {
         setIsApplying(false);
         setShowConfirm(false);

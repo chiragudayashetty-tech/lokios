@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWork } from '@/lib/hooks/useWork';
+import useWork from '@/lib/hooks/useWork';
 import { X, Calendar, Clock, Target, Tag, Zap, AlertTriangle, Link as LinkIcon, Plus } from 'lucide-react';
 
 export default function SessionPlannerModal({ isOpen, onClose }) {
@@ -41,14 +41,16 @@ export default function SessionPlannerModal({ isOpen, onClose }) {
 
     setIsLoading(true);
     try {
-      const durationSecs = (parseInt(formData.planned_duration_hours || 0) * 3600) + (parseInt(formData.planned_duration_mins || 0) * 60);
+      const durationMins = (parseInt(formData.planned_duration_hours || 0) * 60) + parseInt(formData.planned_duration_mins || 0);
       
-      await createSession(currentWorkspace.id, {
+      await createSession({
+        workspace_id: currentWorkspace.id,
         category_id: formData.category_id,
         project_id: formData.project_id || null,
         milestone_id: formData.milestone_id || null,
+        date: new Date(formData.planned_start_time).toISOString().split('T')[0],
         planned_start_time: new Date(formData.planned_start_time).toISOString(),
-        planned_duration: durationSecs,
+        planned_duration_minutes: durationMins,
         planned_output_text: formData.planned_output_text,
         metadata: {
           planned_goal: formData.planned_goal,

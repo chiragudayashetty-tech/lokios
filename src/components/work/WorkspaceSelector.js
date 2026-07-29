@@ -103,7 +103,7 @@ export default function WorkspaceSelector() {
               gap: '4px'
             }}
           >
-            {workspaces.map(workspace => (
+            {(workspaces || []).map(workspace => (
               <button
                 key={workspace.id}
                 onClick={() => {

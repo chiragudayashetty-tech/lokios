@@ -51,8 +51,16 @@ export default function UniversalSearchModal({ isOpen, onClose }) {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const searchResults = await universalSearch(query, activeFilters.length > 0 ? activeFilters : null);
-        setResults(searchResults);
+        const searchResults = await universalSearch(query);
+        if (searchResults && activeFilters.length > 0) {
+          const filtered = {};
+          activeFilters.forEach(f => {
+            if (searchResults[f]) filtered[f] = searchResults[f];
+          });
+          setResults(filtered);
+        } else {
+          setResults(searchResults);
+        }
       } catch (err) {
         console.error("Search failed", err);
       } finally {

@@ -24,7 +24,7 @@ import SessionTimelineViewer from '@/components/work/SessionTimelineViewer';
 function WorkIntelligenceContent() {
   const { auth } = useOS();
   const userId = auth?.user?.id;
-  const { sessions, notifications } = useWork();
+  const { sessions, notifications, categories } = useWork();
   
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -81,7 +81,9 @@ function WorkIntelligenceContent() {
     const planned = sessions.filter(s => s.status === 'planned');
     const completed = sessions.filter(s => s.status === 'completed').slice(0, 5); // recent 5
 
-    const SessionCard = ({ session, type }) => (
+    const SessionCard = ({ session, type }) => {
+      const category = categories?.find(c => c.id === session.category_id);
+      return (
       <div 
         onClick={() => type === 'active' ? setActiveSessionForExec(session) : (type === 'completed' ? setExpandedSession(expandedSession?.id === session.id ? null : session) : null)}
         className="p-4 rounded-xl border flex flex-col gap-2 cursor-pointer transition-colors hover:bg-white/5 relative overflow-hidden group"
@@ -91,7 +93,9 @@ function WorkIntelligenceContent() {
         <div className="flex justify-between items-start ml-2">
           <div>
             <h4 className="font-bold text-sm text-white">{session.title || 'Untitled Session'}</h4>
-            <p className="text-xs text-gray-400 font-mono mt-1">{session.project_id ? 'Linked Project' : 'Standalone'}</p>
+            <p className="text-xs text-gray-400 font-mono mt-1">
+              {category ? category.name : (session.project_id ? 'Linked Project' : 'Standalone')} • {session.planned_duration_minutes || 0}m
+            </p>
           </div>
           <div className="text-xs px-2 py-1 rounded bg-white/10 text-white capitalize font-mono">
             {session.status}
@@ -104,6 +108,7 @@ function WorkIntelligenceContent() {
         )}
       </div>
     );
+    }
 
     return (
       <div className="flex flex-col h-full space-y-6">

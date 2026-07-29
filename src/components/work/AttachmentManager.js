@@ -6,7 +6,7 @@ import useWork from '@/lib/hooks/useWork'
 import { FileText, Image as ImageIcon, Film, Link as LinkIcon, File, X, UploadCloud, Plus } from 'lucide-react'
 
 export default function AttachmentManager({ attachableType, attachableId }) {
-  const { getAttachments, createAttachment, deleteAttachment } = useWork()
+  const { getAttachments, createAttachment, deleteAttachment, currentWorkspace } = useWork()
   const [attachments, setAttachments] = useState([])
   const [loading, setLoading] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -45,6 +45,7 @@ export default function AttachmentManager({ attachableType, attachableId }) {
     e.preventDefault()
     if (!linkUrl) return
     await createAttachment({
+      workspace_id: currentWorkspace?.id,
       attachable_type: attachableType,
       attachable_id: attachableId,
       file_name: linkUrl,
@@ -64,6 +65,7 @@ export default function AttachmentManager({ attachableType, attachableId }) {
     else if (type.includes('pdf')) simplifiedType = 'pdf'
     
     await createAttachment({
+      workspace_id: currentWorkspace?.id,
       attachable_type: attachableType,
       attachable_id: attachableId,
       file_name: name,

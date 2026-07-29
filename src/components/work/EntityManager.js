@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWork } from '@/lib/hooks/useWork';
+import useWork from '@/lib/hooks/useWork';
 import { Search, Plus, X, Edit2, Archive, Tag as TagIcon, Link as LinkIcon, Save, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ENTITY_TYPES = [
@@ -58,7 +58,8 @@ export default function EntityManager() {
         return;
       }
 
-      await createEntity(currentWorkspace.id, {
+      await createEntity({
+        workspace_id: currentWorkspace.id,
         name: formData.name,
         description: formData.description,
         entity_type: formData.entity_type,

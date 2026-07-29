@@ -29,9 +29,9 @@ export const WorkProvider = ({ children, userId }) => {
     try {
       setLoading(true)
       const userWorkspaces = await workService.getWorkspaces(userId)
-      setWorkspaces(userWorkspaces)
+      setWorkspaces(userWorkspaces || [])
       
-      if (userWorkspaces.length > 0 && !currentWorkspace) {
+      if (userWorkspaces?.length > 0 && !currentWorkspace) {
         setCurrentWorkspace(userWorkspaces[0])
       }
     } catch (error) {
@@ -87,11 +87,13 @@ export const WorkProvider = ({ children, userId }) => {
   }, [currentWorkspace])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchBaseData()
   }, [fetchBaseData])
 
   useEffect(() => {
     if (currentWorkspace) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchWorkspaceData()
     }
   }, [currentWorkspace, fetchWorkspaceData])
@@ -221,8 +223,8 @@ export const WorkProvider = ({ children, userId }) => {
     const session = sessions.find(s => s.id === id)
     if (!session) return
     const timeline = updateSessionTimeline(session, 'started')
-    const result = await workService.updateSession(id, { status: 'in_progress', actual_start_time: new Date().toISOString(), timeline })
-    await eventLogger.logSessionEvent(id, 'started')
+    const result = await workService.updateSession(id, { status: 'active', actual_start_time: new Date().toISOString(), timeline })
+    await eventLogger.logSessionEvent(currentWorkspace.id, userId, session, 'started')
     await fetchWorkspaceData()
     return result
   }
@@ -232,7 +234,7 @@ export const WorkProvider = ({ children, userId }) => {
     if (!session) return
     const timeline = updateSessionTimeline(session, 'paused')
     const result = await workService.updateSession(id, { status: 'paused', timeline })
-    await eventLogger.logSessionEvent(id, 'paused')
+    await eventLogger.logSessionEvent(currentWorkspace.id, userId, session, 'paused')
     await fetchWorkspaceData()
     return result
   }
@@ -241,8 +243,8 @@ export const WorkProvider = ({ children, userId }) => {
     const session = sessions.find(s => s.id === id)
     if (!session) return
     const timeline = updateSessionTimeline(session, 'resumed')
-    const result = await workService.updateSession(id, { status: 'in_progress', timeline })
-    await eventLogger.logSessionEvent(id, 'resumed')
+    const result = await workService.updateSession(id, { status: 'active', timeline })
+    await eventLogger.logSessionEvent(currentWorkspace.id, userId, session, 'resumed')
     await fetchWorkspaceData()
     return result
   }
@@ -253,26 +255,30 @@ export const WorkProvider = ({ children, userId }) => {
     
     let planning_accuracy_pct = 100
     let time_variance_minutes = 0
+    let actual_duration_minutes = 0
     
-    if (session.planned_duration && session.actual_start_time) {
+    if (session.actual_start_time) {
       const start = new Date(session.actual_start_time).getTime()
       const end = new Date().getTime()
-      const actualDurationMinutes = (end - start) / (1000 * 60)
+      actual_duration_minutes = (end - start) / (1000 * 60)
       
-      time_variance_minutes = actualDurationMinutes - session.planned_duration
-      planning_accuracy_pct = Math.max(0, 100 - (Math.abs(time_variance_minutes) / session.planned_duration * 100))
+      if (session.planned_duration_minutes) {
+        time_variance_minutes = actual_duration_minutes - session.planned_duration_minutes
+        planning_accuracy_pct = Math.max(0, 100 - (Math.abs(time_variance_minutes) / session.planned_duration_minutes * 100))
+      }
     }
     
     const timeline = updateSessionTimeline(session, 'completed')
     const result = await workService.updateSession(id, { 
       status: 'completed', 
       actual_end_time: new Date().toISOString(),
+      actual_duration_minutes,
       timeline,
       planning_accuracy_pct,
       time_variance_minutes
     })
     
-    await eventLogger.logSessionEvent(id, 'completed')
+    await eventLogger.logSessionEvent(currentWorkspace.id, userId, session, 'completed')
     await fetchWorkspaceData()
     return result
   }
@@ -282,7 +288,7 @@ export const WorkProvider = ({ children, userId }) => {
     if (!session) return
     const timeline = updateSessionTimeline(session, 'cancelled')
     const result = await workService.updateSession(id, { status: 'cancelled', timeline })
-    await eventLogger.logSessionEvent(id, 'cancelled')
+    await eventLogger.logSessionEvent(currentWorkspace.id, userId, session, 'cancelled')
     await fetchWorkspaceData()
     return result
   }
@@ -292,7 +298,7 @@ export const WorkProvider = ({ children, userId }) => {
   }
 
   const saveReflection = async (sessionId, reflection) => {
-    return await workService.updateSession(sessionId, { reflection })
+    return await workService.saveReflection({ session_id: sessionId, ...reflection })
   }
 
   // Entity Actions
@@ -315,7 +321,7 @@ export const WorkProvider = ({ children, userId }) => {
   }
 
   const linkEntityToSession = async (sessionId, entityId) => {
-    return await workService.linkEntityToSession(sessionId, entityId)
+    return await workService.linkEntity({ session_id: sessionId, entity_id: entityId })
   }
 
   // Tag Actions
@@ -397,7 +403,7 @@ export const WorkProvider = ({ children, userId }) => {
   const evaluateFormula = async (formulaId, contextData) => {
     const formula = formulas.find(f => f.id === formulaId)
     if (!formula) return null
-    return formulaEngine.evaluate(formula.expression, contextData)
+    return formulaEngine.evaluate(formula.expression_json, contextData)
   }
 
   // Attachment Actions
@@ -409,8 +415,8 @@ export const WorkProvider = ({ children, userId }) => {
     return await workService.deleteAttachment(id)
   }
 
-  const getAttachments = async (entityId, entityType) => {
-    return await workService.getAttachments(entityId, entityType)
+  const getAttachments = async (attachableType, attachableId) => {
+    return await workService.getAttachments(attachableType, attachableId)
   }
 
   // Other Actions
@@ -425,23 +431,23 @@ export const WorkProvider = ({ children, userId }) => {
   }
 
   const markNotificationRead = async (id) => {
-    const result = await workService.markNotificationRead(id)
+    const result = await workService.markRead(id)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
     return result
   }
 
   const markAllNotificationsRead = async () => {
-    const result = await workService.markAllNotificationsRead(userId)
+    const result = await workService.markAllRead(currentWorkspace.id, userId)
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
     return result
   }
 
-  const getEventLogs = async (entityId, entityType) => {
-    return await eventLogger.getEventLogs(entityId, entityType)
+  const getEventLogs = async (filters = {}) => {
+    return await workService.getEventLogs(currentWorkspace.id, filters)
   }
 
   const getInsights = async () => {
-    return await insightsEngine.generateInsights(currentWorkspace.id)
+    return await insightsEngine.generateInsights(sessions, metrics, targets)
   }
 
   const getTemplates = () => {
@@ -517,10 +523,11 @@ export const WorkProvider = ({ children, userId }) => {
 
   const applyTemplate = async (template) => {
     for (const [index, cat] of template.categories.entries()) {
-      const createdCat = await createCategory(cat)
+      const createdCat = await workService.createCategory({ ...cat, workspace_id: currentWorkspace.id })
       const catMetrics = template.metrics.filter(m => m.categoryIndex === index)
       for (const met of catMetrics) {
-        await createMetric({
+        await workService.createMetric({
+          workspace_id: currentWorkspace.id,
           category_id: createdCat.id,
           name: met.name,
           key: met.key,

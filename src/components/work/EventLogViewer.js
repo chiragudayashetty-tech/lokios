@@ -15,7 +15,9 @@ export default function EventLogViewer() {
     setLoading(true);
     try {
       const typeFilter = filterType === 'All' ? null : filterType.toLowerCase();
-      const data = await getEventLogs({ type: typeFilter, limit: 50, offset: (page - 1) * 50 });
+      const filters = { limit: 50, offset: (page - 1) * 50 };
+      if (typeFilter) filters.event_type = typeFilter;
+      const data = await getEventLogs(filters);
       setLogs(page === 1 ? data : [...logs, ...data]);
     } catch (err) {
       console.error(err);

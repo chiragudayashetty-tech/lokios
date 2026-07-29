@@ -171,7 +171,7 @@ export default function DynamicMetricForm({ metrics, values = {}, onChange, comp
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'var(--font-body)' }}>
       {groups.map(group => {
-        const groupMetrics = metrics.filter(m => m.metric_group === group && !m.is_archived)
+        const groupMetrics = (metrics || []).filter(m => m.metric_group === group && !m.is_archived)
         if (groupMetrics.length === 0) return null
 
         return (

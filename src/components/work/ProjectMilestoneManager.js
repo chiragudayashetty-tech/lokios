@@ -258,7 +258,7 @@ function ProjectCard({ project, isExpanded, onToggleExpand, onDelete, colors, ge
   }
 
   const cycleMilestoneStatus = async (ms) => {
-    const statuses = ['pending', 'in_progress', 'completed']
+    const statuses = ['pending', 'active', 'completed']
     const nextStatus = statuses[(statuses.indexOf(ms.status) + 1) % statuses.length]
     await updateMilestone(ms.id, { status: nextStatus, progress_percentage: nextStatus === 'completed' ? 100 : ms.progress_percentage })
     loadMilestones()
@@ -387,8 +387,8 @@ function ProjectCard({ project, isExpanded, onToggleExpand, onDelete, colors, ge
                   ) : (
                     milestones.map(ms => (
                       <div key={ms.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                        <div onClick={() => cycleMilestoneStatus(ms)} style={{ cursor: 'pointer', color: ms.status === 'completed' ? 'var(--success)' : ms.status === 'in_progress' ? 'var(--warning)' : 'var(--text-muted)' }}>
-                          {ms.status === 'completed' ? <CheckCircle2 size={20} /> : ms.status === 'in_progress' ? <RefreshCw size={20} /> : <Circle size={20} />}
+                        <div onClick={() => cycleMilestoneStatus(ms)} style={{ cursor: 'pointer', color: ms.status === 'completed' ? 'var(--success)' : ms.status === 'active' ? 'var(--warning)' : 'var(--text-muted)' }}>
+                          {ms.status === 'completed' ? <CheckCircle2 size={20} /> : ms.status === 'active' ? <RefreshCw size={20} /> : <Circle size={20} />}
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>

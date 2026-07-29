@@ -21,7 +21,11 @@ export default function DeepWorkTracker() {
 
   const handleLog = async () => {
     if (!currentWorkspace) return;
-    await logDeepWork(currentWorkspace.id, today, formData);
+    await logDeepWork({
+      workspace_id: currentWorkspace.id,
+      date: today,
+      ...formData
+    });
     // show success toast normally
   };
 

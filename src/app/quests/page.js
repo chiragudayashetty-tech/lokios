@@ -49,6 +49,43 @@ export default function DailyOps() {
   const [weightSaving, setWeightSaving] = useState(false)
   const [weightMsg, setWeightMsg] = useState(null)
 
+  // Habit Column Width Resizer State (Persisted in localStorage)
+  const [habitColWidth, setHabitColWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('lokios_habit_col_width')
+      return saved ? parseInt(saved, 10) : 260
+    }
+    return 260
+  })
+
+  const startResizingHabitCol = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX
+    const startWidth = habitColWidth
+
+    const onMove = (moveEvent) => {
+      const currentX = moveEvent.type === 'touchmove' ? moveEvent.touches[0].clientX : moveEvent.clientX
+      const newWidth = Math.max(160, Math.min(600, startWidth + (currentX - startX)))
+      setHabitColWidth(newWidth)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('lokios_habit_col_width', newWidth.toString())
+      }
+    }
+
+    const onEnd = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onEnd)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onEnd)
+    }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onEnd)
+    window.addEventListener('touchmove', onMove)
+    window.addEventListener('touchend', onEnd)
+  }
+
   // Sleep Tracker Widget State (Persisted in localStorage across tab switches)
   const [sleepTargetDate, setSleepTargetDate] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -952,8 +989,8 @@ export default function DailyOps() {
 
         {/* The Spreadsheet Grid */}
         <style dangerouslySetInnerHTML={{__html: `
-          .col-habit { width: 220px !important; min-width: 220px !important; max-width: 220px !important; left: 0 !important; }
-          .col-xp { width: 45px !important; min-width: 45px !important; max-width: 45px !important; left: 220px !important; }
+          .col-habit { width: ${habitColWidth}px !important; min-width: ${habitColWidth}px !important; max-width: ${habitColWidth}px !important; left: 0 !important; }
+          .col-xp { width: 45px !important; min-width: 45px !important; max-width: 45px !important; left: ${habitColWidth}px !important; }
           .col-stat-done { width: 55px !important; min-width: 55px !important; max-width: 55px !important; }
           .col-stat-goal { width: 55px !important; min-width: 55px !important; max-width: 55px !important; }
           .col-stat-pct { width: 65px !important; min-width: 65px !important; max-width: 65px !important; }
@@ -962,9 +999,20 @@ export default function DailyOps() {
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '1100px' }}>
             <thead>
               <tr>
-                <th className="sticky z-20 col-habit" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
-                  <div className="w-full" style={{ padding: '10px 16px', textAlign: 'left' }}>
+                <th className="sticky z-20 col-habit relative group select-none" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
+                  <div className="w-full flex items-center justify-between" style={{ padding: '10px 14px 10px 16px', textAlign: 'left' }}>
                     <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
+                    <span className="font-mono text-[9px] text-muted opacity-50 font-normal">({habitColWidth}px)</span>
+                  </div>
+                  {/* Draggable Column Width Resizer Handle */}
+                  <div
+                    onMouseDown={startResizingHabitCol}
+                    onTouchStart={startResizingHabitCol}
+                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-amber/40 active:bg-amber flex items-center justify-center transition-colors z-30"
+                    title="Click & Drag to resize column width"
+                    style={{ touchAction: 'none' }}
+                  >
+                    <div className="w-0.5 h-4 bg-muted/60 rounded group-hover:bg-amber" />
                   </div>
                 </th>
                 <th className="sticky z-20 col-xp" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)' }}>

@@ -112,7 +112,10 @@ export default function NotificationCenter({ isOpen, onClose }) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    onClick={() => !notification.is_read && markNotificationRead(notification.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!notification.is_read) markNotificationRead(notification.id);
+                    }}
                     className="p-3 rounded-lg relative cursor-pointer overflow-hidden transition-all hover:bg-white/5"
                     style={{ 
                       backgroundColor: notification.is_read ? 'transparent' : 'rgba(255,255,255,0.03)',
