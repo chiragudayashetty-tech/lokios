@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
   { href: '/journal', icon: BookOpen, label: 'Journal' },
   { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },
+  { href: '/work', icon: Briefcase, label: 'Work Intel' },
   { href: '/calendar', icon: CalendarDays, label: 'Calendar' },
 
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
