@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 
 /**
- * Persistently updates War Room battle HP when a linked habit status changes.
+ * Persistently updates War Room battle HP when a habit status changes.
  * - Completed: -15 HP (deal damage to threat pool)
  * - Failed/Missed: +20 HP (threat level increases)
  * - Unmarked/Cleared: Reverts previous delta
@@ -87,10 +87,10 @@ export async function syncWarRoomHabitChange(userId, habitId, habitTitle, oldSta
 }
 
 /**
- * Overnight / Daily catch-up sync:
- * Checks if a new day has passed since last_evaluated_date.
- * Evaluates unlogged habits from yesterday and applies +20 HP penalty to linked battle threats.
- * Guarantees battle.hp baseline carries over without resetting to 100/50!
+ * ── Complete War Room Recalculation Engine ──
+ * Evaluates active habits and completed operations/tasks over recent days.
+ * Deducts -15 HP per completed habit/operation, adds +20 HP per missed/failed habit.
+ * Rewards perfect days with 0 HP (Suppressed/Defeated) and updates Supabase permanently!
  */
 export async function syncWarRoomDailyEvaluator(userId) {
   if (typeof window === 'undefined' || !userId) return null
@@ -107,69 +107,69 @@ export async function syncWarRoomDailyEvaluator(userId) {
 
     if (fetchErr || !bpRow) return null
 
-    const lastEval = bpRow.last_evaluated_date
-    if (lastEval === todayStr) {
-      // Already evaluated for today
-      return bpRow.battles || []
-    }
-
-    // New day detected! Process missed habits from previous day
-    const yesterdayDate = new Date()
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1)
-    const yesterdayStr = getLocalDateStr(yesterdayDate)
+    // 7-day rolling window for completed operations & habit executions
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const sevenDaysAgoStr = getLocalDateStr(sevenDaysAgo)
 
     const { data: habits } = await supabase.from('habits').select('*').eq('user_id', userId).eq('is_archived', false)
-    const { data: yesterdayLogs } = await supabase.from('habit_logs').select('*').eq('user_id', userId).eq('date', yesterdayStr)
-
-    const completedIds = new Set((yesterdayLogs || []).filter(l => l.status === 'completed').map(l => l.habit_id))
-    const failedIds = new Set((yesterdayLogs || []).filter(l => l.status === 'failed').map(l => l.habit_id))
-
-    const yesterdayDayOfWeek = yesterdayDate.getDay()
+    const { data: recentHabitLogs } = await supabase.from('habit_logs').select('*').eq('user_id', userId).gte('date', sevenDaysAgoStr)
+    const { data: recentCompletedTasks } = await supabase.from('tasks').select('*').eq('user_id', userId).eq('status', 'completed')
 
     let battlesUpdated = false
     const battles = (bpRow.battles || []).map(b => {
       const hasExplicitLinks = b.linked_habits && Array.isArray(b.linked_habits) && b.linked_habits.length > 0
       const habitIdList = hasExplicitLinks ? b.linked_habits : (habits || []).map(h => h.id)
 
-      let hpDelta = 0
-      const actions = []
+      // 1. Damage from completed habits
+      const completedHabitCount = (recentHabitLogs || []).filter(l => 
+        l.status === 'completed' && habitIdList.includes(l.habit_id)
+      ).length
 
-      habitIdList.forEach(habitId => {
-        if (habitId === 'sys_screen_intel') return
-        const habit = (habits || []).find(h => h.id === habitId)
-        if (!habit) return
+      // 2. Damage from completed operations/tasks
+      const completedTaskCount = (recentCompletedTasks || []).length
 
-        const freqDays = habit.frequency_days || [0, 1, 2, 3, 4, 5, 6]
-        const wasScheduled = freqDays.includes(yesterdayDayOfWeek)
+      // 3. Threat from failed habits
+      const failedHabitCount = (recentHabitLogs || []).filter(l => 
+        l.status === 'failed' && habitIdList.includes(l.habit_id)
+      ).length
 
-        if (wasScheduled && !completedIds.has(habitId)) {
-          // Habit was missed or failed yesterday!
-          if (!failedIds.has(habitId)) {
-            hpDelta += 20
-            actions.push(`Missed scheduled routine "${habit.title}" yesterday (+20 HP to threat)`)
+      // 4. Threat from missed scheduled habits over past 3 days
+      let missedCount = 0
+      for (let i = 1; i <= 3; i++) {
+        const checkDate = new Date()
+        checkDate.setDate(checkDate.getDate() - i)
+        const checkDateStr = getLocalDateStr(checkDate)
+        const checkDayOfWeek = checkDate.getDay()
+
+        const dayLogs = (recentHabitLogs || []).filter(l => l.date === checkDateStr)
+        const dayCompletedIds = new Set(dayLogs.filter(l => l.status === 'completed').map(l => l.habit_id))
+
+        habitIdList.forEach(hId => {
+          const h = (habits || []).find(item => item.id === hId)
+          if (!h) return
+          const freqDays = h.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+          if (h.created_at && checkDateStr < getLocalDateStr(new Date(h.created_at))) return
+
+          if (freqDays.includes(checkDayOfWeek) && !dayCompletedIds.has(hId)) {
+            missedCount++
           }
-        }
-      })
-
-      if (hpDelta > 0) {
-        battlesUpdated = true
-        const currentHp = b.hp !== undefined ? b.hp : 50
-        const newHp = Math.max(0, Math.min(100, currentHp + hpDelta))
-
-        const logs = b.combat_logs || []
-        actions.forEach(act => {
-          logs.unshift({ date: todayStr, action: act, hpChange: 20 })
         })
-
-        return {
-          ...b,
-          hp: newHp,
-          status: newHp === 0 ? 'defeated' : 'active',
-          combat_logs: logs.slice(0, 30)
-        }
       }
 
-      return b
+      // Base HP starts at 100. Deduct 15 HP per completed habit & task. Add 20 HP per missed/failed habit.
+      const netHp = 100 - (completedHabitCount * 15) - (completedTaskCount * 15) + (missedCount * 20) + (failedHabitCount * 20)
+      const calculatedHp = Math.max(0, Math.min(100, netHp))
+
+      if (b.hp !== calculatedHp) {
+        battlesUpdated = true
+      }
+
+      return {
+        ...b,
+        hp: calculatedHp,
+        status: calculatedHp === 0 ? 'defeated' : 'active'
+      }
     })
 
     // Update last_evaluated_date and battles in DB
