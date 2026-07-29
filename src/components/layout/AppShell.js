@@ -17,6 +17,7 @@ import { initBackgroundReminders } from '@/lib/utils/notifications'
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Command Center' },
   { href: '/quests', icon: Crosshair, label: 'Daily Ops' },
+  { href: '/work', icon: Briefcase, label: 'Work' },
   { href: '/goals', icon: Target, label: 'Missions' },
   { href: '/tasks', icon: CheckSquare, label: 'Operations' },
   { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
