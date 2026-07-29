@@ -538,15 +538,31 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const reportBlob = new Blob([fullHTML], { type: 'text/html' })
       const reportUrl = URL.createObjectURL(reportBlob)
       
-      const printWindow = window.open(reportUrl, '_blank')
-      if (printWindow) {
-        printWindow.focus()
-      } else {
-        const a = document.createElement('a')
-        a.href = reportUrl
-        a.download = `LokiOS_Tactical_Report_${startDate}_to_${endDate}.html`
-        a.click()
-      }
+      // Trigger direct PDF print/save dialog using invisible iframe
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'fixed'
+      iframe.style.right = '0'
+      iframe.style.bottom = '0'
+      iframe.style.width = '0'
+      iframe.style.height = '0'
+      iframe.style.border = '0'
+      document.body.appendChild(iframe)
+
+      const doc = iframe.contentWindow.document
+      doc.open()
+      doc.write(fullHTML)
+      doc.close()
+
+      setTimeout(() => {
+        iframe.contentWindow.focus()
+        iframe.contentWindow.print()
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe)
+          }
+        }, 4000)
+      }, 500)
+
     } catch (e) {
       console.error('Failed to generate intel report:', e)
       alert('Error generating report: ' + (e.message || e))
@@ -558,24 +574,45 @@ export default function IntelExportModal({ isOpen, onClose }) {
   return (
     <AnimatePresence>
       <div 
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-        style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+        style={{ 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 99999, 
+          backgroundColor: 'rgba(4, 6, 10, 0.92)', 
+          backdropFilter: 'blur(16px)', 
+          WebkitBackdropFilter: 'blur(16px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}
         onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative w-full max-w-2xl rounded-2xl p-6 shadow-2xl overflow-hidden"
           style={{ 
-            background: 'var(--bg-secondary)', 
             backgroundColor: '#0c0e14', 
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)'
+            background: '#0c0e14', 
+            border: '1px solid rgba(212, 175, 55, 0.4)',
+            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 30px rgba(212, 175, 55, 0.1)',
+            color: '#f3f4f6',
+            width: '100%',
+            maxWidth: '540px',
+            borderRadius: '16px',
+            padding: '24px',
+            position: 'relative',
+            zIndex: 100000,
+            maxHeight: '88vh',
+            overflowY: 'auto'
           }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-border-color">
+          <div className="flex items-center justify-between pb-4 border-b border-border-color" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-amber/10 border border-amber/30 text-amber">
                 <Printer size={22} />
@@ -721,7 +758,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                 ) : (
                   <>
                     <Printer size={16} />
-                    <span>Download Tactical Report</span>
+                    <span>Download PDF / Report</span>
                   </>
                 )}
               </button>
