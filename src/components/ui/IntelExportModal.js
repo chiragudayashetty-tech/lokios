@@ -182,34 +182,104 @@ export default function IntelExportModal({ isOpen, onClose }) {
         `
       }
 
-      // 3. HABITS MATRIX SECTION
+      // 3. HABITS MATRIX SPREADSHEET CHART SECTION
       if (selectedModules.habits) {
+        const rangeStart = new Date(startDate)
+        const year = rangeStart.getFullYear()
+        const month = rangeStart.getMonth()
+        const daysInMonth = new Date(year, month + 1, 0).getDate()
+        const daysArr = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+        const logMap = new Map()
+        monthLogs.forEach(l => logMap.set(`${l.habit_id}::${l.date}`, l.status || 'completed'))
+
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">🔥 DAILY OPS / HABITS (${habits.length})</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Routine Title</th>
-                  <th>XP Value</th>
-                  <th>Category</th>
-                  <th>Total Completions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${habits.map(h => {
-                  const doneCount = filteredHabitLogs.filter(l => l.habit_id === h.id && l.status === 'completed').length
-                  return `
-                    <tr>
-                      <td><strong>${h.title}</strong></td>
-                      <td class="text-amber">+${h.xp_per_completion || 25} XP</td>
-                      <td>${h.category || 'General'}</td>
-                      <td><span class="badge badge-success">${doneCount} Completed</span></td>
-                    </tr>
-                  `
-                }).join('')}
-              </tbody>
-            </table>
+            <h2 class="section-title">🔥 DAILY OPS / HABITS MATRIX SPREADSHEET (${habits.length} Routines)</h2>
+            <div style="overflow-x: auto;">
+              <table class="matrix-table">
+                <thead>
+                  <tr>
+                    <th style="min-width: 150px; text-align: left;">Routine Title</th>
+                    <th style="width: 35px; text-align: center;">XP</th>
+                    ${daysArr.map(d => `<th style="width: 20px; text-align: center; font-size: 9px; padding: 2px;">${d}</th>`).join('')}
+                    <th style="width: 40px; text-align: center;">DONE</th>
+                    <th style="width: 40px; text-align: center;">GOAL</th>
+                    <th style="width: 40px; text-align: center;">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${habits.map(h => {
+                    let doneCount = 0
+                    let goalCount = 0
+                    const rawCreatedAt = h.created_at || h.created_date
+                    let createdDateStr = null
+
+                    if (rawCreatedAt && (rawCreatedAt.startsWith('2026-01-01') || rawCreatedAt.startsWith('2026-01-02'))) {
+                      const logsForHabit = monthLogs.filter(l => l.habit_id === h.id && l.date)
+                      if (logsForHabit.length > 0) {
+                        const sortedLogs = [...logsForHabit].sort((a, b) => a.date.localeCompare(b.date))
+                        createdDateStr = sortedLogs[0].date
+                      } else {
+                        createdDateStr = getLocalDateStr()
+                      }
+                    } else if (rawCreatedAt) {
+                      const parsedDate = new Date(rawCreatedAt)
+                      if (!isNaN(parsedDate.getTime())) {
+                        createdDateStr = getLocalDateStr(parsedDate)
+                      }
+                    } else {
+                      createdDateStr = getLocalDateStr()
+                    }
+
+                    const freqDays = h.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+
+                    const dayCellsHTML = daysArr.map(d => {
+                      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                      const dateObj = new Date(year, month, d)
+                      const explicitStatus = logMap.get(`${h.id}::${dateStr}`)
+
+                      let status = 'none'
+                      if (explicitStatus) {
+                        status = explicitStatus
+                      } else if (createdDateStr && dateStr < createdDateStr) {
+                        status = 'blocked'
+                      } else if (!freqDays.includes(dateObj.getDay())) {
+                        status = 'blocked'
+                      }
+
+                      if (freqDays.includes(dateObj.getDay())) {
+                        goalCount++
+                      }
+
+                      if (status === 'completed') {
+                        doneCount++
+                        return `<td class="cell cell-done">✓</td>`
+                      } else if (status === 'failed') {
+                        return `<td class="cell cell-fail">✗</td>`
+                      } else if (status === 'blocked') {
+                        if (freqDays.includes(dateObj.getDay())) goalCount--
+                        return `<td class="cell cell-blocked">-</td>`
+                      }
+                      return `<td class="cell cell-empty"></td>`
+                    }).join('')
+
+                    const safeGoal = Math.max(0, goalCount)
+                    const pct = safeGoal === 0 ? 0 : Math.round((doneCount / safeGoal) * 100)
+
+                    return `
+                      <tr>
+                        <td style="text-align: left;"><strong>${h.title}</strong></td>
+                        <td style="text-align: center;" class="text-amber">${h.xp_per_completion || 25}</td>
+                        ${dayCellsHTML}
+                        <td style="text-align: center; color: var(--green); font-weight: bold;">${doneCount}</td>
+                        <td style="text-align: center; color: var(--muted);">${safeGoal}</td>
+                        <td style="text-align: center; font-weight: bold; color: ${pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--accent)' : 'var(--red)'}">${pct}%</td>
+                      </tr>
+                    `
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
           </div>
         `
       }
@@ -260,14 +330,17 @@ export default function IntelExportModal({ isOpen, onClose }) {
                 </tr>
               </thead>
               <tbody>
-                ${weightLogs.map(l => `
-                  <tr>
-                    <td>${l.date}</td>
-                    <td><strong class="text-amber">${l.weight} kg</strong></td>
-                    <td>${l.body_fat_percentage ? `${l.body_fat_percentage}%` : '—'}</td>
-                    <td>${l.notes || '—'}</td>
-                  </tr>
-                `).join('')}
+                ${weightLogs.map(l => {
+                  const weightVal = l.weight_kg ?? l.weight ?? '—'
+                  return `
+                    <tr>
+                      <td>${l.date}</td>
+                      <td><strong class="text-amber">${weightVal} kg</strong></td>
+                      <td>${l.body_fat_percentage ? `${l.body_fat_percentage}%` : '—'}</td>
+                      <td>${l.notes || '—'}</td>
+                    </tr>
+                  `
+                }).join('')}
               </tbody>
             </table>
           </div>
@@ -381,6 +454,33 @@ export default function IntelExportModal({ isOpen, onClose }) {
               font-weight: 600;
               text-transform: uppercase;
               font-size: 11px;
+            }
+            .matrix-table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 11px;
+            }
+            .matrix-table th, .matrix-table td {
+              padding: 6px 4px;
+              border: 1px solid var(--border);
+              text-align: center;
+            }
+            .cell-done {
+              background: rgba(16, 185, 129, 0.25);
+              color: #10B981;
+              font-weight: bold;
+            }
+            .cell-fail {
+              background: rgba(239, 68, 68, 0.25);
+              color: #EF4444;
+              font-weight: bold;
+            }
+            .cell-blocked {
+              color: #6B7280;
+              opacity: 0.5;
+            }
+            .cell-empty {
+              background: rgba(255, 255, 255, 0.02);
             }
             .badge {
               display: inline-block;
