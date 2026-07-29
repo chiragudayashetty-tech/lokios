@@ -432,6 +432,32 @@ export function useHabitsInternal(user) {
     ])
   }, [habits, user])
 
+  const reorderHabitsByDrag = useCallback(async (draggedId, targetId) => {
+    if (!draggedId || !targetId || draggedId === targetId || !user) return
+    const currentSorted = [...habits].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    const dragIdx = currentSorted.findIndex(h => h.id === draggedId)
+    const targetIdx = currentSorted.findIndex(h => h.id === targetId)
+    if (dragIdx === -1 || targetIdx === -1) return
+
+    const [moved] = currentSorted.splice(dragIdx, 1)
+    currentSorted.splice(targetIdx, 0, moved)
+
+    const baseTime = new Date('2026-01-01T00:00:00Z').getTime()
+    const updatedHabits = currentSorted.map((h, i) => ({
+      ...h,
+      created_at: new Date(baseTime + i * 1000).toISOString()
+    }))
+
+    setHabits(updatedHabits)
+
+    const supabase = createClient()
+    await Promise.all(
+      updatedHabits.map(h =>
+        supabase.from('habits').update({ created_at: h.created_at }).eq('id', h.id).eq('user_id', user.id)
+      )
+    )
+  }, [habits, user])
+
   // Auto-fail untouched habits
   useEffect(() => {
     if (!initialized || !user || habits.length === 0 || autoFailRanRef.current) return
@@ -542,6 +568,7 @@ export function useHabitsInternal(user) {
     deleteHabit,
     archiveHabit,
     updateHabit,
-    reorderHabits
+    reorderHabits,
+    reorderHabitsByDrag
   }
 }

@@ -17,8 +17,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 export default function DailyOps() {
   const {
     habits, monthLogs, todayLogs, loading, error,
-    fetchHabits, cycleHabitState, addHabit, deleteHabit, archiveHabit, reorderHabits, updateHabit
+    fetchHabits, cycleHabitState, addHabit, deleteHabit, archiveHabit, reorderHabits, reorderHabitsByDrag, updateHabit
   } = useOS().habits
+
+  const [draggedHabitId, setDraggedHabitId] = useState(null)
+  const [dragOverHabitId, setDragOverHabitId] = useState(null)
 
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth()) // 0-indexed
@@ -972,27 +975,66 @@ export default function DailyOps() {
               {habits.map((habit, idx) => {
                 const stats = getHabitStats(habit.id)
                 const cat = QUEST_CATEGORIES.find(c => c.id === habit.category) || QUEST_CATEGORIES[0]
+                const isDragging = draggedHabitId === habit.id
+                const isDragOver = dragOverHabitId === habit.id
+
                 return (
-                  <tr key={habit.id} className="group hover:bg-hover transition-colors">
+                  <tr 
+                    key={habit.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', habit.id)
+                      e.dataTransfer.effectAllowed = 'move'
+                      setDraggedHabitId(habit.id)
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = 'move'
+                      if (dragOverHabitId !== habit.id) {
+                        setDragOverHabitId(habit.id)
+                      }
+                    }}
+                    onDragLeave={(e) => {
+                      if (dragOverHabitId === habit.id) {
+                        setDragOverHabitId(null)
+                      }
+                    }}
+                    onDrop={async (e) => {
+                      e.preventDefault()
+                      const droppedId = e.dataTransfer.getData('text/plain') || draggedHabitId
+                      setDraggedHabitId(null)
+                      setDragOverHabitId(null)
+                      if (droppedId && droppedId !== habit.id && reorderHabitsByDrag) {
+                        await reorderHabitsByDrag(droppedId, habit.id)
+                      }
+                    }}
+                    onDragEnd={() => {
+                      setDraggedHabitId(null)
+                      setDragOverHabitId(null)
+                    }}
+                    className={`group transition-all ${
+                      isDragging ? 'opacity-30 bg-amber/10' : 'hover:bg-hover'
+                    } ${
+                      isDragOver ? 'border-t-2 border-amber' : ''
+                    }`}
+                  >
                     {/* Habit Name */}
                     <td className="sticky z-10 col-habit group" style={{
-                      background: 'var(--bg-secondary)',
+                      background: isDragging ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
                       padding: 0,
                       borderBottom: '1px solid var(--border-subtle)',
                       borderRight: '2px solid var(--border-color)',
                     }}>
-                      <div className="w-full" style={{ padding: '8px', display: 'flex', itemsCenter: 'center', gap: '8px' }}>
+                      <div className="w-full" style={{ padding: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         
-                        {/* Left Icons - Always reserve space, invisible until hover/mobile */}
-                        <div style={{ width: '20px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '4px', borderRight: '1px solid var(--border-subtle)', paddingRight: '4px' }}>
-                          <button onClick={() => reorderHabits(habit.id, 'top')} className="opacity-0 md:opacity-20 hover:!opacity-100 group-hover:opacity-100 text-info transition-opacity" title="Move to Top" style={{ display: 'flex', justifyContent: 'center' }}><ChevronsUp size={14} /></button>
-                          <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-40 md:opacity-20 hover:!opacity-100 group-hover:opacity-100 text-muted transition-opacity" title="Move Up" style={{ display: 'flex', justifyContent: 'center' }}><ArrowUp size={14} /></button>
-                          <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-40 md:opacity-20 hover:!opacity-100 group-hover:opacity-100 text-muted transition-opacity" title="Move Down" style={{ display: 'flex', justifyContent: 'center' }}><ArrowDown size={14} /></button>
+                        {/* Drag Handle & Arrow Controls */}
+                        <div style={{ width: '24px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="cursor-grab active:cursor-grabbing text-muted hover:text-amber" title="Drag to rearrange routine">
+                          <GripVertical size={16} />
                         </div>
-                        
-                        {/* Grip Icon Overlay */}
-                        <div className="absolute left-[8px] pointer-events-none opacity-40 md:opacity-20 group-hover:opacity-0 transition-opacity hidden md:flex" style={{ width: '20px', height: '100%', alignItems: 'center', justifyContent: 'center', top: 0 }}>
-                          <GripVertical size={14} />
+
+                        <div style={{ width: '16px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <button onClick={() => reorderHabits(habit.id, 'up')} className="opacity-0 group-hover:opacity-100 text-muted hover:text-amber transition-opacity" title="Move Up"><ArrowUp size={12} /></button>
+                          <button onClick={() => reorderHabits(habit.id, 'down')} className="opacity-0 group-hover:opacity-100 text-muted hover:text-amber transition-opacity" title="Move Down"><ArrowDown size={12} /></button>
                         </div>
                         
                         {/* Color Line */}
@@ -1014,7 +1056,7 @@ export default function DailyOps() {
                           </div>
                         </div>
                         
-                        {/* Right Icon - Always reserve space, slightly visible, bright on hover */}
+                        {/* Right Icon */}
                         <button type="button" onClick={() => handleDelete(habit.id)} className="opacity-100 md:opacity-20 group-hover:opacity-100 transition-opacity text-danger" title="Delete Routine" style={{ width: '24px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
                           <Trash2 size={16} />
                         </button>
