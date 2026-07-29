@@ -233,9 +233,10 @@ export function useHabitsInternal(user) {
         // Update optimistic UI with real DB log
         setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
 
+        const habit = habits.find((h) => h.id === habitId)
+
         // Award New XP
         if (newLog) {
-          const habit = habits.find((h) => h.id === habitId)
           const targetDayOfWeek = new Date(targetDate).getDay()
           const freqDays = habit?.frequency_days || [0, 1, 2, 3, 4, 5, 6]
           const isBlocked = !freqDays.includes(targetDayOfWeek)
@@ -251,10 +252,10 @@ export function useHabitsInternal(user) {
               : `Failed routine: ${habit?.title || 'Unknown'}`
             await robustAwardXP(user.id, penaltyXP, 'habit_failed', newLog.id, reason, habit?.stat_category || 'discipline')
           }
-
-          // Persistently update War Room Battle HP in DB
-          await syncWarRoomHabitChange(user.id, habitId, habit?.title || 'Habit', currentStatus, nextStatus)
         }
+
+        // Persistently update War Room Battle HP in DB for ALL status transitions
+        await syncWarRoomHabitChange(user.id, habitId, habit?.title || 'Habit', currentStatus, nextStatus)
       try { 
         await calculateAndUpdateStreak(user.id, habitId)
 

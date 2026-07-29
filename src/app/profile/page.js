@@ -73,6 +73,14 @@ export default function OperatorDashboard() {
   useEffect(() => {
     if (!user) return
     fetchBlueprint()
+
+    const handleBattlesUpdated = (e) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setBattles(e.detail)
+      }
+    }
+    window.addEventListener('lokios_battles_updated', handleBattlesUpdated)
+    return () => window.removeEventListener('lokios_battles_updated', handleBattlesUpdated)
   }, [user])
 
   const fetchBlueprint = async () => {
