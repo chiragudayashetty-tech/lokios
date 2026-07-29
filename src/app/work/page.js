@@ -12,7 +12,7 @@ import {
 import { 
   Briefcase, Video, Film, Clock, Calendar, Check, Save, Download, Printer, 
   Sparkles, TrendingUp, Cpu, Flame, Target, Shield, Filter, FileSpreadsheet,
-  RotateCcw, ArrowRight, Zap
+  RotateCcw, ArrowRight, Zap, AlertTriangle
 } from 'lucide-react'
 
 export default function WorkPage() {
@@ -50,7 +50,7 @@ export default function WorkPage() {
   const [totalHoursWorked, setTotalHoursWorked] = useState('')
   const [beyondTatvaHours, setBeyondTatvaHours] = useState('')
   const [focusedHours, setFocusedHours] = useState('')
-  const [deepExecutionHours, setDeepExecutionHours] = useState('')
+  const [unfocusedHours, setUnfocusedHours] = useState('')
   const [workNotes, setWorkNotes] = useState('')
 
   // Content Ops Form State
@@ -126,13 +126,13 @@ export default function WorkPage() {
       setTotalHoursWorked(existingWork.total_hours_worked ?? '')
       setBeyondTatvaHours(existingWork.beyond_tatva_hours ?? '')
       setFocusedHours(existingWork.focused_hours ?? '')
-      setDeepExecutionHours(existingWork.deep_execution_hours ?? '')
+      setUnfocusedHours(existingWork.unfocused_hours ?? existingWork.deep_execution_hours ?? '')
       setWorkNotes(existingWork.notes ?? '')
     } else {
       setTotalHoursWorked('')
       setBeyondTatvaHours('')
       setFocusedHours('')
-      setDeepExecutionHours('')
+      setUnfocusedHours('')
       setWorkNotes('')
     }
 
@@ -166,7 +166,8 @@ export default function WorkPage() {
       total_hours_worked: parseFloat(totalHoursWorked) || 0,
       beyond_tatva_hours: parseFloat(beyondTatvaHours) || 0,
       focused_hours: parseFloat(focusedHours) || 0,
-      deep_execution_hours: parseFloat(deepExecutionHours) || 0,
+      unfocused_hours: parseFloat(unfocusedHours) || 0,
+      deep_execution_hours: parseFloat(unfocusedHours) || 0, // Fallback for existing column
       notes: workNotes || ''
     }
 
@@ -293,7 +294,7 @@ export default function WorkPage() {
     const totWork = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.total_hours_worked) || 0), 0)
     const totBeyond = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.beyond_tatva_hours) || 0), 0)
     const totFocus = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.focused_hours) || 0), 0)
-    const totDeep = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.deep_execution_hours) || 0), 0)
+    const totUnfocused = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.unfocused_hours ?? l.deep_execution_hours) || 0), 0)
 
     const totShootHrs = filteredContentLogs.reduce((acc, l) => acc + (parseFloat(l.shoot_hours) || 0), 0)
     const totShootRawMins = filteredContentLogs.reduce((acc, l) => acc + (parseFloat(l.shoot_raw_minutes) || 0), 0)
@@ -302,12 +303,13 @@ export default function WorkPage() {
 
     const focusRatio = totWork > 0 ? Math.round((totFocus / totWork) * 100) : 0
     const beyondRatio = totWork > 0 ? Math.round((totBeyond / totWork) * 100) : 0
+    const distractionRatio = totWork > 0 ? Math.round((totUnfocused / totWork) * 100) : 0
     const editRatio = totEditFinishedMins > 0 ? ((totEditHrs * 60) / totEditFinishedMins).toFixed(1) : '—'
 
     return {
-      totWork, totBeyond, totFocus, totDeep,
+      totWork, totBeyond, totFocus, totUnfocused,
       totShootHrs, totShootRawMins, totEditHrs, totEditFinishedMins,
-      focusRatio, beyondRatio, editRatio
+      focusRatio, beyondRatio, distractionRatio, editRatio
     }
   }, [filteredWorkLogs, filteredContentLogs])
 
@@ -334,6 +336,7 @@ export default function WorkPage() {
         Worked: Number(((parseFloat(w.total_hours_worked) || 0) * workMultiplier).toFixed(1)),
         BeyondTatva: Number(((parseFloat(w.beyond_tatva_hours) || 0) * workMultiplier).toFixed(1)),
         Focused: Number(((parseFloat(w.focused_hours) || 0) * workMultiplier).toFixed(1)),
+        Unfocused: Number(((parseFloat(w.unfocused_hours ?? w.deep_execution_hours) || 0) * workMultiplier).toFixed(1)),
         ShootHours: Number(((parseFloat(c.shoot_hours) || 0) * workMultiplier).toFixed(1)),
         RawMins: Number(((parseFloat(c.shoot_raw_minutes) || 0) * minMultiplier).toFixed(1)),
         EditHours: Number(((parseFloat(c.edit_hours) || 0) * workMultiplier).toFixed(1)),
@@ -348,9 +351,10 @@ export default function WorkPage() {
   const handleExportCSV = (type) => {
     let csvContent = 'data:text/csv;charset=utf-8,'
     if (type === 'work') {
-      csvContent += 'Date,Total Hours Worked,Beyond Tatva Hours,Focused Hours,Strategic Hours,Notes\n'
+      csvContent += 'Date,Total Hours Worked,Beyond Tatva Hours,Focused Hours,Unfocused / Distracted Hours,Notes\n'
       workLogs.forEach(l => {
-        csvContent += `"${l.date}","${l.total_hours_worked || 0}","${l.beyond_tatva_hours || 0}","${l.focused_hours || 0}","${l.deep_execution_hours || 0}","${(l.notes || '').replace(/"/g, '""')}"\n`
+        const unfocusedVal = (l.unfocused_hours ?? l.deep_execution_hours) || 0
+        csvContent += `"${l.date}","${l.total_hours_worked || 0}","${l.beyond_tatva_hours || 0}","${l.focused_hours || 0}","${unfocusedVal}","${(l.notes || '').replace(/"/g, '""')}"\n`
       })
     } else {
       csvContent += 'Date,Shoot Hours,Raw Footage Minutes,Edit Hours,Finished Video Minutes,Notes\n'
@@ -379,7 +383,7 @@ export default function WorkPage() {
         <meta charset="utf-8">
         <title>Loki OS - Work & Content Operations Report</title>
         <style>
-          :root { --bg: #090A0F; --card: #12151E; --border: #262B3D; --text: #F3F4F6; --muted: #9CA3AF; --amber: #D4AF37; --cyan: #00F0FF; --green: #10B981; }
+          :root { --bg: #090A0F; --card: #12151E; --border: #262B3D; --text: #F3F4F6; --muted: #9CA3AF; --amber: #D4AF37; --cyan: #00F0FF; --green: #10B981; --red: #EF4444; }
           body { font-family: monospace, sans-serif; background-color: var(--bg); color: var(--text); padding: 30px; margin: 0; }
           .header { border-bottom: 2px solid var(--amber); padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }
           .title { font-size: 24px; font-weight: bold; color: var(--amber); margin: 0; }
@@ -390,6 +394,7 @@ export default function WorkPage() {
           th { color: var(--muted); text-transform: uppercase; font-size: 10px; }
           .text-amber { color: var(--amber); font-weight: bold; }
           .text-cyan { color: var(--cyan); font-weight: bold; }
+          .text-red { color: var(--red); font-weight: bold; }
           @media print {
             body { background: #fff; color: #000; padding: 15px; }
             .section { background: #fff; border: 1px solid #ccc; color: #000; }
@@ -410,22 +415,24 @@ export default function WorkPage() {
 
         <div class="section">
           <h2 class="section-title">⏱️ WORK METRICS SUMMARY</h2>
-          <p>Total Hours Worked: <strong>${totals.totWork.toFixed(1)} h</strong> | Beyond Tatva: <strong>${totals.totBeyond.toFixed(1)} h (${totals.beyondRatio}%)</strong> | Focused Hours: <strong>${totals.totFocus.toFixed(1)} h (${totals.focusRatio}%)</strong></p>
+          <p>Total Hours Worked: <strong>${totals.totWork.toFixed(1)} h</strong> | Beyond Tatva: <strong>${totals.totBeyond.toFixed(1)} h (${totals.beyondRatio}%)</strong> | Focused Hours: <strong>${totals.totFocus.toFixed(1)} h (${totals.focusRatio}%)</strong> | Unfocused: <strong>${totals.totUnfocused.toFixed(1)} h (${totals.distractionRatio}%)</strong></p>
           <table>
             <thead>
-              <tr><th>Date</th><th>Total Worked</th><th>Beyond Tatva</th><th>Focused</th><th>Strategic</th><th>Notes</th></tr>
+              <tr><th>Date</th><th>Total Worked</th><th>Beyond Tatva</th><th>Focused</th><th>Unfocused</th><th>Notes</th></tr>
             </thead>
             <tbody>
-              ${filteredWorkLogs.map(l => `
+              ${filteredWorkLogs.map(l => {
+                const unfocusedVal = (l.unfocused_hours ?? l.deep_execution_hours) || 0
+                return `
                 <tr>
                   <td>${l.date}</td>
                   <td><strong class="text-amber">${l.total_hours_worked || 0} h</strong></td>
                   <td>${l.beyond_tatva_hours || 0} h</td>
                   <td>${l.focused_hours || 0} h</td>
-                  <td>${l.deep_execution_hours || 0} h</td>
+                  <td><strong class="text-red">${unfocusedVal} h</strong></td>
                   <td>${l.notes || '—'}</td>
                 </tr>
-              `).join('')}
+              `}).join('')}
             </tbody>
           </table>
         </div>
@@ -720,24 +727,24 @@ export default function WorkPage() {
                     </span>
                   </div>
 
-                  {/* 4. Strategic / Deep Execution Hours */}
+                  {/* 4. Unfocused / Distracted Hours */}
                   <div className="p-4 rounded-xl bg-secondary border border-border-color space-y-2">
-                    <label className="block font-mono text-xs text-info uppercase font-bold flex items-center gap-2">
-                      <Cpu size={14} /> Strategic / Deep Execution
+                    <label className="block font-mono text-xs text-danger uppercase font-bold flex items-center gap-2">
+                      <AlertTriangle size={14} /> Unfocused / Distracted Hours
                     </label>
                     <input
                       type="number"
                       step="0.1"
                       min="0"
                       max="24"
-                      placeholder="e.g. 3.0"
-                      value={deepExecutionHours}
-                      onChange={(e) => setDeepExecutionHours(e.target.value)}
-                      className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-info"
+                      placeholder="e.g. 1.5"
+                      value={unfocusedHours}
+                      onChange={(e) => setUnfocusedHours(e.target.value)}
+                      className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-danger"
                       style={{ background: '#141824', color: '#fff' }}
                     />
                     <span className="font-mono text-[10px] text-muted block">
-                      Displays as: {formatTimeVal(deepExecutionHours)}
+                      Displays as: {formatTimeVal(unfocusedHours)}
                     </span>
                   </div>
                 </div>
@@ -800,7 +807,7 @@ export default function WorkPage() {
                         <th className="py-2.5 px-3">Total Worked</th>
                         <th className="py-2.5 px-3">Beyond Tatva</th>
                         <th className="py-2.5 px-3">Focused Hours</th>
-                        <th className="py-2.5 px-3">Strategic Hours</th>
+                        <th className="py-2.5 px-3">Unfocused Hours</th>
                         <th className="py-2.5 px-3">Notes</th>
                       </tr>
                     </thead>
@@ -811,7 +818,7 @@ export default function WorkPage() {
                           <td className="py-3 px-3"><strong className="text-amber">{formatTimeVal(l.total_hours_worked)}</strong></td>
                           <td className="py-3 px-3 text-cyan">{formatTimeVal(l.beyond_tatva_hours)}</td>
                           <td className="py-3 px-3 text-success">{formatTimeVal(l.focused_hours)}</td>
-                          <td className="py-3 px-3 text-info">{formatTimeVal(l.deep_execution_hours)}</td>
+                          <td className="py-3 px-3 text-danger font-bold">{formatTimeVal((l.unfocused_hours ?? l.deep_execution_hours))}</td>
                           <td className="py-3 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
                         </tr>
                       ))}
@@ -1190,6 +1197,10 @@ export default function WorkPage() {
                           <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
                           <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                         </linearGradient>
+                        <linearGradient id="gradUnfocused" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#EF4444" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                        </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#262B3D" />
                       <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
@@ -1201,6 +1212,7 @@ export default function WorkPage() {
                       <Area type="monotone" dataKey="Worked" stroke="#D4AF37" fillOpacity={1} fill="url(#gradWorked)" name="Total Worked" />
                       <Area type="monotone" dataKey="BeyondTatva" stroke="#00F0FF" fillOpacity={1} fill="url(#gradBeyond)" name="Beyond Tatva" />
                       <Area type="monotone" dataKey="Focused" stroke="#10B981" fillOpacity={1} fill="url(#gradFocused)" name="Focused Hours" />
+                      <Area type="monotone" dataKey="Unfocused" stroke="#EF4444" fillOpacity={1} fill="url(#gradUnfocused)" name="Unfocused Hours" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
