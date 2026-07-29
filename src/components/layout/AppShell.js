@@ -10,7 +10,6 @@ import {
   BookOpen, Briefcase, CalendarDays, Monitor, User,
   Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList, Scale, Download
 } from 'lucide-react'
-import LokiAI from '@/components/LokiAI'
 import IntelExportModal from '@/components/ui/IntelExportModal'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { initBackgroundReminders } from '@/lib/utils/notifications'
@@ -142,18 +141,7 @@ export default function AppShell({ children }) {
                 <X size={20} />
                 <span className="font-display tracking-wider uppercase text-sm">Close Menu</span>
               </button>
-              
-              <button 
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  setExportModalOpen(true)
-                }}
-                className="w-full flex items-center justify-center gap-3 p-4 bg-tertiary border border-amber/50 rounded-xl text-amber active:scale-95 transition-transform"
-              >
-                <Download size={20} />
-                <span className="font-display tracking-wider uppercase text-sm">Export Intel & Report</span>
-              </button>
-              
+
               <button 
                 onClick={() => {
                   if (typeof window !== 'undefined') {
@@ -177,8 +165,6 @@ export default function AppShell({ children }) {
                 <LogOut size={20} />
                 <span className="font-display tracking-wider uppercase text-sm">Sign Out</span>
               </button>
-
-              <LokiAI />
 
               <div className="flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
                 <div className="flex items-center gap-3">
@@ -241,7 +227,6 @@ export default function AppShell({ children }) {
             <Download size={14} />
             Export Intel
           </button>
-          <LokiAI />
           <button 
             onClick={() => {
               if (confirm('Are you sure you want to sign out?')) {
