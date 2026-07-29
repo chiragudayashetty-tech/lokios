@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Scale, Moon, Clock, Sparkles, CheckCircle2 } from 'lucide-react'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Scale, Moon, Clock, Sparkles, CheckCircle2, Minus } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
@@ -470,6 +470,12 @@ export default function DailyOps() {
     const explicitStatus = logMap.get(`${habitId}::${dateStr}`)
     if (explicitStatus) return explicitStatus
     
+    // Automatically block days prior to habit creation date
+    if (habit?.created_at) {
+      const createdDateStr = getLocalDateStr(new Date(habit.created_at))
+      if (dateStr < createdDateStr) return 'blocked'
+    }
+
     // Automatically block days not in the active days array
     if (!freqDays.includes(dateObj.getDay())) return 'blocked'
     
@@ -1098,7 +1104,7 @@ export default function DailyOps() {
                           }}>
                             {status === 'completed' && <Check size={12} color="#fff" strokeWidth={3} />}
                             {status === 'failed' && <X size={12} color="#fff" strokeWidth={3} />}
-                            {status === 'blocked' && <Leaf size={12} color="var(--warning)" strokeWidth={3} />}
+                            {status === 'blocked' && <Minus size={12} className="text-muted opacity-50" strokeWidth={3} />}
                           </div>
                         </td>
                       )

@@ -347,9 +347,10 @@ export function useHabitsInternal(user) {
     if (!user) return null
 
     try {
+      const payload = { created_at: new Date().toISOString(), ...data, user_id: user.id }
       const { data: newHabit, error } = await supabase
         .from('habits')
-        .insert({ ...data, user_id: user.id })
+        .insert(payload)
         .select()
         .single()
 
