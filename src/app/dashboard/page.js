@@ -18,6 +18,7 @@ import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { RANK_CONFIG } from '@/lib/constants'
 import { getLocalDateStr, getEndOfWeek } from '@/lib/utils/dates'
+import { syncWarRoomDailyEvaluator } from '@/lib/utils/warRoomSync'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
@@ -134,18 +135,23 @@ export default function MissionControl() {
         .eq('user_id', user.id)
         .gte('created_at', thirtyDaysAgoStr)
 
-      // 1b. Fetch Active Battles (War Room)
-      const { data: blueprintRows } = await sb
-        .from('user_blueprints')
-        .select('id, battles, last_evaluated_date')
-        .eq('user_id', user.id)
+      // 1b. Fetch Active Battles (War Room) & Run Daily Catch-up Evaluator
+      const evaluatedBattles = await syncWarRoomDailyEvaluator(user.id)
+      if (evaluatedBattles && evaluatedBattles.length > 0) {
+        setBattles(evaluatedBattles)
+      } else {
+        const { data: blueprintRows } = await sb
+          .from('user_blueprints')
+          .select('id, battles, last_evaluated_date')
+          .eq('user_id', user.id)
 
-      const blueprints = blueprintRows?.[0]
-      const rawBattles = (blueprints?.battles && Array.isArray(blueprints.battles) && blueprints.battles.length > 0)
-        ? blueprints.battles
-        : DEFAULT_BATTLES
+        const blueprints = blueprintRows?.[0]
+        const rawBattles = (blueprints?.battles && Array.isArray(blueprints.battles) && blueprints.battles.length > 0)
+          ? blueprints.battles
+          : DEFAULT_BATTLES
 
-      setBattles(rawBattles)
+        setBattles(rawBattles)
+      }
 
       // Fetch today's screen time log for live battle calculations
       const { data: stLogs } = await sb
@@ -793,9 +799,9 @@ export default function MissionControl() {
                     const Icon       = BATTLE_ICONS[battle.name] || Swords
                     const sevColor   = SEVERITY_COLORS[battle.severity] || 'var(--info)'
 
-                    // Calculate Live HP & Intel Factors for Today
+                    // Persistent HP & Live Intel Factors for Today
                     const liveIntel  = (function() {
-                      let baseHp = battle.hp !== undefined ? battle.hp : 50
+                      const hp = Math.max(0, Math.min(100, battle.hp !== undefined ? battle.hp : 50))
                       const succeeded = []
                       const failed = []
 
@@ -807,10 +813,8 @@ export default function MissionControl() {
                           const title = habit?.title || 'Linked Habit'
 
                           if (log?.status === 'completed') {
-                            baseHp -= 15
                             succeeded.push(`Completed habit "${title}" (-15 HP to threat)`)
                           } else if (log?.status === 'failed') {
-                            baseHp += 20
                             failed.push(`Failed habit "${title}" (+20 HP to threat)`)
                           }
                         })
@@ -824,32 +828,25 @@ export default function MissionControl() {
                           const sHours = parseFloat(todayScreenTime.streaming_hours) || 0
 
                           if (tHours < 6) {
-                            baseHp -= 10
-                            succeeded.push(`Screen Time (${tHours}h) < 6h limit (-10 HP)`)
+                            succeeded.push(`Screen Time (${tHours}h) < 6h limit`)
                           } else {
-                            baseHp += 15
-                            failed.push(`Screen Time (${tHours}h) ≥ 6h limit (+15 HP)`)
+                            failed.push(`Screen Time (${tHours}h) ≥ 6h limit`)
                           }
 
                           if (dMins < 60) {
-                            baseHp -= 10
-                            succeeded.push(`Doomscroll (${dMins}m) < 60m limit (-10 HP)`)
+                            succeeded.push(`Doomscroll (${dMins}m) < 60m limit`)
                           } else {
-                            baseHp += 15
-                            failed.push(`Doomscroll (${dMins}m) ≥ 60m limit (+15 HP)`)
+                            failed.push(`Doomscroll (${dMins}m) ≥ 60m limit`)
                           }
 
                           if (sHours < 1) {
-                            baseHp -= 5
-                            succeeded.push(`Streaming (${sHours}h) < 1h limit (-5 HP)`)
+                            succeeded.push(`Streaming (${sHours}h) < 1h limit`)
                           } else {
-                            baseHp += 10
-                            failed.push(`Streaming (${sHours}h) ≥ 1h limit (+10 HP)`)
+                            failed.push(`Streaming (${sHours}h) ≥ 1h limit`)
                           }
                         }
                       }
 
-                      const hp = Math.max(0, Math.min(100, baseHp))
                       return { hp, succeeded, failed }
                     })()
 

@@ -1,0 +1,187 @@
+// ── Loki OS War Room Persistent Battle Sync Engine ───────────────────────────
+
+import { createClient } from '@/lib/supabase/client'
+import { getLocalDateStr } from '@/lib/utils/dates'
+
+/**
+ * Persistently updates War Room battle HP when a linked habit status changes.
+ * - Completed: -15 HP (deal damage to threat pool)
+ * - Failed/Missed: +20 HP (threat level increases)
+ * - Unmarked/Cleared: Reverts previous delta
+ */
+export async function syncWarRoomHabitChange(userId, habitId, habitTitle, oldStatus, newStatus) {
+  if (typeof window === 'undefined' || !userId || !habitId) return null
+  if (oldStatus === newStatus) return null
+
+  try {
+    const supabase = createClient()
+    const { data: bpRow, error: fetchErr } = await supabase
+      .from('user_blueprints')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (fetchErr || !bpRow || !bpRow.battles || !Array.isArray(bpRow.battles)) return null
+
+    let updated = false
+    const battles = bpRow.battles.map(b => {
+      const isLinked = b.linked_habits && Array.isArray(b.linked_habits) && b.linked_habits.includes(habitId)
+      if (!isLinked) return b
+
+      const currentHp = b.hp !== undefined ? b.hp : 50
+      let delta = 0
+      const actions = []
+
+      // Calculate Net Delta between oldStatus and newStatus
+      if (oldStatus === 'completed') delta += 15 // Revert previous -15
+      if (oldStatus === 'failed') delta -= 20   // Revert previous +20
+
+      if (newStatus === 'completed') {
+        delta -= 15
+        actions.push(`Completed routine "${habitTitle}" (-15 HP to threat)`)
+      } else if (newStatus === 'failed') {
+        delta += 20
+        actions.push(`Failed routine "${habitTitle}" (+20 HP to threat)`)
+      } else if (oldStatus === 'completed') {
+        actions.push(`Cleared completion of "${habitTitle}" (+15 HP reverted)`)
+      } else if (oldStatus === 'failed') {
+        actions.push(`Cleared failure of "${habitTitle}" (-20 HP reverted)`)
+      }
+
+      if (delta === 0) return b
+
+      const newHp = Math.max(0, Math.min(100, currentHp + delta))
+      updated = true
+
+      const logs = b.combat_logs || []
+      actions.forEach(act => {
+        logs.unshift({
+          date: getLocalDateStr(new Date()),
+          action: act,
+          hpChange: delta
+        })
+      })
+
+      return {
+        ...b,
+        hp: newHp,
+        status: newHp === 0 ? 'defeated' : 'active',
+        combat_logs: logs.slice(0, 30) // Keep latest 30 logs
+      }
+    })
+
+    if (updated) {
+      const { error: saveErr } = await supabase
+        .from('user_blueprints')
+        .update({ battles })
+        .eq('id', bpRow.id)
+
+      if (saveErr) console.error('Error saving updated War Room battles:', saveErr)
+      return battles
+    }
+  } catch (e) {
+    console.error('Failed to sync War Room battle for habit change:', e)
+  }
+  return null
+}
+
+/**
+ * Overnight / Daily catch-up sync:
+ * Checks if a new day has passed since last_evaluated_date.
+ * Evaluates unlogged habits from yesterday and applies +20 HP penalty to linked battle threats.
+ * Guarantees battle.hp baseline carries over without resetting to 100/50!
+ */
+export async function syncWarRoomDailyEvaluator(userId) {
+  if (typeof window === 'undefined' || !userId) return null
+
+  try {
+    const supabase = createClient()
+    const todayStr = getLocalDateStr(new Date())
+
+    const { data: bpRow, error: fetchErr } = await supabase
+      .from('user_blueprints')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (fetchErr || !bpRow) return null
+
+    const lastEval = bpRow.last_evaluated_date
+    if (lastEval === todayStr) {
+      // Already evaluated for today
+      return bpRow.battles || []
+    }
+
+    // New day detected! Process missed habits from previous day
+    const yesterdayDate = new Date()
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+    const yesterdayStr = getLocalDateStr(yesterdayDate)
+
+    const { data: habits } = await supabase.from('habits').select('*').eq('user_id', userId).eq('is_archived', false)
+    const { data: yesterdayLogs } = await supabase.from('habit_logs').select('*').eq('user_id', userId).eq('date', yesterdayStr)
+
+    const completedIds = new Set((yesterdayLogs || []).filter(l => l.status === 'completed').map(l => l.habit_id))
+    const failedIds = new Set((yesterdayLogs || []).filter(l => l.status === 'failed').map(l => l.habit_id))
+
+    const yesterdayDayOfWeek = yesterdayDate.getDay()
+
+    let battlesUpdated = false
+    const battles = (bpRow.battles || []).map(b => {
+      if (!b.linked_habits || !Array.isArray(b.linked_habits) || b.linked_habits.length === 0) return b
+
+      let hpDelta = 0
+      const actions = []
+
+      b.linked_habits.forEach(habitId => {
+        if (habitId === 'sys_screen_intel') return
+        const habit = (habits || []).find(h => h.id === habitId)
+        if (!habit) return
+
+        const freqDays = habit.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+        const wasScheduled = freqDays.includes(yesterdayDayOfWeek)
+
+        if (wasScheduled && !completedIds.has(habitId)) {
+          // Habit was missed or failed yesterday!
+          if (!failedIds.has(habitId)) {
+            hpDelta += 20
+            actions.push(`Missed scheduled routine "${habit.title}" yesterday (+20 HP to threat)`)
+          }
+        }
+      })
+
+      if (hpDelta > 0) {
+        battlesUpdated = true
+        const currentHp = b.hp !== undefined ? b.hp : 50
+        const newHp = Math.max(0, Math.min(100, currentHp + hpDelta))
+
+        const logs = b.combat_logs || []
+        actions.forEach(act => {
+          logs.unshift({ date: todayStr, action: act, hpChange: 20 })
+        })
+
+        return {
+          ...b,
+          hp: newHp,
+          status: newHp === 0 ? 'defeated' : 'active',
+          combat_logs: logs.slice(0, 30)
+        }
+      }
+
+      return b
+    })
+
+    // Update last_evaluated_date and battles in DB
+    await supabase
+      .from('user_blueprints')
+      .update({
+        battles,
+        last_evaluated_date: todayStr
+      })
+      .eq('id', bpRow.id)
+
+    return battles
+  } catch (e) {
+    console.error('Failed War Room daily evaluator:', e)
+  }
+  return null
+}

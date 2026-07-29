@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateAndUpdateStreak } from '@/lib/utils/streakCalc'
+import { syncWarRoomHabitChange } from '@/lib/utils/warRoomSync'
 
 /**
  * Calculates prior consecutive missed/failed scheduled days before targetDateStr for a habit.
@@ -250,6 +251,9 @@ export function useHabitsInternal(user) {
               : `Failed routine: ${habit?.title || 'Unknown'}`
             await robustAwardXP(user.id, penaltyXP, 'habit_failed', newLog.id, reason, habit?.stat_category || 'discipline')
           }
+
+          // Persistently update War Room Battle HP in DB
+          await syncWarRoomHabitChange(user.id, habitId, habit?.title || 'Habit', currentStatus, nextStatus)
         }
       try { 
         await calculateAndUpdateStreak(user.id, habitId)

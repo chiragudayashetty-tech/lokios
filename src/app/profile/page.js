@@ -11,6 +11,7 @@ import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, 
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
+import { syncWarRoomDailyEvaluator } from '@/lib/utils/warRoomSync'
 import NotificationControl from '@/components/ui/NotificationControl'
 
 // ── DEFAULT BLUEPRINT DATA ──
@@ -76,6 +77,8 @@ export default function OperatorDashboard() {
 
   const fetchBlueprint = async () => {
     const supabase = createClient()
+    const evaluatedBattles = await syncWarRoomDailyEvaluator(user.id)
+
     const { data: rows, error } = await supabase.from('user_blueprints').select('*').eq('user_id', user.id)
     
     if (error) {
@@ -83,7 +86,7 @@ export default function OperatorDashboard() {
     }
 
     if (rows && rows.length > 0) {
-      const data = rows[0] // take the first one if multiple exist
+      const data = rows[0]
       setBlueprint(data)
       setForm({
         identity: data.identity || DEFAULT_BLUEPRINT.identity,
@@ -94,21 +97,22 @@ export default function OperatorDashboard() {
         strengths: data.strengths ? data.strengths.join('\n') : DEFAULT_BLUEPRINT.strengths.join('\n'),
         future_vision: data.future_vision || DEFAULT_BLUEPRINT.future_vision
       })
-      if (data.battles && Array.isArray(data.battles)) {
-        // Migrate old battles (status) to new battles (hp)
+      if (evaluatedBattles && evaluatedBattles.length > 0) {
+        setBattles(evaluatedBattles)
+      } else if (data.battles && Array.isArray(data.battles)) {
         const migratedBattles = data.battles.map(b => ({
           name: b.name,
           severity: b.severity,
           notes: b.notes,
-          hp: b.hp !== undefined ? b.hp : (b.status === 'defeated' ? 0 : 100),
+          hp: b.hp !== undefined ? b.hp : (b.status === 'defeated' ? 0 : 50),
           linked_habits: b.linked_habits || []
         }))
         setBattles(migratedBattles)
       } else {
-        setBattles([]) // If data.battles is null or undefined or empty in a weird way, reset it.
+        setBattles([])
       }
     } else {
-      setBattles(DEFAULT_BATTLES) // Fallback if no blueprint
+      setBattles(evaluatedBattles || DEFAULT_BATTLES)
     }
 
     const todayStr = getLocalDateStr(new Date())
@@ -464,9 +468,9 @@ export default function OperatorDashboard() {
                   {battles.map((battle, idx) => {
                     const sevColor = SEVERITY_COLORS[battle.severity] || 'var(--info)'
 
-                    // Calculate Live HP & Intel Factors for Today
+                    // Persistent HP & Live Intel Factors for Today
                     const liveIntel = (function() {
-                      let baseHp = battle.hp !== undefined ? battle.hp : 50
+                      const hp = Math.max(0, Math.min(100, battle.hp !== undefined ? battle.hp : 50))
                       const succeeded = []
                       const failed = []
 
@@ -478,10 +482,8 @@ export default function OperatorDashboard() {
                           const title = habit?.title || 'Linked Habit'
 
                           if (log?.status === 'completed') {
-                            baseHp -= 15
                             succeeded.push(`Completed habit "${title}" (-15 HP to threat)`)
                           } else if (log?.status === 'failed') {
-                            baseHp += 20
                             failed.push(`Failed habit "${title}" (+20 HP to threat)`)
                           }
                         })
@@ -495,32 +497,25 @@ export default function OperatorDashboard() {
                           const sHours = parseFloat(todayScreenTime.streaming_hours) || 0
 
                           if (tHours <= 6) {
-                            baseHp -= 10
-                            succeeded.push(`Screen Time (${tHours}h) ≤ 6h limit (-10 HP)`)
+                            succeeded.push(`Screen Time (${tHours}h) ≤ 6h limit`)
                           } else {
-                            baseHp += 15
-                            failed.push(`Screen Time (${tHours}h) > 6h limit (+15 HP)`)
+                            failed.push(`Screen Time (${tHours}h) > 6h limit`)
                           }
 
                           if (dMins <= 60) {
-                            baseHp -= 10
-                            succeeded.push(`Doomscroll (${dMins}m) ≤ 60m limit (-10 HP)`)
+                            succeeded.push(`Doomscroll (${dMins}m) ≤ 60m limit`)
                           } else {
-                            baseHp += 15
-                            failed.push(`Doomscroll (${dMins}m) > 60m limit (+15 HP)`)
+                            failed.push(`Doomscroll (${dMins}m) > 60m limit`)
                           }
 
                           if (sHours <= 2) {
-                            baseHp -= 5
-                            succeeded.push(`Streaming (${sHours}h) ≤ 2h limit (-5 HP)`)
+                            succeeded.push(`Streaming (${sHours}h) ≤ 2h limit`)
                           } else {
-                            baseHp += 10
-                            failed.push(`Streaming (${sHours}h) > 2h limit (+10 HP)`)
+                            failed.push(`Streaming (${sHours}h) > 2h limit`)
                           }
                         }
                       }
 
-                      const hp = Math.max(0, Math.min(100, baseHp))
                       return { hp, succeeded, failed }
                     })()
 
