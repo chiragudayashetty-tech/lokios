@@ -8,9 +8,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList, Scale
+  Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList, Scale, Download
 } from 'lucide-react'
 import LokiAI from '@/components/LokiAI'
+import IntelExportModal from '@/components/ui/IntelExportModal'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { initBackgroundReminders } from '@/lib/utils/notifications'
 
@@ -35,6 +36,7 @@ export default function AppShell({ children }) {
   const { auth, profile: { profile }, tasks: { todayTasks }, habits: { habits, todayLogs } } = useOS()
   const { user } = auth
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
 
   // Close mobile menu on Escape key
   useEffect(() => {
@@ -143,6 +145,17 @@ export default function AppShell({ children }) {
               
               <button 
                 onClick={() => {
+                  setMobileMenuOpen(false)
+                  setExportModalOpen(true)
+                }}
+                className="w-full flex items-center justify-center gap-3 p-4 bg-tertiary border border-amber/50 rounded-xl text-amber active:scale-95 transition-transform"
+              >
+                <Download size={20} />
+                <span className="font-display tracking-wider uppercase text-sm">Export Intel & Report</span>
+              </button>
+              
+              <button 
+                onClick={() => {
                   if (typeof window !== 'undefined') {
                     window.location.reload();
                   }
@@ -183,19 +196,16 @@ export default function AppShell({ children }) {
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar */}
-      <aside className="sidebar hidden-mobile">
+      {/* Sidebar - Desktop */}
+      <aside className="sidebar">
         <div className="sidebar-header">
-          <div className="sidebar-logo">C</div>
-          <div className="flex-col" style={{ minWidth: 0 }}>
-            <span className="sidebar-title">CHIRAGOS</span>
-            <span className="sidebar-version">PRIVATE OS</span>
-          </div>
+          <Link href="/dashboard" className="logo">
+            <span className="logo-text">CHIRAG OS</span>
+            <span className="logo-badge">v2.0</span>
+          </Link>
         </div>
 
-        <div className="sidebar-section-label">Systems</div>
-
-        <nav className="sidebar-nav">
+        <nav className="nav-list">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
@@ -224,6 +234,13 @@ export default function AppShell({ children }) {
               <span className="font-mono text-sm text-primary font-bold">LV.{profile ? calculateLevel(profile.total_xp || 0) : 1}</span>
             </div>
           </div>
+          <button
+            onClick={() => setExportModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 mt-2 p-2 rounded border border-amber/40 bg-amber/10 text-amber hover:bg-amber/20 transition-colors font-mono text-xs uppercase tracking-wider"
+          >
+            <Download size={14} />
+            Export Intel
+          </button>
           <LokiAI />
           <button 
             onClick={() => {
@@ -231,7 +248,7 @@ export default function AppShell({ children }) {
                 auth.signOut()
               }
             }}
-            className="w-full flex items-center justify-center gap-2 mt-3 p-2 rounded text-muted hover:text-danger hover:bg-danger-subtle transition-colors font-mono text-xs uppercase tracking-wider"
+            className="w-full flex items-center justify-center gap-2 mt-2 p-2 rounded text-muted hover:text-danger hover:bg-danger-subtle transition-colors font-mono text-xs uppercase tracking-wider"
           >
             <LogOut size={14} />
             Sign Out
@@ -243,6 +260,12 @@ export default function AppShell({ children }) {
       <main className="main-content">
         {children}
       </main>
+
+      {/* Intel Export & Report Generator Modal */}
+      <IntelExportModal 
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+      />
 
       {/* Mobile Bottom Nav */}
       <nav className="mobile-nav" style={{ zIndex: 100 }}>
