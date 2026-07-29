@@ -86,6 +86,21 @@ export default function DailyOps() {
     window.addEventListener('touchend', onEnd)
   }
 
+  const autoFitHabitCol = () => {
+    if (!habits || habits.length === 0) return
+    let maxLen = 0
+    habits.forEach(h => {
+      if (h.title && h.title.length > maxLen) {
+        maxLen = h.title.length
+      }
+    })
+    const idealWidth = Math.max(220, Math.min(650, Math.ceil(maxLen * 8.5) + 120))
+    setHabitColWidth(idealWidth)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lokios_habit_col_width', idealWidth.toString())
+    }
+  }
+
   // Sleep Tracker Widget State (Persisted in localStorage across tab switches)
   const [sleepTargetDate, setSleepTargetDate] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -944,46 +959,101 @@ export default function DailyOps() {
           </HudPanel>
         </div>
 
-        {/* Paint Tool Selector */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-          <span className="font-display text-[10px] uppercase tracking-widest text-muted">PAINT MODE</span>
-          <div className="flex flex-row items-center bg-tertiary border border-border-color rounded overflow-hidden">
-            <button 
+        {/* Paint Tool & Column Width Controls */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+          <div className="flex flex-row items-center gap-3">
+            <span className="font-display text-[10px] uppercase tracking-widest text-muted">PAINT MODE</span>
+            <div className="flex flex-row items-center bg-tertiary border border-border-color rounded overflow-hidden">
+              <button 
+                type="button"
+                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover text-primary'}`}
+                onClick={() => setActiveTool('cycle')}
+              >
+                <RotateCcw size={13} /> CYCLE
+              </button>
+              <button 
+                type="button"
+                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover text-success'}`}
+                onClick={() => setActiveTool('completed')}
+              >
+                <Check size={13} /> DONE
+              </button>
+              <button 
+                type="button"
+                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover text-danger'}`}
+                onClick={() => setActiveTool('failed')}
+              >
+                <X size={13} /> FAIL
+              </button>
+              <button 
+                type="button"
+                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'text-bg-primary' : 'active:bg-hover'}`}
+                style={activeTool === 'blocked' ? { backgroundColor: 'var(--warning)' } : { color: 'var(--warning)' }}
+                onClick={() => setActiveTool('blocked')}
+              >
+                <Leaf size={13} /> BLOCK
+              </button>
+              <button 
+                type="button"
+                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover text-muted'}`}
+                onClick={() => setActiveTool('none')}
+              >
+                <Trash2 size={13} /> CLEAR
+              </button>
+            </div>
+          </div>
+
+          {/* Habit Column Width Controls */}
+          <div className="hidden-mobile flex items-center gap-2 bg-tertiary border border-border-color rounded-lg px-3 py-1.5">
+            <span className="font-mono text-[10px] text-muted uppercase">COLUMN:</span>
+            <button
               type="button"
-              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover text-primary'}`}
-              onClick={() => setActiveTool('cycle')}
+              onClick={autoFitHabitCol}
+              className="px-2 py-1 bg-amber/10 border border-amber/30 text-amber hover:bg-amber/20 rounded font-mono text-[10px] uppercase font-bold transition-colors"
+              title="Automatically resize column to fit the longest routine title"
             >
-              <RotateCcw size={13} /> CYCLE
+              Auto-Fit
             </button>
-            <button 
-              type="button"
-              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover text-success'}`}
-              onClick={() => setActiveTool('completed')}
-            >
-              <Check size={13} /> DONE
-            </button>
-            <button 
-              type="button"
-              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover text-danger'}`}
-              onClick={() => setActiveTool('failed')}
-            >
-              <X size={13} /> FAIL
-            </button>
-            <button 
-              type="button"
-              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'text-bg-primary' : 'active:bg-hover'}`}
-              style={activeTool === 'blocked' ? { backgroundColor: 'var(--warning)' } : { color: 'var(--warning)' }}
-              onClick={() => setActiveTool('blocked')}
-            >
-              <Leaf size={13} /> BLOCK
-            </button>
-            <button 
-              type="button"
-              className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover text-muted'}`}
-              onClick={() => setActiveTool('none')}
-            >
-              <Trash2 size={13} /> CLEAR
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const w = Math.max(180, habitColWidth - 30)
+                  setHabitColWidth(w)
+                  if (typeof window !== 'undefined') localStorage.setItem('lokios_habit_col_width', w.toString())
+                }}
+                className="w-6 h-6 flex-center bg-secondary border border-border-subtle rounded font-mono text-xs text-muted hover:text-primary transition-colors"
+                title="Decrease Width"
+              >
+                -
+              </button>
+              <input
+                type="range"
+                min="180"
+                max="550"
+                value={habitColWidth}
+                onChange={(e) => {
+                  const w = parseInt(e.target.value, 10)
+                  setHabitColWidth(w)
+                  if (typeof window !== 'undefined') localStorage.setItem('lokios_habit_col_width', w.toString())
+                }}
+                className="w-20 accent-amber cursor-pointer"
+                title="Drag to adjust column width"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const w = Math.min(550, habitColWidth + 30)
+                  setHabitColWidth(w)
+                  if (typeof window !== 'undefined') localStorage.setItem('lokios_habit_col_width', w.toString())
+                }}
+                className="w-6 h-6 flex-center bg-secondary border border-border-subtle rounded font-mono text-xs text-muted hover:text-primary transition-colors"
+                title="Increase Width"
+              >
+                +
+              </button>
+            </div>
+            <span className="font-mono text-[10px] text-amber font-bold w-12 text-right">{habitColWidth}px</span>
           </div>
         </div>
 
@@ -1000,19 +1070,22 @@ export default function DailyOps() {
             <thead>
               <tr>
                 <th className="sticky z-20 col-habit relative group select-none" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
-                  <div className="w-full flex items-center justify-between" style={{ padding: '10px 14px 10px 16px', textAlign: 'left' }}>
+                  <div className="w-full flex items-center justify-between pr-6" style={{ padding: '10px 14px 10px 16px', textAlign: 'left' }}>
                     <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
                     <span className="font-mono text-[9px] text-muted opacity-50 font-normal">({habitColWidth}px)</span>
                   </div>
-                  {/* Draggable Column Width Resizer Handle */}
+                  {/* Prominent Draggable Column Width Resizer Handle */}
                   <div
                     onMouseDown={startResizingHabitCol}
                     onTouchStart={startResizingHabitCol}
-                    className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-amber/40 active:bg-amber flex items-center justify-center transition-colors z-30"
+                    className="absolute right-0 top-0 bottom-0 w-6 cursor-col-resize hover:bg-amber/30 active:bg-amber/50 flex items-center justify-center transition-all z-30 group/handle"
                     title="Click & Drag to resize column width"
                     style={{ touchAction: 'none' }}
                   >
-                    <div className="w-0.5 h-4 bg-muted/60 rounded group-hover:bg-amber" />
+                    <div className="flex gap-0.5 items-center justify-center">
+                      <div className="w-0.5 h-4 bg-amber/70 rounded group-hover/handle:bg-amber group-hover/handle:h-5 transition-all" />
+                      <div className="w-0.5 h-4 bg-amber/70 rounded group-hover/handle:bg-amber group-hover/handle:h-5 transition-all" />
+                    </div>
                   </div>
                 </th>
                 <th className="sticky z-20 col-xp" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)' }}>
