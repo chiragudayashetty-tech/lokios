@@ -112,7 +112,9 @@ export function useHabitsInternal(user) {
         status: 'failed'
       }))
 
-      setHabits(habitsRes.data || [])
+      const fetchedHabits = habitsRes.data || []
+      fetchedHabits.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0) || new Date(a.created_at) - new Date(b.created_at))
+      setHabits(fetchedHabits)
       setMonthLogs([...realLogs, ...virtualFailedLogs])
       
       // Admin one-time DB clear script if flag not found (Reset tracking from Jun 15)
@@ -409,45 +411,44 @@ export function useHabitsInternal(user) {
   }, [user])
 
   const reorderHabits = useCallback(async (habitId, direction) => {
-    const sorted = [...habits].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    const sorted = [...habits]
     const index = sorted.findIndex(h => h.id === habitId)
     if (index === -1) return
     
     let swapIndex = direction === 'up' ? index - 1 : index + 1
     if (swapIndex < 0 || swapIndex >= sorted.length) return
     
-    const habitA = { ...sorted[index] }
-    const habitB = { ...sorted[swapIndex] }
-    const tempTime = habitA.created_at
-    habitA.created_at = habitB.created_at
-    habitB.created_at = tempTime
+    const [moved] = sorted.splice(index, 1)
+    sorted.splice(swapIndex, 0, moved)
     
-    sorted[index] = habitA
-    sorted[swapIndex] = habitB
+    const updatedHabits = sorted.map((h, i) => ({
+      ...h,
+      display_order: i + 1
+    }))
     
-    const newSorted = [...sorted].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    setHabits(newSorted)
+    setHabits(updatedHabits)
     
-    await Promise.all([
-      supabase.from('habits').update({ created_at: habitA.created_at }).eq('id', habitA.id).eq('user_id', user.id),
-      supabase.from('habits').update({ created_at: habitB.created_at }).eq('id', habitB.id).eq('user_id', user.id)
-    ])
+    const supabase = createClient()
+    await Promise.all(
+      updatedHabits.map(h =>
+        supabase.from('habits').update({ display_order: h.display_order }).eq('id', h.id).eq('user_id', user.id)
+      )
+    )
   }, [habits, user])
 
   const reorderHabitsByDrag = useCallback(async (draggedId, targetId) => {
     if (!draggedId || !targetId || draggedId === targetId || !user) return
-    const currentSorted = [...habits].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    const dragIdx = currentSorted.findIndex(h => h.id === draggedId)
-    const targetIdx = currentSorted.findIndex(h => h.id === targetId)
+    const sorted = [...habits]
+    const dragIdx = sorted.findIndex(h => h.id === draggedId)
+    const targetIdx = sorted.findIndex(h => h.id === targetId)
     if (dragIdx === -1 || targetIdx === -1) return
 
-    const [moved] = currentSorted.splice(dragIdx, 1)
-    currentSorted.splice(targetIdx, 0, moved)
+    const [moved] = sorted.splice(dragIdx, 1)
+    sorted.splice(targetIdx, 0, moved)
 
-    const baseTime = new Date('2026-01-01T00:00:00Z').getTime()
-    const updatedHabits = currentSorted.map((h, i) => ({
+    const updatedHabits = sorted.map((h, i) => ({
       ...h,
-      created_at: new Date(baseTime + i * 1000).toISOString()
+      display_order: i + 1
     }))
 
     setHabits(updatedHabits)
@@ -455,7 +456,7 @@ export function useHabitsInternal(user) {
     const supabase = createClient()
     await Promise.all(
       updatedHabits.map(h =>
-        supabase.from('habits').update({ created_at: h.created_at }).eq('id', h.id).eq('user_id', user.id)
+        supabase.from('habits').update({ display_order: h.display_order }).eq('id', h.id).eq('user_id', user.id)
       )
     )
   }, [habits, user])

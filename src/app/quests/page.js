@@ -472,9 +472,26 @@ export default function DailyOps() {
     const explicitStatus = logMap.get(`${habitId}::${dateStr}`)
     if (explicitStatus) return explicitStatus
     
-    // Automatically block days prior to habit creation date (fallback to today if missing)
+    // Automatically block days prior to habit creation date (with smart recovery for corrupted timestamps)
+    let createdDateStr = null
     const rawCreatedAt = habit.created_at || habit.created_date
-    const createdDateStr = rawCreatedAt ? getLocalDateStr(new Date(rawCreatedAt)) : getLocalDateStr()
+
+    if (rawCreatedAt && (rawCreatedAt.startsWith('2026-01-01') || rawCreatedAt.startsWith('2026-01-02'))) {
+      const logsForHabit = monthLogs.filter(l => l.habit_id === habitId && l.date)
+      if (logsForHabit.length > 0) {
+        const sortedLogs = [...logsForHabit].sort((a, b) => a.date.localeCompare(b.date))
+        createdDateStr = sortedLogs[0].date
+      } else {
+        createdDateStr = getLocalDateStr()
+      }
+    } else if (rawCreatedAt) {
+      const parsedDate = new Date(rawCreatedAt)
+      if (!isNaN(parsedDate.getTime())) {
+        createdDateStr = getLocalDateStr(parsedDate)
+      }
+    } else {
+      createdDateStr = getLocalDateStr()
+    }
     
     if (createdDateStr && !isNaN(new Date(createdDateStr).getTime()) && dateStr < createdDateStr) {
       return 'blocked'
