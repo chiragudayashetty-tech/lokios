@@ -457,12 +457,22 @@ export default function IntelExportModal({ isOpen, onClose }) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div 
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+        onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="relative w-full max-w-2xl bg-secondary border border-border-color rounded-2xl p-6 shadow-2xl overflow-hidden"
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+          className="relative w-full max-w-2xl rounded-2xl p-6 shadow-2xl overflow-hidden"
+          style={{ 
+            background: 'var(--bg-secondary)', 
+            backgroundColor: '#0c0e14', 
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-primary)'
+          }}
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-border-color">
@@ -498,7 +508,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full bg-tertiary border border-border-color rounded-lg px-3 py-2 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                    className="w-full border border-border-color rounded-lg px-3 py-2 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                    style={{ background: '#141824', backgroundColor: '#141824', color: '#f3f4f6' }}
                   />
                 </div>
                 <div>
@@ -507,7 +518,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full bg-tertiary border border-border-color rounded-lg px-3 py-2 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                    className="w-full border border-border-color rounded-lg px-3 py-2 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                    style={{ background: '#141824', backgroundColor: '#141824', color: '#f3f4f6' }}
                   />
                 </div>
               </div>
@@ -524,7 +536,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
                   <button
                     key={p.id}
                     onClick={() => setPreset(p.id)}
-                    className="px-2.5 py-1 bg-tertiary hover:bg-hover border border-border-subtle rounded font-mono text-[10px] text-secondary transition-colors"
+                    className="px-2.5 py-1 border border-border-subtle rounded font-mono text-[10px] text-secondary hover:text-amber transition-colors"
+                    style={{ background: '#141824', backgroundColor: '#141824' }}
                   >
                     {p.label}
                   </button>
@@ -554,10 +567,13 @@ export default function IntelExportModal({ isOpen, onClose }) {
                     <div
                       key={mod.key}
                       onClick={() => toggleModule(mod.key)}
-                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                        isSelected 
-                          ? 'bg-tertiary border-amber/60 shadow-sm' 
-                          : 'bg-primary/5 border-border-subtle opacity-60 hover:opacity-100'
+                      style={{ 
+                        background: isSelected ? '#1a202c' : '#10131c', 
+                        backgroundColor: isSelected ? '#1a202c' : '#10131c',
+                        border: isSelected ? '1px solid rgba(212, 175, 55, 0.6)' : '1px solid rgba(255, 255, 255, 0.1)'
+                      }}
+                      className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
+                        isSelected ? 'shadow-sm' : 'opacity-60 hover:opacity-100'
                       }`}
                     >
                       <div className="flex items-center gap-3">
