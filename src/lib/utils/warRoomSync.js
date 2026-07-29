@@ -25,7 +25,8 @@ export async function syncWarRoomHabitChange(userId, habitId, habitTitle, oldSta
 
     let updated = false
     const battles = bpRow.battles.map(b => {
-      const isLinked = b.linked_habits && Array.isArray(b.linked_habits) && b.linked_habits.includes(habitId)
+      const hasExplicitLinks = b.linked_habits && Array.isArray(b.linked_habits) && b.linked_habits.length > 0
+      const isLinked = hasExplicitLinks ? b.linked_habits.includes(habitId) : true
       if (!isLinked) return b
 
       const currentHp = b.hp !== undefined ? b.hp : 50
@@ -127,12 +128,13 @@ export async function syncWarRoomDailyEvaluator(userId) {
 
     let battlesUpdated = false
     const battles = (bpRow.battles || []).map(b => {
-      if (!b.linked_habits || !Array.isArray(b.linked_habits) || b.linked_habits.length === 0) return b
+      const hasExplicitLinks = b.linked_habits && Array.isArray(b.linked_habits) && b.linked_habits.length > 0
+      const habitIdList = hasExplicitLinks ? b.linked_habits : (habits || []).map(h => h.id)
 
       let hpDelta = 0
       const actions = []
 
-      b.linked_habits.forEach(habitId => {
+      habitIdList.forEach(habitId => {
         if (habitId === 'sys_screen_intel') return
         const habit = (habits || []).find(h => h.id === habitId)
         if (!habit) return

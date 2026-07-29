@@ -805,20 +805,22 @@ export default function MissionControl() {
                       const succeeded = []
                       const failed = []
 
-                      if (battle.linked_habits && battle.linked_habits.length > 0) {
-                        battle.linked_habits.forEach(habitId => {
-                          if (habitId === 'sys_screen_intel') return
-                          const habit = (habits || []).find(h => h.id === habitId)
-                          const log = (todayLogs || []).find(l => l.habit_id === habitId)
-                          const title = habit?.title || 'Linked Habit'
+                      const targetHabits = (battle.linked_habits && Array.isArray(battle.linked_habits) && battle.linked_habits.length > 0)
+                        ? battle.linked_habits
+                        : (habits || []).map(h => h.id)
 
-                          if (log?.status === 'completed') {
-                            succeeded.push(`Completed habit "${title}" (-15 HP to threat)`)
-                          } else if (log?.status === 'failed') {
-                            failed.push(`Failed habit "${title}" (+20 HP to threat)`)
-                          }
-                        })
-                      }
+                      targetHabits.forEach(habitId => {
+                        if (habitId === 'sys_screen_intel') return
+                        const habit = (habits || []).find(h => h.id === habitId)
+                        const log = (todayLogs || []).find(l => l.habit_id === habitId)
+                        const title = habit?.title || 'Routine'
+
+                        if (log?.status === 'completed') {
+                          succeeded.push(`Completed habit "${title}" (-15 HP to threat)`)
+                        } else if (log?.status === 'failed') {
+                          failed.push(`Failed habit "${title}" (+20 HP to threat)`)
+                        }
+                      })
 
                       const bName = battle.name?.toLowerCase() || ''
                       if (bName.includes('phone') || bName.includes('screen') || bName.includes('addiction') || bName.includes('execution')) {

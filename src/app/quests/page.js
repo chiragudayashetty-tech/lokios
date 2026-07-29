@@ -112,12 +112,40 @@ export default function DailyOps() {
         if (data) {
           if (data.bedtime) handleSetBedtime(data.bedtime)
           if (data.wake_time) handleSetWakeTime(data.wake_time)
-          const isHealthy = data.status === 'healthy'
+
+          const [bH] = (data.bedtime || '23:00').split(':').map(Number)
+          const [wH, wM] = (data.wake_time || '08:00').split(':').map(Number)
+          const dur = parseFloat(data.duration_hours || 0)
+
+          const isOptBed = bH >= 20 || bH <= 1
+          const isAccBed = bH >= 20 || bH <= 2
+          const isOptWake = wH < 9 || (wH === 9 && wM === 0)
+          const isAccWake = wH < 10 || (wH === 10 && wM === 0)
+          const isOptDur = dur >= 6.0 && dur <= 9.5
+          const isAccDur = dur >= 5.5 && dur <= 10.5
+
+          const isOpt = isOptBed && isOptWake && isOptDur
+          const isAcc = isAccBed && isAccWake && isAccDur
+
+          let logXp = -15
+          let logTitle = '🚨 POOR SLEEP SCHEDULE (-15 XP)'
+          let logSuccess = false
+
+          if (isOpt) {
+            logXp = 30
+            logTitle = '✓ OPTIMAL SLEEP TARGET (+30 XP)'
+            logSuccess = true
+          } else if (isAcc) {
+            logXp = 10
+            logTitle = 'ACCEPTABLE SLEEP SCHEDULE (+10 XP)'
+            logSuccess = true
+          }
+
           setSleepMsg({
-            success: isHealthy,
-            title: isHealthy ? 'SLEEP TARGET MET (+30 XP)' : 'SLEEP LOGGED (+15 XP)',
+            success: logSuccess,
+            title: logTitle,
             subtitle: `Logged for ${data.date}: ${data.bedtime} to ${data.wake_time} (${data.duration_hours}h)`,
-            xp: isHealthy ? 30 : 15
+            xp: logXp
           })
         } else {
           setSleepMsg(null)
