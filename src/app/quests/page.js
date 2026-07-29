@@ -174,27 +174,50 @@ export default function DailyOps() {
     const [bH, bM] = bedtime.split(':').map(Number)
     const [wH, wM] = wakeTime.split(':').map(Number)
 
-    // Healthy sleep targets: Bedtime 8 PM - 2 AM, Wake before 10 AM, Duration 5.5h - 10.5h
-    const isBedtimeOk = bH >= 20 || bH <= 2
-    const isWokeBefore10AM = wH < 10 || (wH === 10 && wM === 0)
-    const isDurationValid = liveSleepDuration.totalHours >= 5.5 && liveSleepDuration.totalHours <= 10.5
+    // ── Sleep Schedule Evaluation Matrix ──
+    // Optimal: Bedtime 8 PM - 1 AM, Wake before 9 AM, Duration 6.0h - 9.5h (+30 XP)
+    // Acceptable: Bedtime 8 PM - 2 AM, Wake before 10 AM, Duration 5.5h - 10.0h (+10 XP)
+    // Poor/Ruined: Bedtime past 2 AM, Wake past 10 AM, or Duration <5.5h / >10.5h (-15 XP Penalty)
 
-    const isHealthy = isBedtimeOk && isWokeBefore10AM && isDurationValid
-    const xpAmount = isHealthy ? 30 : 15
+    const isOptimalBedtime = bH >= 20 || bH <= 1
+    const isAcceptableBedtime = bH >= 20 || bH <= 2
+
+    const isOptimalWake = wH < 9 || (wH === 9 && wM === 0)
+    const isAcceptableWake = wH < 10 || (wH === 10 && wM === 0)
+
+    const isOptimalDuration = liveSleepDuration.totalHours >= 6.0 && liveSleepDuration.totalHours <= 9.5
+    const isAcceptableDuration = liveSleepDuration.totalHours >= 5.5 && liveSleepDuration.totalHours <= 10.5
+
+    const isOptimal = isOptimalBedtime && isOptimalWake && isOptimalDuration
+    const isAcceptable = isAcceptableBedtime && isAcceptableWake && isAcceptableDuration
+
+    let xpAmount = -15
+    let statusStr = 'deprived'
+    let titleText = '🚨 POOR SLEEP SCHEDULE (-15 XP)'
+
+    if (isOptimal) {
+      xpAmount = 30
+      statusStr = 'healthy'
+      titleText = '✓ OPTIMAL SLEEP TARGET (+30 XP)'
+    } else if (isAcceptable) {
+      xpAmount = 10
+      statusStr = 'healthy'
+      titleText = 'ACCEPTABLE SLEEP SCHEDULE (+10 XP)'
+    }
 
     let failReasons = []
-    if (!isBedtimeOk) failReasons.push('Bedtime past 2 AM')
-    if (!isWokeBefore10AM) failReasons.push('Woke up past 10 AM')
-    if (liveSleepDuration.totalHours > 10.5) failReasons.push('Overslept (> 10.5h)')
-    if (liveSleepDuration.totalHours < 5.5) failReasons.push('Under-slept (< 5.5h)')
+    if (!isAcceptableBedtime) failReasons.push(`Late Bedtime (${bedtime})`)
+    if (!isAcceptableWake) failReasons.push(`Late Wake Up (${wakeTime})`)
+    if (liveSleepDuration.totalHours > 10.5) failReasons.push(`Overslept (${liveSleepDuration.totalHours}h)`)
+    if (liveSleepDuration.totalHours < 5.5) failReasons.push(`Under-slept (${liveSleepDuration.totalHours}h)`)
 
     // 1. Optimistic UI update
     setSleepMsg({
-      success: true,
-      title: isHealthy ? 'SLEEP TARGET MET (+30 XP)' : 'SLEEP LOGGED (+15 XP)',
-      subtitle: isHealthy 
-        ? `Slept before 2 AM · Up before 10 AM · Duration: ${liveSleepDuration.totalHours}h` 
-        : `Logged: ${liveSleepDuration.totalHours}h (${failReasons.join(' · ')})`,
+      success: xpAmount > 0,
+      title: titleText,
+      subtitle: statusStr === 'healthy' 
+        ? `Bedtime: ${bedtime} · Wake: ${wakeTime} · Duration: ${liveSleepDuration.totalHours}h` 
+        : `Logged: ${liveSleepDuration.totalHours}h (${failReasons.join(' · ') || 'Irregular schedule'})`,
       xp: xpAmount
     })
     setSleepSaving(false)
@@ -207,7 +230,7 @@ export default function DailyOps() {
         bedtime,
         wake_time: wakeTime,
         duration_hours: liveSleepDuration.totalHours,
-        status: isHealthy ? 'healthy' : 'deprived'
+        status: statusStr
       }
 
       // Try delete first (may fail due to RLS — that's OK)
@@ -230,8 +253,11 @@ export default function DailyOps() {
         console.error('CRITICAL: Sleep log was NOT persisted for date:', sleepTargetDate)
       }
 
-      // Award XP (robustAwardXP handles dedup by deleting old XP for this date)
-      await robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, `Sleep Logged (${liveSleepDuration.totalHours}h)`)
+      // Award or deduct XP (robustAwardXP handles dedup by deleting old XP for this date)
+      const xpLogReason = xpAmount < 0 
+        ? `🚨 Poor Sleep Schedule (${bedtime} → ${wakeTime}, ${liveSleepDuration.totalHours}h)`
+        : `Sleep Logged (${liveSleepDuration.totalHours}h)`
+      await robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, xpLogReason)
 
       // Notify other components
       if (typeof window !== 'undefined') {
