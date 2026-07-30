@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
+import IntelExportModal from '@/components/ui/IntelExportModal'
 import { createClient } from '@/lib/supabase/client'
 import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,9 +11,8 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid 
 } from 'recharts'
 import { 
-  Briefcase, Video, Film, Clock, Calendar, Check, Save, Download, Printer, 
-  Sparkles, TrendingUp, Cpu, Flame, Target, Shield, Filter, FileSpreadsheet,
-  RotateCcw, ArrowRight, Zap, AlertTriangle, Scissors, Camera
+  Briefcase, Video, Film, Clock, Calendar, Save, Download, 
+  Sparkles, TrendingUp, Target, Zap, AlertTriangle, Scissors, Camera
 } from 'lucide-react'
 
 export default function WorkPage() {
@@ -24,8 +24,8 @@ export default function WorkPage() {
   // Content Operations sub-mode: 'shoot' | 'edit'
   const [contentMode, setContentMode] = useState('shoot')
 
-  // Time Unit Display Toggle: 'hours' | 'minutes'
-  const [timeUnit, setTimeUnit] = useState('hours')
+  // Export Modal trigger state
+  const [exportModalOpen, setExportModalOpen] = useState(false)
 
   // Date Selection for Logging (YYYY-MM-DD)
   const getLocalDateStr = (d = new Date()) => {
@@ -41,31 +41,45 @@ export default function WorkPage() {
   const [xpToast, setXpToast] = useState(null)
 
   // ----------------------------------------------------
-  // DATA STATES
+  // INDIVIDUAL FIELD TIME UNITS ('h' | 'm')
   // ----------------------------------------------------
+  // Work Log Units
+  const [unitTotalWorked, setUnitTotalWorked] = useState('h')
+  const [unitBeyondTatva, setUnitBeyondTatva] = useState('h')
+  const [unitFocused, setUnitFocused] = useState('h')
+  const [unitUnfocused, setUnitUnfocused] = useState('h')
+
+  // Shoot Units
+  const [unitShootHours, setUnitShootHours] = useState('h')
+  const [unitShootRaw, setUnitShootRaw] = useState('m')
+
+  // Edit Units
+  const [unitEditHours, setUnitEditHours] = useState('h')
+  const [unitEditFinished, setUnitEditFinished] = useState('m')
+
+  // ----------------------------------------------------
+  // FORM INPUT VALUES (Stored in their respective selected units)
+  // ----------------------------------------------------
+  const [valTotalWorked, setValTotalWorked] = useState('')
+  const [valBeyondTatva, setValBeyondTatva] = useState('')
+  const [valFocused, setValFocused] = useState('')
+  const [valUnfocused, setValUnfocused] = useState('')
+  const [workNotes, setWorkNotes] = useState('')
+
+  const [valShootHours, setValShootHours] = useState('')
+  const [valShootRaw, setValShootRaw] = useState('')
+  const [shootNotes, setShootNotes] = useState('')
+
+  const [valEditHours, setValEditHours] = useState('')
+  const [valEditFinished, setValEditFinished] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+
+  // DATA STATES
   const [workLogs, setWorkLogs] = useState([])
   const [contentLogs, setContentLogs] = useState([])
-  const [loading, setLoading] = useState(true)
   const [savingWork, setSavingWork] = useState(false)
   const [savingShoot, setSavingShoot] = useState(false)
   const [savingEdit, setSavingEdit] = useState(false)
-
-  // Work Log Form State
-  const [totalHoursWorked, setTotalHoursWorked] = useState('')
-  const [beyondTatvaHours, setBeyondTatvaHours] = useState('')
-  const [focusedHours, setFocusedHours] = useState('')
-  const [unfocusedHours, setUnfocusedHours] = useState('')
-  const [workNotes, setWorkNotes] = useState('')
-
-  // Shoot Form State
-  const [shootHours, setShootHours] = useState('')
-  const [shootRawMinutes, setShootRawMinutes] = useState('')
-  const [shootNotes, setShootNotes] = useState('')
-
-  // Edit Form State
-  const [editHours, setEditHours] = useState('')
-  const [editFinishedMinutes, setEditFinishedMinutes] = useState('')
-  const [editNotes, setEditNotes] = useState('')
 
   // Date Range Filter for Analytics: '7days' | '30days' | 'all'
   const [analyticsRange, setAnalyticsRange] = useState('30days')
@@ -77,18 +91,14 @@ export default function WorkPage() {
     if (!user) return
 
     const fetchAllLogs = async () => {
-      setLoading(true)
       const sb = createClient()
-
       try {
-        // Fetch Work Logs
         const { data: wData } = await sb
           .from('work_logs')
           .select('*')
           .eq('user_id', user.id)
           .order('date', { ascending: false })
 
-        // Fetch Content Logs
         const { data: cData } = await sb
           .from('content_logs')
           .select('*')
@@ -111,55 +121,74 @@ export default function WorkPage() {
           if (cached) setContentLogs(JSON.parse(cached))
         }
       } catch (err) {
-        console.warn('Supabase fetch notice (falling back to cache):', err.message)
         if (typeof window !== 'undefined') {
           const wCached = localStorage.getItem('lokios_work_logs_cache')
           if (wCached) setWorkLogs(JSON.parse(wCached))
           const cCached = localStorage.getItem('lokios_content_logs_cache')
           if (cCached) setContentLogs(JSON.parse(cCached))
         }
-      } finally {
-        setLoading(false)
       }
     }
 
     fetchAllLogs()
   }, [user])
 
-  // Populate form fields when selectedDate changes
+  // Helper to convert stored Hours value to input field value based on selected unit
+  const toInputValue = (hoursVal, unit) => {
+    if (hoursVal === '' || hoursVal === undefined || hoursVal === null) return ''
+    const num = parseFloat(hoursVal) || 0
+    if (unit === 'm') return Math.round(num * 60).toString()
+    return num.toString()
+  }
+
+  // Populate forms when date or field unit changes
   useEffect(() => {
-    const existingWork = workLogs.find(l => l.date === selectedDate)
-    if (existingWork) {
-      setTotalHoursWorked(existingWork.total_hours_worked ?? '')
-      setBeyondTatvaHours(existingWork.beyond_tatva_hours ?? '')
-      setFocusedHours(existingWork.focused_hours ?? '')
-      setUnfocusedHours(existingWork.unfocused_hours ?? existingWork.deep_execution_hours ?? '')
-      setWorkNotes(existingWork.notes ?? '')
+    const w = workLogs.find(l => l.date === selectedDate)
+    if (w) {
+      setValTotalWorked(toInputValue(w.total_hours_worked, unitTotalWorked))
+      setValBeyondTatva(toInputValue(w.beyond_tatva_hours, unitBeyondTatva))
+      setValFocused(toInputValue(w.focused_hours, unitFocused))
+      setValUnfocused(toInputValue(w.unfocused_hours ?? w.deep_execution_hours, unitUnfocused))
+      setWorkNotes(w.notes ?? '')
     } else {
-      setTotalHoursWorked('')
-      setBeyondTatvaHours('')
-      setFocusedHours('')
-      setUnfocusedHours('')
+      setValTotalWorked('')
+      setValBeyondTatva('')
+      setValFocused('')
+      setValUnfocused('')
       setWorkNotes('')
     }
 
-    const existingContent = contentLogs.find(l => l.date === selectedDate)
-    if (existingContent) {
-      setShootHours(existingContent.shoot_hours ?? '')
-      setShootRawMinutes(existingContent.shoot_raw_minutes ?? '')
-      setShootNotes(existingContent.notes ?? '')
-      setEditHours(existingContent.edit_hours ?? '')
-      setEditFinishedMinutes(existingContent.edit_finished_minutes ?? '')
-      setEditNotes(existingContent.notes ?? '')
+    const c = contentLogs.find(l => l.date === selectedDate)
+    if (c) {
+      setValShootHours(toInputValue(c.shoot_hours, unitShootHours))
+      setValShootRaw(toInputValue((c.shoot_raw_minutes || 0) / 60, unitShootRaw))
+      setShootNotes(c.notes ?? '')
+      setValEditHours(toInputValue(c.edit_hours, unitEditHours))
+      setValEditFinished(toInputValue((c.edit_finished_minutes || 0) / 60, unitEditFinished))
+      setEditNotes(c.notes ?? '')
     } else {
-      setShootHours('')
-      setShootRawMinutes('')
+      setValShootHours('')
+      setValShootRaw('')
       setShootNotes('')
-      setEditHours('')
-      setEditFinishedMinutes('')
+      setValEditHours('')
+      setValEditFinished('')
       setEditNotes('')
     }
-  }, [selectedDate, workLogs, contentLogs])
+  }, [selectedDate, workLogs, contentLogs, unitTotalWorked, unitBeyondTatva, unitFocused, unitUnfocused, unitShootHours, unitShootRaw, unitEditHours, unitEditFinished])
+
+  // Converts any input value + unit back into Hours for DB storage
+  const toHours = (val, unit) => {
+    const num = parseFloat(val) || 0
+    if (unit === 'm') return num / 60
+    return num
+  }
+
+  // Converts any input value + unit back into Minutes for DB storage
+  const toMinutes = (val, unit) => {
+    const num = parseFloat(val) || 0
+    if (unit === 'h') return num * 60
+    return num
+  }
 
   // ----------------------------------------------------
   // SAVE WORK LOG ENTRY (+2 XP REWARD)
@@ -172,35 +201,26 @@ export default function WorkPage() {
     const payload = {
       user_id: user.id,
       date: selectedDate,
-      total_hours_worked: parseFloat(totalHoursWorked) || 0,
-      beyond_tatva_hours: parseFloat(beyondTatvaHours) || 0,
-      focused_hours: parseFloat(focusedHours) || 0,
-      unfocused_hours: parseFloat(unfocusedHours) || 0,
-      deep_execution_hours: parseFloat(unfocusedHours) || 0,
+      total_hours_worked: toHours(valTotalWorked, unitTotalWorked),
+      beyond_tatva_hours: toHours(valBeyondTatva, unitBeyondTatva),
+      focused_hours: toHours(valFocused, unitFocused),
+      unfocused_hours: toHours(valUnfocused, unitUnfocused),
+      deep_execution_hours: toHours(valUnfocused, unitUnfocused),
       notes: workNotes || ''
     }
 
-    const updatedWorkLogs = [
-      payload,
-      ...workLogs.filter(l => l.date !== selectedDate)
-    ].sort((a, b) => b.date.localeCompare(a.date))
-
-    setWorkLogs(updatedWorkLogs)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lokios_work_logs_cache', JSON.stringify(updatedWorkLogs))
-    }
+    const updated = [payload, ...workLogs.filter(l => l.date !== selectedDate)].sort((a, b) => b.date.localeCompare(a.date))
+    setWorkLogs(updated)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_work_logs_cache', JSON.stringify(updated))
 
     try {
       const sb = createClient()
       await sb.from('work_logs').upsert(payload, { onConflict: 'user_id,date' })
-    } catch (err) {
-      console.warn('Network sync pending, saved locally:', err.message)
-    }
+    } catch (err) {}
 
     awardXP(2, 'Logged Work Hours')
     setXpToast('+2 XP: Work Log Recorded')
     setTimeout(() => setXpToast(null), 3000)
-
     setSavingWork(false)
   }
 
@@ -216,34 +236,25 @@ export default function WorkPage() {
     const payload = {
       user_id: user.id,
       date: selectedDate,
-      shoot_hours: parseFloat(shootHours) || 0,
-      shoot_raw_minutes: parseFloat(shootRawMinutes) || 0,
+      shoot_hours: toHours(valShootHours, unitShootHours),
+      shoot_raw_minutes: toMinutes(valShootRaw, unitShootRaw),
       edit_hours: parseFloat(existing.edit_hours) || 0,
       edit_finished_minutes: parseFloat(existing.edit_finished_minutes) || 0,
       notes: shootNotes || existing.notes || ''
     }
 
-    const updatedContentLogs = [
-      payload,
-      ...contentLogs.filter(l => l.date !== selectedDate)
-    ].sort((a, b) => b.date.localeCompare(a.date))
-
-    setContentLogs(updatedContentLogs)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lokios_content_logs_cache', JSON.stringify(updatedContentLogs))
-    }
+    const updated = [payload, ...contentLogs.filter(l => l.date !== selectedDate)].sort((a, b) => b.date.localeCompare(a.date))
+    setContentLogs(updated)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_content_logs_cache', JSON.stringify(updated))
 
     try {
       const sb = createClient()
       await sb.from('content_logs').upsert(payload, { onConflict: 'user_id,date' })
-    } catch (err) {
-      console.warn('Network sync pending, saved locally:', err.message)
-    }
+    } catch (err) {}
 
     awardXP(2, 'Logged Video Shoot')
     setXpToast('+2 XP: Shoot Log Recorded')
     setTimeout(() => setXpToast(null), 3000)
-
     setSavingShoot(false)
   }
 
@@ -261,52 +272,24 @@ export default function WorkPage() {
       date: selectedDate,
       shoot_hours: parseFloat(existing.shoot_hours) || 0,
       shoot_raw_minutes: parseFloat(existing.shoot_raw_minutes) || 0,
-      edit_hours: parseFloat(editHours) || 0,
-      edit_finished_minutes: parseFloat(editFinishedMinutes) || 0,
+      edit_hours: toHours(valEditHours, unitEditHours),
+      edit_finished_minutes: toMinutes(valEditFinished, unitEditFinished),
       notes: editNotes || existing.notes || ''
     }
 
-    const updatedContentLogs = [
-      payload,
-      ...contentLogs.filter(l => l.date !== selectedDate)
-    ].sort((a, b) => b.date.localeCompare(a.date))
-
-    setContentLogs(updatedContentLogs)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lokios_content_logs_cache', JSON.stringify(updatedContentLogs))
-    }
+    const updated = [payload, ...contentLogs.filter(l => l.date !== selectedDate)].sort((a, b) => b.date.localeCompare(a.date))
+    setContentLogs(updated)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_content_logs_cache', JSON.stringify(updated))
 
     try {
       const sb = createClient()
       await sb.from('content_logs').upsert(payload, { onConflict: 'user_id,date' })
-    } catch (err) {
-      console.warn('Network sync pending, saved locally:', err.message)
-    }
+    } catch (err) {}
 
     awardXP(2, 'Logged Video Edit')
     setXpToast('+2 XP: Edit Log Recorded')
     setTimeout(() => setXpToast(null), 3000)
-
     setSavingEdit(false)
-  }
-
-  // ----------------------------------------------------
-  // UNIT CONVERSION HELPERS
-  // ----------------------------------------------------
-  const formatTimeVal = (hoursVal) => {
-    const val = parseFloat(hoursVal) || 0
-    if (timeUnit === 'minutes') {
-      return `${Math.round(val * 60)} m`
-    }
-    return `${val.toFixed(1)} h`
-  }
-
-  const formatMinVal = (minsVal) => {
-    const val = parseFloat(minsVal) || 0
-    if (timeUnit === 'hours') {
-      return `${(val / 60).toFixed(1)} h`
-    }
-    return `${Math.round(val)} m`
   }
 
   // ----------------------------------------------------
@@ -314,27 +297,26 @@ export default function WorkPage() {
   // ----------------------------------------------------
   const filteredWorkLogs = useMemo(() => {
     if (analyticsRange === '7days') {
-      const sevenDaysAgo = getLocalDateStr(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-      return workLogs.filter(l => l.date >= sevenDaysAgo)
+      const past = getLocalDateStr(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+      return workLogs.filter(l => l.date >= past)
     } else if (analyticsRange === '30days') {
-      const thirtyDaysAgo = getLocalDateStr(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
-      return workLogs.filter(l => l.date >= thirtyDaysAgo)
+      const past = getLocalDateStr(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+      return workLogs.filter(l => l.date >= past)
     }
     return workLogs
   }, [workLogs, analyticsRange])
 
   const filteredContentLogs = useMemo(() => {
     if (analyticsRange === '7days') {
-      const sevenDaysAgo = getLocalDateStr(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-      return contentLogs.filter(l => l.date >= sevenDaysAgo)
+      const past = getLocalDateStr(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+      return contentLogs.filter(l => l.date >= past)
     } else if (analyticsRange === '30days') {
-      const thirtyDaysAgo = getLocalDateStr(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
-      return contentLogs.filter(l => l.date >= thirtyDaysAgo)
+      const past = getLocalDateStr(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+      return contentLogs.filter(l => l.date >= past)
     }
     return contentLogs
   }, [contentLogs, analyticsRange])
 
-  // Summary Totals
   const totals = useMemo(() => {
     const totWork = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.total_hours_worked) || 0), 0)
     const totBeyond = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.beyond_tatva_hours) || 0), 0)
@@ -348,192 +330,59 @@ export default function WorkPage() {
 
     const focusRatio = totWork > 0 ? Math.round((totFocus / totWork) * 100) : 0
     const beyondRatio = totWork > 0 ? Math.round((totBeyond / totWork) * 100) : 0
-    const distractionRatio = totWork > 0 ? Math.round((totUnfocused / totWork) * 100) : 0
     const editRatio = totEditFinishedMins > 0 ? ((totEditHrs * 60) / totEditFinishedMins).toFixed(1) : '—'
 
     return {
       totWork, totBeyond, totFocus, totUnfocused,
       totShootHrs, totShootRawMins, totEditHrs, totEditFinishedMins,
-      focusRatio, beyondRatio, distractionRatio, editRatio
+      focusRatio, beyondRatio, editRatio
     }
   }, [filteredWorkLogs, filteredContentLogs])
 
-  // Chart Data Preparation
   const chartData = useMemo(() => {
-    const allDatesSet = new Set([
-      ...filteredWorkLogs.map(l => l.date),
-      ...filteredContentLogs.map(l => l.date)
-    ])
-
+    const allDatesSet = new Set([...filteredWorkLogs.map(l => l.date), ...filteredContentLogs.map(l => l.date)])
     const sortedDates = Array.from(allDatesSet).sort((a, b) => a.localeCompare(b))
 
     return sortedDates.map(d => {
       const w = filteredWorkLogs.find(l => l.date === d) || {}
       const c = filteredContentLogs.find(l => l.date === d) || {}
 
-      const workMultiplier = timeUnit === 'minutes' ? 60 : 1
-      const minMultiplier = timeUnit === 'hours' ? (1 / 60) : 1
-
       return {
         date: d.slice(5),
         fullDate: d,
-        Worked: Number(((parseFloat(w.total_hours_worked) || 0) * workMultiplier).toFixed(1)),
-        BeyondTatva: Number(((parseFloat(w.beyond_tatva_hours) || 0) * workMultiplier).toFixed(1)),
-        Focused: Number(((parseFloat(w.focused_hours) || 0) * workMultiplier).toFixed(1)),
-        Unfocused: Number(((parseFloat(w.unfocused_hours ?? w.deep_execution_hours) || 0) * workMultiplier).toFixed(1)),
-        ShootHours: Number(((parseFloat(c.shoot_hours) || 0) * workMultiplier).toFixed(1)),
-        RawMins: Number(((parseFloat(c.shoot_raw_minutes) || 0) * minMultiplier).toFixed(1)),
-        EditHours: Number(((parseFloat(c.edit_hours) || 0) * workMultiplier).toFixed(1)),
-        FinishedMins: Number(((parseFloat(c.edit_finished_minutes) || 0) * minMultiplier).toFixed(1)),
+        Worked: Number((parseFloat(w.total_hours_worked) || 0).toFixed(1)),
+        BeyondTatva: Number((parseFloat(w.beyond_tatva_hours) || 0).toFixed(1)),
+        Focused: Number((parseFloat(w.focused_hours) || 0).toFixed(1)),
+        Unfocused: Number((parseFloat(w.unfocused_hours ?? w.deep_execution_hours) || 0).toFixed(1)),
+        RawMins: Number((parseFloat(c.shoot_raw_minutes) || 0).toFixed(0)),
+        FinishedMins: Number((parseFloat(c.edit_finished_minutes) || 0).toFixed(0)),
       }
     })
-  }, [filteredWorkLogs, filteredContentLogs, timeUnit])
+  }, [filteredWorkLogs, filteredContentLogs])
 
-  // ----------------------------------------------------
-  // EXPORT CSV ENGINE
-  // ----------------------------------------------------
-  const handleExportCSV = (type) => {
-    let csvContent = 'data:text/csv;charset=utf-8,'
-    if (type === 'work') {
-      csvContent += 'Date,Total Hours Worked,Beyond Tatva Hours,Focused Hours,Unfocused / Distracted Hours,Notes\n'
-      workLogs.forEach(l => {
-        const unfocusedVal = (l.unfocused_hours ?? l.deep_execution_hours) || 0
-        csvContent += `"${l.date}","${l.total_hours_worked || 0}","${l.beyond_tatva_hours || 0}","${l.focused_hours || 0}","${unfocusedVal}","${(l.notes || '').replace(/"/g, '""')}"\n`
-      })
-    } else {
-      csvContent += 'Date,Shoot Hours,Raw Footage Minutes,Edit Hours,Finished Video Minutes,Notes\n'
-      contentLogs.forEach(l => {
-        csvContent += `"${l.date}","${l.shoot_hours || 0}","${l.shoot_raw_minutes || 0}","${l.edit_hours || 0}","${l.edit_finished_minutes || 0}","${(l.notes || '').replace(/"/g, '""')}"\n`
-      })
-    }
-
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement('a')
-    link.setAttribute('href', encodedUri)
-    link.setAttribute('download', `LokiOS_${type === 'work' ? 'Work_Logs' : 'Content_Operations_Logs'}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  // ----------------------------------------------------
-  // EXPORT PDF REPORT TRIGGER
-  // ----------------------------------------------------
-  const handlePrintPDFReport = () => {
-    const fullHTML = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Loki OS - Work & Content Operations Report</title>
-        <style>
-          :root { --bg: #090A0F; --card: #12151E; --border: #262B3D; --text: #F3F4F6; --muted: #9CA3AF; --amber: #D4AF37; --cyan: #00F0FF; --green: #10B981; --red: #EF4444; }
-          body { font-family: monospace, sans-serif; background-color: var(--bg); color: var(--text); padding: 30px; margin: 0; }
-          .header { border-bottom: 2px solid var(--amber); padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }
-          .title { font-size: 24px; font-weight: bold; color: var(--amber); margin: 0; }
-          .section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-          .section-title { font-size: 15px; color: var(--cyan); margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-          th { color: var(--muted); text-transform: uppercase; font-size: 10px; }
-          .text-amber { color: var(--amber); font-weight: bold; }
-          .text-cyan { color: var(--cyan); font-weight: bold; }
-          .text-red { color: var(--red); font-weight: bold; }
-          @media print {
-            body { background: #fff; color: #000; padding: 15px; }
-            .section { background: #fff; border: 1px solid #ccc; color: #000; }
-            .section-title { color: #000; border-bottom-color: #ccc; }
-            th, td { border-bottom-color: #eee; }
-            th { color: #555; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div>
-            <h1 class="title">LOKI OS // WORK & CONTENT OPERATIONS REPORT</h1>
-            <div style="font-size: 12px; color: var(--muted); margin-top: 5px;">OPERATOR: CHIRAG | RANGE: ${analyticsRange.toUpperCase()}</div>
-          </div>
-          <div style="text-align: right; font-size: 11px; color: var(--muted);">GENERATED ON: ${new Date().toLocaleDateString()}</div>
-        </div>
-
-        <div class="section">
-          <h2 class="section-title">⏱️ WORK METRICS SUMMARY</h2>
-          <p>Total Hours Worked: <strong>${totals.totWork.toFixed(1)} h</strong> | Beyond Tatva: <strong>${totals.totBeyond.toFixed(1)} h (${totals.beyondRatio}%)</strong> | Focused Hours: <strong>${totals.totFocus.toFixed(1)} h (${totals.focusRatio}%)</strong> | Unfocused: <strong>${totals.totUnfocused.toFixed(1)} h (${totals.distractionRatio}%)</strong></p>
-          <table>
-            <thead>
-              <tr><th>Date</th><th>Total Worked</th><th>Beyond Tatva</th><th>Focused</th><th>Unfocused</th><th>Notes</th></tr>
-            </thead>
-            <tbody>
-              ${filteredWorkLogs.map(l => {
-                const unfocusedVal = (l.unfocused_hours ?? l.deep_execution_hours) || 0
-                return `
-                <tr>
-                  <td>${l.date}</td>
-                  <td><strong class="text-amber">${l.total_hours_worked || 0} h</strong></td>
-                  <td>${l.beyond_tatva_hours || 0} h</td>
-                  <td>${l.focused_hours || 0} h</td>
-                  <td><strong class="text-red">${unfocusedVal} h</strong></td>
-                  <td>${l.notes || '—'}</td>
-                </tr>
-              `}).join('')}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="section">
-          <h2 class="section-title">🎬 CONTENT OPERATIONS SUMMARY</h2>
-          <p>Total Shoot Hours: <strong>${totals.totShootHrs.toFixed(1)} h</strong> | Raw Footage: <strong>${totals.totShootRawMins} mins</strong> | Edit Hours: <strong>${totals.totEditHrs.toFixed(1)} h</strong> | Finished Video: <strong>${totals.totEditFinishedMins} mins</strong></p>
-          <table>
-            <thead>
-              <tr><th>Date</th><th>Shoot Hours</th><th>Raw Footage (Mins)</th><th>Edit Hours</th><th>Finished Video (Mins)</th><th>Edit Ratio</th><th>Notes</th></tr>
-            </thead>
-            <tbody>
-              ${filteredContentLogs.map(l => {
-                const ratio = l.edit_finished_minutes > 0 ? ((l.edit_hours * 60) / l.edit_finished_minutes).toFixed(1) : '—'
-                return `
-                  <tr>
-                    <td>${l.date}</td>
-                    <td>${l.shoot_hours || 0} h</td>
-                    <td>${l.shoot_raw_minutes || 0} m</td>
-                    <td><strong class="text-cyan">${l.edit_hours || 0} h</strong></td>
-                    <td><strong class="text-amber">${l.edit_finished_minutes || 0} m</strong></td>
-                    <td>${ratio} m edit / finished m</td>
-                    <td>${l.notes || '—'}</td>
-                  </tr>
-                `
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      </body>
-      </html>
-    `
-
-    const iframe = document.createElement('iframe')
-    iframe.style.position = 'fixed'
-    iframe.style.right = '0'
-    iframe.style.bottom = '0'
-    iframe.style.width = '0'
-    iframe.style.height = '0'
-    iframe.style.border = '0'
-    document.body.appendChild(iframe)
-
-    const doc = iframe.contentWindow.document
-    doc.open()
-    doc.write(fullHTML)
-    doc.close()
-
-    setTimeout(() => {
-      iframe.contentWindow.focus()
-      iframe.contentWindow.print()
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe)
-        }
-      }, 4000)
-    }, 500)
-  }
+  // Inline Unit Toggle Component for Each Individual Field
+  const FieldUnitToggle = ({ unit, setUnit }) => (
+    <div className="flex items-center bg-tertiary border border-border-color rounded-lg p-0.5 ml-auto">
+      <button
+        type="button"
+        onClick={() => setUnit('h')}
+        className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
+          unit === 'h' ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+        }`}
+      >
+        h
+      </button>
+      <button
+        type="button"
+        onClick={() => setUnit('m')}
+        className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
+          unit === 'm' ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+        }`}
+      >
+        m
+      </button>
+    </div>
+  )
 
   return (
     <AppShell>
@@ -544,71 +393,47 @@ export default function WorkPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[99999] bg-amber text-black font-mono font-bold text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 border border-amber/40"
+            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[99999] bg-amber text-black font-mono font-bold text-xs px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border border-amber/40"
           >
-            <Sparkles size={16} />
+            <Sparkles size={15} />
             <span>{xpToast}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5 sm:space-y-6">
-        {/* HEADER & TIME UNIT TOGGLE (MOBILE OPTIMIZED) */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-border-color">
+      <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* HEADER & EXPORT INTEL MODAL TRIGGER */}
+        <div className="flex items-center justify-between gap-3 pb-4 border-b border-border-color">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber/10 border border-amber/30 text-amber flex-shrink-0">
-              <Briefcase size={24} />
+            <div className="p-2 rounded-xl bg-amber/10 border border-amber/30 text-amber flex-shrink-0">
+              <Briefcase size={22} />
             </div>
             <div>
-              <h1 className="font-display text-xl sm:text-2xl md:text-3xl tracking-widest text-primary uppercase">
-                WORK & CONTENT INTELLIGENCE
+              <h1 className="font-display text-xl sm:text-2xl tracking-widest text-primary uppercase">
+                WORK INTELLIGENCE
               </h1>
-              <p className="font-mono text-[11px] sm:text-xs text-muted">
-                Log effort, shoot/edit minutes, & measure production output
-              </p>
             </div>
           </div>
 
-          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-3">
-            {/* Time Unit Toggle */}
-            <div className="w-full sm:w-auto flex items-center bg-tertiary border border-border-color rounded-xl p-1 justify-between sm:justify-start">
-              <span className="font-mono text-[10px] text-muted px-2 uppercase font-bold">UNIT:</span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setTimeUnit('hours')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all ${
-                    timeUnit === 'hours'
-                      ? 'bg-amber text-black shadow-md'
-                      : 'text-muted hover:text-primary'
-                  }`}
-                >
-                  Hours (h)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTimeUnit('minutes')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all ${
-                    timeUnit === 'minutes'
-                      ? 'bg-amber text-black shadow-md'
-                      : 'text-muted hover:text-primary'
-                  }`}
-                >
-                  Minutes (m)
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Trigger Global Intel Export Modal */}
+          <button
+            type="button"
+            onClick={() => setExportModalOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95"
+          >
+            <Download size={15} />
+            <span className="hidden sm:inline">Export Intel</span>
+          </button>
         </div>
 
-        {/* MAIN SUBPAGE NAVIGATION TABS */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-border-color/60 no-scrollbar">
+        {/* SUBPAGE NAVIGATION TABS */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-border-color/60 no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('work_log')}
-            className={`flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-mono text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
               activeTab === 'work_log'
-                ? 'bg-amber/15 border border-amber text-amber shadow-lg shadow-amber/10'
+                ? 'bg-amber/15 border border-amber text-amber shadow-sm'
                 : 'bg-tertiary border border-border-color text-muted hover:text-primary'
             }`}
           >
@@ -619,9 +444,9 @@ export default function WorkPage() {
           <button
             type="button"
             onClick={() => setActiveTab('content_ops')}
-            className={`flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-mono text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
               activeTab === 'content_ops'
-                ? 'bg-cyan/15 border border-cyan text-cyan shadow-lg shadow-cyan/10'
+                ? 'bg-cyan/15 border border-cyan text-cyan shadow-sm'
                 : 'bg-tertiary border border-border-color text-muted hover:text-primary'
             }`}
           >
@@ -632,42 +457,37 @@ export default function WorkPage() {
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl font-mono text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
               activeTab === 'analytics'
-                ? 'bg-success/15 border border-success text-success shadow-lg shadow-success/10'
+                ? 'bg-success/15 border border-success text-success shadow-sm'
                 : 'bg-tertiary border border-border-color text-muted hover:text-primary'
             }`}
           >
             <TrendingUp size={15} />
-            <span>3. Analytics & Export</span>
+            <span>3. Analytics</span>
           </button>
         </div>
 
-        {/* GLOBAL DATE SELECTOR */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 sm:p-4 bg-tertiary border border-border-color rounded-2xl">
-          <div className="flex items-center justify-between sm:justify-start gap-3">
-            <div className="flex items-center gap-2">
-              <Calendar size={16} className="text-amber flex-shrink-0" />
-              <span className="font-mono text-xs text-secondary uppercase font-bold">Log Date:</span>
-            </div>
+        {/* DATE SELECTOR */}
+        <div className="flex items-center justify-between gap-3 p-3 bg-tertiary border border-border-color rounded-xl">
+          <div className="flex items-center gap-2.5">
+            <Calendar size={16} className="text-amber flex-shrink-0" />
+            <span className="font-mono text-xs text-secondary uppercase font-bold">Log Date:</span>
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-secondary border border-border-color rounded-xl px-3 py-1.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+              className="bg-secondary border border-border-color rounded-lg px-2.5 py-1 font-mono text-xs text-primary focus:outline-none focus:border-amber"
               style={{ background: '#121520', color: '#fff' }}
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border-subtle/50">
-            <span className="font-mono text-[10px] text-muted uppercase">PRESETS:</span>
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setSelectedDate(todayStr)}
-              className={`px-3 py-1 rounded-lg font-mono text-xs transition-colors ${
-                selectedDate === todayStr
-                  ? 'bg-amber text-black font-bold'
-                  : 'bg-secondary text-muted hover:text-primary border border-border-subtle'
+              className={`px-2.5 py-1 rounded-lg font-mono text-xs transition-colors ${
+                selectedDate === todayStr ? 'bg-amber text-black font-bold' : 'bg-secondary text-muted hover:text-primary border border-border-subtle'
               }`}
             >
               Today
@@ -675,7 +495,7 @@ export default function WorkPage() {
             <button
               type="button"
               onClick={() => setSelectedDate(getLocalDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000)))}
-              className="px-3 py-1 bg-secondary hover:bg-hover border border-border-subtle rounded-lg font-mono text-xs text-muted hover:text-primary transition-colors"
+              className="px-2.5 py-1 bg-secondary hover:bg-hover border border-border-subtle rounded-lg font-mono text-xs text-muted hover:text-primary transition-colors"
             >
               Yesterday
             </button>
@@ -686,126 +506,99 @@ export default function WorkPage() {
         {/* SUBPAGE 1: WORK LOG */}
         {/* ========================================================================= */}
         {activeTab === 'work_log' && (
-          <div className="space-y-6">
-            <HudPanel className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 mb-5 border-b border-border-color">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber/10 border border-amber/30 text-amber flex-shrink-0">
-                    <Clock size={18} />
-                  </div>
-                  <div>
-                    <h2 className="font-display text-base sm:text-lg uppercase tracking-wider text-primary">
-                      LOG WORK HOURS ({selectedDate})
-                    </h2>
-                    <p className="font-mono text-[11px] sm:text-xs text-muted">
-                      Record total worked, Beyond Tatva focus, & unfocused hours (+2 XP Reward)
-                    </p>
-                  </div>
-                </div>
-
-                <span className="self-start sm:self-auto font-mono text-[10px] sm:text-xs text-success bg-success/10 border border-success/30 px-2.5 py-1 rounded-full">
-                  +2 XP per entry
-                </span>
-              </div>
-
-              <form onSubmit={handleSaveWorkLog} className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="space-y-5">
+            <HudPanel className="p-4 sm:p-5">
+              <form onSubmit={handleSaveWorkLog} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* 1. Total Hours Worked */}
-                  <div className="p-3.5 rounded-xl bg-secondary border border-border-color space-y-2">
-                    <label className="block font-mono text-xs text-amber uppercase font-bold flex items-center gap-2">
-                      <Clock size={14} /> Total Worked (Hours)
-                    </label>
+                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
+                        <Clock size={13} /> Total Worked
+                      </label>
+                      <FieldUnitToggle unit={unitTotalWorked} setUnit={setUnitTotalWorked} />
+                    </div>
                     <input
                       type="number"
-                      step="0.1"
+                      step={unitTotalWorked === 'm' ? '1' : '0.1'}
                       min="0"
-                      max="24"
-                      placeholder="e.g. 8.5"
-                      value={totalHoursWorked}
-                      onChange={(e) => setTotalHoursWorked(e.target.value)}
+                      placeholder={unitTotalWorked === 'm' ? 'e.g. 510' : 'e.g. 8.5'}
+                      value={valTotalWorked}
+                      onChange={(e) => setValTotalWorked(e.target.value)}
                       className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
                       style={{ background: '#141824', color: '#fff' }}
                     />
-                    <span className="font-mono text-[10px] text-muted block">
-                      Displays as: {formatTimeVal(totalHoursWorked)}
-                    </span>
                   </div>
 
                   {/* 2. Beyond Tatva Hours */}
-                  <div className="p-3.5 rounded-xl bg-secondary border border-border-color space-y-2">
-                    <label className="block font-mono text-xs text-cyan uppercase font-bold flex items-center gap-2">
-                      <Target size={14} /> Beyond Tatva (Hours)
-                    </label>
+                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
+                        <Target size={13} /> Beyond Tatva
+                      </label>
+                      <FieldUnitToggle unit={unitBeyondTatva} setUnit={setUnitBeyondTatva} />
+                    </div>
                     <input
                       type="number"
-                      step="0.1"
+                      step={unitBeyondTatva === 'm' ? '1' : '0.1'}
                       min="0"
-                      max="24"
-                      placeholder="e.g. 4.0"
-                      value={beyondTatvaHours}
-                      onChange={(e) => setBeyondTatvaHours(e.target.value)}
+                      placeholder={unitBeyondTatva === 'm' ? 'e.g. 240' : 'e.g. 4.0'}
+                      value={valBeyondTatva}
+                      onChange={(e) => setValBeyondTatva(e.target.value)}
                       className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
                       style={{ background: '#141824', color: '#fff' }}
                     />
-                    <span className="font-mono text-[10px] text-muted block">
-                      Displays as: {formatTimeVal(beyondTatvaHours)}
-                    </span>
                   </div>
 
                   {/* 3. Focused Hours */}
-                  <div className="p-3.5 rounded-xl bg-secondary border border-border-color space-y-2">
-                    <label className="block font-mono text-xs text-success uppercase font-bold flex items-center gap-2">
-                      <Zap size={14} /> Focused Hours
-                    </label>
+                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="font-mono text-xs text-success uppercase font-bold flex items-center gap-1.5">
+                        <Zap size={13} /> Focused
+                      </label>
+                      <FieldUnitToggle unit={unitFocused} setUnit={setUnitFocused} />
+                    </div>
                     <input
                       type="number"
-                      step="0.1"
+                      step={unitFocused === 'm' ? '1' : '0.1'}
                       min="0"
-                      max="24"
-                      placeholder="e.g. 5.5"
-                      value={focusedHours}
-                      onChange={(e) => setFocusedHours(e.target.value)}
+                      placeholder={unitFocused === 'm' ? 'e.g. 330' : 'e.g. 5.5'}
+                      value={valFocused}
+                      onChange={(e) => setValFocused(e.target.value)}
                       className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-success"
                       style={{ background: '#141824', color: '#fff' }}
                     />
-                    <span className="font-mono text-[10px] text-muted block">
-                      Displays as: {formatTimeVal(focusedHours)}
-                    </span>
                   </div>
 
                   {/* 4. Unfocused / Distracted Hours */}
-                  <div className="p-3.5 rounded-xl bg-secondary border border-border-color space-y-2">
-                    <label className="block font-mono text-xs text-danger uppercase font-bold flex items-center gap-2">
-                      <AlertTriangle size={14} /> Unfocused Hours
-                    </label>
+                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="font-mono text-xs text-danger uppercase font-bold flex items-center gap-1.5">
+                        <AlertTriangle size={13} /> Unfocused
+                      </label>
+                      <FieldUnitToggle unit={unitUnfocused} setUnit={setUnitUnfocused} />
+                    </div>
                     <input
                       type="number"
-                      step="0.1"
+                      step={unitUnfocused === 'm' ? '1' : '0.1'}
                       min="0"
-                      max="24"
-                      placeholder="e.g. 1.5"
-                      value={unfocusedHours}
-                      onChange={(e) => setUnfocusedHours(e.target.value)}
+                      placeholder={unitUnfocused === 'm' ? 'e.g. 90' : 'e.g. 1.5'}
+                      value={valUnfocused}
+                      onChange={(e) => setValUnfocused(e.target.value)}
                       className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-danger"
                       style={{ background: '#141824', color: '#fff' }}
                     />
-                    <span className="font-mono text-[10px] text-muted block">
-                      Displays as: {formatTimeVal(unfocusedHours)}
-                    </span>
                   </div>
                 </div>
 
                 {/* Notes */}
                 <div>
-                  <label className="block font-mono text-xs text-secondary uppercase font-bold mb-1.5">
-                    Daily Summary Notes (Optional)
-                  </label>
                   <textarea
                     rows={2}
-                    placeholder="Key tasks completed, focus blockers, or daily notes..."
+                    placeholder="Work summary notes (optional)..."
                     value={workNotes}
                     onChange={(e) => setWorkNotes(e.target.value)}
-                    className="w-full bg-secondary border border-border-color rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                    className="w-full bg-secondary border border-border-color rounded-xl p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
                     style={{ background: '#141824', color: '#fff' }}
                   />
                 </div>
@@ -815,60 +608,48 @@ export default function WorkPage() {
                   <button
                     type="submit"
                     disabled={savingWork}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg shadow-amber/20 transition-all active:scale-95 disabled:opacity-50"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
                   >
-                    <Save size={16} />
+                    <Save size={15} />
                     <span>{savingWork ? 'Saving...' : 'Save Work Log (+2 XP)'}</span>
                   </button>
                 </div>
               </form>
             </HudPanel>
 
-            {/* RECENT WORK LOGS (DESKTOP TABLE + MOBILE CARDS) */}
-            <HudPanel className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-border-color">
-                <h3 className="font-display text-sm sm:text-md uppercase tracking-wider text-primary">
-                  WORK LOG HISTORY ({workLogs.length})
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => handleExportCSV('work')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary hover:bg-hover border border-border-color rounded-lg font-mono text-xs text-secondary hover:text-primary transition-colors"
-                >
-                  <FileSpreadsheet size={14} className="text-amber" />
-                  <span>Export CSV</span>
-                </button>
-              </div>
+            {/* RECENT WORK LOGS */}
+            <HudPanel className="p-4 sm:p-5">
+              <h3 className="font-display text-xs uppercase tracking-wider text-muted mb-3">
+                RECENT WORK HISTORY ({workLogs.length})
+              </h3>
 
               {workLogs.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-6">
-                  No work logs recorded yet. Use the form above to log hours for {selectedDate}.
-                </p>
+                <p className="font-mono text-xs text-muted text-center py-4">No work logs recorded yet.</p>
               ) : (
                 <>
                   {/* Mobile Card View (< 768px) */}
-                  <div className="md:hidden space-y-3">
+                  <div className="md:hidden space-y-2.5">
                     {workLogs.map(l => (
-                      <div key={l.date} className="p-3.5 rounded-xl bg-tertiary border border-border-color space-y-2">
+                      <div key={l.date} className="p-3 rounded-xl bg-tertiary border border-border-color space-y-2">
                         <div className="flex items-center justify-between font-mono text-xs">
                           <span className="text-secondary font-bold">{l.date}</span>
-                          <span className="text-amber font-bold">{formatTimeVal(l.total_hours_worked)} Worked</span>
+                          <span className="text-amber font-bold">{(l.total_hours_worked || 0).toFixed(1)}h Worked</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 font-mono text-[11px] pt-2 border-t border-border-subtle/40">
+                        <div className="grid grid-cols-3 gap-2 font-mono text-[11px] pt-1.5 border-t border-border-subtle/40">
                           <div>
                             <span className="text-muted block text-[9px] uppercase">Beyond</span>
-                            <span className="text-cyan">{formatTimeVal(l.beyond_tatva_hours)}</span>
+                            <span className="text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)}h</span>
                           </div>
                           <div>
                             <span className="text-muted block text-[9px] uppercase">Focused</span>
-                            <span className="text-success">{formatTimeVal(l.focused_hours)}</span>
+                            <span className="text-success">{(l.focused_hours || 0).toFixed(1)}h</span>
                           </div>
                           <div>
                             <span className="text-muted block text-[9px] uppercase">Unfocused</span>
-                            <span className="text-danger font-bold">{formatTimeVal((l.unfocused_hours ?? l.deep_execution_hours))}</span>
+                            <span className="text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)}h</span>
                           </div>
                         </div>
-                        {l.notes && <p className="font-mono text-[11px] text-muted pt-1 italic">{l.notes}</p>}
+                        {l.notes && <p className="font-mono text-[11px] text-muted italic pt-1">{l.notes}</p>}
                       </div>
                     ))}
                   </div>
@@ -878,23 +659,23 @@ export default function WorkPage() {
                     <table className="w-full text-left font-mono text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-border-color text-muted uppercase text-[10px]">
-                          <th className="py-2.5 px-3">Date</th>
-                          <th className="py-2.5 px-3">Total Worked</th>
-                          <th className="py-2.5 px-3">Beyond Tatva</th>
-                          <th className="py-2.5 px-3">Focused Hours</th>
-                          <th className="py-2.5 px-3">Unfocused Hours</th>
-                          <th className="py-2.5 px-3">Notes</th>
+                          <th className="py-2 px-3">Date</th>
+                          <th className="py-2 px-3">Total Worked</th>
+                          <th className="py-2 px-3">Beyond Tatva</th>
+                          <th className="py-2 px-3">Focused</th>
+                          <th className="py-2 px-3">Unfocused</th>
+                          <th className="py-2 px-3">Notes</th>
                         </tr>
                       </thead>
                       <tbody>
                         {workLogs.map(l => (
                           <tr key={l.date} className="border-b border-border-subtle/50 hover:bg-tertiary/50 transition-colors">
-                            <td className="py-3 px-3 text-secondary">{l.date}</td>
-                            <td className="py-3 px-3"><strong className="text-amber">{formatTimeVal(l.total_hours_worked)}</strong></td>
-                            <td className="py-3 px-3 text-cyan">{formatTimeVal(l.beyond_tatva_hours)}</td>
-                            <td className="py-3 px-3 text-success">{formatTimeVal(l.focused_hours)}</td>
-                            <td className="py-3 px-3 text-danger font-bold">{formatTimeVal((l.unfocused_hours ?? l.deep_execution_hours))}</td>
-                            <td className="py-3 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
+                            <td className="py-2.5 px-3 text-secondary">{l.date}</td>
+                            <td className="py-2.5 px-3"><strong className="text-amber">{(l.total_hours_worked || 0).toFixed(1)} h</strong></td>
+                            <td className="py-2.5 px-3 text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)} h</td>
+                            <td className="py-2.5 px-3 text-success">{(l.focused_hours || 0).toFixed(1)} h</td>
+                            <td className="py-2.5 px-3 text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)} h</td>
+                            <td className="py-2.5 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -907,130 +688,100 @@ export default function WorkPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* SUBPAGE 2: CONTENT OPERATIONS (SHOOT LOG & EDIT LOG SEPARATED) */}
+        {/* SUBPAGE 2: CONTENT OPERATIONS */}
         {/* ========================================================================= */}
         {activeTab === 'content_ops' && (
-          <div className="space-y-6">
-            {/* CONTENT MODE SUB-SWITCHER (SHOOT vs EDIT LOGS) */}
-            <div className="flex items-center gap-2 p-1.5 bg-tertiary border border-border-color rounded-2xl">
+          <div className="space-y-5">
+            {/* CONTENT MODE SUB-SWITCHER */}
+            <div className="flex items-center gap-2 p-1 bg-tertiary border border-border-color rounded-xl">
               <button
                 type="button"
                 onClick={() => setContentMode('shoot')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-mono text-xs uppercase font-bold transition-all ${
-                  contentMode === 'shoot'
-                    ? 'bg-cyan text-black shadow-lg shadow-cyan/20'
-                    : 'text-muted hover:text-primary'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
+                  contentMode === 'shoot' ? 'bg-cyan text-black shadow-md' : 'text-muted hover:text-primary'
                 }`}
               >
-                <Camera size={16} />
+                <Camera size={15} />
                 <span>1. Log Shoot</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setContentMode('edit')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-mono text-xs uppercase font-bold transition-all ${
-                  contentMode === 'edit'
-                    ? 'bg-amber text-black shadow-lg shadow-amber/20'
-                    : 'text-muted hover:text-primary'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
+                  contentMode === 'edit' ? 'bg-amber text-black shadow-md' : 'text-muted hover:text-primary'
                 }`}
               >
-                <Scissors size={16} />
+                <Scissors size={15} />
                 <span>2. Log Edit</span>
               </button>
             </div>
 
             {/* SEPARATE FORM 1: SHOOT LOG */}
             {contentMode === 'shoot' && (
-              <HudPanel className="p-4 sm:p-6 space-y-5 border-cyan/40">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 border-b border-cyan/20">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-cyan/10 border border-cyan/30 text-cyan flex-shrink-0">
-                      <Camera size={18} />
-                    </div>
-                    <div>
-                      <h2 className="font-display text-base sm:text-lg uppercase tracking-wider text-cyan">
-                        RECORD VIDEO SHOOT LOG ({selectedDate})
-                      </h2>
-                      <p className="font-mono text-[11px] sm:text-xs text-muted">
-                        Track recording time & raw footage minutes (+2 XP Reward)
-                      </p>
-                    </div>
-                  </div>
-
-                  <span className="font-mono text-[10px] sm:text-xs text-success bg-success/10 border border-success/30 px-2.5 py-1 rounded-full">
-                    +2 XP per entry
-                  </span>
-                </div>
-
-                <form onSubmit={handleSaveShootLog} className="space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <HudPanel className="p-4 sm:p-5 border-cyan/40">
+                <form onSubmit={handleSaveShootLog} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Hours Shot */}
-                    <div className="p-3.5 rounded-xl bg-secondary border border-border-color space-y-2">
-                      <label className="block font-mono text-xs text-cyan uppercase font-bold flex items-center gap-2">
-                        <Clock size={14} /> Hours Shot (Recording Time)
-                      </label>
+                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
+                          <Clock size={13} /> Hours Shot
+                        </label>
+                        <FieldUnitToggle unit={unitShootHours} setUnit={setUnitShootHours} />
+                      </div>
                       <input
                         type="number"
-                        step="0.1"
+                        step={unitShootHours === 'm' ? '1' : '0.1'}
                         min="0"
-                        max="24"
-                        placeholder="e.g. 2.5"
-                        value={shootHours}
-                        onChange={(e) => setShootHours(e.target.value)}
+                        placeholder={unitShootHours === 'm' ? 'e.g. 150' : 'e.g. 2.5'}
+                        value={valShootHours}
+                        onChange={(e) => setValShootHours(e.target.value)}
                         className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
                         style={{ background: '#141824', color: '#fff' }}
                       />
-                      <span className="font-mono text-[10px] text-muted block">
-                        Displays as: {formatTimeVal(shootHours)}
-                      </span>
                     </div>
 
-                    {/* Raw Footage Shot (Minutes) */}
-                    <div className="p-3.5 rounded-xl bg-secondary border border-border-color space-y-2">
-                      <label className="block font-mono text-xs text-cyan uppercase font-bold flex items-center gap-2">
-                        <Film size={14} /> Raw Footage Shot (Minutes)
-                      </label>
+                    {/* Raw Footage Shot */}
+                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
+                          <Film size={13} /> Raw Footage Shot
+                        </label>
+                        <FieldUnitToggle unit={unitShootRaw} setUnit={setUnitShootRaw} />
+                      </div>
                       <input
                         type="number"
-                        step="1"
+                        step={unitShootRaw === 'h' ? '0.1' : '1'}
                         min="0"
-                        placeholder="e.g. 120"
-                        value={shootRawMinutes}
-                        onChange={(e) => setShootRawMinutes(e.target.value)}
+                        placeholder={unitShootRaw === 'h' ? 'e.g. 2.0' : 'e.g. 120'}
+                        value={valShootRaw}
+                        onChange={(e) => setValShootRaw(e.target.value)}
                         className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
                         style={{ background: '#141824', color: '#fff' }}
                       />
-                      <span className="font-mono text-[10px] text-muted block">
-                        Displays as: {formatMinVal(shootRawMinutes)}
-                      </span>
                     </div>
                   </div>
 
-                  {/* Shoot Notes */}
                   <div>
-                    <label className="block font-mono text-xs text-secondary uppercase font-bold mb-1.5">
-                      Shoot Production Notes (Optional)
-                    </label>
                     <textarea
                       rows={2}
-                      placeholder="e.g. Shot Beyond Tatva Module 2, camera angle details, or location..."
+                      placeholder="Shoot production notes (optional)..."
                       value={shootNotes}
                       onChange={(e) => setShootNotes(e.target.value)}
-                      className="w-full bg-secondary border border-border-color rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-cyan"
+                      className="w-full bg-secondary border border-border-color rounded-xl p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-cyan"
                       style={{ background: '#141824', color: '#fff' }}
                     />
                   </div>
 
-                  {/* Submit */}
                   <div className="flex justify-end">
                     <button
                       type="submit"
                       disabled={savingShoot}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-cyan hover:bg-cyan-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg shadow-cyan/20 transition-all active:scale-95 disabled:opacity-50"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-cyan hover:bg-cyan-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
                     >
-                      <Save size={16} />
-                      <span>{savingShoot ? 'Saving Shoot...' : 'Save Shoot Log (+2 XP)'}</span>
+                      <Save size={15} />
+                      <span>{savingShoot ? 'Saving...' : 'Save Shoot Log (+2 XP)'}</span>
                     </button>
                   </div>
                 </form>
@@ -1039,147 +790,109 @@ export default function WorkPage() {
 
             {/* SEPARATE FORM 2: EDIT LOG */}
             {contentMode === 'edit' && (
-              <HudPanel className="p-4 sm:p-6 space-y-5 border-amber/40">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 border-b border-amber/20">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-amber/10 border border-amber/30 text-amber flex-shrink-0">
-                      <Scissors size={18} />
-                    </div>
-                    <div>
-                      <h2 className="font-display text-base sm:text-lg uppercase tracking-wider text-amber">
-                        RECORD VIDEO EDIT LOG ({selectedDate})
-                      </h2>
-                      <p className="font-mono text-[11px] sm:text-xs text-muted">
-                        Track edit software hours & finished output minutes (+2 XP Reward)
-                      </p>
-                    </div>
-                  </div>
-
-                  <span className="font-mono text-[10px] sm:text-xs text-success bg-success/10 border border-success/30 px-2.5 py-1 rounded-full">
-                    +2 XP per entry
-                  </span>
-                </div>
-
-                <form onSubmit={handleSaveEditLog} className="space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <HudPanel className="p-4 sm:p-5 border-amber/40">
+                <form onSubmit={handleSaveEditLog} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Hours Edited */}
-                    <div className="p-3.5 rounded-xl bg-secondary border border-border-color space-y-2">
-                      <label className="block font-mono text-xs text-amber uppercase font-bold flex items-center gap-2">
-                        <Clock size={14} /> Hours Edited (In Software)
-                      </label>
+                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
+                          <Clock size={13} /> Hours Edited
+                        </label>
+                        <FieldUnitToggle unit={unitEditHours} setUnit={setUnitEditHours} />
+                      </div>
                       <input
                         type="number"
-                        step="0.1"
+                        step={unitEditHours === 'm' ? '1' : '0.1'}
                         min="0"
-                        max="24"
-                        placeholder="e.g. 4.0"
-                        value={editHours}
-                        onChange={(e) => setEditHours(e.target.value)}
+                        placeholder={unitEditHours === 'm' ? 'e.g. 240' : 'e.g. 4.0'}
+                        value={valEditHours}
+                        onChange={(e) => setValEditHours(e.target.value)}
                         className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
                         style={{ background: '#141824', color: '#fff' }}
                       />
-                      <span className="font-mono text-[10px] text-muted block">
-                        Displays as: {formatTimeVal(editHours)}
-                      </span>
                     </div>
 
-                    {/* Finished Video Edited (Minutes) */}
-                    <div className="p-3.5 rounded-xl bg-secondary border border-border-color space-y-2">
-                      <label className="block font-mono text-xs text-amber uppercase font-bold flex items-center gap-2">
-                        <Video size={14} /> Finished Video Output (Minutes)
-                      </label>
+                    {/* Finished Video Edited */}
+                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
+                          <Video size={13} /> Finished Video Output
+                        </label>
+                        <FieldUnitToggle unit={unitEditFinished} setUnit={setUnitEditFinished} />
+                      </div>
                       <input
                         type="number"
-                        step="0.1"
+                        step={unitEditFinished === 'h' ? '0.1' : '1'}
                         min="0"
-                        placeholder="e.g. 5.0"
-                        value={editFinishedMinutes}
-                        onChange={(e) => setEditFinishedMinutes(e.target.value)}
+                        placeholder={unitEditFinished === 'h' ? 'e.g. 0.2' : 'e.g. 5'}
+                        value={valEditFinished}
+                        onChange={(e) => setValEditFinished(e.target.value)}
                         className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
                         style={{ background: '#141824', color: '#fff' }}
                       />
-                      <span className="font-mono text-[10px] text-muted block">
-                        Displays as: {formatMinVal(editFinishedMinutes)}
-                      </span>
                     </div>
                   </div>
 
-                  {/* Edit Notes */}
                   <div>
-                    <label className="block font-mono text-xs text-secondary uppercase font-bold mb-1.5">
-                      Edit Production Notes (Optional)
-                    </label>
                     <textarea
                       rows={2}
-                      placeholder="e.g. Color grading, audio cleanup, or export resolution notes..."
+                      placeholder="Edit production notes (optional)..."
                       value={editNotes}
                       onChange={(e) => setEditNotes(e.target.value)}
-                      className="w-full bg-secondary border border-border-color rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                      className="w-full bg-secondary border border-border-color rounded-xl p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
                       style={{ background: '#141824', color: '#fff' }}
                     />
                   </div>
 
-                  {/* Submit */}
                   <div className="flex justify-end">
                     <button
                       type="submit"
                       disabled={savingEdit}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg shadow-amber/20 transition-all active:scale-95 disabled:opacity-50"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
                     >
-                      <Save size={16} />
-                      <span>{savingEdit ? 'Saving Edit...' : 'Save Edit Log (+2 XP)'}</span>
+                      <Save size={15} />
+                      <span>{savingEdit ? 'Saving...' : 'Save Edit Log (+2 XP)'}</span>
                     </button>
                   </div>
                 </form>
               </HudPanel>
             )}
 
-            {/* CONTENT LOG HISTORY (DESKTOP TABLE + MOBILE CARDS) */}
-            <HudPanel className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-border-color">
-                <h3 className="font-display text-sm sm:text-md uppercase tracking-wider text-primary">
-                  CONTENT PRODUCTION HISTORY ({contentLogs.length})
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => handleExportCSV('content')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary hover:bg-hover border border-border-color rounded-lg font-mono text-xs text-secondary hover:text-primary transition-colors"
-                >
-                  <FileSpreadsheet size={14} className="text-cyan" />
-                  <span>Export CSV</span>
-                </button>
-              </div>
+            {/* CONTENT LOG HISTORY */}
+            <HudPanel className="p-4 sm:p-5">
+              <h3 className="font-display text-xs uppercase tracking-wider text-muted mb-3">
+                CONTENT HISTORY ({contentLogs.length})
+              </h3>
 
               {contentLogs.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-6">
-                  No content logs recorded yet. Select Shoot or Edit above to log production.
-                </p>
+                <p className="font-mono text-xs text-muted text-center py-4">No content logs recorded yet.</p>
               ) : (
                 <>
                   {/* Mobile Card View (< 768px) */}
-                  <div className="md:hidden space-y-3">
+                  <div className="md:hidden space-y-2.5">
                     {contentLogs.map(l => {
                       const editHrs = parseFloat(l.edit_hours) || 0
                       const finMins = parseFloat(l.edit_finished_minutes) || 0
                       const ratio = finMins > 0 ? ((editHrs * 60) / finMins).toFixed(1) : '—'
 
                       return (
-                        <div key={l.date} className="p-3.5 rounded-xl bg-tertiary border border-border-color space-y-2">
+                        <div key={l.date} className="p-3 rounded-xl bg-tertiary border border-border-color space-y-2">
                           <div className="flex items-center justify-between font-mono text-xs">
                             <span className="text-secondary font-bold">{l.date}</span>
                             <span className="text-cyan font-bold">Edit Speed: {ratio} m/m</span>
                           </div>
-                          <div className="grid grid-cols-2 gap-2 font-mono text-[11px] pt-2 border-t border-border-subtle/40">
+                          <div className="grid grid-cols-2 gap-2 font-mono text-[11px] pt-1.5 border-t border-border-subtle/40">
                             <div className="p-2 rounded bg-secondary/60">
                               <span className="text-cyan block text-[9px] uppercase font-bold">🎥 Shoot</span>
-                              <div>{formatTimeVal(l.shoot_hours)} ({formatMinVal(l.shoot_raw_minutes)} raw)</div>
+                              <div>{(l.shoot_hours || 0).toFixed(1)}h ({l.shoot_raw_minutes || 0}m raw)</div>
                             </div>
                             <div className="p-2 rounded bg-secondary/60">
                               <span className="text-amber block text-[9px] uppercase font-bold">✂️ Edit</span>
-                              <div>{formatTimeVal(l.edit_hours)} ({formatMinVal(l.edit_finished_minutes)} out)</div>
+                              <div>{(l.edit_hours || 0).toFixed(1)}h ({l.edit_finished_minutes || 0}m out)</div>
                             </div>
                           </div>
-                          {l.notes && <p className="font-mono text-[11px] text-muted pt-1 italic">{l.notes}</p>}
+                          {l.notes && <p className="font-mono text-[11px] text-muted italic pt-1">{l.notes}</p>}
                         </div>
                       )
                     })}
@@ -1190,13 +903,13 @@ export default function WorkPage() {
                     <table className="w-full text-left font-mono text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-border-color text-muted uppercase text-[10px]">
-                          <th className="py-2.5 px-3">Date</th>
-                          <th className="py-2.5 px-3">Shoot Time</th>
-                          <th className="py-2.5 px-3">Raw Footage</th>
-                          <th className="py-2.5 px-3">Edit Time</th>
-                          <th className="py-2.5 px-3">Finished Output</th>
-                          <th className="py-2.5 px-3">Edit Speed Ratio</th>
-                          <th className="py-2.5 px-3">Notes</th>
+                          <th className="py-2 px-3">Date</th>
+                          <th className="py-2 px-3">Shoot Time</th>
+                          <th className="py-2 px-3">Raw Footage</th>
+                          <th className="py-2 px-3">Edit Time</th>
+                          <th className="py-2 px-3">Finished Output</th>
+                          <th className="py-2 px-3">Edit Speed Ratio</th>
+                          <th className="py-2 px-3">Notes</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1207,13 +920,13 @@ export default function WorkPage() {
 
                           return (
                             <tr key={l.date} className="border-b border-border-subtle/50 hover:bg-tertiary/50 transition-colors">
-                              <td className="py-3 px-3 text-secondary">{l.date}</td>
-                              <td className="py-3 px-3 text-cyan">{formatTimeVal(l.shoot_hours)}</td>
-                              <td className="py-3 px-3 text-secondary">{formatMinVal(l.shoot_raw_minutes)}</td>
-                              <td className="py-3 px-3 text-amber font-bold">{formatTimeVal(l.edit_hours)}</td>
-                              <td className="py-3 px-3 text-success font-bold">{formatMinVal(l.edit_finished_minutes)}</td>
-                              <td className="py-3 px-3 text-info font-bold">{ratio} m edit / finished m</td>
-                              <td className="py-3 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
+                              <td className="py-2.5 px-3 text-secondary">{l.date}</td>
+                              <td className="py-2.5 px-3 text-cyan">{(l.shoot_hours || 0).toFixed(1)} h</td>
+                              <td className="py-2.5 px-3 text-secondary">{l.shoot_raw_minutes || 0} m</td>
+                              <td className="py-2.5 px-3 text-amber font-bold">{(l.edit_hours || 0).toFixed(1)} h</td>
+                              <td className="py-2.5 px-3 text-success font-bold">{l.edit_finished_minutes || 0} m</td>
+                              <td className="py-2.5 px-3 text-info font-bold">{ratio} m edit / finished m</td>
+                              <td className="py-2.5 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
                             </tr>
                           )
                         })}
@@ -1227,140 +940,97 @@ export default function WorkPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* SUBPAGE 3: ANALYTICS & EXPORT ENGINE */}
+        {/* SUBPAGE 3: ANALYTICS */}
         {/* ========================================================================= */}
         {activeTab === 'analytics' && (
-          <div className="space-y-6">
-            {/* RANGE SELECTOR & EXPORT ACTION BUTTONS */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 bg-tertiary border border-border-color rounded-2xl">
-              <div className="flex items-center gap-3">
-                <Filter size={18} className="text-amber flex-shrink-0" />
-                <span className="font-mono text-xs text-secondary uppercase font-bold">Analytics Period:</span>
-                <div className="flex items-center bg-secondary border border-border-color rounded-lg p-1">
-                  {['7days', '30days', 'all'].map(rangeKey => (
-                    <button
-                      key={rangeKey}
-                      type="button"
-                      onClick={() => setAnalyticsRange(rangeKey)}
-                      className={`px-2.5 py-1 rounded font-mono text-xs uppercase font-bold transition-all ${
-                        analyticsRange === rangeKey
-                          ? 'bg-amber text-black shadow'
-                          : 'text-muted hover:text-primary'
-                      }`}
-                    >
-                      {rangeKey === '7days' ? '7 Days' : rangeKey === '30days' ? '30 Days' : 'All'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleExportCSV('work')}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-secondary border border-border-color hover:border-amber/50 rounded-xl font-mono text-xs text-secondary hover:text-primary transition-colors"
-                >
-                  <FileSpreadsheet size={15} className="text-amber" />
-                  <span>Work CSV</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleExportCSV('content')}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-secondary border border-border-color hover:border-cyan/50 rounded-xl font-mono text-xs text-secondary hover:text-primary transition-colors"
-                >
-                  <FileSpreadsheet size={15} className="text-cyan" />
-                  <span>Content CSV</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handlePrintPDFReport}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold rounded-xl shadow-lg shadow-amber/20 transition-all active:scale-95"
-                >
-                  <Printer size={16} />
-                  <span>Export PDF Report</span>
-                </button>
+          <div className="space-y-5">
+            {/* RANGE SELECTOR */}
+            <div className="flex items-center justify-between p-3 bg-tertiary border border-border-color rounded-xl">
+              <span className="font-mono text-xs text-secondary uppercase font-bold">Analytics Period:</span>
+              <div className="flex items-center bg-secondary border border-border-color rounded-lg p-0.5">
+                {['7days', '30days', 'all'].map(rangeKey => (
+                  <button
+                    key={rangeKey}
+                    type="button"
+                    onClick={() => setAnalyticsRange(rangeKey)}
+                    className={`px-3 py-1 rounded font-mono text-xs uppercase font-bold transition-all ${
+                      analyticsRange === rangeKey ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+                    }`}
+                  >
+                    {rangeKey === '7days' ? '7 Days' : rangeKey === '30days' ? '30 Days' : 'All'}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* KPI STAT CARDS */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {/* Card 1: Total Worked */}
-              <HudPanel className="p-3.5 sm:p-5 space-y-1.5">
-                <div className="flex items-center justify-between text-muted font-mono text-[10px] sm:text-xs">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <HudPanel className="p-3.5 space-y-1">
+                <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>TOTAL WORKED</span>
-                  <Clock size={15} className="text-amber" />
+                  <Clock size={14} className="text-amber" />
                 </div>
-                <div className="font-display text-xl sm:text-2xl text-amber font-bold">
-                  {formatTimeVal(totals.totWork)}
+                <div className="font-display text-xl text-amber font-bold">
+                  {totals.totWork.toFixed(1)} h
                 </div>
-                <div className="font-mono text-[9px] sm:text-[10px] text-muted truncate">
-                  BT: {formatTimeVal(totals.totBeyond)} ({totals.beyondRatio}%)
+                <div className="font-mono text-[9px] text-muted truncate">
+                  BT: {totals.totBeyond.toFixed(1)} h ({totals.beyondRatio}%)
                 </div>
               </HudPanel>
 
-              {/* Card 2: Focus Ratio */}
-              <HudPanel className="p-3.5 sm:p-5 space-y-1.5">
-                <div className="flex items-center justify-between text-muted font-mono text-[10px] sm:text-xs">
+              <HudPanel className="p-3.5 space-y-1">
+                <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>FOCUS RATIO</span>
-                  <Zap size={15} className="text-success" />
+                  <Zap size={14} className="text-success" />
                 </div>
-                <div className="font-display text-xl sm:text-2xl text-success font-bold">
+                <div className="font-display text-xl text-success font-bold">
                   {totals.focusRatio}%
                 </div>
-                <div className="font-mono text-[9px] sm:text-[10px] text-muted truncate">
-                  Focus: {formatTimeVal(totals.totFocus)}
+                <div className="font-mono text-[9px] text-muted truncate">
+                  Focus: {totals.totFocus.toFixed(1)} h
                 </div>
               </HudPanel>
 
-              {/* Card 3: Raw Footage Shot */}
-              <HudPanel className="p-3.5 sm:p-5 space-y-1.5">
-                <div className="flex items-center justify-between text-muted font-mono text-[10px] sm:text-xs">
-                  <span>RAW FOOTAGE SHOT</span>
-                  <Film size={15} className="text-cyan" />
+              <HudPanel className="p-3.5 space-y-1">
+                <div className="flex items-center justify-between text-muted font-mono text-[10px]">
+                  <span>RAW FOOTAGE</span>
+                  <Film size={14} className="text-cyan" />
                 </div>
-                <div className="font-display text-xl sm:text-2xl text-cyan font-bold">
-                  {formatMinVal(totals.totShootRawMins)}
+                <div className="font-display text-xl text-cyan font-bold">
+                  {totals.totShootRawMins} m
                 </div>
-                <div className="font-mono text-[9px] sm:text-[10px] text-muted truncate">
-                  Shoot Time: {formatTimeVal(totals.totShootHrs)}
+                <div className="font-mono text-[9px] text-muted truncate">
+                  Shoot: {totals.totShootHrs.toFixed(1)} h
                 </div>
               </HudPanel>
 
-              {/* Card 4: Finished Video Output */}
-              <HudPanel className="p-3.5 sm:p-5 space-y-1.5">
-                <div className="flex items-center justify-between text-muted font-mono text-[10px] sm:text-xs">
-                  <span>FINISHED OUTPUT</span>
-                  <Video size={15} className="text-amber" />
+              <HudPanel className="p-3.5 space-y-1">
+                <div className="flex items-center justify-between text-muted font-mono text-[10px]">
+                  <span>FINISHED VIDEO</span>
+                  <Video size={14} className="text-amber" />
                 </div>
-                <div className="font-display text-xl sm:text-2xl text-amber font-bold">
-                  {formatMinVal(totals.totEditFinishedMins)}
+                <div className="font-display text-xl text-amber font-bold">
+                  {totals.totEditFinishedMins} m
                 </div>
-                <div className="font-mono text-[9px] sm:text-[10px] text-muted truncate">
-                  Edit Speed: {totals.editRatio} m/m
+                <div className="font-mono text-[9px] text-muted truncate">
+                  Speed: {totals.editRatio} m/m
                 </div>
               </HudPanel>
             </div>
 
             {/* RECHARTS CHART 1: WORK ALLOCATION */}
-            <HudPanel className="p-4 sm:p-6 space-y-3.5">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 pb-2 border-b border-border-color">
-                <div className="flex items-center gap-2 text-amber font-display text-xs sm:text-sm uppercase">
-                  <TrendingUp size={16} />
-                  <span>Work Hours Allocation ({timeUnit.toUpperCase()})</span>
+            <HudPanel className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-border-color">
+                <div className="flex items-center gap-2 text-amber font-display text-xs uppercase">
+                  <TrendingUp size={15} />
+                  <span>Work Hours Allocation (Hours)</span>
                 </div>
-                <span className="font-mono text-[10px] sm:text-xs text-muted">
-                  Worked vs Beyond Tatva vs Focused vs Unfocused
-                </span>
               </div>
 
               {chartData.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-8">
-                  No work data available for the selected date range.
-                </p>
+                <p className="font-mono text-xs text-muted text-center py-6">No data for selected period.</p>
               ) : (
-                <div className="h-60 sm:h-72 w-full">
+                <div className="h-56 sm:h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
@@ -1384,49 +1054,40 @@ export default function WorkPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#262B3D" />
                       <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                       <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#12151E', borderColor: '#262B3D', borderRadius: '8px', color: '#fff', fontSize: '11px' }} 
-                      />
-                      <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '8px' }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#12151E', borderColor: '#262B3D', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
+                      <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '6px' }} />
                       <Area type="monotone" dataKey="Worked" stroke="#D4AF37" fillOpacity={1} fill="url(#gradWorked)" name="Total Worked" />
                       <Area type="monotone" dataKey="BeyondTatva" stroke="#00F0FF" fillOpacity={1} fill="url(#gradBeyond)" name="Beyond Tatva" />
-                      <Area type="monotone" dataKey="Focused" stroke="#10B981" fillOpacity={1} fill="url(#gradFocused)" name="Focused Hours" />
-                      <Area type="monotone" dataKey="Unfocused" stroke="#EF4444" fillOpacity={1} fill="url(#gradUnfocused)" name="Unfocused Hours" />
+                      <Area type="monotone" dataKey="Focused" stroke="#10B981" fillOpacity={1} fill="url(#gradFocused)" name="Focused" />
+                      <Area type="monotone" dataKey="Unfocused" stroke="#EF4444" fillOpacity={1} fill="url(#gradUnfocused)" name="Unfocused" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               )}
             </HudPanel>
 
-            {/* RECHARTS CHART 2: CONTENT OPERATIONS VELOCITY */}
-            <HudPanel className="p-4 sm:p-6 space-y-3.5">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 pb-2 border-b border-border-color">
-                <div className="flex items-center gap-2 text-cyan font-display text-xs sm:text-sm uppercase">
-                  <Video size={16} />
-                  <span>Content Velocity: Raw Footage vs Finished Output ({timeUnit.toUpperCase()})</span>
+            {/* RECHARTS CHART 2: CONTENT VELOCITY */}
+            <HudPanel className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-border-color">
+                <div className="flex items-center gap-2 text-cyan font-display text-xs uppercase">
+                  <Video size={15} />
+                  <span>Content Velocity (Raw vs Finished Minutes)</span>
                 </div>
-                <span className="font-mono text-[10px] sm:text-xs text-muted">
-                  Raw Footage Shot vs Finished Video Output
-                </span>
               </div>
 
               {chartData.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-8">
-                  No content operations data available for the selected date range.
-                </p>
+                <p className="font-mono text-xs text-muted text-center py-6">No data for selected period.</p>
               ) : (
-                <div className="h-60 sm:h-72 w-full">
+                <div className="h-56 sm:h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#262B3D" />
                       <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                       <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#12151E', borderColor: '#262B3D', borderRadius: '8px', color: '#fff', fontSize: '11px' }} 
-                      />
-                      <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '8px' }} />
-                      <Bar dataKey="RawMins" fill="#00F0FF" radius={[4, 4, 0, 0]} name={`Raw Footage (${timeUnit})`} />
-                      <Bar dataKey="FinishedMins" fill="#D4AF37" radius={[4, 4, 0, 0]} name={`Finished Output (${timeUnit})`} />
+                      <Tooltip contentStyle={{ backgroundColor: '#12151E', borderColor: '#262B3D', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
+                      <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '6px' }} />
+                      <Bar dataKey="RawMins" fill="#00F0FF" radius={[4, 4, 0, 0]} name="Raw Footage (m)" />
+                      <Bar dataKey="FinishedMins" fill="#D4AF37" radius={[4, 4, 0, 0]} name="Finished Output (m)" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -1435,6 +1096,12 @@ export default function WorkPage() {
           </div>
         )}
       </div>
+
+      {/* INTEL EXPORT MODAL */}
+      <IntelExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+      />
     </AppShell>
   )
 }

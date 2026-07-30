@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   X, Download, Calendar, CheckSquare, Target, Monitor, 
-  Scale, Moon, Crosshair, FileText, Check, Printer, Sparkles
+  Scale, Moon, Crosshair, FileText, Check, Printer, Sparkles, Briefcase
 } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
@@ -23,6 +23,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
 
   // Module selections
   const [selectedModules, setSelectedModules] = useState({
+    work_intel: true,
     missions: true,
     operations: true,
     screen_intel: true,
@@ -69,11 +70,33 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const supabase = createClient()
 
       // Fetch supplementary tables for the date range
-      const [screenRes, weightRes, sleepRes] = await Promise.all([
+      const [screenRes, weightRes, sleepRes, workRes, contentRes] = await Promise.all([
         supabase.from('screen_time_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('weight_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
-        supabase.from('sleep_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true })
+        supabase.from('sleep_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
+        supabase.from('work_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
+        supabase.from('content_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true })
       ])
+
+      let workLogs = workRes.data || []
+      let contentLogs = contentRes.data || []
+
+      // Fallback cache if empty
+      if (workLogs.length === 0 && typeof window !== 'undefined') {
+        const cached = localStorage.getItem('lokios_work_logs_cache')
+        if (cached) {
+          const parsed = JSON.parse(cached)
+          workLogs = parsed.filter(l => l.date >= startDate && l.date <= endDate)
+        }
+      }
+
+      if (contentLogs.length === 0 && typeof window !== 'undefined') {
+        const cached = localStorage.getItem('lokios_content_logs_cache')
+        if (cached) {
+          const parsed = JSON.parse(cached)
+          contentLogs = parsed.filter(l => l.date >= startDate && l.date <= endDate)
+        }
+      }
 
       const screenLogs = screenRes.data || []
       const weightLogs = weightRes.data || []
@@ -91,6 +114,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
             export_date: new Date().toISOString(),
             range: { startDate, endDate }
           },
+          work_intel: selectedModules.work_intel ? { work_logs: workLogs, content_logs: contentLogs } : undefined,
           missions: selectedModules.missions ? filteredGoals : undefined,
           operations: selectedModules.operations ? filteredTasks : undefined,
           screen_intel: selectedModules.screen_intel ? screenLogs : undefined,
@@ -112,6 +136,71 @@ export default function IntelExportModal({ isOpen, onClose }) {
 
       // Build rich, color-coded HTML Report Document
       let sectionsHTML = ''
+
+      // 0. WORK & CONTENT INTELLIGENCE SECTION
+      if (selectedModules.work_intel) {
+        sectionsHTML += `
+          <div class="section">
+            <h2 class="section-title">💼 WORK & CONTENT INTELLIGENCE LOGS</h2>
+            <h3 style="font-size: 13px; color: var(--amber); margin-top: 10px; margin-bottom: 8px;">⏱️ WORK LOGS (${workLogs.length})</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Total Worked</th>
+                  <th>Beyond Tatva</th>
+                  <th>Focused Hours</th>
+                  <th>Unfocused Hours</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${workLogs.map(l => `
+                  <tr>
+                    <td>${l.date}</td>
+                    <td><strong style="color: #D4AF37;">${l.total_hours_worked || 0} h</strong></td>
+                    <td>${l.beyond_tatva_hours || 0} h</td>
+                    <td>${l.focused_hours || 0} h</td>
+                    <td><strong style="color: #EF4444;">${(l.unfocused_hours ?? l.deep_execution_hours) || 0} h</strong></td>
+                    <td>${l.notes || '—'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <h3 style="font-size: 13px; color: var(--cyan); margin-top: 18px; margin-bottom: 8px;">🎬 CONTENT OPERATIONS LOGS (${contentLogs.length})</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Shoot Hours</th>
+                  <th>Raw Footage</th>
+                  <th>Edit Hours</th>
+                  <th>Finished Output</th>
+                  <th>Edit Speed</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${contentLogs.map(l => {
+                  const ratio = l.edit_finished_minutes > 0 ? ((l.edit_hours * 60) / l.edit_finished_minutes).toFixed(1) : '—'
+                  return `
+                    <tr>
+                      <td>${l.date}</td>
+                      <td>${l.shoot_hours || 0} h</td>
+                      <td>${l.shoot_raw_minutes || 0} m</td>
+                      <td><strong style="color: #D4AF37;">${l.edit_hours || 0} h</strong></td>
+                      <td><strong style="color: #10B981;">${l.edit_finished_minutes || 0} m</strong></td>
+                      <td>${ratio} m edit / finished m</td>
+                      <td>${l.notes || '—'}</td>
+                    </tr>
+                  `
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+      }
 
       // 1. MISSIONS SECTION
       if (selectedModules.missions) {
@@ -691,6 +780,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
 
               <div className="grid grid-cols-2 gap-3">
                 {[
+                  { key: 'work_intel', icon: Briefcase, label: 'Work & Content Logs', color: 'text-amber' },
                   { key: 'missions', icon: Target, label: 'Missions & Quests', color: 'text-amber' },
                   { key: 'operations', icon: CheckSquare, label: 'Operations & Tasks', color: 'text-info' },
                   { key: 'habits', icon: Crosshair, label: 'Habits & Daily Ops Matrix', color: 'text-danger' },
