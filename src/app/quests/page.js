@@ -961,44 +961,49 @@ export default function DailyOps() {
 
         {/* Paint Tool & Column Width Controls */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-          <div className="flex flex-row items-center gap-3">
+          <div className="flex flex-row items-center gap-2 sm:gap-3">
             <span className="font-display text-[10px] uppercase tracking-widest text-muted">PAINT MODE</span>
             <div className="flex flex-row items-center bg-tertiary border border-border-color rounded overflow-hidden">
               <button 
                 type="button"
-                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover text-primary'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover text-primary'}`}
                 onClick={() => setActiveTool('cycle')}
+                title="Cycle mode"
               >
-                <RotateCcw size={13} /> CYCLE
+                <RotateCcw size={13} /> <span className="hidden sm:inline">CYCLE</span>
               </button>
               <button 
                 type="button"
-                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover text-success'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover text-success'}`}
                 onClick={() => setActiveTool('completed')}
+                title="Done mode"
               >
-                <Check size={13} /> DONE
+                <Check size={13} /> <span className="hidden sm:inline">DONE</span>
               </button>
               <button 
                 type="button"
-                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover text-danger'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover text-danger'}`}
                 onClick={() => setActiveTool('failed')}
+                title="Fail mode"
               >
-                <X size={13} /> FAIL
+                <X size={13} /> <span className="hidden sm:inline">FAIL</span>
               </button>
               <button 
                 type="button"
-                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'text-bg-primary' : 'active:bg-hover'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'text-bg-primary' : 'active:bg-hover'}`}
                 style={activeTool === 'blocked' ? { backgroundColor: 'var(--warning)' } : { color: 'var(--warning)' }}
                 onClick={() => setActiveTool('blocked')}
+                title="Block mode"
               >
-                <Leaf size={13} /> BLOCK
+                <Leaf size={13} /> <span className="hidden sm:inline">BLOCK</span>
               </button>
               <button 
                 type="button"
-                className={`px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-2 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover text-muted'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover text-muted'}`}
                 onClick={() => setActiveTool('none')}
+                title="Clear mode"
               >
-                <Trash2 size={13} /> CLEAR
+                <Trash2 size={13} /> <span className="hidden sm:inline">CLEAR</span>
               </button>
             </div>
           </div>
