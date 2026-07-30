@@ -43,22 +43,19 @@ export default function WorkPage() {
   // ----------------------------------------------------
   // INDIVIDUAL FIELD TIME UNITS ('h' | 'm')
   // ----------------------------------------------------
-  // Work Log Units
   const [unitTotalWorked, setUnitTotalWorked] = useState('h')
   const [unitBeyondTatva, setUnitBeyondTatva] = useState('h')
   const [unitFocused, setUnitFocused] = useState('h')
   const [unitUnfocused, setUnitUnfocused] = useState('h')
 
-  // Shoot Units
   const [unitShootHours, setUnitShootHours] = useState('h')
   const [unitShootRaw, setUnitShootRaw] = useState('m')
 
-  // Edit Units
   const [unitEditHours, setUnitEditHours] = useState('h')
   const [unitEditFinished, setUnitEditFinished] = useState('m')
 
   // ----------------------------------------------------
-  // FORM INPUT VALUES (Stored in their respective selected units)
+  // FORM INPUT VALUES (Clean values, zero clutter)
   // ----------------------------------------------------
   const [valTotalWorked, setValTotalWorked] = useState('')
   const [valBeyondTatva, setValBeyondTatva] = useState('')
@@ -176,14 +173,12 @@ export default function WorkPage() {
     }
   }, [selectedDate, workLogs, contentLogs, unitTotalWorked, unitBeyondTatva, unitFocused, unitUnfocused, unitShootHours, unitShootRaw, unitEditHours, unitEditFinished])
 
-  // Converts any input value + unit back into Hours for DB storage
   const toHours = (val, unit) => {
     const num = parseFloat(val) || 0
     if (unit === 'm') return num / 60
     return num
   }
 
-  // Converts any input value + unit back into Minutes for DB storage
   const toMinutes = (val, unit) => {
     const num = parseFloat(val) || 0
     if (unit === 'h') return num * 60
@@ -401,25 +396,22 @@ export default function WorkPage() {
         )}
       </AnimatePresence>
 
-      <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8">
         {/* HEADER & EXPORT INTEL MODAL TRIGGER */}
-        <div className="flex items-center justify-between gap-3 pb-4 border-b border-border-color">
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-border-color">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-amber/10 border border-amber/30 text-amber flex-shrink-0">
+            <div className="p-2.5 rounded-xl bg-amber/10 border border-amber/30 text-amber flex-shrink-0">
               <Briefcase size={22} />
             </div>
-            <div>
-              <h1 className="font-display text-xl sm:text-2xl tracking-widest text-primary uppercase">
-                WORK INTELLIGENCE
-              </h1>
-            </div>
+            <h1 className="font-display text-xl sm:text-2xl tracking-widest text-primary uppercase">
+              WORK INTELLIGENCE
+            </h1>
           </div>
 
-          {/* Trigger Global Intel Export Modal */}
           <button
             type="button"
             onClick={() => setExportModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95"
           >
             <Download size={15} />
             <span className="hidden sm:inline">Export Intel</span>
@@ -427,11 +419,11 @@ export default function WorkPage() {
         </div>
 
         {/* SUBPAGE NAVIGATION TABS */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-border-color/60 no-scrollbar">
+        <div className="flex items-center gap-3 overflow-x-auto pb-1 border-b border-border-color/60 no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('work_log')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
               activeTab === 'work_log'
                 ? 'bg-amber/15 border border-amber text-amber shadow-sm'
                 : 'bg-tertiary border border-border-color text-muted hover:text-primary'
@@ -444,7 +436,7 @@ export default function WorkPage() {
           <button
             type="button"
             onClick={() => setActiveTab('content_ops')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
               activeTab === 'content_ops'
                 ? 'bg-cyan/15 border border-cyan text-cyan shadow-sm'
                 : 'bg-tertiary border border-border-color text-muted hover:text-primary'
@@ -457,7 +449,7 @@ export default function WorkPage() {
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
               activeTab === 'analytics'
                 ? 'bg-success/15 border border-success text-success shadow-sm'
                 : 'bg-tertiary border border-border-color text-muted hover:text-primary'
@@ -469,24 +461,24 @@ export default function WorkPage() {
         </div>
 
         {/* DATE SELECTOR */}
-        <div className="flex items-center justify-between gap-3 p-3 bg-tertiary border border-border-color rounded-xl">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between gap-4 p-4 bg-tertiary border border-border-color rounded-xl">
+          <div className="flex items-center gap-3">
             <Calendar size={16} className="text-amber flex-shrink-0" />
             <span className="font-mono text-xs text-secondary uppercase font-bold">Log Date:</span>
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-secondary border border-border-color rounded-lg px-2.5 py-1 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+              className="bg-secondary border border-border-color rounded-lg px-3 py-1.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
               style={{ background: '#121520', color: '#fff' }}
             />
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setSelectedDate(todayStr)}
-              className={`px-2.5 py-1 rounded-lg font-mono text-xs transition-colors ${
+              className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-colors ${
                 selectedDate === todayStr ? 'bg-amber text-black font-bold' : 'bg-secondary text-muted hover:text-primary border border-border-subtle'
               }`}
             >
@@ -495,7 +487,7 @@ export default function WorkPage() {
             <button
               type="button"
               onClick={() => setSelectedDate(getLocalDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000)))}
-              className="px-2.5 py-1 bg-secondary hover:bg-hover border border-border-subtle rounded-lg font-mono text-xs text-muted hover:text-primary transition-colors"
+              className="px-3 py-1.5 bg-secondary hover:bg-hover border border-border-subtle rounded-lg font-mono text-xs text-muted hover:text-primary transition-colors"
             >
               Yesterday
             </button>
@@ -506,12 +498,12 @@ export default function WorkPage() {
         {/* SUBPAGE 1: WORK LOG */}
         {/* ========================================================================= */}
         {activeTab === 'work_log' && (
-          <div className="space-y-5">
-            <HudPanel className="p-4 sm:p-5">
-              <form onSubmit={handleSaveWorkLog} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="space-y-6">
+            <HudPanel className="p-5 sm:p-6 space-y-5">
+              <form onSubmit={handleSaveWorkLog} className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* 1. Total Hours Worked */}
-                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                  <div className="p-4 rounded-xl bg-secondary border border-border-color space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
                         <Clock size={13} /> Total Worked
@@ -522,16 +514,16 @@ export default function WorkPage() {
                       type="number"
                       step={unitTotalWorked === 'm' ? '1' : '0.1'}
                       min="0"
-                      placeholder={unitTotalWorked === 'm' ? 'e.g. 510' : 'e.g. 8.5'}
+                      placeholder="0"
                       value={valTotalWorked}
                       onChange={(e) => setValTotalWorked(e.target.value)}
-                      className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
+                      className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-amber"
                       style={{ background: '#141824', color: '#fff' }}
                     />
                   </div>
 
                   {/* 2. Beyond Tatva Hours */}
-                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                  <div className="p-4 rounded-xl bg-secondary border border-border-color space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
                         <Target size={13} /> Beyond Tatva
@@ -542,16 +534,16 @@ export default function WorkPage() {
                       type="number"
                       step={unitBeyondTatva === 'm' ? '1' : '0.1'}
                       min="0"
-                      placeholder={unitBeyondTatva === 'm' ? 'e.g. 240' : 'e.g. 4.0'}
+                      placeholder="0"
                       value={valBeyondTatva}
                       onChange={(e) => setValBeyondTatva(e.target.value)}
-                      className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
+                      className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
                       style={{ background: '#141824', color: '#fff' }}
                     />
                   </div>
 
                   {/* 3. Focused Hours */}
-                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                  <div className="p-4 rounded-xl bg-secondary border border-border-color space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="font-mono text-xs text-success uppercase font-bold flex items-center gap-1.5">
                         <Zap size={13} /> Focused
@@ -562,16 +554,16 @@ export default function WorkPage() {
                       type="number"
                       step={unitFocused === 'm' ? '1' : '0.1'}
                       min="0"
-                      placeholder={unitFocused === 'm' ? 'e.g. 330' : 'e.g. 5.5'}
+                      placeholder="0"
                       value={valFocused}
                       onChange={(e) => setValFocused(e.target.value)}
-                      className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-success"
+                      className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-success"
                       style={{ background: '#141824', color: '#fff' }}
                     />
                   </div>
 
                   {/* 4. Unfocused / Distracted Hours */}
-                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                  <div className="p-4 rounded-xl bg-secondary border border-border-color space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="font-mono text-xs text-danger uppercase font-bold flex items-center gap-1.5">
                         <AlertTriangle size={13} /> Unfocused
@@ -582,10 +574,10 @@ export default function WorkPage() {
                       type="number"
                       step={unitUnfocused === 'm' ? '1' : '0.1'}
                       min="0"
-                      placeholder={unitUnfocused === 'm' ? 'e.g. 90' : 'e.g. 1.5'}
+                      placeholder="0"
                       value={valUnfocused}
                       onChange={(e) => setValUnfocused(e.target.value)}
-                      className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-danger"
+                      className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-danger"
                       style={{ background: '#141824', color: '#fff' }}
                     />
                   </div>
@@ -595,10 +587,10 @@ export default function WorkPage() {
                 <div>
                   <textarea
                     rows={2}
-                    placeholder="Work summary notes (optional)..."
+                    placeholder="Notes..."
                     value={workNotes}
                     onChange={(e) => setWorkNotes(e.target.value)}
-                    className="w-full bg-secondary border border-border-color rounded-xl p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                    className="w-full bg-secondary border border-border-color rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-amber"
                     style={{ background: '#141824', color: '#fff' }}
                   />
                 </div>
@@ -608,7 +600,7 @@ export default function WorkPage() {
                   <button
                     type="submit"
                     disabled={savingWork}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
                   >
                     <Save size={15} />
                     <span>{savingWork ? 'Saving...' : 'Save Work Log (+2 XP)'}</span>
@@ -618,8 +610,8 @@ export default function WorkPage() {
             </HudPanel>
 
             {/* RECENT WORK LOGS */}
-            <HudPanel className="p-4 sm:p-5">
-              <h3 className="font-display text-xs uppercase tracking-wider text-muted mb-3">
+            <HudPanel className="p-5 sm:p-6 space-y-4">
+              <h3 className="font-display text-xs uppercase tracking-wider text-muted">
                 RECENT WORK HISTORY ({workLogs.length})
               </h3>
 
@@ -628,14 +620,14 @@ export default function WorkPage() {
               ) : (
                 <>
                   {/* Mobile Card View (< 768px) */}
-                  <div className="md:hidden space-y-2.5">
+                  <div className="md:hidden space-y-3">
                     {workLogs.map(l => (
-                      <div key={l.date} className="p-3 rounded-xl bg-tertiary border border-border-color space-y-2">
+                      <div key={l.date} className="p-4 rounded-xl bg-tertiary border border-border-color space-y-2.5">
                         <div className="flex items-center justify-between font-mono text-xs">
                           <span className="text-secondary font-bold">{l.date}</span>
                           <span className="text-amber font-bold">{(l.total_hours_worked || 0).toFixed(1)}h Worked</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 font-mono text-[11px] pt-1.5 border-t border-border-subtle/40">
+                        <div className="grid grid-cols-3 gap-2 font-mono text-[11px] pt-2 border-t border-border-subtle/40">
                           <div>
                             <span className="text-muted block text-[9px] uppercase">Beyond</span>
                             <span className="text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)}h</span>
@@ -659,23 +651,23 @@ export default function WorkPage() {
                     <table className="w-full text-left font-mono text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-border-color text-muted uppercase text-[10px]">
-                          <th className="py-2 px-3">Date</th>
-                          <th className="py-2 px-3">Total Worked</th>
-                          <th className="py-2 px-3">Beyond Tatva</th>
-                          <th className="py-2 px-3">Focused</th>
-                          <th className="py-2 px-3">Unfocused</th>
-                          <th className="py-2 px-3">Notes</th>
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Total Worked</th>
+                          <th className="py-2.5 px-3">Beyond Tatva</th>
+                          <th className="py-2.5 px-3">Focused</th>
+                          <th className="py-2.5 px-3">Unfocused</th>
+                          <th className="py-2.5 px-3">Notes</th>
                         </tr>
                       </thead>
                       <tbody>
                         {workLogs.map(l => (
                           <tr key={l.date} className="border-b border-border-subtle/50 hover:bg-tertiary/50 transition-colors">
-                            <td className="py-2.5 px-3 text-secondary">{l.date}</td>
-                            <td className="py-2.5 px-3"><strong className="text-amber">{(l.total_hours_worked || 0).toFixed(1)} h</strong></td>
-                            <td className="py-2.5 px-3 text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)} h</td>
-                            <td className="py-2.5 px-3 text-success">{(l.focused_hours || 0).toFixed(1)} h</td>
-                            <td className="py-2.5 px-3 text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)} h</td>
-                            <td className="py-2.5 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
+                            <td className="py-3 px-3 text-secondary">{l.date}</td>
+                            <td className="py-3 px-3"><strong className="text-amber">{(l.total_hours_worked || 0).toFixed(1)} h</strong></td>
+                            <td className="py-3 px-3 text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)} h</td>
+                            <td className="py-3 px-3 text-success">{(l.focused_hours || 0).toFixed(1)} h</td>
+                            <td className="py-3 px-3 text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)} h</td>
+                            <td className="py-3 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -691,13 +683,13 @@ export default function WorkPage() {
         {/* SUBPAGE 2: CONTENT OPERATIONS */}
         {/* ========================================================================= */}
         {activeTab === 'content_ops' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* CONTENT MODE SUB-SWITCHER */}
-            <div className="flex items-center gap-2 p-1 bg-tertiary border border-border-color rounded-xl">
+            <div className="flex items-center gap-2 p-1.5 bg-tertiary border border-border-color rounded-xl">
               <button
                 type="button"
                 onClick={() => setContentMode('shoot')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
                   contentMode === 'shoot' ? 'bg-cyan text-black shadow-md' : 'text-muted hover:text-primary'
                 }`}
               >
@@ -708,7 +700,7 @@ export default function WorkPage() {
               <button
                 type="button"
                 onClick={() => setContentMode('edit')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
                   contentMode === 'edit' ? 'bg-amber text-black shadow-md' : 'text-muted hover:text-primary'
                 }`}
               >
@@ -719,11 +711,11 @@ export default function WorkPage() {
 
             {/* SEPARATE FORM 1: SHOOT LOG */}
             {contentMode === 'shoot' && (
-              <HudPanel className="p-4 sm:p-5 border-cyan/40">
-                <form onSubmit={handleSaveShootLog} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <HudPanel className="p-5 sm:p-6 space-y-5 border-cyan/40">
+                <form onSubmit={handleSaveShootLog} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Hours Shot */}
-                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="p-4 rounded-xl bg-secondary border border-border-color space-y-2">
                       <div className="flex items-center justify-between">
                         <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
                           <Clock size={13} /> Hours Shot
@@ -734,19 +726,19 @@ export default function WorkPage() {
                         type="number"
                         step={unitShootHours === 'm' ? '1' : '0.1'}
                         min="0"
-                        placeholder={unitShootHours === 'm' ? 'e.g. 150' : 'e.g. 2.5'}
+                        placeholder="0"
                         value={valShootHours}
                         onChange={(e) => setValShootHours(e.target.value)}
-                        className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
+                        className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
                         style={{ background: '#141824', color: '#fff' }}
                       />
                     </div>
 
                     {/* Raw Footage Shot */}
-                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="p-4 rounded-xl bg-secondary border border-border-color space-y-2">
                       <div className="flex items-center justify-between">
                         <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
-                          <Film size={13} /> Raw Footage Shot
+                          <Film size={13} /> Raw Footage
                         </label>
                         <FieldUnitToggle unit={unitShootRaw} setUnit={setUnitShootRaw} />
                       </div>
@@ -754,10 +746,10 @@ export default function WorkPage() {
                         type="number"
                         step={unitShootRaw === 'h' ? '0.1' : '1'}
                         min="0"
-                        placeholder={unitShootRaw === 'h' ? 'e.g. 2.0' : 'e.g. 120'}
+                        placeholder="0"
                         value={valShootRaw}
                         onChange={(e) => setValShootRaw(e.target.value)}
-                        className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
+                        className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
                         style={{ background: '#141824', color: '#fff' }}
                       />
                     </div>
@@ -766,10 +758,10 @@ export default function WorkPage() {
                   <div>
                     <textarea
                       rows={2}
-                      placeholder="Shoot production notes (optional)..."
+                      placeholder="Notes..."
                       value={shootNotes}
                       onChange={(e) => setShootNotes(e.target.value)}
-                      className="w-full bg-secondary border border-border-color rounded-xl p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-cyan"
+                      className="w-full bg-secondary border border-border-color rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-cyan"
                       style={{ background: '#141824', color: '#fff' }}
                     />
                   </div>
@@ -778,7 +770,7 @@ export default function WorkPage() {
                     <button
                       type="submit"
                       disabled={savingShoot}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-cyan hover:bg-cyan-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-cyan hover:bg-cyan-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
                     >
                       <Save size={15} />
                       <span>{savingShoot ? 'Saving...' : 'Save Shoot Log (+2 XP)'}</span>
@@ -790,11 +782,11 @@ export default function WorkPage() {
 
             {/* SEPARATE FORM 2: EDIT LOG */}
             {contentMode === 'edit' && (
-              <HudPanel className="p-4 sm:p-5 border-amber/40">
-                <form onSubmit={handleSaveEditLog} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <HudPanel className="p-5 sm:p-6 space-y-5 border-amber/40">
+                <form onSubmit={handleSaveEditLog} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Hours Edited */}
-                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="p-4 rounded-xl bg-secondary border border-border-color space-y-2">
                       <div className="flex items-center justify-between">
                         <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
                           <Clock size={13} /> Hours Edited
@@ -805,16 +797,16 @@ export default function WorkPage() {
                         type="number"
                         step={unitEditHours === 'm' ? '1' : '0.1'}
                         min="0"
-                        placeholder={unitEditHours === 'm' ? 'e.g. 240' : 'e.g. 4.0'}
+                        placeholder="0"
                         value={valEditHours}
                         onChange={(e) => setValEditHours(e.target.value)}
-                        className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
+                        className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-amber"
                         style={{ background: '#141824', color: '#fff' }}
                       />
                     </div>
 
                     {/* Finished Video Edited */}
-                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="p-4 rounded-xl bg-secondary border border-border-color space-y-2">
                       <div className="flex items-center justify-between">
                         <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
                           <Video size={13} /> Finished Video Output
@@ -825,10 +817,10 @@ export default function WorkPage() {
                         type="number"
                         step={unitEditFinished === 'h' ? '0.1' : '1'}
                         min="0"
-                        placeholder={unitEditFinished === 'h' ? 'e.g. 0.2' : 'e.g. 5'}
+                        placeholder="0"
                         value={valEditFinished}
                         onChange={(e) => setValEditFinished(e.target.value)}
-                        className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
+                        className="w-full bg-tertiary border border-border-color rounded-lg p-3 font-mono text-sm text-primary focus:outline-none focus:border-amber"
                         style={{ background: '#141824', color: '#fff' }}
                       />
                     </div>
@@ -837,10 +829,10 @@ export default function WorkPage() {
                   <div>
                     <textarea
                       rows={2}
-                      placeholder="Edit production notes (optional)..."
+                      placeholder="Notes..."
                       value={editNotes}
                       onChange={(e) => setEditNotes(e.target.value)}
-                      className="w-full bg-secondary border border-border-color rounded-xl p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                      className="w-full bg-secondary border border-border-color rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-amber"
                       style={{ background: '#141824', color: '#fff' }}
                     />
                   </div>
@@ -849,7 +841,7 @@ export default function WorkPage() {
                     <button
                       type="submit"
                       disabled={savingEdit}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
                     >
                       <Save size={15} />
                       <span>{savingEdit ? 'Saving...' : 'Save Edit Log (+2 XP)'}</span>
@@ -860,8 +852,8 @@ export default function WorkPage() {
             )}
 
             {/* CONTENT LOG HISTORY */}
-            <HudPanel className="p-4 sm:p-5">
-              <h3 className="font-display text-xs uppercase tracking-wider text-muted mb-3">
+            <HudPanel className="p-5 sm:p-6 space-y-4">
+              <h3 className="font-display text-xs uppercase tracking-wider text-muted">
                 CONTENT HISTORY ({contentLogs.length})
               </h3>
 
@@ -870,24 +862,24 @@ export default function WorkPage() {
               ) : (
                 <>
                   {/* Mobile Card View (< 768px) */}
-                  <div className="md:hidden space-y-2.5">
+                  <div className="md:hidden space-y-3">
                     {contentLogs.map(l => {
                       const editHrs = parseFloat(l.edit_hours) || 0
                       const finMins = parseFloat(l.edit_finished_minutes) || 0
                       const ratio = finMins > 0 ? ((editHrs * 60) / finMins).toFixed(1) : '—'
 
                       return (
-                        <div key={l.date} className="p-3 rounded-xl bg-tertiary border border-border-color space-y-2">
+                        <div key={l.date} className="p-4 rounded-xl bg-tertiary border border-border-color space-y-2.5">
                           <div className="flex items-center justify-between font-mono text-xs">
                             <span className="text-secondary font-bold">{l.date}</span>
-                            <span className="text-cyan font-bold">Edit Speed: {ratio} m/m</span>
+                            <span className="text-cyan font-bold">Speed: {ratio} m/m</span>
                           </div>
-                          <div className="grid grid-cols-2 gap-2 font-mono text-[11px] pt-1.5 border-t border-border-subtle/40">
-                            <div className="p-2 rounded bg-secondary/60">
+                          <div className="grid grid-cols-2 gap-2 font-mono text-[11px] pt-2 border-t border-border-subtle/40">
+                            <div className="p-2.5 rounded-lg bg-secondary/60">
                               <span className="text-cyan block text-[9px] uppercase font-bold">🎥 Shoot</span>
                               <div>{(l.shoot_hours || 0).toFixed(1)}h ({l.shoot_raw_minutes || 0}m raw)</div>
                             </div>
-                            <div className="p-2 rounded bg-secondary/60">
+                            <div className="p-2.5 rounded-lg bg-secondary/60">
                               <span className="text-amber block text-[9px] uppercase font-bold">✂️ Edit</span>
                               <div>{(l.edit_hours || 0).toFixed(1)}h ({l.edit_finished_minutes || 0}m out)</div>
                             </div>
@@ -903,13 +895,13 @@ export default function WorkPage() {
                     <table className="w-full text-left font-mono text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-border-color text-muted uppercase text-[10px]">
-                          <th className="py-2 px-3">Date</th>
-                          <th className="py-2 px-3">Shoot Time</th>
-                          <th className="py-2 px-3">Raw Footage</th>
-                          <th className="py-2 px-3">Edit Time</th>
-                          <th className="py-2 px-3">Finished Output</th>
-                          <th className="py-2 px-3">Edit Speed Ratio</th>
-                          <th className="py-2 px-3">Notes</th>
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Shoot Time</th>
+                          <th className="py-2.5 px-3">Raw Footage</th>
+                          <th className="py-2.5 px-3">Edit Time</th>
+                          <th className="py-2.5 px-3">Finished Output</th>
+                          <th className="py-2.5 px-3">Edit Speed Ratio</th>
+                          <th className="py-2.5 px-3">Notes</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -920,13 +912,13 @@ export default function WorkPage() {
 
                           return (
                             <tr key={l.date} className="border-b border-border-subtle/50 hover:bg-tertiary/50 transition-colors">
-                              <td className="py-2.5 px-3 text-secondary">{l.date}</td>
-                              <td className="py-2.5 px-3 text-cyan">{(l.shoot_hours || 0).toFixed(1)} h</td>
-                              <td className="py-2.5 px-3 text-secondary">{l.shoot_raw_minutes || 0} m</td>
-                              <td className="py-2.5 px-3 text-amber font-bold">{(l.edit_hours || 0).toFixed(1)} h</td>
-                              <td className="py-2.5 px-3 text-success font-bold">{l.edit_finished_minutes || 0} m</td>
-                              <td className="py-2.5 px-3 text-info font-bold">{ratio} m edit / finished m</td>
-                              <td className="py-2.5 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
+                              <td className="py-3 px-3 text-secondary">{l.date}</td>
+                              <td className="py-3 px-3 text-cyan">{(l.shoot_hours || 0).toFixed(1)} h</td>
+                              <td className="py-3 px-3 text-secondary">{l.shoot_raw_minutes || 0} m</td>
+                              <td className="py-3 px-3 text-amber font-bold">{(l.edit_hours || 0).toFixed(1)} h</td>
+                              <td className="py-3 px-3 text-success font-bold">{l.edit_finished_minutes || 0} m</td>
+                              <td className="py-3 px-3 text-info font-bold">{ratio} m edit / finished m</td>
+                              <td className="py-3 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
                             </tr>
                           )
                         })}
@@ -943,17 +935,17 @@ export default function WorkPage() {
         {/* SUBPAGE 3: ANALYTICS */}
         {/* ========================================================================= */}
         {activeTab === 'analytics' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* RANGE SELECTOR */}
-            <div className="flex items-center justify-between p-3 bg-tertiary border border-border-color rounded-xl">
+            <div className="flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
               <span className="font-mono text-xs text-secondary uppercase font-bold">Analytics Period:</span>
-              <div className="flex items-center bg-secondary border border-border-color rounded-lg p-0.5">
+              <div className="flex items-center bg-secondary border border-border-color rounded-lg p-1">
                 {['7days', '30days', 'all'].map(rangeKey => (
                   <button
                     key={rangeKey}
                     type="button"
                     onClick={() => setAnalyticsRange(rangeKey)}
-                    className={`px-3 py-1 rounded font-mono text-xs uppercase font-bold transition-all ${
+                    className={`px-3 py-1.5 rounded font-mono text-xs uppercase font-bold transition-all ${
                       analyticsRange === rangeKey ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
                     }`}
                   >
@@ -964,73 +956,73 @@ export default function WorkPage() {
             </div>
 
             {/* KPI STAT CARDS */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <HudPanel className="p-3.5 space-y-1">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <HudPanel className="p-4 space-y-2">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>TOTAL WORKED</span>
                   <Clock size={14} className="text-amber" />
                 </div>
-                <div className="font-display text-xl text-amber font-bold">
+                <div className="font-display text-2xl text-amber font-bold">
                   {totals.totWork.toFixed(1)} h
                 </div>
-                <div className="font-mono text-[9px] text-muted truncate">
+                <div className="font-mono text-[10px] text-muted truncate">
                   BT: {totals.totBeyond.toFixed(1)} h ({totals.beyondRatio}%)
                 </div>
               </HudPanel>
 
-              <HudPanel className="p-3.5 space-y-1">
+              <HudPanel className="p-4 space-y-2">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>FOCUS RATIO</span>
                   <Zap size={14} className="text-success" />
                 </div>
-                <div className="font-display text-xl text-success font-bold">
+                <div className="font-display text-2xl text-success font-bold">
                   {totals.focusRatio}%
                 </div>
-                <div className="font-mono text-[9px] text-muted truncate">
+                <div className="font-mono text-[10px] text-muted truncate">
                   Focus: {totals.totFocus.toFixed(1)} h
                 </div>
               </HudPanel>
 
-              <HudPanel className="p-3.5 space-y-1">
+              <HudPanel className="p-4 space-y-2">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>RAW FOOTAGE</span>
                   <Film size={14} className="text-cyan" />
                 </div>
-                <div className="font-display text-xl text-cyan font-bold">
+                <div className="font-display text-2xl text-cyan font-bold">
                   {totals.totShootRawMins} m
                 </div>
-                <div className="font-mono text-[9px] text-muted truncate">
+                <div className="font-mono text-[10px] text-muted truncate">
                   Shoot: {totals.totShootHrs.toFixed(1)} h
                 </div>
               </HudPanel>
 
-              <HudPanel className="p-3.5 space-y-1">
+              <HudPanel className="p-4 space-y-2">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>FINISHED VIDEO</span>
                   <Video size={14} className="text-amber" />
                 </div>
-                <div className="font-display text-xl text-amber font-bold">
+                <div className="font-display text-2xl text-amber font-bold">
                   {totals.totEditFinishedMins} m
                 </div>
-                <div className="font-mono text-[9px] text-muted truncate">
+                <div className="font-mono text-[10px] text-muted truncate">
                   Speed: {totals.editRatio} m/m
                 </div>
               </HudPanel>
             </div>
 
             {/* RECHARTS CHART 1: WORK ALLOCATION */}
-            <HudPanel className="p-4 sm:p-5 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border-color">
-                <div className="flex items-center gap-2 text-amber font-display text-xs uppercase">
+            <HudPanel className="p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border-color">
+                <div className="flex items-center gap-2 text-amber font-display text-xs sm:text-sm uppercase">
                   <TrendingUp size={15} />
                   <span>Work Hours Allocation (Hours)</span>
                 </div>
               </div>
 
               {chartData.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-6">No data for selected period.</p>
+                <p className="font-mono text-xs text-muted text-center py-8">No data for selected period.</p>
               ) : (
-                <div className="h-56 sm:h-64 w-full">
+                <div className="h-60 sm:h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
@@ -1067,18 +1059,18 @@ export default function WorkPage() {
             </HudPanel>
 
             {/* RECHARTS CHART 2: CONTENT VELOCITY */}
-            <HudPanel className="p-4 sm:p-5 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border-color">
-                <div className="flex items-center gap-2 text-cyan font-display text-xs uppercase">
+            <HudPanel className="p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border-color">
+                <div className="flex items-center gap-2 text-cyan font-display text-xs sm:text-sm uppercase">
                   <Video size={15} />
                   <span>Content Velocity (Raw vs Finished Minutes)</span>
                 </div>
               </div>
 
               {chartData.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-6">No data for selected period.</p>
+                <p className="font-mono text-xs text-muted text-center py-8">No data for selected period.</p>
               ) : (
-                <div className="h-56 sm:h-64 w-full">
+                <div className="h-60 sm:h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#262B3D" />
