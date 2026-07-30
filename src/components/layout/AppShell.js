@@ -74,11 +74,11 @@ export default function AppShell({ children }) {
   if (!user) return null
 
   const mainItems = [
-    NAV_ITEMS[0], // Command Center
-    NAV_ITEMS[1], // Daily Ops
-    NAV_ITEMS[3], // Operations
-    NAV_ITEMS[2], // Missions
-  ]
+    NAV_ITEMS.find(item => item.href === '/dashboard'), // Command Center
+    NAV_ITEMS.find(item => item.href === '/quests'),    // Daily Ops
+    NAV_ITEMS.find(item => item.href === '/goals'),     // Missions
+    NAV_ITEMS.find(item => item.href === '/tasks'),     // Operations
+  ].filter(Boolean)
 
   return (
     <div className="app-shell">
