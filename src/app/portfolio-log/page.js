@@ -1,21 +1,30 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/hooks/useProfile'
+import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText, Clock, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { 
+  Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, 
+  Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText, Clock, 
+  ChevronDown, ChevronUp, Trash2, BookOpen, Star, Sparkles, Search, Filter, Book
+} from 'lucide-react'
 
 export default function ProofOfWork() {
   const { user } = useAuth()
   const { profile } = useProfile()
-  const [activeTab, setActiveTab] = useState('timeline') // timeline | projects | resume | reviews
+  const { xp: { awardXP } } = useOS()
+
+  // Active tab: 'timeline' | 'reviews' | 'books' | 'projects' | 'resume'
+  const [activeTab, setActiveTab] = useState('timeline')
   const [expandedReview, setExpandedReview] = useState(null)
   const [expandedLogId, setExpandedLogId] = useState(null)
+  const [expandedBookId, setExpandedBookId] = useState(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -23,16 +32,82 @@ export default function ProofOfWork() {
       setActiveTab(params.get('tab'))
     }
   }, [])
+
+  // DATA STATES
   const [logs, setLogs] = useState([])
   const [projects, setProjects] = useState([])
+  const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(true)
 
   const [editingId, setEditingId] = useState(null)
   const [newMediaUrl, setNewMediaUrl] = useState('')
 
+  // Edit Log State
   const [editingLogId, setEditingLogId] = useState(null)
   const [editLogForm, setEditLogForm] = useState({})
 
+  // New Log Form State
+  const [showAddLog, setShowAddLog] = useState(false)
+  const [newLog, setNewLog] = useState({ title: '', description: '', type: 'project_work', duration: '', duration_unit: 'hours', mediaUrl: '' })
+
+  // New Project Form State
+  const [showAddProject, setShowAddProject] = useState(false)
+  const [newProj, setNewProj] = useState({ title: '', description: '', status: 'active', tech_stack: '' })
+
+  // BOOKS COMPLETED STATE
+  const [showAddBook, setShowAddBook] = useState(false)
+  const [bookSearch, setBookSearch] = useState('')
+  const [bookCategoryFilter, setBookCategoryFilter] = useState('all')
+  const [xpToast, setXpToast] = useState(null)
+
+  const [newBook, setNewBook] = useState({
+    title: '',
+    author: '',
+    category: 'Business',
+    rating: 5,
+    date_completed: getLocalDateStr(),
+    cover_url: '',
+    takeaways: ''
+  })
+
+  const [editingBookId, setEditingBookId] = useState(null)
+  const [editBookForm, setEditBookForm] = useState({})
+
+  useEffect(() => {
+    if (!user) return
+    fetchData()
+  }, [user])
+
+  const fetchData = async () => {
+    const supabase = createClient()
+    try {
+      const [logsRes, projRes, booksRes] = await Promise.all([
+        supabase.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+        supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('books_completed').select('*').eq('user_id', user.id).order('date_completed', { ascending: false })
+      ])
+
+      if (logsRes.data) setLogs(logsRes.data)
+      if (projRes.data) setProjects(projRes.data)
+      
+      if (booksRes.data) {
+        setBooks(booksRes.data)
+        if (typeof window !== 'undefined') localStorage.setItem('lokios_books_completed_cache', JSON.stringify(booksRes.data))
+      } else if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('lokios_books_completed_cache')
+        if (cached) setBooks(JSON.parse(cached))
+      }
+    } catch (err) {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('lokios_books_completed_cache')
+        if (cached) setBooks(JSON.parse(cached))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // LOG HANDLERS
   const startEditLog = (log) => {
     setEditingLogId(log.id)
     setEditLogForm({
@@ -62,30 +137,6 @@ export default function ProofOfWork() {
       await supabase.from('work_logs').delete().eq('id', id)
       setLogs(prev => prev.filter(l => l.id !== id))
     }
-  }
-
-  // New Log Form State
-  const [showAddLog, setShowAddLog] = useState(false)
-  const [newLog, setNewLog] = useState({ title: '', description: '', type: 'project_work', duration: '', duration_unit: 'hours', mediaUrl: '' })
-
-  // New Project Form State
-  const [showAddProject, setShowAddProject] = useState(false)
-  const [newProj, setNewProj] = useState({ title: '', description: '', status: 'active', tech_stack: '' })
-
-  useEffect(() => {
-    if (!user) return
-    fetchData()
-  }, [user])
-
-  const fetchData = async () => {
-    const supabase = createClient()
-    const [logsRes, projRes] = await Promise.all([
-      supabase.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-      supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
-    ])
-    if (logsRes.data) setLogs(logsRes.data)
-    if (projRes.data) setProjects(projRes.data)
-    setLoading(false)
   }
 
   const handleAddMedia = async (logId, currentMedia) => {
@@ -154,25 +205,153 @@ export default function ProofOfWork() {
     }
   }
 
+  // ----------------------------------------------------
+  // BOOK HANDLERS (+10 XP REWARD PER COMPLETED BOOK)
+  // ----------------------------------------------------
+  const handleCreateBook = async (e) => {
+    e.preventDefault()
+    if (!newBook.title.trim() || !user) return
+
+    const payload = {
+      user_id: user.id,
+      title: newBook.title.trim(),
+      author: newBook.author.trim() || 'Unknown Author',
+      category: newBook.category || 'Business',
+      rating: parseInt(newBook.rating) || 5,
+      date_completed: newBook.date_completed || getLocalDateStr(),
+      cover_url: newBook.cover_url.trim() || '',
+      takeaways: newBook.takeaways.trim() || ''
+    }
+
+    const updated = [payload, ...books].sort((a, b) => (b.date_completed || '').localeCompare(a.date_completed || ''))
+    setBooks(updated)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_books_completed_cache', JSON.stringify(updated))
+
+    try {
+      const supabase = createClient()
+      await supabase.from('books_completed').insert([payload])
+    } catch (err) {}
+
+    awardXP(10, `Completed Book: ${payload.title}`)
+    setXpToast(`+10 XP: Completed "${payload.title}"`)
+    setTimeout(() => setXpToast(null), 3500)
+
+    setShowAddBook(false)
+    setNewBook({
+      title: '',
+      author: '',
+      category: 'Business',
+      rating: 5,
+      date_completed: getLocalDateStr(),
+      cover_url: '',
+      takeaways: ''
+    })
+  }
+
+  const startEditBook = (book) => {
+    setEditingBookId(book.id || book.title)
+    setEditBookForm({
+      title: book.title || '',
+      author: book.author || '',
+      category: book.category || 'Business',
+      rating: book.rating || 5,
+      date_completed: book.date_completed || getLocalDateStr(),
+      cover_url: book.cover_url || '',
+      takeaways: book.takeaways || ''
+    })
+  }
+
+  const saveEditBook = async (bookId) => {
+    const updatedBooks = books.map(b => {
+      if ((b.id && b.id === bookId) || b.title === editBookForm.title) {
+        return { ...b, ...editBookForm }
+      }
+      return b
+    })
+
+    setBooks(updatedBooks)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_books_completed_cache', JSON.stringify(updatedBooks))
+
+    try {
+      const supabase = createClient()
+      if (bookId) {
+        await supabase.from('books_completed').update(editBookForm).eq('id', bookId)
+      }
+    } catch (err) {}
+
+    setEditingBookId(null)
+  }
+
+  const handleDeleteBook = async (bookId, title) => {
+    if (confirm(`Are you sure you want to remove "${title}" from your completed books archive?`)) {
+      const filtered = books.filter(b => (b.id ? b.id !== bookId : b.title !== title))
+      setBooks(filtered)
+      if (typeof window !== 'undefined') localStorage.setItem('lokios_books_completed_cache', JSON.stringify(filtered))
+
+      try {
+        if (bookId) {
+          const supabase = createClient()
+          await supabase.from('books_completed').delete().eq('id', bookId)
+        }
+      } catch (err) {}
+    }
+  }
+
+  // Filtered books
+  const filteredBooks = useMemo(() => {
+    return books.filter(b => {
+      const matchesSearch = (b.title || '').toLowerCase().includes(bookSearch.toLowerCase()) ||
+                            (b.author || '').toLowerCase().includes(bookSearch.toLowerCase()) ||
+                            (b.takeaways || '').toLowerCase().includes(bookSearch.toLowerCase())
+      const matchesCategory = bookCategoryFilter === 'all' || (b.category || 'Business').toLowerCase() === bookCategoryFilter.toLowerCase()
+      return matchesSearch && matchesCategory
+    })
+  }, [books, bookSearch, bookCategoryFilter])
+
+  // Book stats
+  const avgBookRating = useMemo(() => {
+    if (books.length === 0) return '0.0'
+    const sum = books.reduce((acc, b) => acc + (parseInt(b.rating) || 5), 0)
+    return (sum / books.length).toFixed(1)
+  }, [books])
+
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">ACCESSING ARCHIVES...</span></div></AppShell>
 
   return (
     <AppShell>
+      {/* Floating XP Toast */}
+      <AnimatePresence>
+        {xpToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[99999] bg-amber text-black font-mono font-bold text-xs px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border border-amber/40"
+          >
+            <Sparkles size={15} />
+            <span>{xpToast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="page-container max-w-5xl">
         <header className="page-header flex-between flex-wrap gap-4">
           <div>
             <h1 className="page-title flex items-center gap-3"><Terminal className="text-amber" /> PORTFOLIO ENGINE</h1>
-            <p className="page-subtitle">Proof of work, project history, and auto-generated resume.</p>
+            <p className="page-subtitle">Proof of work, books completed, project history, and auto-generated resume.</p>
           </div>
         </header>
 
         {/* TABS */}
-        <div className="tabs mb-6">
+        <div className="tabs mb-6 flex-wrap gap-1">
           <button className={`tab-item ${activeTab === 'timeline' ? 'tab-active' : ''}`} onClick={() => setActiveTab('timeline')}>
             TIMELINE LOGS
           </button>
           <button className={`tab-item ${activeTab === 'reviews' ? 'tab-active' : ''}`} onClick={() => setActiveTab('reviews')}>
             WEEKLY REVIEWS
+          </button>
+          <button className={`tab-item ${activeTab === 'books' ? 'tab-active' : ''}`} onClick={() => setActiveTab('books')}>
+            BOOKS COMPLETED ({books.length})
           </button>
           <button className={`tab-item ${activeTab === 'projects' ? 'tab-active' : ''}`} onClick={() => setActiveTab('projects')}>
             PROJECTS
@@ -295,7 +474,7 @@ export default function ProofOfWork() {
                           </div>
                         </div>
 
-                        {/* Expanded Accordion: Description, Proof Links, Actions */}
+                        {/* Expanded Accordion */}
                         <AnimatePresence>
                           {expandedLogId === log.id && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -386,6 +565,356 @@ export default function ProofOfWork() {
               ))}
               {logs.filter(l => l.title?.startsWith('Weekly Debrief')).length === 0 && <div className="font-mono text-sm text-muted py-8">NO WEEKLY REVIEWS ARCHIVED YET.</div>}
             </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* BOOKS COMPLETED TAB */}
+        {/* ========================================================================= */}
+        {activeTab === 'books' && (
+          <div className="space-y-6">
+            {/* STATS HEADER */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <HudPanel className="p-4 flex items-center justify-between">
+                <div>
+                  <span className="font-mono text-[10px] text-muted uppercase block">BOOKS READ</span>
+                  <span className="font-display text-2xl text-amber font-bold">{books.length}</span>
+                </div>
+                <BookOpen size={24} className="text-amber opacity-60" />
+              </HudPanel>
+
+              <HudPanel className="p-4 flex items-center justify-between">
+                <div>
+                  <span className="font-mono text-[10px] text-muted uppercase block">AVG RATING</span>
+                  <span className="font-display text-2xl text-warning font-bold">{avgBookRating} ⭐</span>
+                </div>
+                <Star size={24} className="text-warning opacity-60" />
+              </HudPanel>
+
+              <HudPanel className="p-4 flex items-center justify-between">
+                <div>
+                  <span className="font-mono text-[10px] text-muted uppercase block">XP REWARDS</span>
+                  <span className="font-display text-2xl text-success font-bold">+{books.length * 10} XP</span>
+                </div>
+                <Sparkles size={24} className="text-success opacity-60" />
+              </HudPanel>
+            </div>
+
+            {/* CONTROLS BAR: SEARCH, FILTER, ADD BOOK */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-tertiary border border-border-color rounded-xl">
+              <div className="flex flex-1 items-center gap-2 bg-secondary border border-border-color rounded-lg px-3 py-1.5" style={{ background: '#121520' }}>
+                <Search size={14} className="text-muted flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search books, authors, notes..."
+                  value={bookSearch}
+                  onChange={(e) => setBookSearch(e.target.value)}
+                  className="w-full bg-transparent font-mono text-xs text-primary focus:outline-none placeholder:text-muted"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={bookCategoryFilter}
+                  onChange={(e) => setBookCategoryFilter(e.target.value)}
+                  className="bg-secondary border border-border-color rounded-lg px-3 py-1.5 font-mono text-xs text-primary focus:outline-none"
+                  style={{ background: '#121520', color: '#fff' }}
+                >
+                  <option value="all">ALL GENRES</option>
+                  <option value="Business">Business / Startup</option>
+                  <option value="Philosophy">Philosophy / Mindset</option>
+                  <option value="Technical">Technical / Skills</option>
+                  <option value="Biography">Biography / History</option>
+                  <option value="Fiction">Fiction</option>
+                  <option value="Other">Other</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAddBook(!showAddBook)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-lg shadow-md transition-all shrink-0 active:scale-95"
+                >
+                  <Plus size={16} />
+                  <span>ADD BOOK</span>
+                </button>
+              </div>
+            </div>
+
+            {/* ADD BOOK FORM MODAL */}
+            <AnimatePresence>
+              {showAddBook && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                  <HudPanel label="LOG COMPLETED BOOK (+10 XP)" className="border-amber p-5 space-y-4">
+                    <form onSubmit={handleCreateBook} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="font-mono text-xs text-amber uppercase font-bold block mb-1">Book Title *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Atomic Habits"
+                            value={newBook.title}
+                            onChange={(e) => setNewBook({ ...newBook, title: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
+                            style={{ background: '#141824', color: '#fff' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Author</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. James Clear"
+                            value={newBook.author}
+                            onChange={(e) => setNewBook({ ...newBook, author: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
+                            style={{ background: '#141824', color: '#fff' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Genre / Category</label>
+                          <select
+                            value={newBook.category}
+                            onChange={(e) => setNewBook({ ...newBook, category: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                            style={{ background: '#141824', color: '#fff' }}
+                          >
+                            <option value="Business">Business / Startup</option>
+                            <option value="Philosophy">Philosophy / Mindset</option>
+                            <option value="Technical">Technical / Skills</option>
+                            <option value="Biography">Biography / History</option>
+                            <option value="Fiction">Fiction</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Rating</label>
+                          <select
+                            value={newBook.rating}
+                            onChange={(e) => setNewBook({ ...newBook, rating: parseInt(e.target.value) })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-xs text-warning font-bold focus:outline-none focus:border-amber"
+                            style={{ background: '#141824' }}
+                          >
+                            <option value={5}>⭐⭐⭐⭐⭐ (5/5 Exceptional)</option>
+                            <option value={4}>⭐⭐⭐⭐ (4/5 Great)</option>
+                            <option value={3}>⭐⭐⭐ (3/5 Good)</option>
+                            <option value={2}>⭐⭐ (2/5 Average)</option>
+                            <option value={1}>⭐ (1/5 Poor)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Completion Date</label>
+                          <input
+                            type="date"
+                            value={newBook.date_completed}
+                            onChange={(e) => setNewBook({ ...newBook, date_completed: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                            style={{ background: '#141824', color: '#fff' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Cover Image URL (Optional)</label>
+                        <input
+                          type="url"
+                          placeholder="https://..."
+                          value={newBook.cover_url}
+                          onChange={(e) => setNewBook({ ...newBook, cover_url: e.target.value })}
+                          className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                          style={{ background: '#141824', color: '#fff' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Key Takeaways & Summary</label>
+                        <textarea
+                          rows={3}
+                          placeholder="Main lessons, action items, or core concepts..."
+                          value={newBook.takeaways}
+                          onChange={(e) => setNewBook({ ...newBook, takeaways: e.target.value })}
+                          className="w-full bg-secondary border border-border-color rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                          style={{ background: '#141824', color: '#fff' }}
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddBook(false)}
+                          className="px-4 py-2 bg-secondary border border-border-color rounded-xl font-mono text-xs text-muted hover:text-primary transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-5 py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2"
+                        >
+                          <Save size={15} />
+                          <span>Save Book (+10 XP)</span>
+                        </button>
+                      </div>
+                    </form>
+                  </HudPanel>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* BOOKS GRID ARCHIVE */}
+            {filteredBooks.length === 0 ? (
+              <div className="font-mono text-sm text-muted text-center py-12 bg-tertiary border border-border-color rounded-xl">
+                NO BOOKS FOUND IN ARCHIVE.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredBooks.map((book, idx) => {
+                  const isEditing = editingBookId === (book.id || book.title)
+                  const isExpanded = expandedBookId === (book.id || book.title)
+
+                  return (
+                    <div
+                      key={book.id || idx}
+                      className="p-4 rounded-xl bg-tertiary border border-border-color hover:border-amber/60 transition-all flex flex-col justify-between space-y-3 group"
+                    >
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            value={editBookForm.title}
+                            onChange={(e) => setEditBookForm({ ...editBookForm, title: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded p-2 font-mono text-xs text-primary"
+                          />
+                          <input
+                            type="text"
+                            value={editBookForm.author}
+                            onChange={(e) => setEditBookForm({ ...editBookForm, author: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded p-2 font-mono text-xs text-primary"
+                          />
+                          <textarea
+                            rows={3}
+                            value={editBookForm.takeaways}
+                            onChange={(e) => setEditBookForm({ ...editBookForm, takeaways: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded p-2 font-mono text-xs text-primary"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => saveEditBook(book.id)}
+                              className="px-3 py-1 bg-amber text-black font-mono text-xs font-bold rounded"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingBookId(null)}
+                              className="px-3 py-1 bg-secondary text-muted font-mono text-xs rounded"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-3">
+                            {/* Book Cover Preview or Stylized Book Spine */}
+                            {book.cover_url ? (
+                              <img
+                                src={book.cover_url}
+                                alt={book.title}
+                                className="w-14 h-20 object-cover rounded-lg border border-border-color shadow-sm shrink-0"
+                              />
+                            ) : (
+                              <div className="w-14 h-20 rounded-lg bg-amber/10 border border-amber/30 flex flex-col items-center justify-center p-1 text-center shrink-0">
+                                <Book size={20} className="text-amber mb-1" />
+                                <span className="font-mono text-[8px] text-amber font-bold leading-tight truncate max-w-full">
+                                  {book.category}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono text-[10px] text-amber font-bold uppercase">
+                                  {book.category || 'Business'}
+                                </span>
+                                <span className="font-mono text-[10px] text-muted">
+                                  {book.date_completed}
+                                </span>
+                              </div>
+
+                              <h3 className="font-display text-base uppercase tracking-wider text-primary truncate mt-0.5">
+                                {book.title}
+                              </h3>
+                              <p className="font-mono text-xs text-secondary italic truncate">
+                                by {book.author || 'Unknown'}
+                              </p>
+
+                              {/* Star Rating Display */}
+                              <div className="flex items-center gap-1 mt-1.5 text-warning font-mono text-xs font-bold">
+                                {'★'.repeat(book.rating || 5)}{'☆'.repeat(5 - (book.rating || 5))}
+                                <span className="text-muted text-[10px] ml-1">({book.rating || 5}/5)</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Key Takeaways & Expand Accordion */}
+                          {book.takeaways && (
+                            <div className="pt-2 border-t border-border-subtle/50">
+                              <div
+                                onClick={() => setExpandedBookId(isExpanded ? null : (book.id || book.title))}
+                                className="flex items-center justify-between cursor-pointer text-muted hover:text-primary transition-colors font-mono text-[10px] uppercase font-bold"
+                              >
+                                <span>Key Takeaways & Notes</span>
+                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </div>
+
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                  >
+                                    <p className="font-mono text-xs text-secondary whitespace-pre-wrap leading-relaxed mt-2 p-2.5 rounded bg-secondary/40 border border-border-subtle">
+                                      {book.takeaways}
+                                    </p>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          )}
+
+                          {/* Card Actions */}
+                          <div className="flex items-center justify-between pt-2 border-t border-border-subtle/40">
+                            <div className="flex items-center gap-2 font-mono text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() => startEditBook(book)}
+                                className="text-muted hover:text-amber transition-colors flex items-center gap-1"
+                              >
+                                <Edit2 size={10} /> EDIT
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteBook(book.id, book.title)}
+                              className="text-danger/70 hover:text-danger transition-colors font-mono text-[10px] flex items-center gap-1"
+                            >
+                              <Trash2 size={10} /> DELETE
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -494,6 +1023,24 @@ export default function ProofOfWork() {
                   {logs.length === 0 && <p className="font-mono text-xs text-muted">Awaiting operational data.</p>}
                 </div>
               </div>
+
+              {/* Books Completed Section in Resume */}
+              {books.length > 0 && (
+                <div>
+                  <h2 className="font-display text-2xl uppercase tracking-wider text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2">
+                    <BookOpen size={20} /> BOOKS COMPLETED ({books.length})
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
+                    {books.map((b, i) => (
+                      <div key={i} className="p-3 border border-border-color bg-tertiary rounded">
+                        <div className="text-primary font-bold uppercase">{b.title}</div>
+                        <div className="text-muted text-[10px]">by {b.author || 'Unknown'} • {b.category}</div>
+                        <div className="text-warning font-bold mt-1">{'★'.repeat(b.rating || 5)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Projects */}
               <div>
