@@ -18,7 +18,7 @@ import {
 export default function ProofOfWork() {
   const { user } = useAuth()
   const { profile } = useProfile()
-  const { xp: { awardXP } } = useOS()
+  const { xp: { awardXP, deductXP } } = useOS()
 
   // Active tab: 'timeline' | 'reviews' | 'books' | 'projects' | 'resume'
   const [activeTab, setActiveTab] = useState('timeline')
@@ -136,6 +136,7 @@ export default function ProofOfWork() {
       const supabase = createClient()
       await supabase.from('work_logs').delete().eq('id', id)
       setLogs(prev => prev.filter(l => l.id !== id))
+      deductXP(2, 'work_log', id, 'Deleted Work Log')
     }
   }
 
@@ -294,6 +295,10 @@ export default function ProofOfWork() {
           await supabase.from('books_completed').delete().eq('id', bookId)
         }
       } catch (err) {}
+
+      deductXP(10, 'book', bookId, `Removed Book: ${title}`)
+      setXpToast(`-10 XP: Removed "${title}"`)
+      setTimeout(() => setXpToast(null), 3500)
     }
   }
 

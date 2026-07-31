@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
+import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 
 export function useXPInternal(user) {
   const supabase = createClient()
@@ -19,5 +19,17 @@ export function useXPInternal(user) {
     }
   }, [user])
 
-  return { awardXP }
+  const deductXP = useCallback(async (amount, sourceType, sourceId, description) => {
+    if (!user) return null
+
+    try {
+      await robustRemoveXP(user.id, sourceType, sourceId, amount, description)
+      return true
+    } catch (error) {
+      console.error('Error deducting XP:', error)
+      return null
+    }
+  }, [user])
+
+  return { awardXP, deductXP }
 }

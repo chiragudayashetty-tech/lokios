@@ -203,6 +203,10 @@ export function useHabitsInternal(user) {
       // 2. Database Sync
       if (nextStatus === 'none') {
         if (dbLogsOnly.length > 0) {
+          for (const oldLog of dbLogsOnly) {
+            await robustRemoveXP(user.id, 'habit_complete', oldLog.id)
+            await robustRemoveXP(user.id, 'habit_failed', oldLog.id)
+          }
           const { error: delErr } = await supabase.from('habit_logs').delete().in('id', dbLogsOnly.map(l => l.id))
           if (delErr) throw delErr
         }

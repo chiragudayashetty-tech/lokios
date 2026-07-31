@@ -160,29 +160,42 @@ export async function cleanupAllDuplicateXP(userId) {
   return toDelete.length
 }
 
-export async function robustRemoveXP(userId, sourceType, sourceId) {
+export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount = null, description = null) {
   const supabase = createClient()
-  
-  const { data: items } = await supabase.from('xp_history')
-    .select('id, amount')
-    .eq('user_id', userId)
-    .eq('source_type', sourceType)
-    .eq('source_id', sourceId)
+  if (!userId) return false
 
-  if (!items || items.length === 0) return true
+  let totalDeduction = 0
 
-  const totalDeduction = items.reduce((sum, r) => sum + (r.amount || 0), 0)
-  const ids = items.map(r => r.id)
+  // Step 1: Look for matching xp_history entries for sourceType + sourceId
+  if (sourceType || sourceId) {
+    try {
+      let query = supabase.from('xp_history').select('id, amount').eq('user_id', userId)
+      if (sourceType) query = query.eq('source_type', sourceType)
+      if (sourceId) query = query.eq('source_id', sourceId)
 
-  await supabase.from('xp_history').delete().in('id', ids)
+      const { data: items } = await query
+      if (items && items.length > 0) {
+        totalDeduction = items.reduce((sum, r) => sum + (r.amount || 0), 0)
+        const ids = items.map(r => r.id)
+        await supabase.from('xp_history').delete().in('id', ids)
+      }
+    } catch (err) {
+      console.warn('Failed to query xp_history during remove:', err)
+    }
+  }
 
-  if (totalDeduction !== 0) {
+  // Step 2: Fallback to fixedAmount if no xp_history records were deleted
+  if (totalDeduction === 0 && fixedAmount) {
+    totalDeduction = Math.abs(fixedAmount)
+  }
+
+  // Step 3: Deduct totalDeduction from profiles.total_xp
+  if (totalDeduction > 0) {
     try {
       const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
       if (prof) {
-        await supabase.from('profiles').update({
-          total_xp: Math.max(0, (prof.total_xp || 0) - totalDeduction)
-        }).eq('id', userId)
+        const newTotal = Math.max(0, (prof.total_xp || 0) - totalDeduction)
+        await supabase.from('profiles').update({ total_xp: newTotal }).eq('id', userId)
       }
     } catch (e) {
       console.error('Failed to deduct profile XP:', e)
