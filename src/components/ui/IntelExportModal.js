@@ -70,15 +70,16 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const supabase = createClient()
 
       // Fetch supplementary tables for the date range
-      const [screenRes, weightRes, sleepRes, workRes, contentRes] = await Promise.all([
+      const [screenRes, weightRes, sleepRes, workHoursRes, workRes, contentRes] = await Promise.all([
         supabase.from('screen_time_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('weight_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('sleep_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
+        supabase.from('work_hours_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('work_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('content_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true })
       ])
 
-      let workLogs = workRes.data || []
+      let workLogs = (workHoursRes.data && workHoursRes.data.length > 0) ? workHoursRes.data : (workRes.data || [])
       let contentLogs = contentRes.data || []
 
       // Fallback cache if empty

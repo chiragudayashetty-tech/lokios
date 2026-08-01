@@ -80,7 +80,7 @@ export default function WorkPage() {
   const [analyticsRange, setAnalyticsRange] = useState('30days')
 
   // ----------------------------------------------------
-  // FETCH LOGS (Supabase + localStorage merge for zero data loss)
+  // FETCH LOGS (Dual-table fetch + localStorage merge)
   // ----------------------------------------------------
   useEffect(() => {
     if (!user) return
@@ -88,13 +88,31 @@ export default function WorkPage() {
     const fetchAllLogs = async () => {
       const sb = createClient()
       try {
-        const [wRes, cRes] = await Promise.all([
-          sb.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-          sb.from('content_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
-        ])
+        let fetchedW = []
+        const { data: whData, error: whErr } = await sb
+          .from('work_hours_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
 
-        let fetchedW = wRes.data || []
-        let fetchedC = cRes.data || []
+        if (!whErr && whData && whData.length > 0) {
+          fetchedW = whData
+        } else {
+          const { data: wData } = await sb
+            .from('work_logs')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: false })
+          if (wData) fetchedW = wData
+        }
+
+        const { data: cData } = await sb
+          .from('content_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false })
+
+        let fetchedC = cData || []
 
         // Merge with local cache if local has entries not yet in DB
         if (typeof window !== 'undefined') {
@@ -153,7 +171,7 @@ export default function WorkPage() {
   useEffect(() => {
     const w = workLogs.find(l => l.date === selectedDate)
     if (w) {
-      setValTotalWorked(toInputValue(w.total_hours_worked, unitTotalWorked))
+      setValTotalWorked(toInputValue(w.total_hours_worked ?? w.duration_hours, unitTotalWorked))
       setValBeyondTatva(toInputValue(w.beyond_tatva_hours, unitBeyondTatva))
       setValFocused(toInputValue(w.focused_hours, unitFocused))
       setValUnfocused(toInputValue(w.unfocused_hours ?? w.deep_execution_hours, unitUnfocused))
@@ -201,7 +219,7 @@ export default function WorkPage() {
   // ----------------------------------------------------
   const nonEmptyWorkLogs = useMemo(() => {
     return workLogs.filter(l => {
-      const tot = parseFloat(l.total_hours_worked) || 0
+      const tot = parseFloat(l.total_hours_worked ?? l.duration_hours) || 0
       const bt = parseFloat(l.beyond_tatva_hours) || 0
       const foc = parseFloat(l.focused_hours) || 0
       const unfoc = parseFloat(l.unfocused_hours ?? l.deep_execution_hours) || 0
@@ -240,22 +258,37 @@ export default function WorkPage() {
       notes: workNotes || ''
     }
 
+    // 1. Update local state & localStorage cache immediately for 0ms latency
     const updated = [payload, ...workLogs.filter(l => l.date !== selectedDate)].sort((a, b) => b.date.localeCompare(a.date))
     setWorkLogs(updated)
     if (typeof window !== 'undefined') localStorage.setItem('lokios_work_logs_cache', JSON.stringify(updated))
 
+    // 2. Sync to Supabase: try work_hours_logs first, fallback to work_logs
     try {
       const sb = createClient()
-      const { data: existing } = await sb
-        .from('work_logs')
+      
+      let targetTable = 'work_hours_logs'
+      let { data: existing, error: selectErr } = await sb
+        .from('work_hours_logs')
         .select('id')
         .eq('user_id', user.id)
         .eq('date', selectedDate)
         .limit(1)
 
-      if (existing && existing.length > 0) {
-        await sb
+      if (selectErr) {
+        targetTable = 'work_logs'
+        const fallbackRes = await sb
           .from('work_logs')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('date', selectedDate)
+          .limit(1)
+        existing = fallbackRes.data
+      }
+
+      if (existing && existing.length > 0) {
+        const { error: updateErr } = await sb
+          .from(targetTable)
           .update({
             total_hours_worked: payload.total_hours_worked,
             beyond_tatva_hours: payload.beyond_tatva_hours,
@@ -265,15 +298,23 @@ export default function WorkPage() {
             notes: payload.notes
           })
           .eq('id', existing[0].id)
+
+        if (updateErr) console.error(`Work log update error on ${targetTable}:`, updateErr)
       } else {
         const { data: inserted, error: insertErr } = await sb
-          .from('work_logs')
+          .from(targetTable)
           .insert([payload])
           .select()
 
         if (insertErr) {
-          const minimal = { ...payload }
-          delete minimal.deep_execution_hours
+          console.error(`Work log insert error on ${targetTable}:`, insertErr)
+          const minimal = {
+            user_id: user.id,
+            date: selectedDate,
+            title: 'Daily Work Hours',
+            duration_hours: payload.total_hours_worked,
+            notes: payload.notes || ''
+          }
           await sb.from('work_logs').insert([minimal])
         } else if (inserted && inserted.length > 0) {
           setWorkLogs(prev => prev.map(l => l.date === selectedDate ? { ...l, id: inserted[0].id } : l))
@@ -441,7 +482,7 @@ export default function WorkPage() {
   }, [contentLogs, analyticsRange])
 
   const totals = useMemo(() => {
-    const totWork = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.total_hours_worked) || 0), 0)
+    const totWork = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0), 0)
     const totBeyond = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.beyond_tatva_hours) || 0), 0)
     const totFocus = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.focused_hours) || 0), 0)
     const totUnfocused = filteredWorkLogs.reduce((acc, l) => acc + (parseFloat(l.unfocused_hours ?? l.deep_execution_hours) || 0), 0)
@@ -473,7 +514,7 @@ export default function WorkPage() {
       return {
         date: d.slice(5),
         fullDate: d,
-        Worked: Number((parseFloat(w.total_hours_worked) || 0).toFixed(1)),
+        Worked: Number((parseFloat(w.total_hours_worked ?? w.duration_hours) || 0).toFixed(1)),
         BeyondTatva: Number((parseFloat(w.beyond_tatva_hours) || 0).toFixed(1)),
         Focused: Number((parseFloat(w.focused_hours) || 0).toFixed(1)),
         Unfocused: Number((parseFloat(w.unfocused_hours ?? w.deep_execution_hours) || 0).toFixed(1)),
@@ -747,29 +788,32 @@ export default function WorkPage() {
                 <>
                   {/* Mobile Card View (< 768px) */}
                   <div className="md:hidden space-y-2.5">
-                    {nonEmptyWorkLogs.map(l => (
-                      <div key={l.date} className="p-3.5 rounded-xl bg-tertiary border border-border-color space-y-2">
-                        <div className="flex items-center justify-between font-mono text-xs">
-                          <span className="text-secondary font-bold">{l.date}</span>
-                          <span className="text-amber font-bold">{(l.total_hours_worked || 0).toFixed(1)}h Worked</span>
+                    {nonEmptyWorkLogs.map(l => {
+                      const tot = (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0).toFixed(1)
+                      return (
+                        <div key={l.date} className="p-3.5 rounded-xl bg-tertiary border border-border-color space-y-2">
+                          <div className="flex items-center justify-between font-mono text-xs">
+                            <span className="text-secondary font-bold">{l.date}</span>
+                            <span className="text-amber font-bold">{tot}h Worked</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 font-mono text-[11px] pt-2 border-t border-border-subtle/40">
+                            <div>
+                              <span className="text-muted block text-[9px] uppercase">Beyond</span>
+                              <span className="text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)}h</span>
+                            </div>
+                            <div>
+                              <span className="text-muted block text-[9px] uppercase">Focused</span>
+                              <span className="text-success">{(l.focused_hours || 0).toFixed(1)}h</span>
+                            </div>
+                            <div>
+                              <span className="text-muted block text-[9px] uppercase">Unfocused</span>
+                              <span className="text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)}h</span>
+                            </div>
+                          </div>
+                          {l.notes && <p className="font-mono text-[11px] text-muted italic pt-1">{l.notes}</p>}
                         </div>
-                        <div className="grid grid-cols-3 gap-2 font-mono text-[11px] pt-2 border-t border-border-subtle/40">
-                          <div>
-                            <span className="text-muted block text-[9px] uppercase">Beyond</span>
-                            <span className="text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)}h</span>
-                          </div>
-                          <div>
-                            <span className="text-muted block text-[9px] uppercase">Focused</span>
-                            <span className="text-success">{(l.focused_hours || 0).toFixed(1)}h</span>
-                          </div>
-                          <div>
-                            <span className="text-muted block text-[9px] uppercase">Unfocused</span>
-                            <span className="text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)}h</span>
-                          </div>
-                        </div>
-                        {l.notes && <p className="font-mono text-[11px] text-muted italic pt-1">{l.notes}</p>}
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
 
                   {/* Desktop Table (>= 768px) */}
@@ -786,16 +830,19 @@ export default function WorkPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {nonEmptyWorkLogs.map(l => (
-                          <tr key={l.date} className="border-b border-border-subtle/50 hover:bg-tertiary/50 transition-colors">
-                            <td className="py-2.5 px-3 text-secondary">{l.date}</td>
-                            <td className="py-2.5 px-3"><strong className="text-amber">{(l.total_hours_worked || 0).toFixed(1)} h</strong></td>
-                            <td className="py-2.5 px-3 text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)} h</td>
-                            <td className="py-2.5 px-3 text-success">{(l.focused_hours || 0).toFixed(1)} h</td>
-                            <td className="py-2.5 px-3 text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)} h</td>
-                            <td className="py-2.5 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
-                          </tr>
-                        ))}
+                        {nonEmptyWorkLogs.map(l => {
+                          const tot = (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0).toFixed(1)
+                          return (
+                            <tr key={l.date} className="border-b border-border-subtle/50 hover:bg-tertiary/50 transition-colors">
+                              <td className="py-2.5 px-3 text-secondary">{l.date}</td>
+                              <td className="py-2.5 px-3"><strong className="text-amber">{tot} h</strong></td>
+                              <td className="py-2.5 px-3 text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)} h</td>
+                              <td className="py-2.5 px-3 text-success">{(l.focused_hours || 0).toFixed(1)} h</td>
+                              <td className="py-2.5 px-3 text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)} h</td>
+                              <td className="py-2.5 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
