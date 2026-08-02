@@ -15,7 +15,7 @@ import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
+import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { RANK_CONFIG } from '@/lib/constants'
 import { getLocalDateStr, getEndOfWeek } from '@/lib/utils/dates'
 import { syncWarRoomDailyEvaluator } from '@/lib/utils/warRoomSync'
@@ -529,20 +529,25 @@ export default function MissionControl() {
     return sourceList.map((item, idx) => {
       const itemTitle = item.title ? item.title.trim() : String(item).trim()
 
-      // Match with existing task in tasks array
-      const matchedTask = tasks.find(t => 
+      // Match ALL tasks in tasks array matching this title or category
+      const matchingTasks = tasks.filter(t => 
         (item.id && t.id === item.id) ||
         (t.category === 'weekly_goal' && t.title && t.title.trim().toLowerCase() === itemTitle.toLowerCase()) ||
         (t.description && t.description.includes('[Weekly Goal]') && t.title && t.title.trim().toLowerCase() === itemTitle.toLowerCase())
       )
 
-      const keyId = matchedTask ? matchedTask.id : `debrief_p_${idx}_${itemTitle.slice(0, 8)}`
-      const localOverride = priorityStatusMap[keyId]
-      const effectiveStatus = localOverride || (matchedTask ? matchedTask.status : 'pending')
+      const completedTask = matchingTasks.find(t => t.status === 'completed')
+      const failedTask = matchingTasks.find(t => t.status === 'failed' || t.status === 'cancelled')
+      const activeTask = completedTask || failedTask || matchingTasks[0]
+
+      const keyId = activeTask ? activeTask.id : `debrief_p_${idx}_${itemTitle.slice(0, 8)}`
+      const localOverride = priorityStatusMap[keyId] || priorityStatusMap[itemTitle]
+      const effectiveStatus = localOverride || (activeTask ? activeTask.status : 'pending')
 
       return {
         id: keyId,
-        taskId: matchedTask ? matchedTask.id : null,
+        taskId: activeTask ? activeTask.id : null,
+        matchingTaskIds: matchingTasks.map(t => t.id),
         title: itemTitle,
         status: effectiveStatus,
         category: 'weekly_goal'
@@ -963,9 +968,10 @@ export default function MissionControl() {
                     const isFailed = gt.status === 'failed' || gt.status === 'cancelled'
 
                     const handleMarkDone = async () => {
-                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'completed' }))
-                      let targetId = gt.taskId
-                      if (!targetId && user) {
+                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'completed', [gt.title]: 'completed' }))
+                      let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
+
+                      if (targetIds.length === 0 && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
                         const res = await addTask({
                           title: gt.title,
@@ -975,20 +981,26 @@ export default function MissionControl() {
                           status: 'pending',
                           description: '[Weekly Goal] Priority for Next Week'
                         })
-                        if (res?.data?.id) targetId = res.data.id
+                        if (res?.data?.id) targetIds.push(res.data.id)
                         if (fetchTasks) await fetchTasks()
                       }
-                      if (targetId) {
-                        await completeOperation(targetId)
-                        await profile.fetchProfile()
-                        if (fetchTasks) await fetchTasks()
+
+                      for (const tid of targetIds) {
+                        await completeOperation(tid)
                       }
+
+                      // Direct fallback to ensure +25 XP is awarded and recorded in xp_history & profiles
+                      await robustAwardXP(user.id, 25, 'task_complete', targetIds[0] || gt.id, `Completed Priority Goal: ${gt.title}`, 'discipline')
+
+                      await profile.fetchProfile()
+                      if (fetchTasks) await fetchTasks()
                     }
 
                     const handleMarkFailed = async () => {
-                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'failed' }))
-                      let targetId = gt.taskId
-                      if (!targetId && user) {
+                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'failed', [gt.title]: 'failed' }))
+                      let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
+
+                      if (targetIds.length === 0 && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
                         const res = await addTask({
                           title: gt.title,
@@ -998,24 +1010,33 @@ export default function MissionControl() {
                           status: 'pending',
                           description: '[Weekly Goal] Priority for Next Week'
                         })
-                        if (res?.data?.id) targetId = res.data.id
+                        if (res?.data?.id) targetIds.push(res.data.id)
                         if (fetchTasks) await fetchTasks()
                       }
-                      if (targetId) {
-                        await failOperation(targetId)
-                        await profile.fetchProfile()
-                        if (fetchTasks) await fetchTasks()
+
+                      for (const tid of targetIds) {
+                        await failOperation(tid)
                       }
+
+                      // Direct fallback to ensure -15 XP penalty is deducted and recorded in xp_history & profiles
+                      await robustAwardXP(user.id, -15, 'task_failed', targetIds[0] || gt.id, `Failed Priority Goal: ${gt.title}`, 'discipline')
+
+                      await profile.fetchProfile()
+                      if (fetchTasks) await fetchTasks()
                     }
 
                     const handleReopen = async () => {
-                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'pending' }))
-                      if (!gt.taskId) return
-                      if (isDone) {
-                        await undoCompleteTask(gt.taskId)
-                      } else if (isFailed) {
-                        await undoFailOperation(gt.taskId)
+                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'pending', [gt.title]: 'pending' }))
+                      const targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? gt.matchingTaskIds : (gt.taskId ? [gt.taskId] : [])
+                      for (const tid of targetIds) {
+                        if (isDone) {
+                          await undoCompleteTask(tid)
+                        } else if (isFailed) {
+                          await undoFailOperation(tid)
+                        }
                       }
+                      await robustRemoveXP(user.id, 'task_complete', targetIds[0] || gt.id)
+                      await robustRemoveXP(user.id, 'task_failed', targetIds[0] || gt.id)
                       await profile.fetchProfile()
                       if (fetchTasks) await fetchTasks()
                     }
