@@ -222,17 +222,25 @@ export default function MissionControl() {
         
       if (xpData) {
         // Today & This Week (NET XP including penalties)
-        setXpThisWeek(xpData.filter(r => r.created_at >= currentMondayStr).reduce((s, r) => s + r.amount, 0))
-        setXpToday(xpData.filter(r => r.created_at.startsWith(todayStr)).reduce((s, r) => s + r.amount, 0))
+        setXpThisWeek(xpData.filter(r => {
+          const rDateStr = getLocalDateStr(new Date(r.created_at))
+          return rDateStr >= currentMondayStr
+        }).reduce((s, r) => s + r.amount, 0))
+
+        setXpToday(xpData.filter(r => {
+          const rDateStr = getLocalDateStr(new Date(r.created_at))
+          return rDateStr === todayStr
+        }).reduce((s, r) => s + r.amount, 0))
         
-        // 30-Day Trajectory Graph
+        // 30-Day Trajectory Graph (includes both gains and penalties mapped to local dates)
         const xpByDate = {}
-        xpData.filter(r => r.amount > 0).forEach(r => {
-          const dateStr = r.created_at.substring(0, 10)
+        xpData.forEach(r => {
+          const dateStr = getLocalDateStr(new Date(r.created_at))
           xpByDate[dateStr] = (xpByDate[dateStr] || 0) + r.amount
         })
+
         const graphData = []
-        for(let i=29; i>=0; i--) {
+        for (let i = 29; i >= 0; i--) {
           const d = new Date()
           d.setDate(d.getDate() - i)
           const dStr = getLocalDateStr(d)

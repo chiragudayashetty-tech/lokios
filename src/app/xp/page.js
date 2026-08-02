@@ -185,13 +185,16 @@ export default function XPDashboard() {
     return getLocalDateStr(d)
   })
 
-  let runningTotal = 0
+  // Calculate starting cumulative XP prior to the 14-day window
+  const sum14Days = last14Days.reduce((acc, d) => acc + (timelineMap[d] || 0), 0)
+  let runningTotal = Math.max(0, totalXp - sum14Days)
+
   const areaData = last14Days.map(d => {
     runningTotal += (timelineMap[d] || 0)
     return {
       date: d.substring(5).replace('-', '/'),
       dailyGain: timelineMap[d] || 0,
-      total: runningTotal
+      total: Math.max(0, runningTotal)
     }
   })
 
