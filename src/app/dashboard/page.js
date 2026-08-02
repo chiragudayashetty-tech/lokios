@@ -77,7 +77,7 @@ export default function MissionControl() {
     profile: { profile },
     goals:   { mainQuest, sideQuests, longTermGoals },
     habits:  { todayLogs, habits },
-    tasks:   { tasks, undoCompleteTask },
+    tasks:   { tasks, addTask, undoCompleteTask },
     journal: { entries },
     completeOperation,
     failOperation,
@@ -507,6 +507,36 @@ export default function MissionControl() {
     }))
   }, [nextWeekPriorities])
 
+  // Combined list of Weekly Priorities mapped directly to DB tasks
+  const debriefPriorityList = useMemo(() => {
+    let sourceList = []
+
+    if (parsedPriorities && parsedPriorities.length > 0) {
+      sourceList = parsedPriorities
+    } else {
+      sourceList = tasks.filter(t => t.category === 'weekly_goal' && t.status !== 'cancelled').slice(0, 3)
+    }
+
+    return sourceList.map((item, idx) => {
+      const itemTitle = item.title ? item.title.trim() : String(item).trim()
+
+      // Match with existing task in tasks array
+      const matchedTask = tasks.find(t => 
+        (item.id && t.id === item.id) ||
+        (t.category === 'weekly_goal' && t.title && t.title.trim().toLowerCase() === itemTitle.toLowerCase()) ||
+        (t.description && t.description.includes('[Weekly Goal]') && t.title && t.title.trim().toLowerCase() === itemTitle.toLowerCase())
+      )
+
+      return {
+        id: matchedTask ? matchedTask.id : `debrief_p_${idx}_${itemTitle.slice(0, 8)}`,
+        taskId: matchedTask ? matchedTask.id : null,
+        title: itemTitle,
+        status: matchedTask ? matchedTask.status : 'pending',
+        category: 'weekly_goal'
+      }
+    })
+  }, [parsedPriorities, tasks])
+
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
 
@@ -913,57 +943,60 @@ export default function MissionControl() {
                 </Link>
               </div>
 
-              {(weeklyGoalTasks.length > 0 || parsedPriorities.length > 0) ? (
+              {debriefPriorityList.length > 0 ? (
                 <div className="space-y-2">
-                  {(weeklyGoalTasks.length > 0 ? weeklyGoalTasks.slice(0, 3) : parsedPriorities).map((gt) => {
+                  {debriefPriorityList.map((gt) => {
                     const isDone = gt.status === 'completed'
-                    const isFailed = gt.status === 'failed'
+                    const isFailed = gt.status === 'failed' || gt.status === 'cancelled'
 
                     const handleMarkDone = async () => {
-                      if (gt.category === 'weekly_goal') {
-                        await completeOperation(gt.id)
-                      } else if (user) {
-                        const sb = createClient()
+                      let targetId = gt.taskId
+                      if (!targetId && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
-                        const { data: newT } = await sb.from('tasks').insert([{
-                          user_id: user.id,
+                        const newT = await addTask({
                           title: gt.title,
                           type: 'custom',
                           category: 'weekly_goal',
                           due_date: endOfWeekStr,
-                          status: 'completed',
-                          completed_at: new Date().toISOString(),
+                          status: 'pending',
                           description: '[Weekly Goal] Priority for Next Week'
-                        }]).select().single()
-                        if (newT) {
-                          await robustAwardXP(user.id, 25, 'task_complete', newT.id, `Completed Priority Goal: ${gt.title}`)
-                        }
+                        })
+                        if (newT) targetId = newT.id
+                      }
+                      if (targetId) {
+                        await completeOperation(targetId)
+                        await profile.fetchProfile()
                       }
                     }
 
                     const handleMarkFailed = async () => {
-                      if (gt.category === 'weekly_goal') {
-                        await failOperation(gt.id)
-                      } else if (user) {
-                        const sb = createClient()
+                      let targetId = gt.taskId
+                      if (!targetId && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
-                        await sb.from('tasks').insert([{
-                          user_id: user.id,
+                        const newT = await addTask({
                           title: gt.title,
                           type: 'custom',
                           category: 'weekly_goal',
                           due_date: endOfWeekStr,
-                          status: 'failed',
+                          status: 'pending',
                           description: '[Weekly Goal] Priority for Next Week'
-                        }])
+                        })
+                        if (newT) targetId = newT.id
+                      }
+                      if (targetId) {
+                        await failOperation(targetId)
+                        await profile.fetchProfile()
                       }
                     }
 
                     const handleReopen = async () => {
-                      if (gt.category === 'weekly_goal') {
-                        if (isDone) await undoCompleteTask(gt.id)
-                        else if (isFailed) await undoFailOperation(gt.id)
+                      if (!gt.taskId) return
+                      if (isDone) {
+                        await undoCompleteTask(gt.taskId)
+                      } else if (isFailed) {
+                        await undoFailOperation(gt.taskId)
                       }
+                      await profile.fetchProfile()
                     }
 
                     return (
@@ -995,7 +1028,7 @@ export default function MissionControl() {
                                 <button
                                   type="button"
                                   onClick={handleMarkFailed}
-                                  title="Mark Failed"
+                                  title="Mark Failed (-15 XP)"
                                   className="w-6 h-6 rounded flex items-center justify-center border border-danger/60 hover:bg-danger text-danger hover:text-white transition-all"
                                 >
                                   <X size={13} strokeWidth={2.5} />
@@ -1012,7 +1045,7 @@ export default function MissionControl() {
                         {isDone ? (
                           <span className="font-mono text-[9px] text-success font-bold shrink-0 px-2 py-0.5 rounded bg-success/10 border border-success/30">DONE (+25 XP)</span>
                         ) : isFailed ? (
-                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-2 py-0.5 rounded bg-danger/10 border border-danger/30">FAILED</span>
+                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-2 py-0.5 rounded bg-danger/10 border border-danger/30">FAILED (-15 XP)</span>
                         ) : (
                           <span className="font-mono text-[9px] text-amber shrink-0 font-semibold">+25 XP</span>
                         )}
