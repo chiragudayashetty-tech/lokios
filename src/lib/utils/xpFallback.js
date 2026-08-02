@@ -11,45 +11,22 @@ import { createClient } from '@/lib/supabase/client'
 export async function robustAwardXP(userId, amount, sourceType, sourceId, description, statCategory = 'discipline') {
   const supabase = createClient()
 
-  // Step 1: Find and remove ALL previous XP entries for this source_type
+  // Step 1: Find and remove previous XP entries ONLY for exact matching (source_type AND source_id)
   if (sourceId) {
     try {
-      let allOld = []
-      
-      // 1a: Try finding entries matching exact source_type + source_id
-      try {
-        const { data: exact, error: exactErr } = await supabase.from('xp_history')
-          .select('id, amount')
-          .eq('user_id', userId)
-          .eq('source_type', sourceType)
-          .eq('source_id', sourceId)
-        if (!exactErr && exact) allOld.push(...exact)
-      } catch (e) {
-        // source_id column might not exist
-      }
-      
-      // 1b: Also find legacy entries with NULL source_id for same source_type
-      try {
-        const { data: legacy, error: legacyErr } = await supabase.from('xp_history')
-          .select('id, amount')
-          .eq('user_id', userId)
-          .eq('source_type', sourceType)
-          .is('source_id', null)
-        if (!legacyErr && legacy) allOld.push(...legacy)
-      } catch (e) {
-        // source_id column might not exist
-      }
+      const { data: exact, error: exactErr } = await supabase.from('xp_history')
+        .select('id, amount')
+        .eq('user_id', userId)
+        .eq('source_type', sourceType)
+        .eq('source_id', sourceId)
 
-      // Deduplicate IDs
-      const uniqueIds = Array.from(new Set(allOld.map(r => r.id)))
-      const recordsToDelete = allOld.filter((r, idx) => allOld.findIndex(x => x.id === r.id) === idx)
-      
-      if (recordsToDelete.length > 0) {
-        const oldXpTotal = recordsToDelete.reduce((sum, r) => sum + (r.amount || 0), 0)
+      if (!exactErr && exact && exact.length > 0) {
+        const uniqueIds = exact.map(r => r.id)
+        const oldXpTotal = exact.reduce((sum, r) => sum + (r.amount || 0), 0)
         await supabase.from('xp_history').delete().in('id', uniqueIds)
 
-        // Deduct old XP from profile
-        if (oldXpTotal > 0) {
+        // Deduct old XP from profile before adding new amount
+        if (oldXpTotal !== 0) {
           const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
           if (prof) {
             await supabase.from('profiles').update({
