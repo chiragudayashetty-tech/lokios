@@ -112,27 +112,20 @@ export function OSProvider({ children }) {
     
     // Cross-Domain Orchestration Methods
     completeOperation: useCallback(async (taskId, proofUrl = null) => {
-      const task = tasks.tasks.find(t => t.id === taskId)
-      if (!task) return null
-
-      const wasAlreadyCompleted = task.status === 'completed'
-
       // 1. Complete the underlying task
       const updatedTask = await tasks.completeTask(taskId, proofUrl)
 
       // 2. If it belongs to a Mission (Goal), automate mission progress
-      if (task.goal_id) {
+      const task = updatedTask || tasks.tasks.find(t => t.id === taskId)
+      if (task && task.goal_id) {
         const goal = goals.goals.find(g => g.id === task.goal_id)
         if (goal && goal.status !== 'completed') {
-          // Find all tasks for this goal to calculate proper percentage
           const goalTasks = tasks.tasks.filter(t => t.goal_id === task.goal_id)
           const completedGoalTasks = goalTasks.filter(t => t.status === 'completed' || t.id === taskId).length
           const totalGoalTasks = goalTasks.length || 1
           
           const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
           await goals.updateProgress(goal.id, newProgress)
-
-          // Mission progress updates, but NEVER auto-completes. User must manually verify and close missions.
         }
       }
       return updatedTask

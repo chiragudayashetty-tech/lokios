@@ -92,6 +92,7 @@ export default function MissionControl() {
   const [weeklyWinRate, setWeeklyWinRate] = useState(0)
   const [arcExpanded, setArcExpanded] = useState(false)
   const [momentumExpanded, setMomentumExpanded] = useState(false)
+  const [priorityStatusMap, setPriorityStatusMap] = useState({})
   
   // New metrics states
   const [ghostScore, setGhostScore] = useState(0)
@@ -527,15 +528,19 @@ export default function MissionControl() {
         (t.description && t.description.includes('[Weekly Goal]') && t.title && t.title.trim().toLowerCase() === itemTitle.toLowerCase())
       )
 
+      const keyId = matchedTask ? matchedTask.id : `debrief_p_${idx}_${itemTitle.slice(0, 8)}`
+      const localOverride = priorityStatusMap[keyId]
+      const effectiveStatus = localOverride || (matchedTask ? matchedTask.status : 'pending')
+
       return {
-        id: matchedTask ? matchedTask.id : `debrief_p_${idx}_${itemTitle.slice(0, 8)}`,
+        id: keyId,
         taskId: matchedTask ? matchedTask.id : null,
         title: itemTitle,
-        status: matchedTask ? matchedTask.status : 'pending',
+        status: effectiveStatus,
         category: 'weekly_goal'
       }
     })
-  }, [parsedPriorities, tasks])
+  }, [parsedPriorities, tasks, priorityStatusMap])
 
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
@@ -950,6 +955,7 @@ export default function MissionControl() {
                     const isFailed = gt.status === 'failed' || gt.status === 'cancelled'
 
                     const handleMarkDone = async () => {
+                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'completed' }))
                       let targetId = gt.taskId
                       if (!targetId && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
@@ -972,6 +978,7 @@ export default function MissionControl() {
                     }
 
                     const handleMarkFailed = async () => {
+                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'failed' }))
                       let targetId = gt.taskId
                       if (!targetId && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
@@ -994,6 +1001,7 @@ export default function MissionControl() {
                     }
 
                     const handleReopen = async () => {
+                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'pending' }))
                       if (!gt.taskId) return
                       if (isDone) {
                         await undoCompleteTask(gt.taskId)
@@ -1005,11 +1013,11 @@ export default function MissionControl() {
                     }
 
                     return (
-                      <div key={gt.id} className={`flex items-center justify-between gap-3 p-2.5 rounded bg-bg-primary border ${
+                      <div key={gt.id} className={`flex items-center justify-between gap-3 p-2.5 rounded bg-bg-primary border transition-all ${
                         isDone ? 'border-success/40 bg-success/5' : isFailed ? 'border-danger/40 bg-danger/5' : 'border-border-color'
                       }`}>
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                          {/* Interactive Action Buttons */}
+                          {/* Action Buttons */}
                           <div className="flex items-center gap-1 shrink-0">
                             {isDone || isFailed ? (
                               <button
@@ -1041,8 +1049,12 @@ export default function MissionControl() {
                               </>
                             )}
                           </div>
-                          <span className={`font-mono text-xs truncate ${
-                            isDone ? 'text-muted line-through opacity-70' : isFailed ? 'text-danger line-through opacity-80' : 'text-primary font-medium'
+                          <span className={`font-mono text-xs truncate transition-all ${
+                            isDone 
+                              ? 'text-success line-through decoration-success font-medium opacity-90' 
+                              : isFailed 
+                              ? 'text-danger line-through decoration-danger font-medium opacity-90' 
+                              : 'text-primary font-medium'
                           }`}>
                             {gt.title}
                           </span>
