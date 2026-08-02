@@ -509,11 +509,22 @@ export default function MissionControl() {
     if (rawItems.length === 0 && nextWeekPriorities.trim()) {
       return [{ id: 'p1', title: nextWeekPriorities.trim(), status: 'pending' }]
     }
-    return rawItems.slice(0, 3).map((title, idx) => ({
-      id: `p-${idx + 1}`,
-      title,
-      status: 'pending'
-    }))
+    return rawItems.slice(0, 3).map((rawTitle, idx) => {
+      let status = 'pending'
+      let title = rawTitle
+      if (rawTitle.includes('[DONE]')) {
+        status = 'completed'
+        title = rawTitle.replace('[DONE]', '').trim()
+      } else if (rawTitle.includes('[FAILED]')) {
+        status = 'failed'
+        title = rawTitle.replace('[FAILED]', '').trim()
+      }
+      return {
+        id: `p-${idx + 1}`,
+        title,
+        status
+      }
+    })
   }, [nextWeekPriorities])
 
   // Combined list of Weekly Priorities mapped directly to DB tasks
@@ -542,7 +553,7 @@ export default function MissionControl() {
 
       const keyId = activeTask ? activeTask.id : `debrief_p_${idx}_${itemTitle.slice(0, 8)}`
       const localOverride = priorityStatusMap[keyId] || priorityStatusMap[itemTitle]
-      const effectiveStatus = localOverride || (activeTask ? activeTask.status : 'pending')
+      const effectiveStatus = localOverride || (item.status !== 'pending' ? item.status : (activeTask ? activeTask.status : 'pending'))
 
       return {
         id: keyId,
@@ -967,6 +978,26 @@ export default function MissionControl() {
                     const isDone = gt.status === 'completed'
                     const isFailed = gt.status === 'failed' || gt.status === 'cancelled'
 
+                    const updateDebriefWorkLog = async (priorityTitle, newTag) => {
+                      if (!latestDebrief?.id || !user) return
+                      const sb = createClient()
+                      const currentDesc = latestDebrief.description || ''
+                      const cleanTarget = priorityTitle.replace('[DONE]', '').replace('[FAILED]', '').trim().toLowerCase()
+
+                      const lines = currentDesc.split('\n')
+                      const updatedLines = lines.map(line => {
+                        const cleanLine = line.replace('[DONE]', '').replace('[FAILED]', '').trim()
+                        if (cleanLine.toLowerCase().includes(cleanTarget)) {
+                          return newTag ? `${cleanLine} ${newTag}` : cleanLine
+                        }
+                        return line
+                      })
+
+                      const newDesc = updatedLines.join('\n')
+                      await sb.from('work_logs').update({ description: newDesc }).eq('id', latestDebrief.id)
+                      setLatestDebrief(prev => prev ? { ...prev, description: newDesc } : null)
+                    }
+
                     const handleMarkDone = async () => {
                       setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'completed', [gt.title]: 'completed' }))
                       let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
@@ -989,7 +1020,7 @@ export default function MissionControl() {
                         await completeOperation(tid)
                       }
 
-                      // Direct fallback to ensure +25 XP is awarded and recorded in xp_history & profiles
+                      await updateDebriefWorkLog(gt.title, '[DONE]')
                       await robustAwardXP(user.id, 25, 'task_complete', targetIds[0] || gt.id, `Completed Priority Goal: ${gt.title}`, 'discipline')
 
                       await profile.fetchProfile()
@@ -1018,7 +1049,7 @@ export default function MissionControl() {
                         await failOperation(tid)
                       }
 
-                      // Direct fallback to ensure -15 XP penalty is deducted and recorded in xp_history & profiles
+                      await updateDebriefWorkLog(gt.title, '[FAILED]')
                       await robustAwardXP(user.id, -15, 'task_failed', targetIds[0] || gt.id, `Failed Priority Goal: ${gt.title}`, 'discipline')
 
                       await profile.fetchProfile()
@@ -1035,6 +1066,7 @@ export default function MissionControl() {
                           await undoFailOperation(tid)
                         }
                       }
+                      await updateDebriefWorkLog(gt.title, '')
                       await robustRemoveXP(user.id, 'task_complete', targetIds[0] || gt.id)
                       await robustRemoveXP(user.id, 'task_failed', targetIds[0] || gt.id)
                       await profile.fetchProfile()
