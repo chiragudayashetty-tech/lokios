@@ -76,10 +76,15 @@ export function OSProvider({ children }) {
     }
 
     const channel = supabase.channel(`os_sync_${auth.user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedXpSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, debouncedXpSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, debouncedXpSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedXpSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_hours_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'habits', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'habit_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
       .subscribe()
 
     const handleVisibility = () => {

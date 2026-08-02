@@ -38,7 +38,7 @@ export function useTasksInternal(user) {
       setLoading(false)
       setInitialized(true)
     }
-  }, [user, initialized])
+  }, [user])
 
   useEffect(() => {
     fetchTasks()
