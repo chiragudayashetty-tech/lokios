@@ -88,7 +88,11 @@ export function useTasksInternal(user) {
     if (!user) return null
 
     try {
-      const task = tasks.find((t) => t.id === id)
+      let task = tasks.find((t) => t.id === id)
+      if (!task) {
+        const { data: dbTask } = await supabase.from('tasks').select('*').eq('id', id).eq('user_id', user.id).single()
+        if (dbTask) task = dbTask
+      }
       if (!task) throw new Error("Task not found")
       if (task.status === 'completed') return task // Idempotency guard
 
@@ -234,8 +238,12 @@ export function useTasksInternal(user) {
     if (!user) return null
 
     try {
-      const task = tasks.find((t) => t.id === id)
-      if (!task || task.status === 'cancelled') return null
+      let task = tasks.find((t) => t.id === id)
+      if (!task) {
+        const { data: dbTask } = await supabase.from('tasks').select('*').eq('id', id).eq('user_id', user.id).single()
+        if (dbTask) task = dbTask
+      }
+      if (!task || task.status === 'cancelled' || task.status === 'failed') return null
 
       const { data: updated, error } = await supabase
         .from('tasks')

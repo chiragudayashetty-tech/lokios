@@ -77,7 +77,7 @@ export default function MissionControl() {
     profile: { profile },
     goals:   { mainQuest, sideQuests, longTermGoals },
     habits:  { todayLogs, habits },
-    tasks:   { tasks, addTask, undoCompleteTask },
+    tasks:   { tasks, addTask, undoCompleteTask, fetchTasks },
     journal: { entries },
     completeOperation,
     failOperation,
@@ -953,7 +953,7 @@ export default function MissionControl() {
                       let targetId = gt.taskId
                       if (!targetId && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
-                        const newT = await addTask({
+                        const res = await addTask({
                           title: gt.title,
                           type: 'custom',
                           category: 'weekly_goal',
@@ -961,11 +961,13 @@ export default function MissionControl() {
                           status: 'pending',
                           description: '[Weekly Goal] Priority for Next Week'
                         })
-                        if (newT) targetId = newT.id
+                        if (res?.data?.id) targetId = res.data.id
+                        if (fetchTasks) await fetchTasks()
                       }
                       if (targetId) {
                         await completeOperation(targetId)
                         await profile.fetchProfile()
+                        if (fetchTasks) await fetchTasks()
                       }
                     }
 
@@ -973,7 +975,7 @@ export default function MissionControl() {
                       let targetId = gt.taskId
                       if (!targetId && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
-                        const newT = await addTask({
+                        const res = await addTask({
                           title: gt.title,
                           type: 'custom',
                           category: 'weekly_goal',
@@ -981,11 +983,13 @@ export default function MissionControl() {
                           status: 'pending',
                           description: '[Weekly Goal] Priority for Next Week'
                         })
-                        if (newT) targetId = newT.id
+                        if (res?.data?.id) targetId = res.data.id
+                        if (fetchTasks) await fetchTasks()
                       }
                       if (targetId) {
                         await failOperation(targetId)
                         await profile.fetchProfile()
+                        if (fetchTasks) await fetchTasks()
                       }
                     }
 
@@ -997,6 +1001,7 @@ export default function MissionControl() {
                         await undoFailOperation(gt.taskId)
                       }
                       await profile.fetchProfile()
+                      if (fetchTasks) await fetchTasks()
                     }
 
                     return (
