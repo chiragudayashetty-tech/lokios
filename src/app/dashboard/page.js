@@ -999,6 +999,7 @@ export default function MissionControl() {
                     }
 
                     const handleMarkDone = async () => {
+                      const stableSourceId = `debrief_p_${gt.title.trim().toLowerCase().replace(/\s+/g, '_')}`
                       setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'completed', [gt.title]: 'completed' }))
                       let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
 
@@ -1017,17 +1018,19 @@ export default function MissionControl() {
                       }
 
                       for (const tid of targetIds) {
-                        await completeOperation(tid)
+                        const updates = { completed_at: new Date().toISOString(), status: 'completed' }
+                        await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
                       }
 
                       await updateDebriefWorkLog(gt.title, '[DONE]')
-                      await robustAwardXP(user.id, 25, 'task_complete', targetIds[0] || gt.id, `Completed Priority Goal: ${gt.title}`, 'discipline')
+                      await robustAwardXP(user.id, 25, 'task_complete', stableSourceId, `Completed Priority Goal: ${gt.title}`, 'discipline')
 
                       await profile.fetchProfile()
                       if (fetchTasks) await fetchTasks()
                     }
 
                     const handleMarkFailed = async () => {
+                      const stableSourceId = `debrief_p_${gt.title.trim().toLowerCase().replace(/\s+/g, '_')}`
                       setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'failed', [gt.title]: 'failed' }))
                       let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
 
@@ -1046,29 +1049,28 @@ export default function MissionControl() {
                       }
 
                       for (const tid of targetIds) {
-                        await failOperation(tid)
+                        const updates = { completed_at: new Date().toISOString(), status: 'failed' }
+                        await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
                       }
 
                       await updateDebriefWorkLog(gt.title, '[FAILED]')
-                      await robustAwardXP(user.id, -15, 'task_failed', targetIds[0] || gt.id, `Failed Priority Goal: ${gt.title}`, 'discipline')
+                      await robustAwardXP(user.id, -15, 'task_failed', stableSourceId, `Failed Priority Goal: ${gt.title}`, 'discipline')
 
                       await profile.fetchProfile()
                       if (fetchTasks) await fetchTasks()
                     }
 
                     const handleReopen = async () => {
+                      const stableSourceId = `debrief_p_${gt.title.trim().toLowerCase().replace(/\s+/g, '_')}`
                       setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'pending', [gt.title]: 'pending' }))
                       const targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? gt.matchingTaskIds : (gt.taskId ? [gt.taskId] : [])
                       for (const tid of targetIds) {
-                        if (isDone) {
-                          await undoCompleteTask(tid)
-                        } else if (isFailed) {
-                          await undoFailOperation(tid)
-                        }
+                        const updates = { completed_at: null, status: 'pending' }
+                        await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
                       }
                       await updateDebriefWorkLog(gt.title, '')
-                      await robustRemoveXP(user.id, 'task_complete', targetIds[0] || gt.id)
-                      await robustRemoveXP(user.id, 'task_failed', targetIds[0] || gt.id)
+                      await robustRemoveXP(user.id, 'task_complete', stableSourceId)
+                      await robustRemoveXP(user.id, 'task_failed', stableSourceId)
                       await profile.fetchProfile()
                       if (fetchTasks) await fetchTasks()
                     }

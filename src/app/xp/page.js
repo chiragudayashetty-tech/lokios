@@ -82,56 +82,12 @@ export default function XPDashboard() {
 
   const handleFixDuplicates = async () => {
     setLoading(true)
-    const supabase = createClient()
-    
-    // 1. Clean sleep/weight duplicates
-    await cleanupAllDuplicateXP(user.id)
-
-    // 2. Clean habit duplicates (legacy logic)
-    const { data: allHistory } = await supabase.from('xp_history').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
-    if (!allHistory) { window.location.reload(); return }
-    
-    const xpByDayAndRoutine = {}
-    for (const item of allHistory) {
-      if (!item.source_type?.startsWith('habit_')) continue
-      
-      const isComplete = item.description?.startsWith('Completed routine: ')
-      const isFail = item.description?.startsWith('Failed routine: ')
-      if (!isComplete && !isFail) continue
-      
-      const routineName = item.description.replace('Completed routine: ', '').replace('Failed routine: ', '')
-      const d = new Date(item.created_at)
-      const offset = d.getTimezoneOffset()
-      const local = new Date(d.getTime() - offset * 60 * 1000)
-      const dateStr = local.toISOString().split('T')[0]
-      
-      const key = `${dateStr}_${routineName}`
-      if (!xpByDayAndRoutine[key]) xpByDayAndRoutine[key] = []
-      xpByDayAndRoutine[key].push(item)
+    const cleanedCount = await cleanupAllDuplicateXP(user.id)
+    if (cleanedCount > 0) {
+      alert(`Cleanup Complete: Successfully purged ${cleanedCount} duplicate XP entries and updated your profile XP.`)
+    } else {
+      alert('No duplicate XP entries found!')
     }
-    
-    let totalDeduction = 0
-    const toDelete = []
-    
-    for (const key in xpByDayAndRoutine) {
-      const items = xpByDayAndRoutine[key]
-      if (items.length > 1) {
-        items.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        for (let i = 1; i < items.length; i++) {
-          toDelete.push(items[i].id)
-          totalDeduction += items[i].amount
-        }
-      }
-    }
-    
-    if (toDelete.length > 0) {
-      await supabase.from('xp_history').delete().in('id', toDelete)
-      const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', user.id).single()
-      if (prof) {
-        await supabase.from('profiles').update({ total_xp: Math.max(0, (prof.total_xp || 0) - totalDeduction) }).eq('id', user.id)
-      }
-    }
-    
     window.location.reload()
   }
 

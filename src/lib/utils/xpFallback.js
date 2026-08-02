@@ -90,51 +90,60 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
  */
 export async function cleanupAllDuplicateXP(userId) {
   const supabase = createClient()
-  
-  const { data: allHistory } = await supabase.from('xp_history')
+  if (!userId) return 0
+
+  const { data: allHistory } = await supabase
+    .from('xp_history')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-  
+
   if (!allHistory || allHistory.length === 0) return 0
 
-  const seen = new Map() // key: "source_type|source_id" -> kept entry
-  const toDelete = []
-  let totalDeduction = 0
+  const seenKeys = new Set()
+  const toDeleteIds = []
 
   for (const entry of allHistory) {
-    // Only dedup entries that have a source_id (sleep dates, weight dates)
-    if (!entry.source_id) continue
-    
-    const key = `${entry.source_type}|${entry.source_id}`
-    if (seen.has(key)) {
-      // This is a duplicate — mark for deletion
-      toDelete.push(entry.id)
-      totalDeduction += entry.amount || 0
-    } else {
-      seen.set(key, entry)
-    }
-  }
+    let key = null
 
-  if (toDelete.length > 0) {
-    // Delete duplicates in batches of 50
-    for (let i = 0; i < toDelete.length; i += 50) {
-      const batch = toDelete.slice(i, i + 50)
-      await supabase.from('xp_history').delete().in('id', batch)
+    if (entry.source_id) {
+      key = `${entry.source_type}|${entry.source_id}`
+    } else if (entry.description) {
+      const dateStr = entry.created_at ? entry.created_at.substring(0, 10) : ''
+      const cleanDesc = entry.description.trim().toLowerCase()
+      key = `${entry.source_type}|${cleanDesc}|${dateStr}`
     }
 
-    // Deduct the duplicate XP from profile
-    if (totalDeduction > 0) {
-      const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
-      if (prof) {
-        await supabase.from('profiles').update({
-          total_xp: Math.max(0, (prof.total_xp || 0) - totalDeduction)
-        }).eq('id', userId)
+    if (key) {
+      if (seenKeys.has(key)) {
+        toDeleteIds.push(entry.id)
+      } else {
+        seenKeys.add(key)
       }
     }
   }
 
-  return toDelete.length
+  if (toDeleteIds.length > 0) {
+    for (let i = 0; i < toDeleteIds.length; i += 50) {
+      const batch = toDeleteIds.slice(i, i + 50)
+      await supabase.from('xp_history').delete().in('id', batch)
+    }
+
+    // Recalculate true total_xp from remaining unique history entries
+    const { data: remaining } = await supabase
+      .from('xp_history')
+      .select('amount')
+      .eq('user_id', userId)
+
+    const trueTotalXp = (remaining || []).reduce((sum, r) => sum + (r.amount || 0), 0)
+
+    await supabase
+      .from('profiles')
+      .update({ total_xp: Math.max(0, trueTotalXp) })
+      .eq('id', userId)
+  }
+
+  return toDeleteIds.length
 }
 
 export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount = null, description = null) {
