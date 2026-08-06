@@ -158,6 +158,11 @@ export default function XPDashboard() {
     }
   })
 
+  const minTotal = Math.min(...areaData.map(d => d.total))
+  const maxTotal = Math.max(...areaData.map(d => d.total))
+  const yMin = Math.max(0, Math.floor((minTotal * 0.85) / 500) * 500)
+  const yMax = Math.ceil((maxTotal * 1.05) / 500) * 500
+
   // Calculate actual days tracked since first activity (or reset)
   let daysTracked = 1
   if (timeline.length > 0) {
@@ -248,62 +253,21 @@ export default function XPDashboard() {
                   filter="url(#lineGlow)"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
-                  transition={{ duration: 2, ease: "easeInOut" }}
-                />
-
-                {/* Bright apex dot */}
-                <motion.circle
-                  cx="340" cy="28" r="6"
-                  fill="#ffffff"
-                  filter="url(#glowDot)"
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 1.5, duration: 0.5, ease: "easeOut" }}
-                />
-
-                {/* Colored outer glow ring at apex */}
-                <motion.circle
-                  cx="340" cy="28" r="11"
-                  fill="none"
-                  stroke={currentRank.color}
-                  strokeWidth="1.5"
-                  filter="url(#glowDot)"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.6 }}
-                  transition={{ delay: 1.6, duration: 0.5 }}
                 />
               </svg>
             </div>
 
-            {/* Level Title & Rank Subtitle */}
-            <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-1">
-              Level {currentLevel}
-            </h2>
-            <span className="font-mono text-xs uppercase tracking-[0.35em] font-semibold text-muted mb-8">
-              {currentRank.name}
-            </span>
-
-            {/* Progress Card (Matching Reference Image) */}
-            <div className="w-full max-w-2xl bg-bg-primary/80 border border-border-color rounded-2xl p-6 shadow-2xl backdrop-blur-md mb-8 text-left">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: `${currentRank.color}20`, border: `1px solid ${currentRank.color}40` }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2L22 12L12 22L2 12L12 2Z" fill={currentRank.color} />
-                    </svg>
-                  </div>
-                  <span className="font-display text-lg font-bold text-white">Level {currentLevel}</span>
-                </div>
-                <span className="font-mono text-xs font-bold text-muted tracking-wider">{current} / {required} XP</span>
+            <div className="relative z-10 mt-2">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-1">
+                SAGA {currentRank.code} · LEVEL {currentLevel}
+              </span>
+              <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-primary mb-2">
+                {currentRank.name}
+              </h2>
+              <div className="font-mono text-sm mb-6 flex items-center justify-center gap-2" style={{ color: currentRank.color }}>
+                <span className="font-bold text-2xl">{totalXp.toLocaleString()}</span>
+                <span className="text-muted font-normal">XP TOTAL</span>
               </div>
-
-              <div className="mb-4">
-                <TacticalProgress value={progressPct} height={8} showValue={false} color={currentRank.color} />
-              </div>
-
-              <p className="font-mono text-xs text-muted leading-relaxed">
-                {currentRank.flavor || "You are proficient in executing daily disciplines, completing missions, and maintaining high operational performance."}
-              </p>
             </div>
 
             {/* Stats Grid */}
@@ -325,61 +289,48 @@ export default function XPDashboard() {
           </HudPanel>
         </motion.div>
 
-        {/* XP TRAJECTORY — Unified Single Chart */}
+        {/* XP TRAJECTORY — Sleek Tactical Chart */}
         <div className="w-full">
           <HudPanel label="" glow className="p-0 overflow-hidden">
             {/* Chart Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-4 border-b border-white/5">
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: currentRank.color, boxShadow: `0 0 8px ${currentRank.color}` }} />
-                <span className="font-mono text-xs uppercase tracking-widest text-muted font-bold">XP TRAJECTORY — 14-DAY INTELLIGENCE</span>
-              </div>
-              <div className="flex items-center gap-4 font-mono text-[10px]">
-                <span className="flex items-center gap-1.5 text-success">
-                  <span className="inline-block w-3 h-0.5 bg-success rounded" />
-                  Daily Gain
-                </span>
-                <span className="flex items-center gap-1.5" style={{ color: currentRank.color }}>
-                  <span className="inline-block w-3 h-0.5 rounded" style={{ background: currentRank.color }} />
-                  Cumulative XP
-                </span>
-              </div>
-            </div>
-
-            {/* Daily delta chips */}
-            <div className="flex gap-1.5 px-5 pb-3 overflow-x-auto">
-              {areaData.map((d, i) => (
-                <div
-                  key={i}
-                  className="shrink-0 px-2 py-1 rounded-md font-mono text-[9px] font-bold border"
-                  style={{
-                    background: d.dailyGain > 0 ? 'rgba(34,197,94,0.12)' : d.dailyGain < 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)',
-                    borderColor: d.dailyGain > 0 ? 'rgba(34,197,94,0.35)' : d.dailyGain < 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.1)',
-                    color: d.dailyGain > 0 ? '#22c55e' : d.dailyGain < 0 ? '#ef4444' : 'var(--text-muted)'
-                  }}
-                >
-                  {d.date}<br />
-                  {d.dailyGain > 0 ? '+' : ''}{d.dailyGain}
+                <div className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: currentRank.color, boxShadow: `0 0 10px ${currentRank.color}` }} />
+                <div>
+                  <h3 className="font-mono text-xs uppercase tracking-widest text-primary font-bold">XP TRAJECTORY — 14-DAY INTELLIGENCE</h3>
+                  <p className="font-mono text-[10px] text-muted mt-0.5">Cumulative progress & daily earnings breakdown</p>
                 </div>
-              ))}
+              </div>
+              <div className="flex items-center gap-4 font-mono text-xs">
+                <div className="px-3 py-1.5 rounded-lg bg-bg-tertiary border border-border-color flex items-center gap-2">
+                  <span className="text-muted text-[10px] uppercase">14-Day Net Gain:</span>
+                  <span className={`font-bold ${sum14Days >= 0 ? 'text-success' : 'text-danger'}`}>
+                    {sum14Days >= 0 ? '+' : ''}{sum14Days.toLocaleString()} XP
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5" style={{ color: currentRank.color }}>
+                  <span className="inline-block w-3 h-0.5 rounded" style={{ background: currentRank.color }} />
+                  <span className="font-bold text-[10px] uppercase">Cumulative Total</span>
+                </div>
+              </div>
             </div>
 
             {/* The Chart */}
-            <div style={{ height: '300px', width: '100%' }}>
+            <div className="p-4" style={{ height: '320px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={areaData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <AreaChart data={areaData} margin={{ top: 15, right: 25, left: 10, bottom: 5 }}>
                   <defs>
                     <linearGradient id="xpGradMain" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={currentRank.color} stopOpacity={0.5} />
-                      <stop offset="60%" stopColor={currentRank.color} stopOpacity={0.15} />
+                      <stop offset="0%" stopColor={currentRank.color} stopOpacity={0.4} />
+                      <stop offset="70%" stopColor={currentRank.color} stopOpacity={0.08} />
                       <stop offset="100%" stopColor={currentRank.color} stopOpacity={0} />
                     </linearGradient>
                     <filter id="xpGlow">
-                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feGaussianBlur stdDeviation="4" result="blur" />
                       <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                     </filter>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                   <XAxis
                     dataKey="date"
                     stroke="rgba(255,255,255,0.2)"
@@ -388,8 +339,10 @@ export default function XPDashboard() {
                     axisLine={false}
                     fontFamily="var(--font-mono)"
                     tick={{ fill: 'var(--text-muted)' }}
+                    dy={5}
                   />
                   <YAxis
+                    domain={[yMin, yMax]}
                     stroke="rgba(255,255,255,0.2)"
                     fontSize={10}
                     tickLine={false}
@@ -401,22 +354,14 @@ export default function XPDashboard() {
                   />
                   <Tooltip
                     content={<CustomXpTooltip />}
-                    cursor={{ stroke: 'rgba(255,255,255,0.15)', strokeDasharray: '4 4', strokeWidth: 1 }}
-                  />
-                  {/* Hidden dailyGain area just for tooltip data */}
-                  <Area
-                    type="monotone"
-                    dataKey="dailyGain"
-                    stroke="transparent"
-                    fill="transparent"
-                    strokeWidth={0}
+                    cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '4 4', strokeWidth: 1 }}
                   />
                   {/* Main cumulative XP area */}
                   <Area
-                    type="monotonex"
+                    type="monotone"
                     dataKey="total"
                     stroke={currentRank.color}
-                    strokeWidth={2.5}
+                    strokeWidth={3}
                     fillOpacity={1}
                     fill="url(#xpGradMain)"
                     dot={(props) => {
