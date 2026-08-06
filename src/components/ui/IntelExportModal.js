@@ -311,11 +311,25 @@ export default function IntelExportModal({ isOpen, onClose }) {
 
       // 3. HABITS MATRIX SPREADSHEET CHART SECTION
       if (selectedModules.habits) {
-        const rangeStart = new Date(startDate)
-        const year = rangeStart.getFullYear()
-        const month = rangeStart.getMonth()
-        const daysInMonth = new Date(year, month + 1, 0).getDate()
-        const daysArr = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+        // Build array of all dates in the selected range [startDate, endDate]
+        const dateList = []
+        let curr = new Date(startDate + 'T00:00:00')
+        const last = new Date(endDate + 'T00:00:00')
+
+        while (curr <= last) {
+          const yyyy = curr.getFullYear()
+          const mm = String(curr.getMonth() + 1).padStart(2, '0')
+          const dd = String(curr.getDate()).padStart(2, '0')
+          const dateStr = `${yyyy}-${mm}-${dd}`
+          dateList.push({
+            dateStr,
+            dayNum: curr.getDate(),
+            dayOfWeek: curr.getDay(),
+            monthShort: curr.toLocaleDateString('en-US', { month: 'short' })
+          })
+          curr.setDate(curr.getDate() + 1)
+        }
+
         const logMap = new Map()
         fetchedHabitLogs.forEach(l => {
           if (l.habit_id && l.date) {
@@ -325,14 +339,14 @@ export default function IntelExportModal({ isOpen, onClose }) {
 
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">🔥 DAILY OPS / HABITS MATRIX SPREADSHEET (${habits.length} Routines) · ${startDate} TO ${endDate}</h2>
+            <h2 class="section-title">🔥 DAILY OPS / HABITS MATRIX SPREADSHEET (${habits.length} Routines) · RANGE: ${startDate} TO ${endDate}</h2>
             <div style="overflow-x: auto;">
               <table class="matrix-table">
                 <thead>
                   <tr>
                     <th style="min-width: 150px; text-align: left;">Routine Title</th>
                     <th style="width: 35px; text-align: center;">XP</th>
-                    ${daysArr.map(d => `<th style="width: 20px; text-align: center; font-size: 9px; padding: 2px;">${d}</th>`).join('')}
+                    ${dateList.map(d => `<th style="width: 20px; text-align: center; font-size: 8px; padding: 2px;" title="${d.monthShort} ${d.dayNum}">${d.dayNum}</th>`).join('')}
                     <th style="width: 40px; text-align: center;">DONE</th>
                     <th style="width: 40px; text-align: center;">GOAL</th>
                     <th style="width: 40px; text-align: center;">%</th>
@@ -346,7 +360,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                     let createdDateStr = null
 
                     if (rawCreatedAt && (rawCreatedAt.startsWith('2026-01-01') || rawCreatedAt.startsWith('2026-01-02'))) {
-                      const logsForHabit = monthLogs.filter(l => l.habit_id === h.id && l.date)
+                      const logsForHabit = fetchedHabitLogs.filter(l => l.habit_id === h.id && l.date)
                       if (logsForHabit.length > 0) {
                         const sortedLogs = [...logsForHabit].sort((a, b) => a.date.localeCompare(b.date))
                         createdDateStr = sortedLogs[0].date
@@ -364,9 +378,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
 
                     const freqDays = h.frequency_days || [0, 1, 2, 3, 4, 5, 6]
 
-                    const dayCellsHTML = daysArr.map(d => {
-                      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-                      const dateObj = new Date(year, month, d)
+                    const dayCellsHTML = dateList.map(dItem => {
+                      const { dateStr, dayOfWeek } = dItem
                       const explicitStatus = logMap.get(`${h.id}::${dateStr}`)
 
                       let status = 'none'
@@ -374,11 +387,11 @@ export default function IntelExportModal({ isOpen, onClose }) {
                         status = explicitStatus
                       } else if (createdDateStr && dateStr < createdDateStr) {
                         status = 'blocked'
-                      } else if (!freqDays.includes(dateObj.getDay())) {
+                      } else if (!freqDays.includes(dayOfWeek)) {
                         status = 'blocked'
                       }
 
-                      if (freqDays.includes(dateObj.getDay())) {
+                      if (freqDays.includes(dayOfWeek)) {
                         goalCount++
                       }
 
@@ -388,7 +401,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                       } else if (status === 'failed') {
                         return `<td class="cell cell-fail">✗</td>`
                       } else if (status === 'blocked') {
-                        if (freqDays.includes(dateObj.getDay())) goalCount--
+                        if (freqDays.includes(dayOfWeek)) goalCount--
                         return `<td class="cell cell-blocked">-</td>`
                       }
                       return `<td class="cell cell-empty"></td>`
