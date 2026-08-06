@@ -188,15 +188,47 @@ export default function Operations() {
 
   const startEdit = (task) => {
     setEditingId(task.id)
+    
+    let customCat = ''
+    let cleanDesc = task.description || ''
+    if (cleanDesc.startsWith('[Category:')) {
+      const match = cleanDesc.match(/^\[Category:\s*([^\]]+)\]\n\n?/)
+      if (match) {
+        customCat = match[1]
+        cleanDesc = cleanDesc.replace(/^\[Category:\s*([^\]]+)\]\n\n?/, '')
+      }
+    }
+
     setEditForm({
-      title: task.title, due_date: task.due_date || '', difficulty: task.difficulty || 'MEDIUM',
-      type: task.type || 'custom', recurrence_type: task.recurrence_type || '', description: task.description || ''
+      title: task.title || '',
+      description: cleanDesc || '',
+      due_date: task.due_date || '',
+      difficulty: task.difficulty || 'MEDIUM',
+      category: task.category || 'beyond_tatva',
+      customCategory: customCat,
+      recurrence_type: task.recurrence_type || '',
+      type: task.type || 'custom',
+      goal_id: task.goal_id || ''
     })
   }
 
   const saveEdit = async (id) => {
-    const payload = { ...editForm }
-    if (payload.due_date === '') payload.due_date = null
+    let finalDesc = editForm.description || ''
+    if (editForm.category === 'other' && editForm.customCategory) {
+      finalDesc = `[Category: ${editForm.customCategory}]\n\n${finalDesc}`.trim()
+    }
+
+    const payload = {
+      title: editForm.title,
+      description: finalDesc || null,
+      due_date: editForm.due_date || null,
+      difficulty: editForm.difficulty || 'MEDIUM',
+      category: editForm.category === 'other' ? 'other' : editForm.category,
+      type: editForm.recurrence_type ? 'recurring' : 'custom',
+      recurrence_type: editForm.recurrence_type || null,
+      goal_id: editForm.goal_id || null,
+    }
+
     await editTask(id, payload)
     setEditingId(null)
   }
@@ -271,42 +303,127 @@ export default function Operations() {
     if (isEditing) {
       return (
         <motion.div key={task.id} layout className="col-span-1">
-          <HudPanel className="p-5 border-amber">
+          <HudPanel className="p-4 sm:p-5 border-amber space-y-4">
+            <div className="flex items-center justify-between border-b border-border-color pb-2">
+              <span className="font-display text-sm uppercase text-amber tracking-widest font-bold flex items-center gap-2">
+                <Edit2 size={14} /> EDIT OPERATION
+              </span>
+              <button type="button" onClick={() => setEditingId(null)} className="text-muted hover:text-danger">
+                <X size={16} />
+              </button>
+            </div>
+
             <div className="flex-col gap-3">
-              <input type="text" className="input font-mono" value={editForm.title}
-                onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
-              <textarea className="textarea font-mono text-sm h-16" value={editForm.description}
-                onChange={e => setEditForm({ ...editForm, description: e.target.value })} placeholder="Description..." />
-              <div className="grid-3 gap-3">
+              <div>
+                <label className="font-mono text-[10px] text-muted mb-1 block">OPERATION TITLE *</label>
+                <input
+                  type="text"
+                  className="input font-mono text-sm w-full"
+                  value={editForm.title || ''}
+                  onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="font-mono text-[10px] text-muted mb-1 block">DESCRIPTION</label>
+                <textarea
+                  className="textarea font-mono text-xs h-20 w-full"
+                  value={editForm.description || ''}
+                  onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Operation details..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="font-mono text-[10px] text-muted mb-1 block">DUE DATE</label>
-                  <input type="date" className="input font-mono text-xs" value={editForm.due_date}
-                    onChange={e => setEditForm({ ...editForm, due_date: e.target.value })} />
+                  <input
+                    type="date"
+                    className="input font-mono text-xs py-1.5 w-full"
+                    value={editForm.due_date || ''}
+                    onChange={e => setEditForm(prev => ({ ...prev, due_date: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <label className="font-mono text-[10px] text-muted mb-1 block">DIFFICULTY</label>
-                  <select className="select font-mono text-xs" value={editForm.difficulty} onChange={e => setEditForm({ ...editForm, difficulty: e.target.value })}>
+                  <select
+                    className="select font-mono text-xs py-1.5 w-full"
+                    value={editForm.difficulty || 'MEDIUM'}
+                    onChange={e => setEditForm(prev => ({ ...prev, difficulty: e.target.value }))}
+                  >
                     <option value="NONE">NONE (0 XP)</option>
-                    <option value="EASY">EASY</option>
-                    <option value="MEDIUM">MEDIUM</option>
-                    <option value="HARD">HARD</option>
-                    <option value="EXTREME">EXTREME</option>
+                    <option value="EASY">EASY (15 XP)</option>
+                    <option value="MEDIUM">MEDIUM (30 XP)</option>
+                    <option value="HARD">HARD (60 XP)</option>
+                    <option value="EXTREME">EXTREME (120 XP)</option>
                   </select>
                 </div>
                 <div>
                   <label className="font-mono text-[10px] text-muted mb-1 block">RECURRENCE</label>
-                  <select className="select font-mono text-xs" value={editForm.recurrence_type}
-                    onChange={e => setEditForm({ ...editForm, recurrence_type: e.target.value, type: e.target.value ? 'recurring' : 'custom' })}>
+                  <select
+                    className="select font-mono text-xs py-1.5 w-full"
+                    value={editForm.recurrence_type || ''}
+                    onChange={e => setEditForm(prev => ({ ...prev, recurrence_type: e.target.value, type: e.target.value ? 'recurring' : 'custom' }))}
+                  >
                     <option value="">ONE TIME</option>
                     <option value="daily">DAILY</option>
                     <option value="weekly">WEEKLY</option>
                   </select>
                 </div>
               </div>
-              <div className="flex gap-2 justify-end mt-2">
-                <button type='button' onClick={() => handleDeleteTask(task.id)} className="btn btn-ghost btn-sm text-danger mr-auto">DELETE</button>
-                <button type='button' onClick={() => saveEdit(task.id)} className="btn btn-primary btn-sm">SAVE</button>
-                <button type='button' onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-mono text-[10px] text-muted mb-1 block">CATEGORY</label>
+                  <select
+                    className="select font-mono text-xs py-1.5 w-full"
+                    value={editForm.category || 'beyond_tatva'}
+                    onChange={e => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                  >
+                    <option value="beyond_tatva">BEYOND TATVA</option>
+                    <option value="personal_mission">PERSONAL MISSION</option>
+                    <option value="learning">LEARNING</option>
+                    <option value="other">OTHER</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-mono text-[10px] text-muted mb-1 block">LINK TO MISSION</label>
+                  <select
+                    className="select font-mono text-xs py-1.5 w-full"
+                    value={editForm.goal_id || ''}
+                    onChange={e => setEditForm(prev => ({ ...prev, goal_id: e.target.value }))}
+                  >
+                    <option value="">NO MISSION LINKED</option>
+                    {goals?.filter(g => g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed').map(goal => (
+                      <option key={goal.id} value={goal.id}>{goal.title.toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {editForm.category === 'other' && (
+                <div>
+                  <label className="font-mono text-[10px] text-muted mb-1 block">CUSTOM CATEGORY</label>
+                  <input
+                    type="text"
+                    className="input font-mono text-xs py-1.5 w-full"
+                    placeholder="e.g. Finance, Health"
+                    value={editForm.customCategory || ''}
+                    onChange={e => setEditForm(prev => ({ ...prev, customCategory: e.target.value }))}
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end pt-3 border-t border-border-color/50">
+                <button type='button' onClick={() => handleDeleteTask(task.id)} className="btn btn-ghost btn-sm text-danger mr-auto font-mono">
+                  DELETE
+                </button>
+                <button type='button' onClick={() => setEditingId(null)} className="btn btn-ghost btn-sm font-mono">
+                  CANCEL
+                </button>
+                <button type='button' onClick={() => saveEdit(task.id)} className="btn btn-primary btn-sm font-mono font-bold">
+                  SAVE CHANGES
+                </button>
               </div>
             </div>
           </HudPanel>
@@ -466,7 +583,7 @@ export default function Operations() {
                 className="btn btn-primary btn-sm flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 font-bold">
                 <Zap size={14} /> EXECUTE
               </button>
-              <button type='button' className="p-2 rounded border border-border-color hover:bg-bg-tertiary text-muted hover:text-amber transition-colors" onClick={() => setEditingId(task.id)} title="Edit">
+              <button type='button' className="p-2 rounded border border-border-color hover:bg-bg-tertiary text-muted hover:text-amber transition-colors" onClick={() => startEdit(task)} title="Edit">
                 <Edit2 size={14} />
               </button>
               <button type='button' className="p-2 rounded border border-border-color hover:bg-bg-tertiary text-muted hover:text-amber transition-colors" onClick={() => pushToTomorrow(task)} title="Push to Tomorrow">
@@ -788,7 +905,7 @@ export default function Operations() {
                         <Check size={16} /> CONFIRM EXECUTION
                       </button>
                       <div className="flex flex-wrap justify-center gap-2">
-                        <button type='button' className="btn btn-ghost btn-sm" onClick={() => setEditingId(proofTask.id)}>
+                        <button type='button' className="btn btn-ghost btn-sm" onClick={() => startEdit(proofTask)}>
                           <Edit2 size={14} /> EDIT
                         </button>
                         <button type='button' className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(proofTask)}>
