@@ -349,19 +349,19 @@ export default function ProofOfWork() {
 
         {/* TABS */}
         <div className="tabs mb-6 flex-wrap gap-1">
-          <button className={`tab-item ${activeTab === 'timeline' ? 'tab-active' : ''}`} onClick={() => setActiveTab('timeline')}>
+          <button className={`tab-item ${activeTab === 'timeline' ? 'active tab-active' : ''}`} onClick={() => setActiveTab('timeline')}>
             TIMELINE LOGS
           </button>
-          <button className={`tab-item ${activeTab === 'reviews' ? 'tab-active' : ''}`} onClick={() => setActiveTab('reviews')}>
+          <button className={`tab-item ${activeTab === 'reviews' ? 'active tab-active' : ''}`} onClick={() => setActiveTab('reviews')}>
             WEEKLY REVIEWS
           </button>
-          <button className={`tab-item ${activeTab === 'books' ? 'tab-active' : ''}`} onClick={() => setActiveTab('books')}>
+          <button className={`tab-item ${activeTab === 'books' ? 'active tab-active' : ''}`} onClick={() => setActiveTab('books')}>
             BOOKS COMPLETED ({books.length})
           </button>
-          <button className={`tab-item ${activeTab === 'projects' ? 'tab-active' : ''}`} onClick={() => setActiveTab('projects')}>
+          <button className={`tab-item ${activeTab === 'projects' ? 'active tab-active' : ''}`} onClick={() => setActiveTab('projects')}>
             PROJECTS
           </button>
-          <button className={`tab-item ${activeTab === 'resume' ? 'tab-active' : ''}`} onClick={() => setActiveTab('resume')}>
+          <button className={`tab-item ${activeTab === 'resume' ? 'active tab-active' : ''}`} onClick={() => setActiveTab('resume')}>
             RESUME (AUTO-GEN)
           </button>
         </div>
