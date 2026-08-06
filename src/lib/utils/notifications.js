@@ -92,31 +92,28 @@ export async function sendLocalNotification(title, options = {}) {
   try {
     // 1. Try active Service Worker (Best for iPhone iOS & Android Web Push)
     if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.ready
-      if (reg && reg.showNotification) {
-        await reg.showNotification(title, {
-          body: options.body || '',
-          icon: options.icon || '/icons/icon-192.png',
-          badge: '/icons/icon-192.png',
-          tag: options.tag || 'lokios-local',
-          data: { url: options.url || '/dashboard' },
-          vibrate: [100, 50, 100],
-          actions: [
-            { action: 'open', title: 'VIEW IN APP' },
-            { action: 'close', title: 'DISMISS' }
-          ]
-        })
-        return true
-      } else if (reg && reg.active) {
-        reg.active.postMessage({
-          type: 'SHOW_NOTIFICATION',
-          title,
-          body: options.body || '',
-          icon: options.icon || '/icons/icon-192.png',
-          tag: options.tag || 'lokios-local',
-          url: options.url || '/dashboard'
-        })
-        return true
+      try {
+        const reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 1000))
+        ])
+        if (reg && reg.showNotification) {
+          await reg.showNotification(title, {
+            body: options.body || '',
+            icon: options.icon || '/icons/icon-192.png',
+            badge: '/icons/icon-192.png',
+            tag: options.tag || 'lokios-local',
+            data: { url: options.url || '/dashboard' },
+            vibrate: [100, 50, 100],
+            actions: [
+              { action: 'open', title: 'VIEW IN APP' },
+              { action: 'close', title: 'DISMISS' }
+            ]
+          })
+          return true
+        }
+      } catch (swErr) {
+        console.warn('SW notification fallback active:', swErr)
       }
     }
 
