@@ -78,7 +78,7 @@ export default function MissionControl() {
     profile: { profile },
     goals:   { mainQuest, sideQuests, longTermGoals },
     habits:  { todayLogs, habits },
-    tasks:   { tasks, addTask, undoCompleteTask, fetchTasks },
+    tasks:   { tasks, addTask, completeTask, undoCompleteTask, fetchTasks },
     journal: { entries },
     calendar: { events = [] } = {},
     completeOperation,
@@ -109,6 +109,16 @@ export default function MissionControl() {
   const [arcExpanded, setArcExpanded] = useState(false)
   const [momentumExpanded, setMomentumExpanded] = useState(false)
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
+  const [completedEventIds, setCompletedEventIds] = useState(new Set())
+
+  const toggleEventCompleted = (id) => {
+    setCompletedEventIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
   
   // New metrics states
   const [xpTrajectory, setXpTrajectory] = useState([])
@@ -778,67 +788,167 @@ export default function MissionControl() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            TOP STRIP — TODAY'S CALENDAR & EVENTS
+            TOP STRIP — TODAY'S OPERATIONS & SCHEDULE
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="mb-4" style={{
-          padding: '10px 16px',
-          background: 'var(--bg-tertiary)',
-          borderLeft: `3px solid var(--accent-primary)`,
+        <div className="mb-5 p-4 rounded-xl" style={{
+          background: 'rgba(15, 18, 28, 0.85)',
           border: '1px solid var(--border-color)',
-          borderLeftWidth: '3px',
-          borderLeftColor: 'var(--accent-primary)',
+          borderLeft: '4px solid var(--accent-primary)',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
         }}>
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <div className="flex items-center gap-2">
-              <CalendarIcon size={12} className="text-amber" />
-              <span className="font-mono text-[9px] uppercase tracking-widest text-amber font-bold">
-                TODAY'S SCHEDULE — {todayCalendarEvents.length + todayTasksScheduled.length} ITEM{(todayCalendarEvents.length + todayTasksScheduled.length) !== 1 ? 'S' : ''}
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-2.5 border-b border-white/5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-2 h-2 rounded-full bg-amber animate-pulse" style={{ boxShadow: '0 0 8px var(--amber)' }} />
+              <span className="font-mono text-xs uppercase tracking-widest text-amber font-bold">
+                TODAY'S OPERATIONS & SCHEDULE
+              </span>
+              <span className="font-mono text-[10px] px-2.5 py-0.5 rounded-full bg-amber/10 border border-amber/30 text-amber font-bold">
+                {todayTasksScheduled.filter(t => t.status === 'completed').length + Array.from(completedEventIds).length} / {todayCalendarEvents.length + todayTasksScheduled.length} COMPLETED
               </span>
             </div>
-            <Link
-              href="/calendar"
-              className="font-mono text-[9px] text-amber hover:underline flex items-center gap-1 uppercase font-bold shrink-0"
-            >
-              <span>Full Calendar</span>
-              <ExternalLink size={9} />
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/tasks"
+                className="font-mono text-[10px] text-muted hover:text-amber transition-colors flex items-center gap-1 uppercase font-bold"
+              >
+                <span>Operations Hub</span>
+                <ExternalLink size={10} />
+              </Link>
+              <Link
+                href="/calendar"
+                className="font-mono text-[10px] text-amber hover:underline flex items-center gap-1 uppercase font-bold"
+              >
+                <span>Full Calendar</span>
+                <ExternalLink size={10} />
+              </Link>
+            </div>
           </div>
 
+          {/* Content Items Grid */}
           {todayCalendarEvents.length === 0 && todayTasksScheduled.length === 0 ? (
-            <div className="flex items-center gap-3">
-              <p className="font-mono text-[9px] text-muted">No events or scheduled tasks for today.</p>
-              <Link href="/calendar" className="font-mono text-[9px] text-amber/70 hover:text-amber flex items-center gap-1 uppercase">
-                <Plus size={10} /> Add Event
+            <div className="p-4 text-center rounded-lg bg-black/20 border border-dashed border-white/10 flex items-center justify-center gap-3">
+              <p className="font-mono text-xs text-muted">No scheduled operations or calendar events for today.</p>
+              <Link href="/tasks" className="btn btn-secondary btn-xs font-mono text-[10px] inline-flex items-center gap-1">
+                <Plus size={11} /> DEPLOY OPERATION
               </Link>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {todayCalendarEvents.map((evt, idx) => (
-                <div key={evt.id || idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)' }}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan animate-pulse shrink-0" />
-                  <span className="font-mono text-[10px] text-primary font-bold truncate max-w-[140px]">{evt.title}</span>
-                  {evt.start_time && (
-                    <span className="font-mono text-[9px] text-muted shrink-0">
-                      {evt.start_time.includes('T') ? evt.start_time.split('T')[1].slice(0, 5) : evt.start_time}
-                    </span>
-                  )}
-                  <span className="font-mono text-[8px] font-bold text-cyan uppercase shrink-0">EVENT</span>
-                </div>
-              ))}
-              {todayTasksScheduled.map(task => (
-                <div key={task.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{
-                  background: task.status === 'completed' ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)',
-                  border: `1px solid ${task.status === 'completed' ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`
-                }}>
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.status === 'completed' ? 'bg-success' : 'bg-amber'}`} />
-                  <span className={`font-mono text-[10px] font-bold truncate max-w-[140px] ${task.status === 'completed' ? 'text-muted line-through' : 'text-primary'}`}>
-                    {task.title}
-                  </span>
-                  <span className={`font-mono text-[8px] font-bold uppercase shrink-0 ${task.status === 'completed' ? 'text-success' : 'text-amber'}`}>
-                    {task.status === 'completed' ? 'DONE' : 'DUE'}
-                  </span>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {/* Scheduled Operations / Tasks */}
+              {todayTasksScheduled.map(task => {
+                const isDone = task.status === 'completed'
+                return (
+                  <div
+                    key={task.id}
+                    className={`p-3 rounded-lg border transition-all flex items-center justify-between gap-3 ${
+                      isDone 
+                        ? 'bg-success/5 border-success/30' 
+                        : 'bg-black/40 border-white/10 hover:border-amber/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {/* Checkbox button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isDone) undoCompleteTask(task.id)
+                          else completeTask(task.id)
+                        }}
+                        title={isDone ? "Mark as Pending" : "Mark as Completed"}
+                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-all ${
+                          isDone 
+                            ? 'bg-success text-black border border-success' 
+                            : 'border border-amber/60 hover:bg-amber/20 text-amber'
+                        }`}
+                      >
+                        {isDone ? <Check size={13} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-amber/80" />}
+                      </button>
+
+                      <div className="min-w-0 flex-1">
+                        <div className={`font-mono text-xs font-semibold truncate ${isDone ? 'text-muted line-through opacity-60' : 'text-primary'}`}>
+                          {task.title}
+                        </div>
+                        <div className="font-mono text-[9px] text-muted uppercase tracking-wider flex items-center gap-2 mt-0.5">
+                          <span className="text-amber">{task.category ? task.category.replace('_', ' ') : 'OPERATION'}</span>
+                          {task.difficulty && <span>• {task.difficulty}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isDone) undoCompleteTask(task.id)
+                        else completeTask(task.id)
+                      }}
+                      className={`font-mono text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wider shrink-0 transition-all ${
+                        isDone 
+                          ? 'bg-success/20 text-success border border-success/40 hover:bg-success/30' 
+                          : 'bg-amber/15 text-amber hover:bg-amber/30 border border-amber/40'
+                      }`}
+                    >
+                      {isDone ? '✓ DONE' : 'MARK DONE'}
+                    </button>
+                  </div>
+                )
+              })}
+
+              {/* Calendar Events */}
+              {todayCalendarEvents.map((evt, idx) => {
+                const evtId = evt.id || `evt-${idx}`
+                const isAttended = completedEventIds.has(evtId)
+                return (
+                  <div
+                    key={evtId}
+                    className={`p-3 rounded-lg border transition-all flex items-center justify-between gap-3 ${
+                      isAttended 
+                        ? 'bg-cyan/5 border-cyan/30' 
+                        : 'bg-black/40 border-white/10 hover:border-cyan/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleEventCompleted(evtId)}
+                        title={isAttended ? "Mark as Pending" : "Mark as Completed"}
+                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-all ${
+                          isAttended 
+                            ? 'bg-cyan text-black border border-cyan' 
+                            : 'border border-cyan/60 hover:bg-cyan/20 text-cyan'
+                        }`}
+                      >
+                        {isAttended ? <Check size={13} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-cyan/80 animate-pulse" />}
+                      </button>
+
+                      <div className="min-w-0 flex-1">
+                        <div className={`font-mono text-xs font-semibold truncate ${isAttended ? 'text-muted line-through opacity-60' : 'text-primary'}`}>
+                          {evt.title}
+                        </div>
+                        <div className="font-mono text-[9px] text-muted flex items-center gap-1.5 mt-0.5">
+                          <Clock size={10} className="text-cyan" />
+                          <span>{evt.start_time ? (evt.start_time.includes('T') ? evt.start_time.split('T')[1].slice(0, 5) : evt.start_time) : 'All Day'}</span>
+                          {evt.location && <span className="truncate">· {evt.location}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleEventCompleted(evtId)}
+                      className={`font-mono text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wider shrink-0 transition-all ${
+                        isAttended 
+                          ? 'bg-cyan/20 text-cyan border border-cyan/40 hover:bg-cyan/30' 
+                          : 'bg-cyan/15 text-cyan hover:bg-cyan/30 border border-cyan/40'
+                      }`}
+                    >
+                      {isAttended ? '✓ DONE' : 'MARK DONE'}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
