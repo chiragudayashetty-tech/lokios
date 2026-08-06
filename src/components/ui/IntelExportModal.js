@@ -70,13 +70,14 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const supabase = createClient()
 
       // Fetch supplementary tables for the date range
-      const [screenRes, weightRes, sleepRes, workHoursRes, workRes, contentRes] = await Promise.all([
+      const [screenRes, weightRes, sleepRes, workHoursRes, workRes, contentRes, habitLogsRes] = await Promise.all([
         supabase.from('screen_time_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('weight_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('sleep_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('work_hours_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('work_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
-        supabase.from('content_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true })
+        supabase.from('content_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
+        supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true })
       ])
 
       let workLogs = (workHoursRes.data && workHoursRes.data.length > 0) ? workHoursRes.data : (workRes.data || [])
@@ -102,11 +103,30 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const screenLogs = screenRes.data || []
       const weightLogs = weightRes.data || []
       const sleepLogs = sleepRes.data || []
+      const fetchedHabitLogs = (habitLogsRes.data && habitLogsRes.data.length > 0) ? habitLogsRes.data : (monthLogs || [])
 
-      // Filter local state by date range
-      const filteredGoals = (goals || []).filter(g => !g.created_at || (getLocalDateStr(new Date(g.created_at)) >= startDate && getLocalDateStr(new Date(g.created_at)) <= endDate))
-      const filteredTasks = (tasks || []).filter(t => !t.due_date || (t.due_date >= startDate && t.due_date <= endDate))
-      const filteredHabitLogs = (monthLogs || []).filter(l => l.date >= startDate && l.date <= endDate)
+      // Filter local state by date range (by due_date, completed_at, or created_at)
+      const filteredGoals = (goals || []).filter(g => {
+        const cDate = g.completed_at ? getLocalDateStr(new Date(g.completed_at)) : null
+        const dDate = g.deadline || g.due_date || null
+        const crDate = g.created_at ? getLocalDateStr(new Date(g.created_at)) : null
+        
+        if (cDate && cDate >= startDate && cDate <= endDate) return true
+        if (dDate && dDate >= startDate && dDate <= endDate) return true
+        if (crDate && crDate >= startDate && crDate <= endDate) return true
+        return !dDate && !crDate
+      })
+
+      const filteredTasks = (tasks || []).filter(t => {
+        const cDate = t.completed_at ? getLocalDateStr(new Date(t.completed_at)) : null
+        const dDate = t.due_date || null
+        
+        if (cDate && cDate >= startDate && cDate <= endDate) return true
+        if (dDate && dDate >= startDate && dDate <= endDate) return true
+        return !dDate
+      })
+
+      const filteredHabitLogs = fetchedHabitLogs.filter(l => l.date >= startDate && l.date <= endDate)
 
       if (format === 'json') {
         const payload = {
@@ -297,11 +317,15 @@ export default function IntelExportModal({ isOpen, onClose }) {
         const daysInMonth = new Date(year, month + 1, 0).getDate()
         const daysArr = Array.from({ length: daysInMonth }, (_, i) => i + 1)
         const logMap = new Map()
-        monthLogs.forEach(l => logMap.set(`${l.habit_id}::${l.date}`, l.status || 'completed'))
+        fetchedHabitLogs.forEach(l => {
+          if (l.habit_id && l.date) {
+            logMap.set(`${l.habit_id}::${l.date}`, l.status || 'completed')
+          }
+        })
 
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">🔥 DAILY OPS / HABITS MATRIX SPREADSHEET (${habits.length} Routines)</h2>
+            <h2 class="section-title">🔥 DAILY OPS / HABITS MATRIX SPREADSHEET (${habits.length} Routines) · ${startDate} TO ${endDate}</h2>
             <div style="overflow-x: auto;">
               <table class="matrix-table">
                 <thead>
