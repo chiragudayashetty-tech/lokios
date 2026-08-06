@@ -7,7 +7,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react'
 
 export default function Operations() {
   const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, pushTaskToTomorrow, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation, undoFailOperation, goals: { goals } } = useOS()
@@ -515,23 +515,46 @@ export default function Operations() {
           </button>
         </header>
 
-        {/* METRICS ROW — pushed to bottom on mobile */}
-        <div className="grid grid-cols-2 md:flex md:flex-row gap-2 md:gap-4 mb-6 tasks-metrics-row">
-          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center w-full md:flex-1 md:min-w-[75px]">
-            <div className="font-display text-2xl md:text-3xl text-primary">{pending.length}</div>
-            <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">PENDING</div>
+        {/* METRICS ROW — Compact 4-Box Stat Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 tasks-metrics-row w-full">
+          <HudPanel className="p-3 flex items-center justify-between gap-2.5 border border-border-color rounded-xl bg-bg-tertiary">
+            <div>
+              <div className="font-mono text-[9px] text-muted uppercase tracking-wider">PENDING</div>
+              <div className="font-display text-xl text-primary font-bold">{pending.length}</div>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <Clock size={16} />
+            </div>
           </HudPanel>
-          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center border-danger w-full md:flex-1 md:min-w-[75px]">
-            <div className="font-display text-2xl md:text-3xl text-danger">{overdue.length}</div>
-            <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">OVERDUE</div>
+
+          <HudPanel className="p-3 flex items-center justify-between gap-2.5 border border-danger/40 bg-danger/5 rounded-xl">
+            <div>
+              <div className="font-mono text-[9px] text-muted uppercase tracking-wider">OVERDUE</div>
+              <div className="font-display text-xl text-danger font-bold">{overdue.length}</div>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-danger/10 flex items-center justify-center text-danger shrink-0">
+              <AlertTriangle size={16} />
+            </div>
           </HudPanel>
-          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center border-amber w-full md:flex-1 md:min-w-[75px]">
-            <div className="font-display text-2xl md:text-3xl text-amber">{dueToday.length}</div>
-            <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">DUE TODAY</div>
+
+          <HudPanel className="p-3 flex items-center justify-between gap-2.5 border border-amber/40 bg-amber/5 rounded-xl">
+            <div>
+              <div className="font-mono text-[9px] text-muted uppercase tracking-wider">DUE TODAY</div>
+              <div className="font-display text-xl text-amber font-bold">{dueToday.length}</div>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-amber/10 flex items-center justify-center text-amber shrink-0">
+              <Calendar size={16} />
+            </div>
           </HudPanel>
-          <HudPanel className="p-3 md:p-4 flex-col items-center justify-center text-center w-full md:flex-1 md:min-w-[75px]">
-            <div className="font-display text-2xl md:text-3xl text-success">{completionRate}%</div>
-            <div className="font-mono text-[9px] md:text-[10px] text-muted uppercase tracking-widest">COMPLETION</div>
+
+          <HudPanel className="p-3 flex items-center justify-between gap-2.5 border border-success/40 bg-success/5 rounded-xl">
+            <div>
+              <div className="font-mono text-[9px] text-muted uppercase tracking-wider">COMPLETION</div>
+              <div className="font-display text-xl text-success font-bold">{completionRate}%</div>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center text-success shrink-0">
+              <TrendingUp size={16} />
+            </div>
           </HudPanel>
         </div>
 
