@@ -13,6 +13,7 @@ import {
 import IntelExportModal from '@/components/ui/IntelExportModal'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { initBackgroundReminders } from '@/lib/utils/notifications'
+import LokiAIWidget from '@/components/layout/LokiAIWidget'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Command Center' },
@@ -246,6 +247,8 @@ export default function AppShell({ children }) {
       <main className="main-content">
         {children}
       </main>
+
+      <LokiAIWidget />
 
       {/* Intel Export & Report Generator Modal */}
       <IntelExportModal 
