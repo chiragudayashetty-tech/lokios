@@ -219,20 +219,25 @@ export default function ScreenIntel() {
     const focus = log?.focus_hours || 0
     const doom = log?.doom_scroll_minutes || 0
     const streaming = log?.streaming_hours || 0
+    const unfocused = Math.max(0, total - focus)
 
-    // Component scores (each 0–1)
-    const focusPct = Math.min(focus / 3, 1)          // target: 3h focus
-    const cleanScreenPct = Math.max(0, 1 - Math.max(0, total - 4) / 8)  // penalty after 4h, maxes at 12h
-    const cleanDoomPct = Math.max(0, 1 - doom / 120)  // penalty after 120m doomscroll
+    // Formula emphasizing Doomscroll, Unfocused Wasted Time (Total - Focus), and Streaming:
+    // 1. Doomscroll Factor (40%): 0m = 40pts, 120m+ = 0pts
+    const doomScore = Math.max(0, 40 * (1 - doom / 120))
+    // 2. Unfocused Wasted Time (35%): 0h = 35pts, 5h+ = 0pts
+    const unfocusedScore = Math.max(0, 35 * (1 - unfocused / 5))
+    // 3. Streaming Factor (25%): 0h = 25pts, 3h+ = 0pts
+    const streamingScore = Math.max(0, 25 * (1 - streaming / 3))
 
     // Weighted discipline score
-    const score = log ? Math.round((focusPct * 40) + (cleanScreenPct * 35) + (cleanDoomPct * 25)) : null
+    const score = log ? Math.round(doomScore + unfocusedScore + streamingScore) : null
 
     return {
       date: d.substring(5).replace('-', '/'),
       score,
       total,
       focus,
+      unfocused,
       doom,
       streaming,
       logged: !!log
@@ -300,7 +305,7 @@ export default function ScreenIntel() {
               <span className="font-mono text-xs uppercase tracking-widest text-muted font-bold">DIGITAL DISCIPLINE SCORE — 7-DAY ANALYSIS</span>
             </div>
             <div className="font-mono text-[10px] text-muted">
-              Formula: Focus×40 + Clean Screen×35 + No Doom×25
+              Formula: No Doom (40%) + Unfocused Time (35%) + Low Streaming (25%)
             </div>
           </div>
 
@@ -351,16 +356,17 @@ export default function ScreenIntel() {
                     const s = d?.score
                     const scoreColor = s === null ? 'var(--text-muted)' : s >= 75 ? '#22c55e' : s >= 50 ? '#f59e0b' : '#ef4444'
                     return (
-                      <div className="p-3 bg-bg-secondary/98 border border-border-color rounded-xl shadow-2xl font-mono text-xs space-y-2 min-w-[170px]" style={{ boxShadow: '0 0 24px rgba(0,0,0,0.6)' }}>
+                      <div className="p-3 bg-bg-secondary/98 border border-border-color rounded-xl shadow-2xl font-mono text-xs space-y-1.5 min-w-[190px]" style={{ boxShadow: '0 0 24px rgba(0,0,0,0.6)' }}>
                         <div className="font-display font-bold text-primary border-b border-border-color pb-1.5">{label}</div>
                         {s === null
                           ? <div className="text-muted">No data logged</div>
                           : <>
                             <div className="flex justify-between"><span className="text-muted">Discipline Score</span><span className="font-bold" style={{ color: scoreColor }}>{s}/100</span></div>
-                            <div className="flex justify-between"><span className="text-muted">Screen Time</span><span className="text-primary">{d?.total}h</span></div>
-                            <div className="flex justify-between"><span className="text-muted">Focus</span><span className="text-info">{d?.focus}h</span></div>
-                            <div className="flex justify-between"><span className="text-muted">Doomscroll</span><span className="text-danger">{d?.doom}m</span></div>
-                            <div className="flex justify-between"><span className="text-muted">Streaming</span><span className="text-amber">{d?.streaming}h</span></div>
+                            <div className="flex justify-between"><span className="text-muted">Total Screen</span><span className="text-primary">{d?.total}h</span></div>
+                            <div className="flex justify-between"><span className="text-muted">Focus Hours</span><span className="text-info">{d?.focus}h</span></div>
+                            <div className="flex justify-between"><span className="text-muted">Unfocused Wasted</span><span className="text-amber font-bold">{d?.unfocused}h</span></div>
+                            <div className="flex justify-between"><span className="text-muted">Doomscroll</span><span className="text-danger font-bold">{d?.doom}m</span></div>
+                            <div className="flex justify-between"><span className="text-muted">Streaming</span><span className="text-amber font-bold">{d?.streaming}h</span></div>
                           </>
                         }
                       </div>
