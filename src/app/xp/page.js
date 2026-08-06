@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, CartesianGrid, ReferenceLine } from 'recharts'
+import { AreaChart, Area, BarChart, Bar, Cell, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, CartesianGrid, ReferenceLine } from 'recharts'
 import { Flame, Star, Activity, Trophy, ArrowUp, RotateCcw } from 'lucide-react'
 import { RANK_CONFIG } from '@/lib/constants'
 import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
@@ -47,6 +47,7 @@ export default function XPDashboard() {
   const [timeline, setTimeline] = useState([])
   const [totalXp, setTotalXp] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [chartViewMode, setChartViewMode] = useState('cumulative') // 'cumulative' | 'daily' | 'both'
 
   useEffect(() => {
     if (!user) return
@@ -162,6 +163,12 @@ export default function XPDashboard() {
   const maxTotal = Math.max(...areaData.map(d => d.total))
   const yMin = Math.max(0, Math.floor((minTotal * 0.85) / 500) * 500)
   const yMax = Math.ceil((maxTotal * 1.05) / 500) * 500
+
+  const dailyGains = areaData.map(d => d.dailyGain)
+  const minDaily = Math.min(...dailyGains, 0)
+  const maxDaily = Math.max(...dailyGains, 100)
+  const yMinDaily = Math.floor((minDaily < 0 ? minDaily * 1.2 : minDaily) / 50) * 50
+  const yMaxDaily = Math.ceil((maxDaily * 1.2) / 50) * 50
 
   // Calculate actual days tracked since first activity (or reset)
   let daysTracked = 1
@@ -298,19 +305,52 @@ export default function XPDashboard() {
                 <div className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: currentRank.color, boxShadow: `0 0 10px ${currentRank.color}` }} />
                 <div>
                   <h3 className="font-mono text-xs uppercase tracking-widest text-primary font-bold">XP TRAJECTORY — 14-DAY INTELLIGENCE</h3>
-                  <p className="font-mono text-[10px] text-muted mt-0.5">Cumulative progress & daily earnings breakdown</p>
+                  <p className="font-mono text-[10px] text-muted mt-0.5">
+                    {chartViewMode === 'cumulative' 
+                      ? 'Cumulative total progress trajectory' 
+                      : chartViewMode === 'daily' 
+                      ? 'Daily net XP gain breakdown' 
+                      : 'Dual view: Cumulative total & daily net gain'}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 font-mono text-xs">
+              <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
                 <div className="px-3 py-1.5 rounded-lg bg-bg-tertiary border border-border-color flex items-center gap-2">
-                  <span className="text-muted text-[10px] uppercase">14-Day Net Gain:</span>
+                  <span className="text-muted text-[10px] uppercase">14-Day Net:</span>
                   <span className={`font-bold ${sum14Days >= 0 ? 'text-success' : 'text-danger'}`}>
                     {sum14Days >= 0 ? '+' : ''}{sum14Days.toLocaleString()} XP
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5" style={{ color: currentRank.color }}>
-                  <span className="inline-block w-3 h-0.5 rounded" style={{ background: currentRank.color }} />
-                  <span className="font-bold text-[10px] uppercase">Cumulative Total</span>
+
+                {/* Mode Selector Buttons */}
+                <div className="flex items-center bg-bg-tertiary border border-border-color rounded-lg p-0.5 font-mono text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setChartViewMode('cumulative')}
+                    className={`px-2.5 py-1 rounded font-bold uppercase transition-all ${
+                      chartViewMode === 'cumulative' ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+                    }`}
+                  >
+                    Cumulative
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartViewMode('daily')}
+                    className={`px-2.5 py-1 rounded font-bold uppercase transition-all ${
+                      chartViewMode === 'daily' ? 'bg-success text-black shadow-sm' : 'text-muted hover:text-primary'
+                    }`}
+                  >
+                    Daily Net
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartViewMode('both')}
+                    className={`px-2.5 py-1 rounded font-bold uppercase transition-all ${
+                      chartViewMode === 'both' ? 'bg-info text-black shadow-sm' : 'text-muted hover:text-primary'
+                    }`}
+                  >
+                    Both
+                  </button>
                 </div>
               </div>
             </div>
@@ -318,71 +358,184 @@ export default function XPDashboard() {
             {/* The Chart */}
             <div className="p-4" style={{ height: '320px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={areaData} margin={{ top: 15, right: 25, left: 10, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="xpGradMain" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={currentRank.color} stopOpacity={0.4} />
-                      <stop offset="70%" stopColor={currentRank.color} stopOpacity={0.08} />
-                      <stop offset="100%" stopColor={currentRank.color} stopOpacity={0} />
-                    </linearGradient>
-                    <filter id="xpGlow">
-                      <feGaussianBlur stdDeviation="4" result="blur" />
-                      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                    </filter>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    stroke="rgba(255,255,255,0.2)"
-                    fontSize={10}
-                    tickLine={false}
-                    axisLine={false}
-                    fontFamily="var(--font-mono)"
-                    tick={{ fill: 'var(--text-muted)' }}
-                    dy={5}
-                  />
-                  <YAxis
-                    domain={[yMin, yMax]}
-                    stroke="rgba(255,255,255,0.2)"
-                    fontSize={10}
-                    tickLine={false}
-                    axisLine={false}
-                    fontFamily="var(--font-mono)"
-                    tick={{ fill: 'var(--text-muted)' }}
-                    tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
-                    width={45}
-                  />
-                  <Tooltip
-                    content={<CustomXpTooltip />}
-                    cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '4 4', strokeWidth: 1 }}
-                  />
-                  {/* Main cumulative XP area */}
-                  <Area
-                    type="monotone"
-                    dataKey="total"
-                    stroke={currentRank.color}
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#xpGradMain)"
-                    dot={(props) => {
-                      const { cx, cy, payload } = props
-                      const isToday = payload.date === areaData[areaData.length - 1]?.date
-                      return (
-                        <circle
-                          key={payload.date}
-                          cx={cx}
-                          cy={cy}
-                          r={isToday ? 6 : 3.5}
-                          fill={isToday ? '#fff' : currentRank.color}
-                          stroke={currentRank.color}
-                          strokeWidth={isToday ? 2.5 : 1}
-                          filter={isToday ? 'url(#xpGlow)' : 'none'}
+                {chartViewMode === 'cumulative' ? (
+                  /* 1. CUMULATIVE AREA CHART */
+                  <AreaChart data={areaData} margin={{ top: 15, right: 25, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="xpGradMain" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={currentRank.color} stopOpacity={0.4} />
+                        <stop offset="70%" stopColor={currentRank.color} stopOpacity={0.08} />
+                        <stop offset="100%" stopColor={currentRank.color} stopOpacity={0} />
+                      </linearGradient>
+                      <filter id="xpGlow">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                      </filter>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      stroke="rgba(255,255,255,0.2)"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                      fontFamily="var(--font-mono)"
+                      tick={{ fill: 'var(--text-muted)' }}
+                      dy={5}
+                    />
+                    <YAxis
+                      domain={[yMin, yMax]}
+                      stroke="rgba(255,255,255,0.2)"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                      fontFamily="var(--font-mono)"
+                      tick={{ fill: 'var(--text-muted)' }}
+                      tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
+                      width={45}
+                    />
+                    <Tooltip
+                      content={<CustomXpTooltip />}
+                      cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '4 4', strokeWidth: 1 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="total"
+                      stroke={currentRank.color}
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#xpGradMain)"
+                      dot={(props) => {
+                        const { cx, cy, payload } = props
+                        const isToday = payload.date === areaData[areaData.length - 1]?.date
+                        return (
+                          <circle
+                            key={payload.date}
+                            cx={cx}
+                            cy={cy}
+                            r={isToday ? 6 : 3.5}
+                            fill={isToday ? '#fff' : currentRank.color}
+                            stroke={currentRank.color}
+                            strokeWidth={isToday ? 2.5 : 1}
+                            filter={isToday ? 'url(#xpGlow)' : 'none'}
+                          />
+                        )
+                      }}
+                      activeDot={{ r: 7, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                ) : chartViewMode === 'daily' ? (
+                  /* 2. DAILY NET GAIN BAR CHART */
+                  <BarChart data={areaData} margin={{ top: 15, right: 25, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      stroke="rgba(255,255,255,0.2)"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                      fontFamily="var(--font-mono)"
+                      tick={{ fill: 'var(--text-muted)' }}
+                      dy={5}
+                    />
+                    <YAxis
+                      domain={[yMinDaily, yMaxDaily]}
+                      stroke="rgba(255,255,255,0.2)"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                      fontFamily="var(--font-mono)"
+                      tick={{ fill: 'var(--text-muted)' }}
+                      tickFormatter={(v) => `${v >= 0 ? '+' : ''}${v}`}
+                      width={45}
+                    />
+                    <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="2 2" />
+                    <Tooltip
+                      content={<CustomXpTooltip />}
+                      cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                    />
+                    <Bar dataKey="dailyGain" radius={[4, 4, 0, 0]}>
+                      {areaData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.dailyGain >= 0 ? 'rgba(34,197,94,0.65)' : 'rgba(239,68,68,0.65)'}
+                          stroke={entry.dailyGain >= 0 ? '#22c55e' : '#ef4444'}
+                          strokeWidth={1}
                         />
-                      )
-                    }}
-                    activeDot={{ r: 7, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
-                  />
-                </AreaChart>
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : (
+                  /* 3. BOTH / DUAL-AXIS COMPOSED CHART */
+                  <ComposedChart data={areaData} margin={{ top: 15, right: 25, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="xpGradMain" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={currentRank.color} stopOpacity={0.35} />
+                        <stop offset="70%" stopColor={currentRank.color} stopOpacity={0.05} />
+                        <stop offset="100%" stopColor={currentRank.color} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      stroke="rgba(255,255,255,0.2)"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                      fontFamily="var(--font-mono)"
+                      tick={{ fill: 'var(--text-muted)' }}
+                      dy={5}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      domain={[yMin, yMax]}
+                      stroke={currentRank.color}
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                      fontFamily="var(--font-mono)"
+                      tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
+                      width={45}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      domain={[yMinDaily, yMaxDaily]}
+                      stroke="#22c55e"
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                      fontFamily="var(--font-mono)"
+                      tickFormatter={(v) => `${v >= 0 ? '+' : ''}${v}`}
+                      width={45}
+                    />
+                    <Tooltip
+                      content={<CustomXpTooltip />}
+                      cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '4 4', strokeWidth: 1 }}
+                    />
+                    <Bar yAxisId="right" dataKey="dailyGain" barSize={16} radius={[4, 4, 0, 0]}>
+                      {areaData.map((entry, index) => (
+                        <Cell
+                          key={`cell-both-${index}`}
+                          fill={entry.dailyGain >= 0 ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}
+                          stroke={entry.dailyGain >= 0 ? '#22c55e' : '#ef4444'}
+                          strokeWidth={1}
+                        />
+                      ))}
+                    </Bar>
+                    <Area
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="total"
+                      stroke={currentRank.color}
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#xpGradMain)"
+                      dot={{ fill: currentRank.color, r: 3 }}
+                      activeDot={{ r: 7, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
+                    />
+                  </ComposedChart>
+                )}
               </ResponsiveContainer>
             </div>
           </HudPanel>
