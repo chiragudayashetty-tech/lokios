@@ -12,7 +12,8 @@ import {
 } from 'recharts'
 import { 
   Briefcase, Video, Film, Clock, Calendar, Save, Download, 
-  Sparkles, TrendingUp, Target, Zap, AlertTriangle, Scissors, Camera
+  Sparkles, TrendingUp, Target, Zap, AlertTriangle, Scissors, Camera,
+  ChevronDown, ChevronUp
 } from 'lucide-react'
 
 export default function WorkPage() {
@@ -75,6 +76,28 @@ export default function WorkPage() {
   const [savingWork, setSavingWork] = useState(false)
   const [savingShoot, setSavingShoot] = useState(false)
   const [savingEdit, setSavingEdit] = useState(false)
+
+  // Accordion Dropdown States for History Logs
+  const [expandedWorkDates, setExpandedWorkDates] = useState(new Set())
+  const [expandedContentDates, setExpandedContentDates] = useState(new Set())
+
+  const toggleWorkDate = (date) => {
+    setExpandedWorkDates(prev => {
+      const next = new Set(prev)
+      if (next.has(date)) next.delete(date)
+      else next.add(date)
+      return next
+    })
+  }
+
+  const toggleContentDate = (date) => {
+    setExpandedContentDates(prev => {
+      const next = new Set(prev)
+      if (next.has(date)) next.delete(date)
+      else next.add(date)
+      return next
+    })
+  }
 
   // Date Range Filter for Analytics: '7days' | '30days' | 'all'
   const [analyticsRange, setAnalyticsRange] = useState('30days')
@@ -776,77 +799,84 @@ export default function WorkPage() {
               </form>
             </HudPanel>
 
-            {/* RECENT WORK LOGS (ONLY NON-EMPTY LOGS DISPLAYED) */}
+            {/* RECENT WORK LOGS (DROPDOWN ACCORDION MENU) */}
             <HudPanel className="p-3.5 sm:p-5 space-y-3">
-              <h3 className="font-display text-xs uppercase tracking-wider text-muted">
-                RECENT WORK HISTORY ({nonEmptyWorkLogs.length})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-xs uppercase tracking-wider text-muted">
+                  RECENT WORK HISTORY ({nonEmptyWorkLogs.length})
+                </h3>
+                <span className="font-mono text-[9px] text-muted uppercase">Click date to expand/collapse</span>
+              </div>
 
               {nonEmptyWorkLogs.length === 0 ? (
                 <p className="font-mono text-xs text-muted text-center py-4">No entered work logs recorded yet.</p>
               ) : (
-                <>
-                  {/* Mobile Card View (< 768px) */}
-                  <div className="md:hidden space-y-2.5">
-                    {nonEmptyWorkLogs.map(l => {
-                      const tot = (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0).toFixed(1)
-                      return (
-                        <div key={l.date} className="p-3.5 rounded-xl bg-tertiary border border-border-color space-y-2">
-                          <div className="flex items-center justify-between font-mono text-xs">
-                            <span className="text-secondary font-bold">{l.date}</span>
-                            <span className="text-amber font-bold">{tot}h Worked</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 font-mono text-[11px] pt-2 border-t border-border-subtle/40">
-                            <div>
-                              <span className="text-muted block text-[9px] uppercase">Beyond</span>
-                              <span className="text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)}h</span>
-                            </div>
-                            <div>
-                              <span className="text-muted block text-[9px] uppercase">Focused</span>
-                              <span className="text-success">{(l.focused_hours || 0).toFixed(1)}h</span>
-                            </div>
-                            <div>
-                              <span className="text-muted block text-[9px] uppercase">Unfocused</span>
-                              <span className="text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)}h</span>
-                            </div>
-                          </div>
-                          {l.notes && <p className="font-mono text-[11px] text-muted italic pt-1">{l.notes}</p>}
-                        </div>
-                      )
-                    })}
-                  </div>
+                <div className="space-y-2.5">
+                  {nonEmptyWorkLogs.map((l, idx) => {
+                    const tot = (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0).toFixed(1)
+                    // Expand latest log by default unless explicitly toggled
+                    const isExpanded = expandedWorkDates.has(l.date) || (expandedWorkDates.size === 0 && idx === 0)
 
-                  {/* Desktop Table (>= 768px) */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left font-mono text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-border-color text-muted uppercase text-[10px]">
-                          <th className="py-2.5 px-3">Date</th>
-                          <th className="py-2.5 px-3">Total Worked</th>
-                          <th className="py-2.5 px-3">Beyond Tatva</th>
-                          <th className="py-2.5 px-3">Focused</th>
-                          <th className="py-2.5 px-3">Unfocused</th>
-                          <th className="py-2.5 px-3">Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {nonEmptyWorkLogs.map(l => {
-                          const tot = (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0).toFixed(1)
-                          return (
-                            <tr key={l.date} className="border-b border-border-subtle/50 hover:bg-tertiary/50 transition-colors">
-                              <td className="py-2.5 px-3 text-secondary">{l.date}</td>
-                              <td className="py-2.5 px-3"><strong className="text-amber">{tot} h</strong></td>
-                              <td className="py-2.5 px-3 text-cyan">{(l.beyond_tatva_hours || 0).toFixed(1)} h</td>
-                              <td className="py-2.5 px-3 text-success">{(l.focused_hours || 0).toFixed(1)} h</td>
-                              <td className="py-2.5 px-3 text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)} h</td>
-                              <td className="py-2.5 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
+                    return (
+                      <div key={l.date} className="rounded-xl bg-tertiary border border-border-color overflow-hidden transition-all">
+                        {/* Dropdown Header */}
+                        <button
+                          type="button"
+                          onClick={() => toggleWorkDate(l.date)}
+                          className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-hover/60 transition-colors select-none"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <span className="font-mono text-xs text-secondary font-bold shrink-0">{l.date}</span>
+                            <span className="font-mono text-[10px] text-cyan font-semibold truncate hidden sm:inline">
+                              BEYOND {(l.beyond_tatva_hours || 0).toFixed(1)}h
+                            </span>
+                            {l.notes && (
+                              <span className="font-mono text-[10px] text-muted truncate hidden md:inline opacity-70">
+                                • {l.notes}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2.5 shrink-0">
+                            <span className="font-mono text-xs text-amber font-bold px-2.5 py-0.5 rounded bg-amber/10 border border-amber/30">
+                              {tot}h Worked
+                            </span>
+                            <div className="w-6 h-6 rounded flex items-center justify-center text-muted border border-border-subtle bg-secondary/50">
+                              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Dropdown Details Body */}
+                        {isExpanded && (
+                          <div className="p-3.5 border-t border-border-subtle/60 bg-secondary/40 space-y-3 font-mono text-xs">
+                            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-cyan/30">
+                                <span className="text-muted block text-[9px] uppercase tracking-wider font-bold mb-0.5">Beyond Tatva</span>
+                                <span className="text-cyan font-bold text-sm">{(l.beyond_tatva_hours || 0).toFixed(1)} h</span>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-success/30">
+                                <span className="text-muted block text-[9px] uppercase tracking-wider font-bold mb-0.5">Focused</span>
+                                <span className="text-success font-bold text-sm">{(l.focused_hours || 0).toFixed(1)} h</span>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-danger/30">
+                                <span className="text-muted block text-[9px] uppercase tracking-wider font-bold mb-0.5">Unfocused</span>
+                                <span className="text-danger font-bold text-sm">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)} h</span>
+                              </div>
+                            </div>
+
+                            {l.notes && (
+                              <div className="p-2.5 rounded-lg bg-bg-primary/60 border border-border-subtle text-primary">
+                                <span className="text-muted text-[10px] uppercase font-bold block mb-1">Work Notes:</span>
+                                <p className="whitespace-pre-wrap leading-relaxed">{l.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </HudPanel>
           </div>
@@ -1020,81 +1050,84 @@ export default function WorkPage() {
               </HudPanel>
             )}
 
-            {/* CONTENT LOG HISTORY (ONLY NON-EMPTY LOGS DISPLAYED) */}
+            {/* CONTENT LOG HISTORY (DROPDOWN ACCORDION MENU) */}
             <HudPanel className="p-3.5 sm:p-5 space-y-3">
-              <h3 className="font-display text-xs uppercase tracking-wider text-muted">
-                CONTENT HISTORY ({nonEmptyContentLogs.length})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-xs uppercase tracking-wider text-muted">
+                  CONTENT HISTORY ({nonEmptyContentLogs.length})
+                </h3>
+                <span className="font-mono text-[9px] text-muted uppercase">Click date to expand/collapse</span>
+              </div>
 
               {nonEmptyContentLogs.length === 0 ? (
                 <p className="font-mono text-xs text-muted text-center py-4">No entered content logs recorded yet.</p>
               ) : (
-                <>
-                  {/* Mobile Card View (< 768px) */}
-                  <div className="md:hidden space-y-2.5">
-                    {nonEmptyContentLogs.map(l => {
-                      const editHrs = parseFloat(l.edit_hours) || 0
-                      const finMins = parseFloat(l.edit_finished_minutes) || 0
-                      const ratio = finMins > 0 ? ((editHrs * 60) / finMins).toFixed(1) : '—'
+                <div className="space-y-2.5">
+                  {nonEmptyContentLogs.map((l, idx) => {
+                    const editHrs = parseFloat(l.edit_hours) || 0
+                    const finMins = parseFloat(l.edit_finished_minutes) || 0
+                    const ratio = finMins > 0 ? ((editHrs * 60) / finMins).toFixed(1) : '—'
+                    // Expand latest log by default unless explicitly toggled
+                    const isExpanded = expandedContentDates.has(l.date) || (expandedContentDates.size === 0 && idx === 0)
 
-                      return (
-                        <div key={l.date} className="p-3.5 rounded-xl bg-tertiary border border-border-color space-y-2">
-                          <div className="flex items-center justify-between font-mono text-xs">
-                            <span className="text-secondary font-bold">{l.date}</span>
-                            <span className="text-cyan font-bold">Speed: {ratio} m/m</span>
+                    return (
+                      <div key={l.date} className="rounded-xl bg-tertiary border border-border-color overflow-hidden transition-all">
+                        {/* Dropdown Header */}
+                        <button
+                          type="button"
+                          onClick={() => toggleContentDate(l.date)}
+                          className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-hover/60 transition-colors select-none"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <span className="font-mono text-xs text-secondary font-bold shrink-0">{l.date}</span>
+                            <span className="font-mono text-[10px] text-amber font-semibold truncate hidden sm:inline">
+                              ✂️ EDIT {(l.edit_hours || 0).toFixed(1)}h
+                            </span>
+                            {l.notes && (
+                              <span className="font-mono text-[10px] text-muted truncate hidden md:inline opacity-70">
+                                • {l.notes}
+                              </span>
+                            )}
                           </div>
-                          <div className="grid grid-cols-2 gap-2 font-mono text-[11px] pt-2 border-t border-border-subtle/40">
-                            <div className="p-2 rounded bg-secondary/60">
-                              <span className="text-cyan block text-[9px] uppercase font-bold">🎥 Shoot</span>
-                              <div>{(l.shoot_hours || 0).toFixed(1)}h ({l.shoot_raw_minutes || 0}m raw)</div>
-                            </div>
-                            <div className="p-2 rounded bg-secondary/60">
-                              <span className="text-amber block text-[9px] uppercase font-bold">✂️ Edit</span>
-                              <div>{(l.edit_hours || 0).toFixed(1)}h ({l.edit_finished_minutes || 0}m out)</div>
+
+                          <div className="flex items-center gap-2.5 shrink-0">
+                            <span className="font-mono text-xs text-cyan font-bold px-2.5 py-0.5 rounded bg-cyan/10 border border-cyan/30">
+                              Speed: {ratio} m/m
+                            </span>
+                            <div className="w-6 h-6 rounded flex items-center justify-center text-muted border border-border-subtle bg-secondary/50">
+                              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             </div>
                           </div>
-                          {l.notes && <p className="font-mono text-[11px] text-muted italic pt-1">{l.notes}</p>}
-                        </div>
-                      )
-                    })}
-                  </div>
+                        </button>
 
-                  {/* Desktop Table (>= 768px) */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left font-mono text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-border-color text-muted uppercase text-[10px]">
-                          <th className="py-2.5 px-3">Date</th>
-                          <th className="py-2.5 px-3">Shoot Time</th>
-                          <th className="py-2.5 px-3">Raw Footage</th>
-                          <th className="py-2.5 px-3">Edit Time</th>
-                          <th className="py-2.5 px-3">Finished Output</th>
-                          <th className="py-2.5 px-3">Edit Speed Ratio</th>
-                          <th className="py-2.5 px-3">Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {nonEmptyContentLogs.map(l => {
-                          const editHrs = parseFloat(l.edit_hours) || 0
-                          const finMins = parseFloat(l.edit_finished_minutes) || 0
-                          const ratio = finMins > 0 ? ((editHrs * 60) / finMins).toFixed(1) : '—'
+                        {/* Dropdown Details Body */}
+                        {isExpanded && (
+                          <div className="p-3.5 border-t border-border-subtle/60 bg-secondary/40 space-y-3 font-mono text-xs">
+                            <div className="grid grid-cols-2 gap-3 text-center">
+                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-cyan/30">
+                                <span className="text-cyan block text-[9px] uppercase tracking-wider font-bold mb-1">🎥 Shoot Operations</span>
+                                <div className="text-primary font-bold text-sm">{(l.shoot_hours || 0).toFixed(1)} h</div>
+                                <div className="text-muted text-[10px]">({l.shoot_raw_minutes || 0} m raw footage)</div>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-amber/30">
+                                <span className="text-amber block text-[9px] uppercase tracking-wider font-bold mb-1">✂️ Edit Operations</span>
+                                <div className="text-primary font-bold text-sm">{(l.edit_hours || 0).toFixed(1)} h</div>
+                                <div className="text-muted text-[10px]">({l.edit_finished_minutes || 0} m finished output)</div>
+                              </div>
+                            </div>
 
-                          return (
-                            <tr key={l.date} className="border-b border-border-subtle/50 hover:bg-tertiary/50 transition-colors">
-                              <td className="py-2.5 px-3 text-secondary">{l.date}</td>
-                              <td className="py-2.5 px-3 text-cyan">{(l.shoot_hours || 0).toFixed(1)} h</td>
-                              <td className="py-2.5 px-3 text-secondary">{l.shoot_raw_minutes || 0} m</td>
-                              <td className="py-2.5 px-3 text-amber font-bold">{(l.edit_hours || 0).toFixed(1)} h</td>
-                              <td className="py-2.5 px-3 text-success font-bold">{l.edit_finished_minutes || 0} m</td>
-                              <td className="py-2.5 px-3 text-info font-bold">{ratio} m edit / finished m</td>
-                              <td className="py-2.5 px-3 text-muted max-w-xs truncate">{l.notes || '—'}</td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
+                            {l.notes && (
+                              <div className="p-2.5 rounded-lg bg-bg-primary/60 border border-border-subtle text-primary">
+                                <span className="text-muted text-[10px] uppercase font-bold block mb-1">Content Notes / Chapters:</span>
+                                <p className="whitespace-pre-wrap leading-relaxed">{l.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </HudPanel>
           </div>
