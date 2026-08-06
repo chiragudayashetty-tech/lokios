@@ -51,9 +51,11 @@ export default function IntelExportModal({ isOpen, onClose }) {
       setStartDate(getLocalDateStr(past))
       setEndDate(getLocalDateStr(today))
     } else if (preset === 'this_week') {
-      const past = new Date()
-      past.setDate(past.getDate() - 7)
-      setStartDate(getLocalDateStr(past))
+      const dayOfWeek = today.getDay()
+      const diffToMon = (dayOfWeek + 6) % 7
+      const mon = new Date(today)
+      mon.setDate(today.getDate() - diffToMon)
+      setStartDate(getLocalDateStr(mon))
       setEndDate(getLocalDateStr(today))
     } else if (preset === 'all') {
       setStartDate('2026-01-01')
@@ -337,16 +339,30 @@ export default function IntelExportModal({ isOpen, onClose }) {
           }
         })
 
-        sectionsHTML += `
-          <div class="section">
-            <h2 class="section-title">🔥 DAILY OPS / HABITS MATRIX SPREADSHEET (${habits.length} Routines) · RANGE: ${startDate} TO ${endDate}</h2>
-            <div style="overflow-x: auto;">
+        // Chunk dateList into 31-day blocks if longer than 35 days (e.g. All Time)
+        const chunks = []
+        if (dateList.length > 35) {
+          for (let i = 0; i < dateList.length; i += 31) {
+            chunks.push(dateList.slice(i, i + 31))
+          }
+        } else {
+          chunks.push(dateList)
+        }
+
+        let habitTablesHTML = ''
+        chunks.forEach((chunk, chunkIdx) => {
+          const chunkStart = chunk[0].dateStr
+          const chunkEnd = chunk[chunk.length - 1].dateStr
+
+          habitTablesHTML += `
+            ${chunks.length > 1 ? `<h3 style="font-size: 12px; color: var(--amber); margin-top: ${chunkIdx > 0 ? '18px' : '6px'}; margin-bottom: 6px;">📅 PERIOD: ${chunkStart} TO ${chunkEnd}</h3>` : ''}
+            <div style="overflow-x: auto; margin-bottom: 12px;">
               <table class="matrix-table">
                 <thead>
                   <tr>
                     <th style="min-width: 150px; text-align: left;">Routine Title</th>
                     <th style="width: 35px; text-align: center;">XP</th>
-                    ${dateList.map(d => `<th style="width: 20px; text-align: center; font-size: 8px; padding: 2px;" title="${d.monthShort} ${d.dayNum}">${d.dayNum}</th>`).join('')}
+                    ${chunk.map(d => `<th style="width: 20px; text-align: center; font-size: 8px; padding: 2px;" title="${d.monthShort} ${d.dayNum}">${d.dayNum}</th>`).join('')}
                     <th style="width: 40px; text-align: center;">DONE</th>
                     <th style="width: 40px; text-align: center;">GOAL</th>
                     <th style="width: 40px; text-align: center;">%</th>
@@ -378,7 +394,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
 
                     const freqDays = h.frequency_days || [0, 1, 2, 3, 4, 5, 6]
 
-                    const dayCellsHTML = dateList.map(dItem => {
+                    const dayCellsHTML = chunk.map(dItem => {
                       const { dateStr, dayOfWeek } = dItem
                       const explicitStatus = logMap.get(`${h.id}::${dateStr}`)
 
@@ -424,6 +440,13 @@ export default function IntelExportModal({ isOpen, onClose }) {
                 </tbody>
               </table>
             </div>
+          `
+        })
+
+        sectionsHTML += `
+          <div class="section">
+            <h2 class="section-title">🔥 DAILY OPS / HABITS MATRIX SPREADSHEET (${habits.length} Routines) · RANGE: ${startDate} TO ${endDate}</h2>
+            ${habitTablesHTML}
           </div>
         `
       }
