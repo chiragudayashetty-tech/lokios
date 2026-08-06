@@ -1166,6 +1166,22 @@ tbody tr:hover { background: rgba(244, 201, 107, 0.045); }
 .modal-overlay { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); background: rgba(3, 5, 8, 0.78) !important; }
 .modal-overlay > div { border-radius: 22px !important; border-color: var(--game-border) !important; box-shadow: 0 28px 90px rgba(0,0,0,.58), 0 0 32px rgba(244,201,107,.08); }
 
+/* Custom Scrollbar & Selection Styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #07090d; }
+::-webkit-scrollbar-thumb { background: rgba(244, 201, 107, 0.25); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(244, 201, 107, 0.45); }
+
+::selection { background: rgba(244, 201, 107, 0.22); color: #fff4d1; }
+
+.pulse-glow {
+  animation: pulse-glow-anim 2.4s ease-in-out infinite alternate;
+}
+@keyframes pulse-glow-anim {
+  0% { box-shadow: 0 0 12px rgba(244, 201, 107, 0.15); }
+  100% { box-shadow: 0 0 26px rgba(244, 201, 107, 0.35); }
+}
+
 @media (max-width: 768px) {
   html, body { background: var(--game-bg); }
   .main-content {
