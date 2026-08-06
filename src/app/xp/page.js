@@ -314,21 +314,23 @@ export default function XPDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
-                <div className="px-3 py-1.5 rounded-lg bg-bg-tertiary border border-border-color flex items-center gap-2">
-                  <span className="text-muted text-[10px] uppercase">14-Day Net:</span>
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 font-mono text-xs">
+                <div className="px-3.5 py-1.5 rounded-xl bg-bg-tertiary border border-border-color flex items-center gap-2">
+                  <span className="text-muted text-[10px] uppercase tracking-wider">14-Day Net:</span>
                   <span className={`font-bold ${sum14Days >= 0 ? 'text-success' : 'text-danger'}`}>
                     {sum14Days >= 0 ? '+' : ''}{sum14Days.toLocaleString()} XP
                   </span>
                 </div>
 
                 {/* Mode Selector Buttons */}
-                <div className="flex items-center bg-bg-tertiary border border-border-color rounded-lg p-0.5 font-mono text-[10px]">
+                <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-xl p-1 font-mono text-[11px]">
                   <button
                     type="button"
                     onClick={() => setChartViewMode('cumulative')}
-                    className={`px-2.5 py-1 rounded font-bold uppercase transition-all ${
-                      chartViewMode === 'cumulative' ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+                    className={`px-3.5 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all ${
+                      chartViewMode === 'cumulative' 
+                        ? 'bg-amber text-black shadow-md' 
+                        : 'text-muted hover:text-primary hover:bg-white/5'
                     }`}
                   >
                     Cumulative
@@ -336,8 +338,10 @@ export default function XPDashboard() {
                   <button
                     type="button"
                     onClick={() => setChartViewMode('daily')}
-                    className={`px-2.5 py-1 rounded font-bold uppercase transition-all ${
-                      chartViewMode === 'daily' ? 'bg-success text-black shadow-sm' : 'text-muted hover:text-primary'
+                    className={`px-3.5 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all ${
+                      chartViewMode === 'daily' 
+                        ? 'bg-success text-black shadow-md' 
+                        : 'text-muted hover:text-primary hover:bg-white/5'
                     }`}
                   >
                     Daily Net
@@ -345,8 +349,10 @@ export default function XPDashboard() {
                   <button
                     type="button"
                     onClick={() => setChartViewMode('both')}
-                    className={`px-2.5 py-1 rounded font-bold uppercase transition-all ${
-                      chartViewMode === 'both' ? 'bg-info text-black shadow-sm' : 'text-muted hover:text-primary'
+                    className={`px-3.5 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all ${
+                      chartViewMode === 'both' 
+                        ? 'bg-info text-black shadow-md' 
+                        : 'text-muted hover:text-primary hover:bg-white/5'
                     }`}
                   >
                     Both
