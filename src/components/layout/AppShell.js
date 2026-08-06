@@ -17,9 +17,9 @@ import { initBackgroundReminders } from '@/lib/utils/notifications'
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Command Center' },
   { href: '/quests', icon: Crosshair, label: 'Daily Ops' },
-  { href: '/work', icon: Briefcase, label: 'Work' },
-  { href: '/goals', icon: Target, label: 'Missions' },
   { href: '/tasks', icon: CheckSquare, label: 'Operations' },
+  { href: '/goals', icon: Target, label: 'Missions' },
+  { href: '/work', icon: Briefcase, label: 'Work' },
   { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
   { href: '/journal', icon: BookOpen, label: 'Journal' },
   { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },
@@ -76,8 +76,8 @@ export default function AppShell({ children }) {
   const mainItems = [
     NAV_ITEMS.find(item => item.href === '/dashboard'), // Command Center
     NAV_ITEMS.find(item => item.href === '/quests'),    // Daily Ops
-    NAV_ITEMS.find(item => item.href === '/goals'),     // Missions
     NAV_ITEMS.find(item => item.href === '/tasks'),     // Operations
+    NAV_ITEMS.find(item => item.href === '/goals'),     // Missions
   ].filter(Boolean)
 
   return (

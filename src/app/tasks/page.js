@@ -456,7 +456,7 @@ export default function Operations() {
                 +{diffConfig.xp} XP
               </span>
               {isOverdue && (
-                <span className="text-danger">+{dynamicXp} XP (PENALTY)</span>
+                <span className="text-danger">-{Math.abs(dynamicXp)} XP (PENALTY)</span>
               )}
             </div>
             
