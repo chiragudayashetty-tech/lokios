@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getRankDisplay } from '@/lib/utils/ranks'
+import { getRankForXp } from '@/lib/utils/xp'
 
 export async function generateMetadata({ params }) {
   const supabase = await createClient()
@@ -32,7 +32,7 @@ export default async function PublicPortfolio({ params }) {
   const workLogs = workRes.data || []
   const projects = projectsRes.data || []
   const skills = skillsRes.data || []
-  const rank = getRankDisplay(profile.current_rank || 'E')
+  const rank = getRankForXp(profile.total_xp || 0)
 
   return (
     <div className="portfolio-public" style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', paddingBottom: 'var(--space-20)' }}>
