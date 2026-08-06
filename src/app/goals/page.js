@@ -243,6 +243,8 @@ export default function Missions() {
                       <div>
                         <span className="uppercase">TYPE: {goal.type?.replace('_', ' ')}</span>
                         {goal.category && <span className="ml-3 uppercase">CAT: {goal.category}</span>}
+                        {goal.created_at && <span className="ml-3 text-info">DEPLOYED: {new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+                        {goal.completed_at && <span className="ml-3 text-success font-semibold">COMPLETED: {new Date(goal.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
                       </div>
                       <div className="flex items-center gap-2">
                         {isCompleted && (
@@ -465,7 +467,12 @@ export default function Missions() {
 
           {/* Bottom Primary Action Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 mt-3 border-t border-border-color" onClick={(e) => e.stopPropagation()}>
-            <div>
+            <div className="flex flex-col gap-1">
+              {goal.created_at && (
+                <span className="font-mono text-xs text-info flex items-center gap-1">
+                  <Clock size={12} /> DEPLOYED: {new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              )}
               {goal.deadline && (
                 <span className="font-mono text-xs text-muted flex items-center gap-1">
                   <Clock size={12} /> DEADLINE: {new Date(goal.deadline).toLocaleDateString()}

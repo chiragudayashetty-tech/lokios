@@ -485,7 +485,9 @@ export default function Operations() {
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted pt-1">
                       <div className="flex flex-wrap items-center gap-3">
                         <span className="uppercase">CAT: {task.category || 'GENERAL'}</span>
+                        {task.created_at && <span className="text-info">DEPLOYED: {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
                         {task.due_date && <span>DUE: {task.due_date}</span>}
+                        {task.completed_at && <span className="text-success font-semibold">COMPLETED: {new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
                         {task.media_urls && task.media_urls.length > 0 && (
                           <span className="text-amber font-semibold">[{task.media_urls.length} PROOF ATTACHED]</span>
                         )}
@@ -561,9 +563,14 @@ export default function Operations() {
           {/* Bottom Action Footer */}
           <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-4 pt-3 border-t border-border-subtle gap-3">
             <div className="flex flex-wrap items-center gap-3 font-mono text-[10px] text-muted">
+              {task.created_at && (
+                <span className="flex items-center gap-1 text-info">
+                  <Clock size={10} /> DEPLOYED: {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
               {task.due_date && (
                 <span className="flex items-center gap-1">
-                  <Calendar size={10} /> {task.due_date}
+                  <Calendar size={10} /> DUE: {task.due_date}
                 </span>
               )}
               {task.media_urls && task.media_urls.length > 0 && (
