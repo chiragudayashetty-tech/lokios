@@ -12,7 +12,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, 
   Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText, Clock, 
-  ChevronDown, ChevronUp, Trash2, BookOpen, Star, Sparkles, Search, Filter, Book
+  ChevronDown, ChevronUp, Trash2, BookOpen, Star, Sparkles, Search, Filter, Book,
+  Check, Trophy, Printer, RefreshCw
 } from 'lucide-react'
 
 export default function ProofOfWork() {
@@ -25,6 +26,45 @@ export default function ProofOfWork() {
   const [expandedReview, setExpandedReview] = useState(null)
   const [expandedLogId, setExpandedLogId] = useState(null)
   const [expandedBookId, setExpandedBookId] = useState(null)
+  const [showAllResumeLogs, setShowAllResumeLogs] = useState(false)
+
+  // Executive Resume Bullet Point Parser (Strips raw markdown section headers)
+  const parseResumeHighlights = (description) => {
+    if (!description) return []
+    const cleanText = description.replace(/\r\n/g, '\n')
+    const highlights = []
+
+    // Extract What Went Well / Achievements
+    const wentWellMatch = cleanText.match(/###\s*What went well\??([\s\S]*?)(?=###|$)/i)
+    if (wentWellMatch && wentWellMatch[1]) {
+      const points = wentWellMatch[1]
+        .split(/\n+/)
+        .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^[\-\*\•]\s*/, '').trim())
+        .filter(s => s.length > 8 && !s.toLowerCase().startsWith('what went well'))
+      highlights.push(...points)
+    }
+
+    // Extract Priorities / Key Wins
+    const prioritiesMatch = cleanText.match(/###\s*Priorities for Next Week[\s\S]*?(?=\n\n|$)/i)
+    if (prioritiesMatch && prioritiesMatch[0]) {
+      const points = prioritiesMatch[0]
+        .split('\n')
+        .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/\[DONE\]/g, '✓').replace(/\[FAILED\]/g, '').trim())
+        .filter(s => s.length > 8 && !s.startsWith('###'))
+      highlights.push(...points)
+    }
+
+    // Fallback: If no markdown section headers found
+    if (highlights.length === 0) {
+      const cleanLines = cleanText
+        .split(/\n+/)
+        .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^[\-\*\•]\s*/, '').trim())
+        .filter(s => s.length > 8)
+      return cleanLines.slice(0, 4)
+    }
+
+    return Array.from(new Set(highlights)).slice(0, 5)
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -994,90 +1034,230 @@ export default function ProofOfWork() {
           </div>
         )}
 
-        {/* RESUME TAB (AUTO-GEN) */}
+        {/* RESUME TAB (EXECUTIVE MASTER RESUME) */}
         {activeTab === 'resume' && (
-          <HudPanel className="bg-bg-primary border-amber" style={{ padding: '3rem 2rem' }}>
-            <div className="max-w-3xl mx-auto flex-col gap-10">
+          <div className="space-y-6">
+            {/* Executive Action Bar (Hidden when printing PDF) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-tertiary border border-border-color rounded-2xl print:hidden">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-amber" />
+                <span className="font-display text-xs uppercase tracking-widest text-primary font-bold">
+                  EXECUTIVE PORTFOLIO RESUME
+                </span>
+                <span className="font-mono text-[10px] text-muted hidden sm:inline">
+                  • Real-time Live Sync
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowAllResumeLogs(!showAllResumeLogs)}
+                  className="px-3 py-1.5 rounded-lg border border-border-color bg-secondary hover:bg-hover text-secondary font-mono text-xs uppercase font-semibold transition-colors"
+                >
+                  {showAllResumeLogs ? 'Show Compact View' : `Show All (${logs.length} Weeks)`}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={fetchData}
+                  className="p-2 rounded-lg border border-border-color bg-secondary hover:bg-hover text-secondary transition-colors"
+                  title="Refresh Intel Data"
+                >
+                  <RefreshCw size={14} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="btn btn-primary btn-sm flex items-center gap-2 px-4 py-2 font-mono text-xs font-bold"
+                >
+                  <Printer size={14} /> EXPORT / PRINT PDF
+                </button>
+              </div>
+            </div>
+
+            {/* Resume Main Document Card */}
+            <HudPanel className="bg-bg-primary border-amber/50 print:border-none p-6 sm:p-10 space-y-8 max-w-4xl mx-auto shadow-2xl">
               
-              {/* Header */}
-              <div className="text-center border-b border-border-color pb-8">
-                <h1 className="font-display text-5xl uppercase tracking-widest text-primary mb-2">{profile?.full_name || 'CHIRAG SHETTY'}</h1>
-                <p className="font-mono text-sm text-amber uppercase tracking-widest">FOUNDER & OPERATOR</p>
-                <div className="flex justify-center gap-4 mt-4 font-mono text-xs text-muted">
-                  <span>LEVEL {profile?.level || 1}</span>
+              {/* Operator Identity Header */}
+              <div className="text-center border-b border-border-color pb-8 space-y-3">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-amber font-bold">
+                  SAGA OPERATOR DOSSIER
+                </div>
+                <h1 className="font-display text-4xl sm:text-5xl uppercase tracking-widest text-primary font-bold">
+                  {profile?.full_name || 'CHIRAG SHETTY'}
+                </h1>
+                <p className="font-mono text-xs sm:text-sm text-amber uppercase tracking-widest font-semibold">
+                  FOUNDER & OPERATOR • SYSTEM ARCHITECT
+                </p>
+
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2 font-mono text-xs text-muted">
+                  <span className="px-3 py-1 rounded-full bg-secondary border border-border-color text-primary font-bold">
+                    SAGA V: The King
+                  </span>
                   <span>•</span>
-                  <span>{profile?.current_rank || 'E'} RANK</span>
+                  <span className="text-cyan font-bold">LEVEL {profile?.level || 1}</span>
+                  <span>•</span>
+                  <span className="text-amber font-bold">{(profile?.total_xp || 0).toLocaleString()} XP</span>
+                  <span>•</span>
+                  <span className="text-success font-bold">{profile?.current_rank || 'E'} RANK</span>
                 </div>
               </div>
 
-              {/* Experience Summary */}
-              <div>
-                <h2 className="font-display text-2xl uppercase tracking-wider text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2">
-                  <Briefcase size={20} /> EXPERIENCE LOG
+              {/* KPI Metrics Summary Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs text-center">
+                <div className="p-3 rounded-xl bg-tertiary border border-border-subtle">
+                  <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Discipline Level</span>
+                  <span className="text-cyan font-display text-xl font-bold">LVL {profile?.level || 1}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-tertiary border border-border-subtle">
+                  <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Total XP Earned</span>
+                  <span className="text-amber font-display text-xl font-bold">{(profile?.total_xp || 0).toLocaleString()}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-tertiary border border-border-subtle">
+                  <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Literature Completed</span>
+                  <span className="text-success font-display text-xl font-bold">{books.length} Books</span>
+                </div>
+                <div className="p-3 rounded-xl bg-tertiary border border-border-subtle">
+                  <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Shipped Projects</span>
+                  <span className="text-primary font-display text-xl font-bold">{projects.length} Systems</span>
+                </div>
+              </div>
+
+              {/* Core Competencies & Skills */}
+              <div className="space-y-3">
+                <h2 className="font-display text-lg uppercase tracking-wider text-amber border-b border-border-color pb-2 flex items-center gap-2">
+                  <Terminal size={18} /> CORE COMPETENCIES & DISCIPLINE PILLARS
                 </h2>
-                <div className="flex-col gap-6">
-                  {logs.slice(0, 5).map(log => (
-                    <div key={log.id}>
-                      <div className="flex justify-between items-baseline mb-1">
-                        <h3 className="font-mono text-sm text-primary uppercase">{log.title}</h3>
-                        <span className="font-mono text-[10px] text-muted">{log.date}</span>
-                      </div>
-                      <p className="font-mono text-xs text-secondary leading-relaxed">{log.description || 'Executed operational directive.'}</p>
-                    </div>
+                <div className="flex flex-wrap gap-2 font-mono text-xs">
+                  {[
+                    'Video Production & Post-Editing', 'Premiere Pro & AutoCut',
+                    'System Architecture & Full-Stack JS', 'Next.js & Supabase Engine',
+                    'Content Operations & Directing', 'High-Focus Deep Execution',
+                    'Weekly Debriefing & Iteration', 'Productivity OS Architecture'
+                  ].map((skill, idx) => (
+                    <span key={idx} className="px-3 py-1 rounded-lg bg-tertiary border border-border-color text-primary font-semibold">
+                      {skill}
+                    </span>
                   ))}
-                  {logs.length === 0 && <p className="font-mono text-xs text-muted">Awaiting operational data.</p>}
                 </div>
               </div>
 
-              {/* Books Completed Section in Resume */}
-              {books.length > 0 && (
-                <div>
-                  <h2 className="font-display text-2xl uppercase tracking-wider text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2">
-                    <BookOpen size={20} /> BOOKS COMPLETED ({books.length})
+              {/* Parsed Executive Accomplishments (Replaces raw markdown text wall!) */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-border-color pb-2">
+                  <h2 className="font-display text-lg uppercase tracking-wider text-amber flex items-center gap-2">
+                    <Briefcase size={18} /> OPERATIONAL MILESTONES & WEEKLY ACCOMPLISHMENTS
                   </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
+                  <span className="font-mono text-[10px] text-muted">
+                    {showAllResumeLogs ? `Showing All ${logs.length} Weeks` : `Recent Top ${Math.min(5, logs.length)} Weeks`}
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {(showAllResumeLogs ? logs : logs.slice(0, 5)).map(log => {
+                    const highlights = parseResumeHighlights(log.description || log.notes || '')
+                    
+                    return (
+                      <div key={log.id} className="p-4 rounded-xl bg-tertiary/70 border border-border-color space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle/50 pb-2">
+                          <h3 className="font-mono text-sm font-bold text-primary uppercase">
+                            {log.title}
+                          </h3>
+                          {log.date && (
+                            <span className="font-mono text-[10px] text-amber font-semibold px-2 py-0.5 rounded bg-amber/10 border border-amber/30">
+                              {log.date}
+                            </span>
+                          )}
+                        </div>
+
+                        {highlights.length > 0 ? (
+                          <ul className="space-y-1.5 font-mono text-xs text-secondary pl-1">
+                            {highlights.map((point, pIdx) => (
+                              <li key={pIdx} className="flex items-start gap-2 leading-relaxed">
+                                <span className="text-success shrink-0 mt-0.5"><Check size={12} strokeWidth={3} /></span>
+                                <span>{point}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="font-mono text-xs text-secondary leading-relaxed">
+                            {log.description ? log.description.replace(/###/g, '').trim() : 'Executed operational directive with verified proof.'}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {logs.length === 0 && (
+                    <p className="font-mono text-xs text-muted text-center py-6">No operational debriefs logged yet.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Literature & Knowledge Intake (Books Completed) */}
+              {books.length > 0 && (
+                <div className="space-y-3">
+                  <h2 className="font-display text-lg uppercase tracking-wider text-amber border-b border-border-color pb-2 flex items-center gap-2">
+                    <BookOpen size={18} /> LITERATURE & KNOWLEDGE INTAKE ({books.length})
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
                     {books.map((b, i) => (
-                      <div key={i} className="p-3 border border-border-color bg-tertiary rounded">
+                      <div key={i} className="p-3.5 rounded-xl bg-tertiary border border-border-color space-y-1">
                         <div className="text-primary font-bold uppercase">{b.title}</div>
-                        <div className="text-muted text-[10px]">by {b.author || 'Unknown'} • {b.category}</div>
-                        <div className="text-warning font-bold mt-1">{'★'.repeat(b.rating || 5)}</div>
+                        <div className="text-muted text-[10px]">by {b.author || 'Unknown'} • <span className="text-cyan">{b.category}</span></div>
+                        <div className="text-amber font-bold text-[11px] pt-1">
+                          {'★'.repeat(b.rating || 5)} <span className="text-muted text-[10px] font-normal ml-1">({b.date_completed})</span>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Projects */}
-              <div>
-                <h2 className="font-display text-2xl uppercase tracking-wider text-amber mb-4 border-b border-border-color pb-2 flex items-center gap-2">
-                  <Database size={20} /> KEY PROJECTS
+              {/* Key Systems & Projects */}
+              <div className="space-y-3">
+                <h2 className="font-display text-lg uppercase tracking-wider text-amber border-b border-border-color pb-2 flex items-center gap-2">
+                  <Database size={18} /> SHIPPED PROJECTS & SYSTEM BUILD-OUTS
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {projects.map(proj => (
-                    <div key={proj.id} className="border border-border-color p-4 bg-tertiary">
-                      <h3 className="font-mono text-sm text-primary uppercase mb-2">{proj.title}</h3>
-                      <p className="font-mono text-[10px] text-secondary mb-3">{proj.description}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {Array.isArray(proj.tech_stack) && proj.tech_stack.map((t, i) => (
-                          <span key={i} className="font-mono text-[8px] border border-border-strong px-1 text-muted">{t}</span>
-                        ))}
+                    <div key={proj.id} className="p-4 rounded-xl border border-border-color bg-tertiary space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-mono text-sm text-primary font-bold uppercase">{proj.title}</h3>
+                        <span className="font-mono text-[9px] text-success uppercase px-2 py-0.5 rounded bg-success/10 border border-success/30">
+                          {proj.status || 'ACTIVE'}
+                        </span>
                       </div>
+                      <p className="font-mono text-xs text-secondary leading-relaxed">{proj.description}</p>
+                      {Array.isArray(proj.tech_stack) && proj.tech_stack.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {proj.tech_stack.map((t, i) => (
+                            <span key={i} className="font-mono text-[9px] bg-bg-primary px-2 py-0.5 border border-border-strong text-muted rounded">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {projects.length === 0 && <p className="font-mono text-xs text-muted">Awaiting project data.</p>}
                 </div>
               </div>
 
-              {/* Stats Footer */}
-              <div className="border-t border-border-color pt-6 mt-4 flex justify-between">
-                <div className="font-mono text-[10px] text-muted">AUTO-GENERATED BY CHIRAGOS</div>
-                <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => window.print()}>
-                  <FileText size={14} /> EXPORT PDF
-                </button>
+              {/* Resume Footer */}
+              <div className="border-t border-border-color pt-6 flex flex-wrap items-center justify-between gap-4 font-mono text-[10px] text-muted">
+                <div>AUTHENTICATED DOSSIER • GENERATED BY CHIRAG OS EXECUTIVE ENGINE</div>
+                <div className="flex items-center gap-3">
+                  <span>CONFIDENTIAL</span>
+                  <span>•</span>
+                  <span>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                </div>
               </div>
 
-            </div>
-          </HudPanel>
+            </HudPanel>
+          </div>
         )}
 
       </div>

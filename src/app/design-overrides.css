@@ -1226,3 +1226,11 @@ tbody tr:hover { background: rgba(244, 201, 107, 0.045); }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
+/* Printable PDF Styling for Resume */
+@media print {
+  body { background: #000 !important; color: #fff !important; }
+  header, nav, .sidebar, .bottom-nav, .mobile-nav, .app-header, .pwa-install-banner, .print\:hidden { display: none !important; }
+  .page-container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+  .hud-panel { border: 1px solid #333 !important; background: #080a0f !important; box-shadow: none !important; }
+}
+
