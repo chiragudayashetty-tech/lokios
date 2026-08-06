@@ -1023,22 +1023,6 @@ body > * {
     flex-direction: column;
   }
 
-  /* Page header always on top */
-  .page-header {
-    order: -10;
-  }
-
-  /* On mobile, the quests stats row goes below the card list */
-  .quests-stats-row   { order: 50; }
-  .quests-card-list   { order: 1; }
-  .quests-paint-grid  { order: 40; }
-  .quests-sidebar     { order: 60; }
-
-  /* Tasks page: task list first, metrics row second */
-  .tasks-metrics-row  { order: 50; }
-  .tasks-tab-row      { order: 2; }
-  .tasks-grid         { order: 3; }
-  .tasks-header       { order: -10; }
 
   /* Dashboard: battle plan first, mission objective second, sidebar last */
   .dash-battle-plan   { order: 1; }

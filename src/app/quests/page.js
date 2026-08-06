@@ -904,61 +904,6 @@ export default function DailyOps() {
 
         </div>
 
-        {/* Top Stats Row — pushed to bottom on mobile via CSS order */}
-        <div className="grid-2 gap-4 mb-6 quests-stats-row">
-          {/* Today's Progress */}
-          <HudPanel glow className="flex items-center gap-5 p-5">
-            <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-strong)" strokeWidth="7" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--accent-primary)" strokeWidth="7"
-                  strokeDasharray={`${2 * Math.PI * 42}`}
-                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - todayPct / 100)}`}
-                  strokeLinecap="round" className="transition-all duration-700" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="font-display text-lg text-primary">{todayPct}%</span>
-              </div>
-            </div>
-            <div>
-              <div className="font-display text-lg uppercase tracking-wider text-primary">TODAY</div>
-              <div className="font-mono text-sm text-secondary">{todayComplete} / {todayTotal} completed</div>
-            </div>
-          </HudPanel>
-          
-          {/* Monthly Progress */}
-          <HudPanel className="flex items-center gap-5 p-5">
-            <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-strong)" strokeWidth="7" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--info)" strokeWidth="7"
-                  strokeDasharray={`${2 * Math.PI * 42}`}
-                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - globalStats.pct / 100)}`}
-                  strokeLinecap="round" className="transition-all duration-700" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="font-display text-lg text-info">{globalStats.pct}%</span>
-              </div>
-            </div>
-            <div>
-              <div className="font-display text-lg uppercase tracking-wider text-info">MONTH TOTAL</div>
-              <div className="font-mono text-sm text-secondary">{globalStats.completed} / {globalStats.goal} total</div>
-            </div>
-          </HudPanel>
-        </div>
-
-        {/* Month Navigation — part of paint grid section on mobile */}
-        <div className="flex items-center justify-center mb-6 quests-paint-grid">
-          <HudPanel className="flex-center gap-6 p-5">
-            <button onClick={prevMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronLeft size={20} /></button>
-            <div className="text-center">
-              <div className="font-display text-2xl uppercase tracking-widest text-primary">{MONTH_NAMES[viewMonth]}</div>
-              <div className="font-mono text-xs text-muted">{viewYear}</div>
-            </div>
-            <button onClick={nextMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronRight size={20} /></button>
-          </HudPanel>
-        </div>
-
         {/* Paint Tool & Column Width Controls */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
           <div className="flex flex-row items-center gap-2 sm:gap-3">
@@ -1372,7 +1317,60 @@ export default function DailyOps() {
           )}
         </div>
 
+        {/* Month Navigation — placed after habits table on phone and desktop */}
+        <div className="flex items-center justify-center my-6 quests-paint-grid">
+          <HudPanel className="flex-center gap-6 p-5">
+            <button onClick={prevMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronLeft size={20} /></button>
+            <div className="text-center">
+              <div className="font-display text-2xl uppercase tracking-widest text-primary">{MONTH_NAMES[viewMonth]}</div>
+              <div className="font-mono text-xs text-muted">{viewYear}</div>
+            </div>
+            <button onClick={nextMonth} className="btn btn-ghost p-2 hover:text-amber"><ChevronRight size={20} /></button>
+          </HudPanel>
+        </div>
 
+        {/* Progress Stats Row — placed after habits table on phone and desktop */}
+        <div className="grid-2 gap-4 mb-6 quests-stats-row">
+          {/* Today's Progress */}
+          <HudPanel glow className="flex items-center gap-5 p-5">
+            <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-strong)" strokeWidth="7" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--accent-primary)" strokeWidth="7"
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - todayPct / 100)}`}
+                  strokeLinecap="round" className="transition-all duration-700" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="font-display text-lg text-primary">{todayPct}%</span>
+              </div>
+            </div>
+            <div>
+              <div className="font-display text-lg uppercase tracking-wider text-primary">TODAY</div>
+              <div className="font-mono text-sm text-secondary">{todayComplete} / {todayTotal} completed</div>
+            </div>
+          </HudPanel>
+          
+          {/* Monthly Progress */}
+          <HudPanel className="flex items-center gap-5 p-5">
+            <div className="relative w-16 h-16 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-strong)" strokeWidth="7" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--info)" strokeWidth="7"
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - globalStats.pct / 100)}`}
+                  strokeLinecap="round" className="transition-all duration-700" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="font-display text-lg text-info">{globalStats.pct}%</span>
+              </div>
+            </div>
+            <div>
+              <div className="font-display text-lg uppercase tracking-wider text-info">MONTH TOTAL</div>
+              <div className="font-mono text-sm text-secondary">{globalStats.completed} / {globalStats.goal} total</div>
+            </div>
+          </HudPanel>
+        </div>
 
         {/* Top 10 Daily Habits Sidebar */}
         {topHabits.length > 0 && (
