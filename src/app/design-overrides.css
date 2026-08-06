@@ -1158,12 +1158,29 @@ tbody tr:hover { background: rgba(244, 201, 107, 0.045); }
 
 ::selection { background: rgba(244, 201, 107, 0.22); color: #fff4d1; }
 
-.pulse-glow {
-  animation: pulse-glow-anim 2.4s ease-in-out infinite alternate;
+/* Glowing Active Tab Item Highlight */
+.tab-item {
+  position: relative;
+  transition: all 180ms var(--game-spring);
+  border-bottom: 2px solid transparent;
 }
-@keyframes pulse-glow-anim {
-  0% { box-shadow: 0 0 12px rgba(244, 201, 107, 0.15); }
-  100% { box-shadow: 0 0 26px rgba(244, 201, 107, 0.35); }
+.tab-item.active,
+.tab-item.tab-active {
+  color: #fff4d1 !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid var(--game-gold) !important;
+  background: rgba(244, 201, 107, 0.12) !important;
+  border-radius: 8px 8px 0 0 !important;
+  text-shadow: 0 0 14px rgba(244, 201, 107, 0.35) !important;
+  box-shadow: inset 0 -1px 0 var(--game-gold), 0 4px 16px rgba(244, 201, 107, 0.1) !important;
+}
+.tab-item.active.text-danger,
+.tab-item.tab-active.text-danger {
+  color: #ff9999 !important;
+  border-bottom: 2px solid var(--danger) !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  text-shadow: 0 0 14px rgba(239, 68, 68, 0.35) !important;
+  box-shadow: inset 0 -1px 0 var(--danger), 0 4px 16px rgba(239, 68, 68, 0.1) !important;
 }
 
 @media (max-width: 768px) {

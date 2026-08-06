@@ -567,7 +567,7 @@ export default function Operations() {
             { id: 'completed', label: `COMPLETED (${completed.length})` },
             { id: 'failed', label: `FAILED (${failedOps.length})` }
           ].map(tab => (
-            <button type='button' key={tab.id} className={`tab-item ${activeTab === tab.id ? 'tab-active' : ''} ${tab.id === 'failed' ? 'text-danger' : ''}`}
+            <button type='button' key={tab.id} className={`tab-item ${activeTab === tab.id ? 'active tab-active' : ''} ${tab.id === 'failed' ? 'text-danger' : ''}`}
               onClick={() => setActiveTab(tab.id)}>
               {tab.label}
             </button>
