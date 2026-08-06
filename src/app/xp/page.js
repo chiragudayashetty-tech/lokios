@@ -300,73 +300,77 @@ export default function XPDashboard() {
         <div className="w-full">
           <HudPanel label="" glow className="p-0 overflow-hidden">
             {/* Chart Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-4 border-b border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: currentRank.color, boxShadow: `0 0 10px ${currentRank.color}` }} />
-                <div>
-                  <h3 className="font-mono text-xs uppercase tracking-widest text-primary font-bold">XP TRAJECTORY — 14-DAY INTELLIGENCE</h3>
-                  <p className="font-mono text-[10px] text-muted mt-0.5">
-                    {chartViewMode === 'cumulative' 
-                      ? 'Cumulative total progress trajectory' 
-                      : chartViewMode === 'daily' 
-                      ? 'Daily net XP gain breakdown' 
-                      : 'Dual view: Cumulative total & daily net gain'}
-                  </p>
+            <div className="p-4 sm:p-5 border-b border-white/5 space-y-3">
+              {/* Top Row: Title + 14-Day Net Badge */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-2.5 h-2.5 rounded-full animate-pulse shrink-0" style={{ background: currentRank.color, boxShadow: `0 0 10px ${currentRank.color}` }} />
+                  <div className="min-w-0">
+                    <h3 className="font-mono text-xs uppercase tracking-widest text-primary font-bold truncate">
+                      XP TRAJECTORY — 14-DAY INTELLIGENCE
+                    </h3>
+                    <p className="font-mono text-[9px] text-muted hidden sm:block mt-0.5">
+                      {chartViewMode === 'cumulative' 
+                        ? 'Cumulative total progress trajectory' 
+                        : chartViewMode === 'daily' 
+                        ? 'Daily net XP gain breakdown' 
+                        : 'Dual view: Cumulative total & daily net gain'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-4 sm:gap-6 font-mono text-xs">
-                <div className="px-3.5 py-1.5 rounded-xl bg-bg-tertiary border border-border-color flex items-center gap-2">
-                  <span className="text-muted text-[10px] uppercase tracking-wider">14-Day Net:</span>
+
+                <div className="px-2.5 py-1 rounded-lg bg-bg-tertiary border border-border-color font-mono text-[10px] flex items-center gap-1.5 shrink-0">
+                  <span className="text-muted uppercase tracking-wider">14-Day Net:</span>
                   <span className={`font-bold ${sum14Days >= 0 ? 'text-success' : 'text-danger'}`}>
                     {sum14Days >= 0 ? '+' : ''}{sum14Days.toLocaleString()} XP
                   </span>
                 </div>
+              </div>
 
-                {/* Mode Selector Buttons */}
-                <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-xl p-1 font-mono text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setChartViewMode('cumulative')}
-                    className={`px-3.5 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all ${
-                      chartViewMode === 'cumulative' 
-                        ? 'bg-amber text-black shadow-md' 
-                        : 'text-muted hover:text-primary hover:bg-white/5'
-                    }`}
-                  >
-                    Cumulative
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartViewMode('daily')}
-                    className={`px-3.5 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all ${
-                      chartViewMode === 'daily' 
-                        ? 'bg-success text-black shadow-md' 
-                        : 'text-muted hover:text-primary hover:bg-white/5'
-                    }`}
-                  >
-                    Daily Net
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartViewMode('both')}
-                    className={`px-3.5 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-all ${
-                      chartViewMode === 'both' 
-                        ? 'bg-info text-black shadow-md' 
-                        : 'text-muted hover:text-primary hover:bg-white/5'
-                    }`}
-                  >
-                    Both
-                  </button>
-                </div>
+              {/* Mode Selector Toggle Strip (3-column grid on mobile, fit on desktop) */}
+              <div className="grid grid-cols-3 gap-1 bg-black/50 border border-white/10 rounded-xl p-1 font-mono text-[10px] sm:w-fit">
+                <button
+                  type="button"
+                  onClick={() => setChartViewMode('cumulative')}
+                  className={`px-2.5 sm:px-4 py-1.5 rounded-lg font-bold uppercase tracking-wider text-center transition-all ${
+                    chartViewMode === 'cumulative' 
+                      ? 'bg-amber text-black shadow-md' 
+                      : 'text-muted hover:text-primary hover:bg-white/5'
+                  }`}
+                >
+                  Cumulative
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartViewMode('daily')}
+                  className={`px-2.5 sm:px-4 py-1.5 rounded-lg font-bold uppercase tracking-wider text-center transition-all ${
+                    chartViewMode === 'daily' 
+                      ? 'bg-success text-black shadow-md' 
+                      : 'text-muted hover:text-primary hover:bg-white/5'
+                  }`}
+                >
+                  Daily Net
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartViewMode('both')}
+                  className={`px-2.5 sm:px-4 py-1.5 rounded-lg font-bold uppercase tracking-wider text-center transition-all ${
+                    chartViewMode === 'both' 
+                      ? 'bg-info text-black shadow-md' 
+                      : 'text-muted hover:text-primary hover:bg-white/5'
+                  }`}
+                >
+                  Both
+                </button>
               </div>
             </div>
 
             {/* The Chart */}
-            <div className="p-4" style={{ height: '320px', width: '100%' }}>
+            <div className="p-2 sm:p-4" style={{ height: '300px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 {chartViewMode === 'cumulative' ? (
                   /* 1. CUMULATIVE AREA CHART */
-                  <AreaChart data={areaData} margin={{ top: 15, right: 25, left: 10, bottom: 5 }}>
+                  <AreaChart data={areaData} margin={{ top: 15, right: 15, left: -10, bottom: 5 }}>
                     <defs>
                       <linearGradient id="xpGradMain" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={currentRank.color} stopOpacity={0.4} />
@@ -382,23 +386,24 @@ export default function XPDashboard() {
                     <XAxis
                       dataKey="date"
                       stroke="rgba(255,255,255,0.2)"
-                      fontSize={10}
+                      fontSize={9}
                       tickLine={false}
                       axisLine={false}
                       fontFamily="var(--font-mono)"
                       tick={{ fill: 'var(--text-muted)' }}
+                      minTickGap={15}
                       dy={5}
                     />
                     <YAxis
                       domain={[yMin, yMax]}
                       stroke="rgba(255,255,255,0.2)"
-                      fontSize={10}
+                      fontSize={9}
                       tickLine={false}
                       axisLine={false}
                       fontFamily="var(--font-mono)"
                       tick={{ fill: 'var(--text-muted)' }}
                       tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
-                      width={45}
+                      width={38}
                     />
                     <Tooltip
                       content={<CustomXpTooltip />}
@@ -419,41 +424,42 @@ export default function XPDashboard() {
                             key={payload.date}
                             cx={cx}
                             cy={cy}
-                            r={isToday ? 6 : 3.5}
+                            r={isToday ? 5 : 3}
                             fill={isToday ? '#fff' : currentRank.color}
                             stroke={currentRank.color}
-                            strokeWidth={isToday ? 2.5 : 1}
+                            strokeWidth={isToday ? 2 : 1}
                             filter={isToday ? 'url(#xpGlow)' : 'none'}
                           />
                         )
                       }}
-                      activeDot={{ r: 7, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
+                      activeDot={{ r: 6, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
                     />
                   </AreaChart>
                 ) : chartViewMode === 'daily' ? (
                   /* 2. DAILY NET GAIN BAR CHART */
-                  <BarChart data={areaData} margin={{ top: 15, right: 25, left: 10, bottom: 5 }}>
+                  <BarChart data={areaData} margin={{ top: 15, right: 15, left: -10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                     <XAxis
                       dataKey="date"
                       stroke="rgba(255,255,255,0.2)"
-                      fontSize={10}
+                      fontSize={9}
                       tickLine={false}
                       axisLine={false}
                       fontFamily="var(--font-mono)"
                       tick={{ fill: 'var(--text-muted)' }}
+                      minTickGap={15}
                       dy={5}
                     />
                     <YAxis
                       domain={[yMinDaily, yMaxDaily]}
                       stroke="rgba(255,255,255,0.2)"
-                      fontSize={10}
+                      fontSize={9}
                       tickLine={false}
                       axisLine={false}
                       fontFamily="var(--font-mono)"
                       tick={{ fill: 'var(--text-muted)' }}
                       tickFormatter={(v) => `${v >= 0 ? '+' : ''}${v}`}
-                      width={45}
+                      width={38}
                     />
                     <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="2 2" />
                     <Tooltip
@@ -473,7 +479,7 @@ export default function XPDashboard() {
                   </BarChart>
                 ) : (
                   /* 3. BOTH / DUAL-AXIS COMPOSED CHART */
-                  <ComposedChart data={areaData} margin={{ top: 15, right: 25, left: 10, bottom: 5 }}>
+                  <ComposedChart data={areaData} margin={{ top: 15, right: 15, left: -10, bottom: 5 }}>
                     <defs>
                       <linearGradient id="xpGradMain" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={currentRank.color} stopOpacity={0.35} />
@@ -485,41 +491,42 @@ export default function XPDashboard() {
                     <XAxis
                       dataKey="date"
                       stroke="rgba(255,255,255,0.2)"
-                      fontSize={10}
+                      fontSize={9}
                       tickLine={false}
                       axisLine={false}
                       fontFamily="var(--font-mono)"
                       tick={{ fill: 'var(--text-muted)' }}
+                      minTickGap={15}
                       dy={5}
                     />
                     <YAxis
                       yAxisId="left"
                       domain={[yMin, yMax]}
                       stroke={currentRank.color}
-                      fontSize={10}
+                      fontSize={9}
                       tickLine={false}
                       axisLine={false}
                       fontFamily="var(--font-mono)"
                       tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
-                      width={45}
+                      width={38}
                     />
                     <YAxis
                       yAxisId="right"
                       orientation="right"
                       domain={[yMinDaily, yMaxDaily]}
                       stroke="#22c55e"
-                      fontSize={10}
+                      fontSize={9}
                       tickLine={false}
                       axisLine={false}
                       fontFamily="var(--font-mono)"
                       tickFormatter={(v) => `${v >= 0 ? '+' : ''}${v}`}
-                      width={45}
+                      width={38}
                     />
                     <Tooltip
                       content={<CustomXpTooltip />}
                       cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '4 4', strokeWidth: 1 }}
                     />
-                    <Bar yAxisId="right" dataKey="dailyGain" barSize={16} radius={[4, 4, 0, 0]}>
+                    <Bar yAxisId="right" dataKey="dailyGain" barSize={12} radius={[3, 3, 0, 0]}>
                       {areaData.map((entry, index) => (
                         <Cell
                           key={`cell-both-${index}`}
@@ -537,8 +544,8 @@ export default function XPDashboard() {
                       strokeWidth={2.5}
                       fillOpacity={1}
                       fill="url(#xpGradMain)"
-                      dot={{ fill: currentRank.color, r: 3 }}
-                      activeDot={{ r: 7, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
+                      dot={{ fill: currentRank.color, r: 2.5 }}
+                      activeDot={{ r: 6, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
                     />
                   </ComposedChart>
                 )}
