@@ -515,48 +515,66 @@ export default function Operations() {
           </button>
         </header>
 
-        {/* METRICS ROW — Compact 4-Box Stat Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 tasks-metrics-row w-full">
-          <HudPanel className="p-3 flex items-center justify-between gap-2.5 border border-border-color rounded-xl bg-bg-tertiary">
-            <div>
-              <div className="font-mono text-[9px] text-muted uppercase tracking-wider">PENDING</div>
-              <div className="font-display text-xl text-primary font-bold">{pending.length}</div>
+        {/* METRICS STRIP — Single bar, 4 divisions */}
+        <div className="mb-6 flex items-stretch overflow-hidden" style={{
+          border: '1px solid var(--border-color)',
+          background: 'var(--bg-tertiary)',
+          borderRadius: '10px',
+        }}>
+          {/* PENDING */}
+          <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Clock size={14} className="text-primary" />
             </div>
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
-              <Clock size={16} />
+            <div className="min-w-0">
+              <div className="font-mono text-[8px] text-muted uppercase tracking-widest">Pending</div>
+              <div className="font-display text-lg text-primary font-bold leading-tight">{pending.length}</div>
             </div>
-          </HudPanel>
+          </div>
 
-          <HudPanel className="p-3 flex items-center justify-between gap-2.5 border border-danger/40 bg-danger/5 rounded-xl">
-            <div>
-              <div className="font-mono text-[9px] text-muted uppercase tracking-wider">OVERDUE</div>
-              <div className="font-display text-xl text-danger font-bold">{overdue.length}</div>
-            </div>
-            <div className="w-8 h-8 rounded-lg bg-danger/10 flex items-center justify-center text-danger shrink-0">
-              <AlertTriangle size={16} />
-            </div>
-          </HudPanel>
+          {/* Divider */}
+          <div style={{ width: '1px', background: 'var(--border-color)', flexShrink: 0 }} />
 
-          <HudPanel className="p-3 flex items-center justify-between gap-2.5 border border-amber/40 bg-amber/5 rounded-xl">
-            <div>
-              <div className="font-mono text-[9px] text-muted uppercase tracking-wider">DUE TODAY</div>
-              <div className="font-display text-xl text-amber font-bold">{dueToday.length}</div>
+          {/* OVERDUE */}
+          <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0" style={{ background: overdue.length > 0 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+            <div className="w-7 h-7 rounded-lg bg-danger/10 flex items-center justify-center shrink-0">
+              <AlertTriangle size={14} className="text-danger" />
             </div>
-            <div className="w-8 h-8 rounded-lg bg-amber/10 flex items-center justify-center text-amber shrink-0">
-              <Calendar size={16} />
+            <div className="min-w-0">
+              <div className="font-mono text-[8px] text-muted uppercase tracking-widest">Overdue</div>
+              <div className={`font-display text-lg font-bold leading-tight ${overdue.length > 0 ? 'text-danger' : 'text-primary'}`}>{overdue.length}</div>
             </div>
-          </HudPanel>
+          </div>
 
-          <HudPanel className="p-3 flex items-center justify-between gap-2.5 border border-success/40 bg-success/5 rounded-xl">
-            <div>
-              <div className="font-mono text-[9px] text-muted uppercase tracking-wider">COMPLETION</div>
-              <div className="font-display text-xl text-success font-bold">{completionRate}%</div>
+          {/* Divider */}
+          <div style={{ width: '1px', background: 'var(--border-color)', flexShrink: 0 }} />
+
+          {/* DUE TODAY */}
+          <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-amber/10 flex items-center justify-center shrink-0">
+              <Calendar size={14} className="text-amber" />
             </div>
-            <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center text-success shrink-0">
-              <TrendingUp size={16} />
+            <div className="min-w-0">
+              <div className="font-mono text-[8px] text-muted uppercase tracking-widest">Due Today</div>
+              <div className="font-display text-lg text-amber font-bold leading-tight">{dueToday.length}</div>
             </div>
-          </HudPanel>
+          </div>
+
+          {/* Divider */}
+          <div style={{ width: '1px', background: 'var(--border-color)', flexShrink: 0 }} />
+
+          {/* COMPLETION */}
+          <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+              <TrendingUp size={14} className="text-success" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-mono text-[8px] text-muted uppercase tracking-widest">Completion</div>
+              <div className="font-display text-lg text-success font-bold leading-tight">{completionRate}%</div>
+            </div>
+          </div>
         </div>
+
 
         {/* TABS */}
         <div className="tabs mb-6 flex-wrap tasks-tab-row">

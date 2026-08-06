@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Target, AlertTriangle, Zap, Swords, Flame, ChevronDown,
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
-  Activity, Clock, Terminal, Ghost, Skull, ArrowUpRight, BarChart2,
-  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale, X, RotateCcw
+  Activity, Clock, Terminal, ArrowUpRight, BarChart2,
+  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale, X, RotateCcw,
+  Calendar as CalendarIcon, MapPin, Plus, ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
@@ -79,10 +80,25 @@ export default function MissionControl() {
     habits:  { todayLogs, habits },
     tasks:   { tasks, addTask, undoCompleteTask, fetchTasks },
     journal: { entries },
+    calendar: { events = [] } = {},
     completeOperation,
     failOperation,
     undoFailOperation
   } = useOS()
+
+  const todayStr = getLocalDateStr()
+
+  // Today's Calendar Events & Scheduled Due Tasks
+  const todayCalendarEvents = useMemo(() => {
+    return (events || []).filter(e => {
+      const eDate = e.event_date || e.date || (e.start_time ? e.start_time.split('T')[0] : '')
+      return eDate === todayStr
+    })
+  }, [events, todayStr])
+
+  const todayTasksScheduled = useMemo(() => {
+    return (tasks || []).filter(t => t.due_date === todayStr && t.status !== 'cancelled')
+  }, [tasks, todayStr])
 
   const weeklyGoalTasks = tasks.filter(t => t.category === 'weekly_goal' && t.status !== 'cancelled')
 
@@ -95,8 +111,6 @@ export default function MissionControl() {
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
   
   // New metrics states
-  const [ghostScore, setGhostScore] = useState(0)
-  const [habitGraveyard, setHabitGraveyard] = useState([])
   const [xpTrajectory, setXpTrajectory] = useState([])
   const [battles, setBattles] = useState([])
   const [weightData, setWeightData] = useState(null)
@@ -276,41 +290,6 @@ export default function MissionControl() {
         if (daysElapsed === 0) daysElapsed = 7 // Sunday is the 7th day
         
         setWeeklyWinRate(Math.round((uniqueDaysWithCompletion / daysElapsed) * 100))
-
-        // Ghost Score (All-Time Recovery)
-        let ghostPoints = 0
-        const logsByHabit = {}
-        allHabitLogs.forEach(log => {
-          if (!logsByHabit[log.habit_id]) logsByHabit[log.habit_id] = []
-          logsByHabit[log.habit_id].push(log)
-        })
-
-        Object.values(logsByHabit).forEach(logs => {
-          for (let i = 0; i < logs.length - 1; i++) {
-            if (logs[i].status === 'failed' && logs[i+1].status === 'completed') {
-              ghostPoints++
-            }
-          }
-        })
-        setGhostScore(ghostPoints)
-
-        // Habit Graveyard (Last 30 Days)
-        const recentFails = {}
-        allHabitLogs
-          .filter(l => l.date >= thirtyDaysAgoStr && l.status === 'failed')
-          .forEach(l => {
-            recentFails[l.habit_id] = (recentFails[l.habit_id] || 0) + 1
-          })
-        
-        const sortedFails = Object.entries(recentFails)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 2)
-          .map(([habitId, fails]) => {
-            const habit = allHabitsData?.find(h => String(h.id) === String(habitId))
-            return { habitId, fails, name: habit?.title || 'Unknown Routine' }
-          })
-          
-        setHabitGraveyard(sortedFails)
       }
 
       // ── Weight Tracking (Body Recon Widget) ──
@@ -459,7 +438,7 @@ export default function MissionControl() {
 
   const flameColor = currentStreak >= 30 ? '#F59E0B' : currentStreak >= 7 ? '#f97316' : '#ef4444'
 
-  const todayStr = getLocalDateStr(new Date())
+  // todayStr is defined at the top of component
 
   // ── Dynamic Daily Ops Momentum Engine (-10 to +10) ────────────────────────
   // 1. Habits Performance (Completed vs Failed Today)
@@ -796,6 +775,72 @@ export default function MissionControl() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            TOP STRIP — TODAY'S CALENDAR & EVENTS
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="mb-4" style={{
+          padding: '10px 16px',
+          background: 'var(--bg-tertiary)',
+          borderLeft: `3px solid var(--accent-primary)`,
+          border: '1px solid var(--border-color)',
+          borderLeftWidth: '3px',
+          borderLeftColor: 'var(--accent-primary)',
+        }}>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <CalendarIcon size={12} className="text-amber" />
+              <span className="font-mono text-[9px] uppercase tracking-widest text-amber font-bold">
+                TODAY'S SCHEDULE — {todayCalendarEvents.length + todayTasksScheduled.length} ITEM{(todayCalendarEvents.length + todayTasksScheduled.length) !== 1 ? 'S' : ''}
+              </span>
+            </div>
+            <Link
+              href="/calendar"
+              className="font-mono text-[9px] text-amber hover:underline flex items-center gap-1 uppercase font-bold shrink-0"
+            >
+              <span>Full Calendar</span>
+              <ExternalLink size={9} />
+            </Link>
+          </div>
+
+          {todayCalendarEvents.length === 0 && todayTasksScheduled.length === 0 ? (
+            <div className="flex items-center gap-3">
+              <p className="font-mono text-[9px] text-muted">No events or scheduled tasks for today.</p>
+              <Link href="/calendar" className="font-mono text-[9px] text-amber/70 hover:text-amber flex items-center gap-1 uppercase">
+                <Plus size={10} /> Add Event
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {todayCalendarEvents.map((evt, idx) => (
+                <div key={evt.id || idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{ background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan animate-pulse shrink-0" />
+                  <span className="font-mono text-[10px] text-primary font-bold truncate max-w-[140px]">{evt.title}</span>
+                  {evt.start_time && (
+                    <span className="font-mono text-[9px] text-muted shrink-0">
+                      {evt.start_time.includes('T') ? evt.start_time.split('T')[1].slice(0, 5) : evt.start_time}
+                    </span>
+                  )}
+                  <span className="font-mono text-[8px] font-bold text-cyan uppercase shrink-0">EVENT</span>
+                </div>
+              ))}
+              {todayTasksScheduled.map(task => (
+                <div key={task.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{
+                  background: task.status === 'completed' ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)',
+                  border: `1px solid ${task.status === 'completed' ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`
+                }}>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.status === 'completed' ? 'bg-success' : 'bg-amber'}`} />
+                  <span className={`font-mono text-[10px] font-bold truncate max-w-[140px] ${task.status === 'completed' ? 'text-muted line-through' : 'text-primary'}`}>
+                    {task.title}
+                  </span>
+                  <span className={`font-mono text-[8px] font-bold uppercase shrink-0 ${task.status === 'completed' ? 'text-success' : 'text-amber'}`}>
+                    {task.status === 'completed' ? 'DONE' : 'DUE'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
@@ -1526,33 +1571,7 @@ export default function MissionControl() {
               </div>
             </div>
 
-            {/* GHOST SCORE */}
-            <div className="dashboard-card text-center" style={{ padding: '12px' }}>
-              <Ghost size={12} className="mx-auto mb-1 text-muted" />
-              <div className="font-display font-bold tracking-tighter" style={{ fontSize: '1.8rem', lineHeight: 1 }}>{ghostScore}</div>
-              <div className="font-mono text-[8px] uppercase tracking-widest text-muted mt-1">Ghost Score</div>
-              <div className="font-mono text-[7px] text-muted mt-0.5">(All-Time Bounces)</div>
-            </div>
 
-            {/* HABIT GRAVEYARD */}
-            {habitGraveyard.length > 0 && (
-              <div className="dashboard-card border-danger-subtle" style={{ borderLeft: '3px solid var(--danger)' }}>
-                <div className="flex items-center gap-1.5 mb-3">
-                  <Skull size={10} color="var(--danger)" />
-                  <span className="font-mono text-[8px] uppercase tracking-widest text-danger">Habit Graveyard (30 Days)</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {habitGraveyard.map((grave) => {
-                    return (
-                      <div key={grave.habitId} className="flex items-center justify-between p-2 bg-bg-primary border border-danger-subtle">
-                        <span className="font-mono text-[9px] text-primary truncate max-w-[150px]">{grave.name}</span>
-                        <span className="font-mono text-[9px] font-bold text-danger">{grave.fails} Fails</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* JOURNAL STATUS & WEEKLY DEBRIEF */}
             <div className="flex gap-3 lg:gap-4">

@@ -9,7 +9,7 @@ import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scale, TrendingDown, TrendingUp, Trophy, Lock, Check, Target, Flame,
-  Moon, Clock, CheckCircle2, XCircle, Swords, BarChart2, Activity
+  Moon, Clock, CheckCircle2, XCircle, Swords, BarChart2, Activity, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { ResponsiveContainer, AreaChart, Area, Tooltip, ReferenceLine, XAxis, YAxis, BarChart, Bar, Cell } from 'recharts'
 
@@ -17,6 +17,7 @@ export default function WellnessPage() {
   const { user } = useAuth()
   const supabase = createClient()
   const todayStr = getLocalDateStr(new Date())
+  const [showSleepHistory, setShowSleepHistory] = useState(false)
 
   const [activeTab, setActiveTab] = useState('body')
 
@@ -575,44 +576,73 @@ export default function WellnessPage() {
                   </div>
                 )}
 
-                {/* Sleep Log History Table */}
+                {/* Sleep Log History — Dropdown Accordion */}
                 {sleepLogs.length > 0 && (
-                  <div className="p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Clock size={10} color="var(--info)" />
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Sleep Log History (Last 30 Days)</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full font-mono text-xs">
-                        <thead>
-                          <tr className="border-b border-border-color text-muted text-[9px] uppercase tracking-widest">
-                            <th className="text-left py-2 pr-4">Date</th>
-                            <th className="text-left py-2 pr-4">Bedtime</th>
-                            <th className="text-left py-2 pr-4">Wake Time</th>
-                            <th className="text-left py-2 pr-4">Duration</th>
-                            <th className="text-left py-2">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...sleepLogs].reverse().map((log, i) => (
-                            <tr key={i} className="border-b border-border-color border-opacity-30 hover:bg-bg-primary transition-colors">
-                              <td className="py-2 pr-4 text-muted">{log.date}</td>
-                              <td className="py-2 pr-4 text-primary">{log.bedtime || '—'}</td>
-                              <td className="py-2 pr-4 text-primary">{log.wake_time || '—'}</td>
-                              <td className="py-2 pr-4 font-bold" style={{ color: log.status === 'healthy' ? 'var(--success)' : 'var(--danger)' }}>
-                                {log.duration_hours ? `${log.duration_hours}h` : '—'}
-                              </td>
-                              <td className="py-2">
-                                {isLogHealthy(log)
-                                  ? <span className="flex items-center gap-1 text-success"><CheckCircle2 size={10} /> Healthy</span>
-                                  : <span className="flex items-center gap-1 text-danger"><XCircle size={10} /> Missed</span>
-                                }
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                  <div className="border border-border-color rounded-xl overflow-hidden">
+                    {/* Accordion Toggle Header */}
+                    <button
+                      type="button"
+                      onClick={() => setShowSleepHistory(!showSleepHistory)}
+                      className="w-full flex items-center justify-between gap-3 p-4 bg-bg-tertiary hover:bg-bg-secondary transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Clock size={12} color="var(--info)" />
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-muted font-bold">
+                          Sleep Log History (Last 30 Days) — {sleepLogs.length} Entries
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono text-[9px] text-muted">
+                        <span>{showSleepHistory ? 'COLLAPSE' : 'EXPAND'}</span>
+                        {showSleepHistory
+                          ? <ChevronUp size={14} className="text-muted" />
+                          : <ChevronDown size={14} className="text-muted" />}
+                      </div>
+                    </button>
+
+                    {/* Dropdown Content */}
+                    <AnimatePresence initial={false}>
+                      {showSleepHistory && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.22, ease: 'easeInOut' }}
+                          className="overflow-hidden"
+                        >
+                          <div className="overflow-x-auto">
+                            <table className="w-full font-mono text-xs">
+                              <thead>
+                                <tr className="border-b border-border-color text-muted text-[9px] uppercase tracking-widest bg-bg-primary">
+                                  <th className="text-left py-2.5 px-4">Date</th>
+                                  <th className="text-left py-2.5 px-4">Bedtime</th>
+                                  <th className="text-left py-2.5 px-4">Wake Time</th>
+                                  <th className="text-left py-2.5 px-4">Duration</th>
+                                  <th className="text-left py-2.5 px-4">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {[...sleepLogs].reverse().map((log, i) => (
+                                  <tr key={i} className="border-b border-border-color hover:bg-bg-primary/60 transition-colors">
+                                    <td className="py-2.5 px-4 text-muted">{log.date}</td>
+                                    <td className="py-2.5 px-4 text-primary">{log.bedtime || '—'}</td>
+                                    <td className="py-2.5 px-4 text-primary">{log.wake_time || '—'}</td>
+                                    <td className="py-2.5 px-4 font-bold" style={{ color: log.status === 'healthy' ? 'var(--success)' : 'var(--danger)' }}>
+                                      {log.duration_hours ? `${log.duration_hours}h` : '—'}
+                                    </td>
+                                    <td className="py-2.5 px-4">
+                                      {isLogHealthy(log)
+                                        ? <span className="flex items-center gap-1 text-success"><CheckCircle2 size={10} /> Healthy</span>
+                                        : <span className="flex items-center gap-1 text-danger"><XCircle size={10} /> Missed</span>
+                                      }
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
               </>

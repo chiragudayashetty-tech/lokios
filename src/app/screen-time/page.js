@@ -8,7 +8,7 @@ import { useOS } from '@/lib/context/OSContext'
 import { XP_RULES } from '@/lib/xpRules'
 import { robustRemoveXP } from '@/lib/utils/xpFallback'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { Shield, Target, AlertTriangle } from 'lucide-react'
 
 export default function ScreenIntel() {
@@ -204,8 +204,10 @@ export default function ScreenIntel() {
 
   if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">GATHERING INTEL...</span></div></AppShell>
 
-  // Chart Logic (Last 7 days)
-  const last7Days = Array.from({length: 7}, (_, i) => {
+  // Unified Digital Discipline Score formula per day:
+  // Score = (focusPct * 40) + (cleanScreenPct * 35) + (cleanDoomPct * 25)
+  // where: focusPct = min(focus/3, 1), cleanScreenPct = max(0, 1 - (total-4)/8), cleanDoomPct = max(0, 1 - doom/120)
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (6 - i))
     return getLocalDateStr(d)
@@ -213,12 +215,27 @@ export default function ScreenIntel() {
 
   const chartData = last7Days.map(d => {
     const log = logs.find(l => l.date === d)
+    const total = log?.total_hours || 0
+    const focus = log?.focus_hours || 0
+    const doom = log?.doom_scroll_minutes || 0
+    const streaming = log?.streaming_hours || 0
+
+    // Component scores (each 0–1)
+    const focusPct = Math.min(focus / 3, 1)          // target: 3h focus
+    const cleanScreenPct = Math.max(0, 1 - Math.max(0, total - 4) / 8)  // penalty after 4h, maxes at 12h
+    const cleanDoomPct = Math.max(0, 1 - doom / 120)  // penalty after 120m doomscroll
+
+    // Weighted discipline score
+    const score = log ? Math.round((focusPct * 40) + (cleanScreenPct * 35) + (cleanDoomPct * 25)) : null
+
     return {
       date: d.substring(5).replace('-', '/'),
-      total: log?.total_hours || 0,
-      focus: log?.focus_hours || 0,
-      doom: log?.doom_scroll_minutes || 0,
-      streaming: log?.streaming_hours || 0
+      score,
+      total,
+      focus,
+      doom,
+      streaming,
+      logged: !!log
     }
   })
 
@@ -272,64 +289,102 @@ export default function ScreenIntel() {
               </div>
             </form>
           </HudPanel>
-
-          <HudPanel label="7-DAY ANALYSIS" style={{ height: '400px' }}>
-            <div style={{ width: '100%', height: '350px', minHeight: '300px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorFocus" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorStream" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    cursor={{stroke: 'rgba(255,255,255,0.2)'}}
-                    contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '8px' }}
-                    itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-                    labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
-                  />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }} />
-                  <Area type="monotone" dataKey="total" name="Total (h)" stroke="#94a3b8" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" dot={{ fill: '#94a3b8', r: 3 }} />
-                  <Area type="monotone" dataKey="focus" name="Focus (h)" stroke="#38bdf8" strokeWidth={2.5} fillOpacity={1} fill="url(#colorFocus)" dot={{ fill: '#38bdf8', r: 3.5 }} />
-                  <Area type="monotone" dataKey="streaming" name="Streaming (h)" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorStream)" dot={{ fill: '#f59e0b', r: 3 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </HudPanel>
         </div>
 
-        <HudPanel label="DOOMSCROLL TREND (MINUTES)" style={{ height: '300px' }}>
-          <div style={{ width: '100%', height: '250px', minHeight: '200px' }}>
+        {/* ── UNIFIED DIGITAL DISCIPLINE SCORE CHART ── */}
+        <HudPanel label="" className="p-0 overflow-hidden">
+          {/* Chart Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--info)', boxShadow: '0 0 8px var(--info)' }} />
+              <span className="font-mono text-xs uppercase tracking-widest text-muted font-bold">DIGITAL DISCIPLINE SCORE — 7-DAY ANALYSIS</span>
+            </div>
+            <div className="font-mono text-[10px] text-muted">
+              Formula: Focus×40 + Clean Screen×35 + No Doom×25
+            </div>
+          </div>
+
+          {/* Score Pills Row */}
+          <div className="flex gap-2 px-5 pb-3 overflow-x-auto">
+            {chartData.map((d, i) => {
+              const s = d.score
+              const color = s === null ? 'rgba(255,255,255,0.1)' : s >= 75 ? '#22c55e' : s >= 50 ? '#f59e0b' : '#ef4444'
+              const textColor = s === null ? 'var(--text-muted)' : s >= 75 ? '#22c55e' : s >= 50 ? '#f59e0b' : '#ef4444'
+              return (
+                <div
+                  key={i}
+                  className="shrink-0 px-3 py-2 rounded-xl font-mono text-[9px] font-bold border text-center min-w-[56px]"
+                  style={{ background: `${color}15`, borderColor: `${color}40`, color: textColor }}
+                >
+                  <div className="text-[8px] text-muted mb-0.5">{d.date}</div>
+                  <div className="text-sm font-display">{s === null ? '—' : s}</div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* The Chart */}
+          <div style={{ height: '240px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorDoom" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.5} />
+                    <stop offset="60%" stopColor="#38bdf8" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
                   </linearGradient>
+                  <filter id="scoreGlow">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  cursor={{stroke: 'rgba(239,68,68,0.4)'}}
-                  contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--danger)', borderRadius: '8px' }}
-                  itemStyle={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
-                  labelStyle={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <XAxis dataKey="date" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }} />
+                <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }} width={35} />
+                <ReferenceLine y={75} stroke="rgba(34,197,94,0.3)" strokeDasharray="4 4" label={{ value: '75 OPTIMAL', position: 'right', fontSize: 9, fill: 'rgba(34,197,94,0.7)', fontFamily: 'var(--font-mono)' }} />
+                <ReferenceLine y={50} stroke="rgba(245,158,11,0.3)" strokeDasharray="4 4" label={{ value: '50 CAUTION', position: 'right', fontSize: 9, fill: 'rgba(245,158,11,0.7)', fontFamily: 'var(--font-mono)' }} />
+                <Tooltip
+                  cursor={{ stroke: 'rgba(255,255,255,0.15)', strokeDasharray: '4 4', strokeWidth: 1 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null
+                    const d = payload[0]?.payload
+                    const s = d?.score
+                    const scoreColor = s === null ? 'var(--text-muted)' : s >= 75 ? '#22c55e' : s >= 50 ? '#f59e0b' : '#ef4444'
+                    return (
+                      <div className="p-3 bg-bg-secondary/98 border border-border-color rounded-xl shadow-2xl font-mono text-xs space-y-2 min-w-[170px]" style={{ boxShadow: '0 0 24px rgba(0,0,0,0.6)' }}>
+                        <div className="font-display font-bold text-primary border-b border-border-color pb-1.5">{label}</div>
+                        {s === null
+                          ? <div className="text-muted">No data logged</div>
+                          : <>
+                            <div className="flex justify-between"><span className="text-muted">Discipline Score</span><span className="font-bold" style={{ color: scoreColor }}>{s}/100</span></div>
+                            <div className="flex justify-between"><span className="text-muted">Screen Time</span><span className="text-primary">{d?.total}h</span></div>
+                            <div className="flex justify-between"><span className="text-muted">Focus</span><span className="text-info">{d?.focus}h</span></div>
+                            <div className="flex justify-between"><span className="text-muted">Doomscroll</span><span className="text-danger">{d?.doom}m</span></div>
+                            <div className="flex justify-between"><span className="text-muted">Streaming</span><span className="text-amber">{d?.streaming}h</span></div>
+                          </>
+                        }
+                      </div>
+                    )
+                  }}
                 />
-                <Area type="monotone" dataKey="doom" name="Doomscroll (m)" stroke="#ef4444" strokeWidth={2.5} fillOpacity={1} fill="url(#colorDoom)" dot={{ fill: '#ef4444', r: 4 }} activeDot={{ r: 6, fill: '#ef4444', stroke: '#fff', strokeWidth: 2 }} />
+                <Area
+                  type="monotone"
+                  dataKey="score"
+                  stroke="#38bdf8"
+                  strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#scoreGrad)"
+                  connectNulls={false}
+                  dot={(props) => {
+                    const { cx, cy, payload } = props
+                    if (payload.score === null) return null
+                    const s = payload.score
+                    const color = s >= 75 ? '#22c55e' : s >= 50 ? '#f59e0b' : '#ef4444'
+                    const isLast = payload.date === chartData[chartData.length-1]?.date
+                    return <circle key={payload.date} cx={cx} cy={cy} r={isLast ? 6 : 4} fill={color} stroke="#fff" strokeWidth={isLast ? 2 : 1.5} filter={isLast ? 'url(#scoreGlow)' : 'none'} />
+                  }}
+                  activeDot={{ r: 7, fill: '#38bdf8', stroke: '#fff', strokeWidth: 2 }}
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>

@@ -81,6 +81,10 @@ export default function WorkPage() {
   const [expandedWorkDates, setExpandedWorkDates] = useState(new Set())
   const [expandedContentDates, setExpandedContentDates] = useState(new Set())
 
+  // Week-based calendar navigation (0 = current week, -1 = prev week, etc.)
+  const [workWeekOffset, setWorkWeekOffset] = useState(0)
+  const [contentWeekOffset, setContentWeekOffset] = useState(0)
+
   const toggleWorkDate = (date) => {
     setExpandedWorkDates(prev => {
       const next = new Set(prev)
@@ -97,6 +101,13 @@ export default function WorkPage() {
       else next.add(date)
       return next
     })
+  }
+
+  // Helper: get YYYY-MM-DD for a date offset by N days from today
+  const offsetDate = (daysOffset) => {
+    const d = new Date()
+    d.setDate(d.getDate() + daysOffset)
+    return getLocalDateStr(d)
   }
 
   // Date Range Filter for Analytics: '7days' | '30days' | 'all'
@@ -800,85 +811,103 @@ export default function WorkPage() {
             </HudPanel>
 
             {/* RECENT WORK LOGS (DROPDOWN ACCORDION MENU) */}
-            <HudPanel className="p-3.5 sm:p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-xs uppercase tracking-wider text-muted">
-                  RECENT WORK HISTORY ({nonEmptyWorkLogs.length})
-                </h3>
-                <span className="font-mono text-[9px] text-muted uppercase">Click date to expand/collapse</span>
-              </div>
+            {(() => {
+              const windowEnd = offsetDate(workWeekOffset * 7)
+              const windowStart = offsetDate(workWeekOffset * 7 - 6)
+              const visibleLogs = nonEmptyWorkLogs.filter(l => l.date >= windowStart && l.date <= windowEnd)
+              const hasPrev = nonEmptyWorkLogs.some(l => l.date < windowStart)
+              const hasNext = workWeekOffset < 0
+              return (
+                <HudPanel className="p-3.5 sm:p-5 space-y-3">
+                  {/* Header with calendar nav */}
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="font-display text-xs uppercase tracking-widest text-amber font-bold flex items-center gap-2">
+                      <Briefcase size={13} />
+                      Work History
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setWorkWeekOffset(w => w - 1)}
+                        disabled={!hasPrev}
+                        className="w-6 h-6 flex items-center justify-center rounded border border-border-color text-muted hover:text-primary hover:border-amber/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        ‹
+                      </button>
+                      <span className="font-mono text-[9px] text-muted tabular-nums">
+                        {windowStart.slice(5)} – {windowEnd.slice(5)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setWorkWeekOffset(w => Math.min(0, w + 1))}
+                        disabled={!hasNext}
+                        className="w-6 h-6 flex items-center justify-center rounded border border-border-color text-muted hover:text-primary hover:border-amber/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        ›
+                      </button>
+                    </div>
+                  </div>
 
-              {nonEmptyWorkLogs.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-4">No entered work logs recorded yet.</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {nonEmptyWorkLogs.map((l, idx) => {
-                    const tot = (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0).toFixed(1)
-                    // Expand latest log by default unless explicitly toggled
-                    const isExpanded = expandedWorkDates.has(l.date) || (expandedWorkDates.size === 0 && idx === 0)
+                  {visibleLogs.length === 0 ? (
+                    <p className="font-mono text-[10px] text-muted text-center py-6">No logs for this week.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {visibleLogs.map((l, idx) => {
+                        const tot = (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0).toFixed(1)
+                        const isExpanded = expandedWorkDates.has(l.date) || (expandedWorkDates.size === 0 && idx === 0)
+                        return (
+                          <div key={l.date} className="rounded-lg bg-bg-primary border border-border-color overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => toggleWorkDate(l.date)}
+                              className="w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-white/[0.03] transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <span className="font-mono text-[10px] text-secondary font-bold shrink-0">{l.date}</span>
+                                <span className="font-mono text-[9px] text-cyan truncate hidden sm:inline">
+                                  {(l.beyond_tatva_hours || 0).toFixed(1)}h beyond
+                                </span>
+                                {l.notes && (
+                                  <span className="font-mono text-[9px] text-muted truncate hidden md:inline">
+                                    · {l.notes.slice(0, 40)}{l.notes.length > 40 ? '…' : ''}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="font-mono text-[10px] text-amber font-bold">{tot}h</span>
+                                {isExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
+                              </div>
+                            </button>
 
-                    return (
-                      <div key={l.date} className="rounded-xl bg-tertiary border border-border-color overflow-hidden transition-all">
-                        {/* Dropdown Header */}
-                        <button
-                          type="button"
-                          onClick={() => toggleWorkDate(l.date)}
-                          className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-hover/60 transition-colors select-none"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <span className="font-mono text-xs text-secondary font-bold shrink-0">{l.date}</span>
-                            <span className="font-mono text-[10px] text-cyan font-semibold truncate hidden sm:inline">
-                              BEYOND {(l.beyond_tatva_hours || 0).toFixed(1)}h
-                            </span>
-                            {l.notes && (
-                              <span className="font-mono text-[10px] text-muted truncate hidden md:inline opacity-70">
-                                • {l.notes}
-                              </span>
+                            {isExpanded && (
+                              <div className="px-3.5 pb-3 pt-1 border-t border-border-subtle/40 bg-black/20 space-y-2">
+                                <div className="flex gap-2 text-center">
+                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-cyan/20">
+                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">Beyond</div>
+                                    <div className="font-mono text-sm text-cyan font-bold">{(l.beyond_tatva_hours || 0).toFixed(1)}h</div>
+                                  </div>
+                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-success/20">
+                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">Focused</div>
+                                    <div className="font-mono text-sm text-success font-bold">{(l.focused_hours || 0).toFixed(1)}h</div>
+                                  </div>
+                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-danger/20">
+                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">Unfocused</div>
+                                    <div className="font-mono text-sm text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)}h</div>
+                                  </div>
+                                </div>
+                                {l.notes && (
+                                  <div className="font-mono text-[10px] text-muted leading-relaxed pt-1 border-t border-border-subtle/30">{l.notes}</div>
+                                )}
+                              </div>
                             )}
                           </div>
-
-                          <div className="flex items-center gap-2.5 shrink-0">
-                            <span className="font-mono text-xs text-amber font-bold px-2.5 py-0.5 rounded bg-amber/10 border border-amber/30">
-                              {tot}h Worked
-                            </span>
-                            <div className="w-6 h-6 rounded flex items-center justify-center text-muted border border-border-subtle bg-secondary/50">
-                              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                            </div>
-                          </div>
-                        </button>
-
-                        {/* Dropdown Details Body */}
-                        {isExpanded && (
-                          <div className="p-3.5 border-t border-border-subtle/60 bg-secondary/40 space-y-3 font-mono text-xs">
-                            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
-                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-cyan/30">
-                                <span className="text-muted block text-[9px] uppercase tracking-wider font-bold mb-0.5">Beyond Tatva</span>
-                                <span className="text-cyan font-bold text-sm">{(l.beyond_tatva_hours || 0).toFixed(1)} h</span>
-                              </div>
-                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-success/30">
-                                <span className="text-muted block text-[9px] uppercase tracking-wider font-bold mb-0.5">Focused</span>
-                                <span className="text-success font-bold text-sm">{(l.focused_hours || 0).toFixed(1)} h</span>
-                              </div>
-                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-danger/30">
-                                <span className="text-muted block text-[9px] uppercase tracking-wider font-bold mb-0.5">Unfocused</span>
-                                <span className="text-danger font-bold text-sm">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)} h</span>
-                              </div>
-                            </div>
-
-                            {l.notes && (
-                              <div className="p-2.5 rounded-lg bg-bg-primary/60 border border-border-subtle text-primary">
-                                <span className="text-muted text-[10px] uppercase font-bold block mb-1">Work Notes:</span>
-                                <p className="whitespace-pre-wrap leading-relaxed">{l.notes}</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </HudPanel>
+                        )
+                      })}
+                    </div>
+                  )}
+                </HudPanel>
+              )
+            })()}
           </div>
         )}
 
@@ -1051,85 +1080,103 @@ export default function WorkPage() {
             )}
 
             {/* CONTENT LOG HISTORY (DROPDOWN ACCORDION MENU) */}
-            <HudPanel className="p-3.5 sm:p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-xs uppercase tracking-wider text-muted">
-                  CONTENT HISTORY ({nonEmptyContentLogs.length})
-                </h3>
-                <span className="font-mono text-[9px] text-muted uppercase">Click date to expand/collapse</span>
-              </div>
+            {(() => {
+              const windowEnd = offsetDate(contentWeekOffset * 7)
+              const windowStart = offsetDate(contentWeekOffset * 7 - 6)
+              const visibleLogs = nonEmptyContentLogs.filter(l => l.date >= windowStart && l.date <= windowEnd)
+              const hasPrev = nonEmptyContentLogs.some(l => l.date < windowStart)
+              const hasNext = contentWeekOffset < 0
+              return (
+                <HudPanel className="p-3.5 sm:p-5 space-y-3">
+                  {/* Header with calendar nav */}
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="font-display text-xs uppercase tracking-widest text-cyan font-bold flex items-center gap-2">
+                      <Film size={13} />
+                      Content History
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setContentWeekOffset(w => w - 1)}
+                        disabled={!hasPrev}
+                        className="w-6 h-6 flex items-center justify-center rounded border border-border-color text-muted hover:text-primary hover:border-cyan/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        ‹
+                      </button>
+                      <span className="font-mono text-[9px] text-muted tabular-nums">
+                        {windowStart.slice(5)} – {windowEnd.slice(5)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setContentWeekOffset(w => Math.min(0, w + 1))}
+                        disabled={!hasNext}
+                        className="w-6 h-6 flex items-center justify-center rounded border border-border-color text-muted hover:text-primary hover:border-cyan/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        ›
+                      </button>
+                    </div>
+                  </div>
 
-              {nonEmptyContentLogs.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-4">No entered content logs recorded yet.</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {nonEmptyContentLogs.map((l, idx) => {
-                    const editHrs = parseFloat(l.edit_hours) || 0
-                    const finMins = parseFloat(l.edit_finished_minutes) || 0
-                    const ratio = finMins > 0 ? ((editHrs * 60) / finMins).toFixed(1) : '—'
-                    // Expand latest log by default unless explicitly toggled
-                    const isExpanded = expandedContentDates.has(l.date) || (expandedContentDates.size === 0 && idx === 0)
+                  {visibleLogs.length === 0 ? (
+                    <p className="font-mono text-[10px] text-muted text-center py-6">No logs for this week.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {visibleLogs.map((l, idx) => {
+                        const editHrs = parseFloat(l.edit_hours) || 0
+                        const finMins = parseFloat(l.edit_finished_minutes) || 0
+                        const ratio = finMins > 0 ? ((editHrs * 60) / finMins).toFixed(1) : '—'
+                        const isExpanded = expandedContentDates.has(l.date) || (expandedContentDates.size === 0 && idx === 0)
+                        return (
+                          <div key={l.date} className="rounded-lg bg-bg-primary border border-border-color overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => toggleContentDate(l.date)}
+                              className="w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-white/[0.03] transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <span className="font-mono text-[10px] text-secondary font-bold shrink-0">{l.date}</span>
+                                <span className="font-mono text-[9px] text-amber truncate hidden sm:inline">
+                                  ✂ {(l.edit_hours || 0).toFixed(1)}h edit
+                                </span>
+                                {l.notes && (
+                                  <span className="font-mono text-[9px] text-muted truncate hidden md:inline">
+                                    · {l.notes.slice(0, 40)}{l.notes.length > 40 ? '…' : ''}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="font-mono text-[9px] text-cyan font-bold">{ratio} m/m</span>
+                                {isExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
+                              </div>
+                            </button>
 
-                    return (
-                      <div key={l.date} className="rounded-xl bg-tertiary border border-border-color overflow-hidden transition-all">
-                        {/* Dropdown Header */}
-                        <button
-                          type="button"
-                          onClick={() => toggleContentDate(l.date)}
-                          className="w-full p-3.5 flex items-center justify-between gap-3 text-left hover:bg-hover/60 transition-colors select-none"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <span className="font-mono text-xs text-secondary font-bold shrink-0">{l.date}</span>
-                            <span className="font-mono text-[10px] text-amber font-semibold truncate hidden sm:inline">
-                              ✂️ EDIT {(l.edit_hours || 0).toFixed(1)}h
-                            </span>
-                            {l.notes && (
-                              <span className="font-mono text-[10px] text-muted truncate hidden md:inline opacity-70">
-                                • {l.notes}
-                              </span>
+                            {isExpanded && (
+                              <div className="px-3.5 pb-3 pt-1 border-t border-border-subtle/40 bg-black/20 space-y-2">
+                                <div className="flex gap-2 text-center">
+                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-cyan/20">
+                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">🎥 Shoot</div>
+                                    <div className="font-mono text-sm text-cyan font-bold">{(l.shoot_hours || 0).toFixed(1)}h</div>
+                                    <div className="font-mono text-[8px] text-muted">{l.shoot_raw_minutes || 0}m raw</div>
+                                  </div>
+                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-amber/20">
+                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">✂ Edit</div>
+                                    <div className="font-mono text-sm text-amber font-bold">{(l.edit_hours || 0).toFixed(1)}h</div>
+                                    <div className="font-mono text-[8px] text-muted">{l.edit_finished_minutes || 0}m out</div>
+                                  </div>
+                                </div>
+                                {l.notes && (
+                                  <div className="font-mono text-[10px] text-muted leading-relaxed pt-1 border-t border-border-subtle/30">{l.notes}</div>
+                                )}
+                              </div>
                             )}
                           </div>
-
-                          <div className="flex items-center gap-2.5 shrink-0">
-                            <span className="font-mono text-xs text-cyan font-bold px-2.5 py-0.5 rounded bg-cyan/10 border border-cyan/30">
-                              Speed: {ratio} m/m
-                            </span>
-                            <div className="w-6 h-6 rounded flex items-center justify-center text-muted border border-border-subtle bg-secondary/50">
-                              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                            </div>
-                          </div>
-                        </button>
-
-                        {/* Dropdown Details Body */}
-                        {isExpanded && (
-                          <div className="p-3.5 border-t border-border-subtle/60 bg-secondary/40 space-y-3 font-mono text-xs">
-                            <div className="grid grid-cols-2 gap-3 text-center">
-                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-cyan/30">
-                                <span className="text-cyan block text-[9px] uppercase tracking-wider font-bold mb-1">🎥 Shoot Operations</span>
-                                <div className="text-primary font-bold text-sm">{(l.shoot_hours || 0).toFixed(1)} h</div>
-                                <div className="text-muted text-[10px]">({l.shoot_raw_minutes || 0} m raw footage)</div>
-                              </div>
-                              <div className="p-2.5 rounded-lg bg-bg-primary/80 border border-amber/30">
-                                <span className="text-amber block text-[9px] uppercase tracking-wider font-bold mb-1">✂️ Edit Operations</span>
-                                <div className="text-primary font-bold text-sm">{(l.edit_hours || 0).toFixed(1)} h</div>
-                                <div className="text-muted text-[10px]">({l.edit_finished_minutes || 0} m finished output)</div>
-                              </div>
-                            </div>
-
-                            {l.notes && (
-                              <div className="p-2.5 rounded-lg bg-bg-primary/60 border border-border-subtle text-primary">
-                                <span className="text-muted text-[10px] uppercase font-bold block mb-1">Content Notes / Chapters:</span>
-                                <p className="whitespace-pre-wrap leading-relaxed">{l.notes}</p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </HudPanel>
+                        )
+                      })}
+                    </div>
+                  )}
+                </HudPanel>
+              )
+            })()}
           </div>
         )}
 

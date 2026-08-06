@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, CartesianGrid } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, CartesianGrid, ReferenceLine } from 'recharts'
 import { Flame, Star, Activity, Trophy, ArrowUp, RotateCcw } from 'lucide-react'
 import { RANK_CONFIG } from '@/lib/constants'
 import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
@@ -17,20 +17,24 @@ import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
 // Custom Glassmorphic Tooltip for XP Timeline
 function CustomXpTooltip({ active, payload, label }) {
   if (active && payload && payload.length) {
-    const dailyGain = payload.find(p => p.dataKey === 'dailyGain')?.value || 0
     const total = payload.find(p => p.dataKey === 'total')?.value || 0
+    const dailyGain = payload.find(p => p.dataKey === 'dailyGain')?.value || 0
+    const isPositive = dailyGain >= 0
 
     return (
-      <div className="p-3 bg-bg-secondary/95 border border-border-color rounded-xl shadow-2xl backdrop-blur-md font-mono text-xs space-y-1.5 min-w-[140px]">
-        <div className="font-display font-bold text-primary border-b border-border-color pb-1 flex justify-between items-center">
-          <span>{label}</span>
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${dailyGain >= 0 ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>
-            {dailyGain >= 0 ? `+${dailyGain} XP` : `${dailyGain} XP`}
-          </span>
+      <div className="p-3 bg-bg-secondary/98 border border-border-color rounded-xl shadow-2xl backdrop-blur-md font-mono text-xs space-y-2 min-w-[160px]" style={{ boxShadow: '0 0 24px rgba(0,0,0,0.6)' }}>
+        <div className="font-display font-bold text-primary border-b border-border-color pb-1.5">
+          {label}
         </div>
-        <div className="flex justify-between items-center text-muted text-[11px] pt-0.5">
-          <span>Cumulative XP:</span>
-          <span className="font-bold text-info">{total.toLocaleString()} XP</span>
+        <div className="flex justify-between items-center">
+          <span className="text-muted">Cumulative XP</span>
+          <span className="font-bold text-primary">{total.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-muted">Day Earned</span>
+          <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${isPositive ? 'bg-success/20 text-success' : 'bg-danger/20 text-danger'}`}>
+            {isPositive ? '+' : ''}{dailyGain} XP
+          </span>
         </div>
       </div>
     )
@@ -321,49 +325,121 @@ export default function XPDashboard() {
           </HudPanel>
         </motion.div>
 
+        {/* XP TRAJECTORY — Unified Single Chart */}
         <div className="w-full">
-          <HudPanel label="XP TIMELINE (14 DAYS)" glow style={{ height: '420px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={areaData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={currentRank.color} stopOpacity={0.45} />
-                    <stop offset="95%" stopColor={currentRank.color} stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="colorDaily" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip content={<CustomXpTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeDasharray: '4 4' }} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontFamily: 'var(--font-mono)' }} />
-                <Area
-                  type="monotone"
-                  dataKey="dailyGain"
-                  name="Daily Net XP"
-                  stroke="#22c55e"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#colorDaily)"
-                  dot={{ fill: '#22c55e', r: 3.5 }}
-                  activeDot={{ r: 6, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="total"
-                  name="Cumulative Total XP"
-                  stroke={currentRank.color}
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#colorTotal)"
-                  dot={{ fill: currentRank.color, r: 4 }}
-                  activeDot={{ r: 7, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <HudPanel label="" glow className="p-0 overflow-hidden">
+            {/* Chart Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: currentRank.color, boxShadow: `0 0 8px ${currentRank.color}` }} />
+                <span className="font-mono text-xs uppercase tracking-widest text-muted font-bold">XP TRAJECTORY — 14-DAY INTELLIGENCE</span>
+              </div>
+              <div className="flex items-center gap-4 font-mono text-[10px]">
+                <span className="flex items-center gap-1.5 text-success">
+                  <span className="inline-block w-3 h-0.5 bg-success rounded" />
+                  Daily Gain
+                </span>
+                <span className="flex items-center gap-1.5" style={{ color: currentRank.color }}>
+                  <span className="inline-block w-3 h-0.5 rounded" style={{ background: currentRank.color }} />
+                  Cumulative XP
+                </span>
+              </div>
+            </div>
+
+            {/* Daily delta chips */}
+            <div className="flex gap-1.5 px-5 pb-3 overflow-x-auto">
+              {areaData.map((d, i) => (
+                <div
+                  key={i}
+                  className="shrink-0 px-2 py-1 rounded-md font-mono text-[9px] font-bold border"
+                  style={{
+                    background: d.dailyGain > 0 ? 'rgba(34,197,94,0.12)' : d.dailyGain < 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)',
+                    borderColor: d.dailyGain > 0 ? 'rgba(34,197,94,0.35)' : d.dailyGain < 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.1)',
+                    color: d.dailyGain > 0 ? '#22c55e' : d.dailyGain < 0 ? '#ef4444' : 'var(--text-muted)'
+                  }}
+                >
+                  {d.date}<br />
+                  {d.dailyGain > 0 ? '+' : ''}{d.dailyGain}
+                </div>
+              ))}
+            </div>
+
+            {/* The Chart */}
+            <div style={{ height: '300px', width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={areaData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="xpGradMain" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={currentRank.color} stopOpacity={0.5} />
+                      <stop offset="60%" stopColor={currentRank.color} stopOpacity={0.15} />
+                      <stop offset="100%" stopColor={currentRank.color} stopOpacity={0} />
+                    </linearGradient>
+                    <filter id="xpGlow">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="rgba(255,255,255,0.2)"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    fontFamily="var(--font-mono)"
+                    tick={{ fill: 'var(--text-muted)' }}
+                  />
+                  <YAxis
+                    stroke="rgba(255,255,255,0.2)"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    fontFamily="var(--font-mono)"
+                    tick={{ fill: 'var(--text-muted)' }}
+                    tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}
+                    width={45}
+                  />
+                  <Tooltip
+                    content={<CustomXpTooltip />}
+                    cursor={{ stroke: 'rgba(255,255,255,0.15)', strokeDasharray: '4 4', strokeWidth: 1 }}
+                  />
+                  {/* Hidden dailyGain area just for tooltip data */}
+                  <Area
+                    type="monotone"
+                    dataKey="dailyGain"
+                    stroke="transparent"
+                    fill="transparent"
+                    strokeWidth={0}
+                  />
+                  {/* Main cumulative XP area */}
+                  <Area
+                    type="monotonex"
+                    dataKey="total"
+                    stroke={currentRank.color}
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#xpGradMain)"
+                    dot={(props) => {
+                      const { cx, cy, payload } = props
+                      const isToday = payload.date === areaData[areaData.length - 1]?.date
+                      return (
+                        <circle
+                          key={payload.date}
+                          cx={cx}
+                          cy={cy}
+                          r={isToday ? 6 : 3.5}
+                          fill={isToday ? '#fff' : currentRank.color}
+                          stroke={currentRank.color}
+                          strokeWidth={isToday ? 2.5 : 1}
+                          filter={isToday ? 'url(#xpGlow)' : 'none'}
+                        />
+                      )
+                    }}
+                    activeDot={{ r: 7, fill: currentRank.color, stroke: '#fff', strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </HudPanel>
         </div>
 

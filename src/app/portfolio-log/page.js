@@ -388,7 +388,7 @@ export default function ProofOfWork() {
         </header>
 
         {/* TABS */}
-        <div className="tabs mb-6 flex-wrap gap-1">
+        <div className="tab-list mb-6">
           <button className={`tab-item ${activeTab === 'timeline' ? 'active tab-active' : ''}`} onClick={() => setActiveTab('timeline')}>
             TIMELINE LOGS
           </button>
