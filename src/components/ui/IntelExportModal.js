@@ -214,27 +214,35 @@ export default function IntelExportModal({ isOpen, onClose }) {
                   <th>Mission Title</th>
                   <th>Type</th>
                   <th>Category</th>
+                  <th>Set Due Date</th>
+                  <th>Completed On</th>
                   <th>Progress</th>
                   <th>Reward</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                ${filteredGoals.map(g => `
-                  <tr>
-                    <td><strong>${g.title}</strong></td>
-                    <td><span class="badge badge-info">${g.type || 'Side Quest'}</span></td>
-                    <td>${g.category || 'TATVA'}</td>
-                    <td>
-                      <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${g.progress || 0}%"></div>
-                      </div>
-                      <small>${g.progress || 0}%</small>
-                    </td>
-                    <td class="text-amber">+${g.xp_reward || 100} XP</td>
-                    <td><span class="badge ${g.status === 'completed' ? 'badge-success' : 'badge-warning'}">${(g.status || 'active').toUpperCase()}</span></td>
-                  </tr>
-                `).join('')}
+                ${filteredGoals.map(g => {
+                  const dueDateStr = g.deadline || g.due_date || 'None'
+                  const completedStr = g.completed_at ? getLocalDateStr(new Date(g.completed_at)) : (g.status === 'completed' ? 'Done' : '—')
+                  return `
+                    <tr>
+                      <td><strong>${g.title}</strong></td>
+                      <td><span class="badge badge-info">${g.type || 'Side Quest'}</span></td>
+                      <td>${g.category ? String(g.category).toUpperCase().replace('_', ' ') : 'GENERAL'}</td>
+                      <td><strong style="color: #60A5FA;">${dueDateStr}</strong></td>
+                      <td><span style="${g.status === 'completed' ? 'color: #10B981; font-weight: bold;' : 'color: #9CA3AF;'}">${completedStr}</span></td>
+                      <td>
+                        <div class="progress-bar">
+                          <div class="progress-fill" style="width: ${g.progress || 0}%"></div>
+                        </div>
+                        <small>${g.progress || 0}%</small>
+                      </td>
+                      <td class="text-amber">+${g.xp_reward || 100} XP</td>
+                      <td><span class="badge ${g.status === 'completed' ? 'badge-success' : 'badge-warning'}">${(g.status || 'active').toUpperCase()}</span></td>
+                    </tr>
+                  `
+                }).join('')}
               </tbody>
             </table>
           </div>
@@ -250,22 +258,31 @@ export default function IntelExportModal({ isOpen, onClose }) {
               <thead>
                 <tr>
                   <th>Operation Title</th>
-                  <th>Priority</th>
+                  <th>Difficulty</th>
                   <th>Category</th>
-                  <th>Due Date</th>
+                  <th>Set Due Date</th>
+                  <th>Completed On</th>
+                  <th>Reward</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                ${filteredTasks.map(t => `
-                  <tr>
-                    <td><strong>${t.title}</strong></td>
-                    <td><span class="badge ${t.priority === 'P1' ? 'badge-danger' : t.priority === 'P2' ? 'badge-warning' : 'badge-info'}">${t.priority || 'P3'}</span></td>
-                    <td>${t.stat_category || 'Discipline'}</td>
-                    <td>${t.due_date || 'None'}</td>
-                    <td><span class="badge ${t.status === 'completed' ? 'badge-success' : 'badge-warning'}">${(t.status || 'pending').toUpperCase()}</span></td>
-                  </tr>
-                `).join('')}
+                ${filteredTasks.map(t => {
+                  const dueDateStr = t.due_date || 'None'
+                  const completedStr = t.completed_at ? getLocalDateStr(new Date(t.completed_at)) : (t.status === 'completed' ? 'Done' : '—')
+                  const diffLabel = (t.difficulty || t.priority || 'MEDIUM').toUpperCase()
+                  return `
+                    <tr>
+                      <td><strong>${t.title}</strong></td>
+                      <td><span class="badge ${t.difficulty === 'HARD' || t.difficulty === 'EXTREME' ? 'badge-danger' : t.difficulty === 'EASY' ? 'badge-info' : 'badge-warning'}">${diffLabel}</span></td>
+                      <td>${t.category ? String(t.category).toUpperCase().replace('_', ' ') : (t.stat_category || 'GENERAL')}</td>
+                      <td><strong style="color: #60A5FA;">${dueDateStr}</strong></td>
+                      <td><span style="${t.status === 'completed' ? 'color: #10B981; font-weight: bold;' : 'color: #9CA3AF;'}">${completedStr}</span></td>
+                      <td class="text-amber">+${t.xp_reward || 30} XP</td>
+                      <td><span class="badge ${t.status === 'completed' ? 'badge-success' : t.status === 'cancelled' || t.status === 'failed' ? 'badge-danger' : 'badge-warning'}">${(t.status || 'pending').toUpperCase()}</span></td>
+                    </tr>
+                  `
+                }).join('')}
               </tbody>
             </table>
           </div>
