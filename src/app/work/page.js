@@ -61,6 +61,21 @@ export default function WorkPage() {
   const [valFocused, setValFocused] = useState('')
   const [valUnfocused, setValUnfocused] = useState('')
   const [workNotes, setWorkNotes] = useState('')
+  const [workTypes, setWorkTypes] = useState([]) // selected work type tags
+  const [customWorkType, setCustomWorkType] = useState('')
+
+  const WORK_TYPE_OPTIONS = [
+    { label: 'Deep Work', color: '#D4AF37' },
+    { label: 'Beyond Tatva', color: '#00F0FF' },
+    { label: 'Meetings', color: '#A78BFA' },
+    { label: 'Admin', color: '#9CA3AF' },
+    { label: 'Research', color: '#60A5FA' },
+    { label: 'Strategy', color: '#F97316' },
+    { label: 'Content', color: '#10B981' },
+    { label: 'Editing', color: '#EC4899' },
+    { label: 'Learning', color: '#34D399' },
+    { label: 'Client Work', color: '#FBBF24' },
+  ]
 
   const [valShootHours, setValShootHours] = useState('')
   const [valShootRaw, setValShootRaw] = useState('')
@@ -210,12 +225,14 @@ export default function WorkPage() {
       setValFocused(toInputValue(w.focused_hours, unitFocused))
       setValUnfocused(toInputValue(w.unfocused_hours ?? w.deep_execution_hours, unitUnfocused))
       setWorkNotes(w.notes ?? '')
+      setWorkTypes(w.work_type ? w.work_type.split(',').map(s => s.trim()).filter(Boolean) : [])
     } else {
       setValTotalWorked('')
       setValBeyondTatva('')
       setValFocused('')
       setValUnfocused('')
       setWorkNotes('')
+      setWorkTypes([])
     }
 
     const c = contentLogs.find(l => l.date === selectedDate)
@@ -289,7 +306,8 @@ export default function WorkPage() {
       focused_hours: toHours(valFocused, unitFocused),
       unfocused_hours: toHours(valUnfocused, unitUnfocused),
       deep_execution_hours: toHours(valUnfocused, unitUnfocused),
-      notes: workNotes || ''
+      notes: workNotes || '',
+      work_type: workTypes.join(', ')
     }
 
     // 1. Update local state & localStorage cache immediately for 0ms latency
@@ -329,7 +347,8 @@ export default function WorkPage() {
             focused_hours: payload.focused_hours,
             unfocused_hours: payload.unfocused_hours,
             deep_execution_hours: payload.deep_execution_hours,
-            notes: payload.notes
+            notes: payload.notes,
+            work_type: payload.work_type
           })
           .eq('id', existing[0].id)
 
@@ -787,6 +806,87 @@ export default function WorkPage() {
                 </div>
 
                 <div>
+                  {/* TYPE OF WORK — Multi-select tags */}
+                  <div className="space-y-2">
+                    <label className="font-mono text-[11px] sm:text-xs text-purple-400 uppercase font-bold flex items-center gap-1.5">
+                      <Sparkles size={12} /> Type of Work
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {WORK_TYPE_OPTIONS.map(opt => {
+                        const active = workTypes.includes(opt.label)
+                        return (
+                          <button
+                            key={opt.label}
+                            type="button"
+                            onClick={() => setWorkTypes(prev =>
+                              prev.includes(opt.label)
+                                ? prev.filter(t => t !== opt.label)
+                                : [...prev, opt.label]
+                            )}
+                            className={`px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                              active ? 'text-black' : 'text-muted hover:text-primary bg-secondary'
+                            }`}
+                            style={active
+                              ? { background: opt.color, borderColor: opt.color }
+                              : { borderColor: `${opt.color}40` }
+                            }
+                          >
+                            {opt.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {/* Custom type input */}
+                    <div className="flex gap-2 mt-1">
+                      <input
+                        type="text"
+                        value={customWorkType}
+                        onChange={e => setCustomWorkType(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && customWorkType.trim()) {
+                            e.preventDefault()
+                            const val = customWorkType.trim()
+                            if (!workTypes.includes(val)) setWorkTypes(prev => [...prev, val])
+                            setCustomWorkType('')
+                          }
+                        }}
+                        placeholder="Custom type... (press Enter)"
+                        className="flex-1 bg-secondary border border-border-color rounded-lg px-2.5 py-1.5 font-mono text-xs text-primary focus:outline-none focus:border-purple-400"
+                        style={{ background: '#141824', color: '#fff' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = customWorkType.trim()
+                          if (val && !workTypes.includes(val)) setWorkTypes(prev => [...prev, val])
+                          setCustomWorkType('')
+                        }}
+                        className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/40 rounded-lg font-mono text-xs text-purple-300 hover:bg-purple-500/30 transition-all"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    {workTypes.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {workTypes.map(t => (
+                          <span
+                            key={t}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/30 font-mono text-[10px] text-purple-300"
+                          >
+                            {t}
+                            <button
+                              type="button"
+                              onClick={() => setWorkTypes(prev => prev.filter(x => x !== t))}
+                              className="text-purple-400 hover:text-danger ml-0.5"
+                            >×</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
                   <textarea
                     rows={2}
                     placeholder="Notes..."
@@ -917,6 +1017,14 @@ export default function WorkPage() {
                                 </div>
                                 {l.notes && (
                                   <div className="font-mono text-[10px] text-muted leading-relaxed pt-1 border-t border-border-subtle/30">{l.notes}</div>
+                                )}
+                                {l.work_type && (
+                                  <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border-subtle/30">
+                                    <span className="font-mono text-[9px] text-muted uppercase">Type:</span>
+                                    {l.work_type.split(',').map(t => t.trim()).filter(Boolean).map(t => (
+                                      <span key={t} className="px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/30 font-mono text-[9px] text-purple-300">{t}</span>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             )}
