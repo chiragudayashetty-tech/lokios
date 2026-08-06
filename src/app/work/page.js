@@ -13,7 +13,7 @@ import {
 import { 
   Briefcase, Video, Film, Clock, Calendar, Save, Download, 
   Sparkles, TrendingUp, Target, Zap, AlertTriangle, Scissors, Camera,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight
 } from 'lucide-react'
 
 export default function WorkPage() {
@@ -819,33 +819,53 @@ export default function WorkPage() {
               const hasNext = workWeekOffset < 0
               return (
                 <HudPanel className="p-3.5 sm:p-5 space-y-3">
-                  {/* Header with calendar nav */}
-                  <div className="flex items-center justify-between gap-3">
+                  {/* Clean Header */}
+                  <div className="flex items-center justify-between gap-3 border-b border-white/5 pb-2">
                     <h3 className="font-display text-xs uppercase tracking-widest text-amber font-bold flex items-center gap-2">
                       <Briefcase size={13} />
                       Work History
                     </h3>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setWorkWeekOffset(w => w - 1)}
-                        disabled={!hasPrev}
-                        className="w-6 h-6 flex items-center justify-center rounded border border-border-color text-muted hover:text-primary hover:border-amber/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        ‹
-                      </button>
-                      <span className="font-mono text-[9px] text-muted tabular-nums">
-                        {windowStart.slice(5)} – {windowEnd.slice(5)}
+                    <span className="font-mono text-[10px] text-muted uppercase">
+                      {visibleLogs.length} LOG{visibleLogs.length !== 1 ? 'S' : ''}
+                    </span>
+                  </div>
+
+                  {/* Dedicated Week Navigation Bar */}
+                  <div className="flex items-center justify-between gap-2 p-2 sm:p-2.5 rounded-xl bg-black/40 border border-white/10 font-mono text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setWorkWeekOffset(w => w - 1)}
+                      disabled={!hasPrev}
+                      className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-primary font-bold text-[10px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft size={13} />
+                      <span>Prev Week</span>
+                    </button>
+
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-bold text-amber text-[11px] tracking-wider uppercase truncate">
+                        {windowStart.slice(5).replace('-', '/')} – {windowEnd.slice(5).replace('-', '/')}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setWorkWeekOffset(w => Math.min(0, w + 1))}
-                        disabled={!hasNext}
-                        className="w-6 h-6 flex items-center justify-center rounded border border-border-color text-muted hover:text-primary hover:border-amber/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        ›
-                      </button>
+                      {workWeekOffset < 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setWorkWeekOffset(0)}
+                          className="px-2 py-0.5 rounded bg-amber/20 border border-amber/40 text-amber text-[9px] font-bold uppercase hover:bg-amber/30 transition-all shrink-0"
+                        >
+                          CURRENT
+                        </button>
+                      )}
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setWorkWeekOffset(w => Math.min(0, w + 1))}
+                      disabled={!hasNext}
+                      className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-primary font-bold text-[10px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <span>Next Week</span>
+                      <ChevronRight size={13} />
+                    </button>
                   </div>
 
                   {visibleLogs.length === 0 ? (
@@ -1088,33 +1108,53 @@ export default function WorkPage() {
               const hasNext = contentWeekOffset < 0
               return (
                 <HudPanel className="p-3.5 sm:p-5 space-y-3">
-                  {/* Header with calendar nav */}
-                  <div className="flex items-center justify-between gap-3">
+                  {/* Clean Header */}
+                  <div className="flex items-center justify-between gap-3 border-b border-white/5 pb-2">
                     <h3 className="font-display text-xs uppercase tracking-widest text-cyan font-bold flex items-center gap-2">
                       <Film size={13} />
                       Content History
                     </h3>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setContentWeekOffset(w => w - 1)}
-                        disabled={!hasPrev}
-                        className="w-6 h-6 flex items-center justify-center rounded border border-border-color text-muted hover:text-primary hover:border-cyan/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        ‹
-                      </button>
-                      <span className="font-mono text-[9px] text-muted tabular-nums">
-                        {windowStart.slice(5)} – {windowEnd.slice(5)}
+                    <span className="font-mono text-[10px] text-muted uppercase">
+                      {visibleLogs.length} LOG{visibleLogs.length !== 1 ? 'S' : ''}
+                    </span>
+                  </div>
+
+                  {/* Dedicated Week Navigation Bar */}
+                  <div className="flex items-center justify-between gap-2 p-2 sm:p-2.5 rounded-xl bg-black/40 border border-white/10 font-mono text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setContentWeekOffset(w => w - 1)}
+                      disabled={!hasPrev}
+                      className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-primary font-bold text-[10px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft size={13} />
+                      <span>Prev Week</span>
+                    </button>
+
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-bold text-cyan text-[11px] tracking-wider uppercase truncate">
+                        {windowStart.slice(5).replace('-', '/')} – {windowEnd.slice(5).replace('-', '/')}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setContentWeekOffset(w => Math.min(0, w + 1))}
-                        disabled={!hasNext}
-                        className="w-6 h-6 flex items-center justify-center rounded border border-border-color text-muted hover:text-primary hover:border-cyan/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        ›
-                      </button>
+                      {contentWeekOffset < 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setContentWeekOffset(0)}
+                          className="px-2 py-0.5 rounded bg-cyan/20 border border-cyan/40 text-cyan text-[9px] font-bold uppercase hover:bg-cyan/30 transition-all shrink-0"
+                        >
+                          CURRENT
+                        </button>
+                      )}
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setContentWeekOffset(w => Math.min(0, w + 1))}
+                      disabled={!hasNext}
+                      className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-primary font-bold text-[10px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <span>Next Week</span>
+                      <ChevronRight size={13} />
+                    </button>
                   </div>
 
                   {visibleLogs.length === 0 ? (
