@@ -790,37 +790,32 @@ export default function MissionControl() {
         {/* ══════════════════════════════════════════════════════════════════
             TOP STRIP — TODAY'S OPERATIONS & SCHEDULE
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="mb-5 p-4 rounded-xl" style={{
-          background: 'rgba(15, 18, 28, 0.85)',
-          border: '1px solid var(--border-color)',
-          borderLeft: '4px solid var(--accent-primary)',
-          backdropFilter: 'blur(12px)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
-        }}>
+        <div className="mb-5 p-3.5 sm:p-4 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-2.5 border-b border-white/5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-amber animate-pulse" style={{ boxShadow: '0 0 8px var(--amber)' }} />
-              <span className="font-mono text-xs uppercase tracking-widest text-amber font-bold">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 pb-3 border-b border-white/10">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <div className="w-2.5 h-2.5 rounded-full bg-amber animate-pulse shrink-0" style={{ boxShadow: '0 0 10px var(--amber)' }} />
+              <span className="font-mono text-xs uppercase tracking-widest text-amber font-bold truncate">
                 TODAY'S OPERATIONS & SCHEDULE
               </span>
-              <span className="font-mono text-[10px] px-2.5 py-0.5 rounded-full bg-amber/10 border border-amber/30 text-amber font-bold">
-                {todayTasksScheduled.filter(t => t.status === 'completed').length + Array.from(completedEventIds).length} / {todayCalendarEvents.length + todayTasksScheduled.length} COMPLETED
+              <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-amber/15 border border-amber/40 text-amber font-bold shrink-0">
+                {todayTasksScheduled.filter(t => t.status === 'completed').length + Array.from(completedEventIds).length} / {todayCalendarEvents.length + todayTasksScheduled.length} DONE
               </span>
             </div>
-            <div className="flex items-center gap-4">
+
+            <div className="flex items-center gap-2.5 font-mono text-[10px] uppercase font-bold shrink-0">
               <Link
                 href="/tasks"
-                className="font-mono text-[10px] text-muted hover:text-amber transition-colors flex items-center gap-1 uppercase font-bold"
+                className="px-2.5 py-1 rounded-lg bg-bg-tertiary border border-border-color text-muted hover:text-amber transition-colors flex items-center gap-1"
               >
-                <span>Operations Hub</span>
+                <span>Ops Hub</span>
                 <ExternalLink size={10} />
               </Link>
               <Link
                 href="/calendar"
-                className="font-mono text-[10px] text-amber hover:underline flex items-center gap-1 uppercase font-bold"
+                className="px-2.5 py-1 rounded-lg bg-bg-tertiary border border-border-color text-amber hover:text-amber-hover transition-colors flex items-center gap-1"
               >
-                <span>Full Calendar</span>
+                <span>Calendar</span>
                 <ExternalLink size={10} />
               </Link>
             </div>
@@ -828,7 +823,7 @@ export default function MissionControl() {
 
           {/* Content Items Grid */}
           {todayCalendarEvents.length === 0 && todayTasksScheduled.length === 0 ? (
-            <div className="p-4 text-center rounded-lg bg-black/20 border border-dashed border-white/10 flex items-center justify-center gap-3">
+            <div className="p-4 text-center rounded-lg bg-black/20 border border-dashed border-white/10 flex flex-col sm:flex-row items-center justify-center gap-3">
               <p className="font-mono text-xs text-muted">No scheduled operations or calendar events for today.</p>
               <Link href="/tasks" className="btn btn-secondary btn-xs font-mono text-[10px] inline-flex items-center gap-1">
                 <Plus size={11} /> DEPLOY OPERATION
@@ -842,10 +837,10 @@ export default function MissionControl() {
                 return (
                   <div
                     key={task.id}
-                    className={`p-3 rounded-lg border transition-all flex items-center justify-between gap-3 ${
+                    className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
                       isDone 
                         ? 'bg-success/5 border-success/30' 
-                        : 'bg-black/40 border-white/10 hover:border-amber/40'
+                        : 'bg-black/50 border-white/10 hover:border-amber/40'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -857,22 +852,22 @@ export default function MissionControl() {
                           else completeTask(task.id)
                         }}
                         title={isDone ? "Mark as Pending" : "Mark as Completed"}
-                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-all ${
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
                           isDone 
                             ? 'bg-success text-black border border-success' 
                             : 'border border-amber/60 hover:bg-amber/20 text-amber'
                         }`}
                       >
-                        {isDone ? <Check size={13} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-amber/80" />}
+                        {isDone ? <Check size={14} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-amber/80" />}
                       </button>
 
                       <div className="min-w-0 flex-1">
-                        <div className={`font-mono text-xs font-semibold truncate ${isDone ? 'text-muted line-through opacity-60' : 'text-primary'}`}>
+                        <div className={`font-mono text-xs font-bold leading-tight truncate ${isDone ? 'text-muted line-through opacity-60' : 'text-primary'}`}>
                           {task.title}
                         </div>
-                        <div className="font-mono text-[9px] text-muted uppercase tracking-wider flex items-center gap-2 mt-0.5">
-                          <span className="text-amber">{task.category ? task.category.replace('_', ' ') : 'OPERATION'}</span>
-                          {task.difficulty && <span>• {task.difficulty}</span>}
+                        <div className="font-mono text-[9px] text-muted uppercase tracking-wider flex items-center gap-1.5 mt-1">
+                          <span className="text-amber font-semibold">{task.category ? task.category.replace('_', ' ') : 'OPERATION'}</span>
+                          {task.difficulty && <span className="text-secondary">• {task.difficulty}</span>}
                         </div>
                       </div>
                     </div>
@@ -884,10 +879,10 @@ export default function MissionControl() {
                         if (isDone) undoCompleteTask(task.id)
                         else completeTask(task.id)
                       }}
-                      className={`font-mono text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wider shrink-0 transition-all ${
+                      className={`font-mono text-[9px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider shrink-0 transition-all whitespace-nowrap ${
                         isDone 
                           ? 'bg-success/20 text-success border border-success/40 hover:bg-success/30' 
-                          : 'bg-amber/15 text-amber hover:bg-amber/30 border border-amber/40'
+                          : 'bg-amber/20 text-amber hover:bg-amber/30 border border-amber/40'
                       }`}
                     >
                       {isDone ? '✓ DONE' : 'MARK DONE'}
@@ -903,10 +898,10 @@ export default function MissionControl() {
                 return (
                   <div
                     key={evtId}
-                    className={`p-3 rounded-lg border transition-all flex items-center justify-between gap-3 ${
+                    className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
                       isAttended 
                         ? 'bg-cyan/5 border-cyan/30' 
-                        : 'bg-black/40 border-white/10 hover:border-cyan/40'
+                        : 'bg-black/50 border-white/10 hover:border-cyan/40'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -914,20 +909,20 @@ export default function MissionControl() {
                         type="button"
                         onClick={() => toggleEventCompleted(evtId)}
                         title={isAttended ? "Mark as Pending" : "Mark as Completed"}
-                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-all ${
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
                           isAttended 
                             ? 'bg-cyan text-black border border-cyan' 
                             : 'border border-cyan/60 hover:bg-cyan/20 text-cyan'
                         }`}
                       >
-                        {isAttended ? <Check size={13} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-cyan/80 animate-pulse" />}
+                        {isAttended ? <Check size={14} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-cyan/80 animate-pulse" />}
                       </button>
 
                       <div className="min-w-0 flex-1">
-                        <div className={`font-mono text-xs font-semibold truncate ${isAttended ? 'text-muted line-through opacity-60' : 'text-primary'}`}>
+                        <div className={`font-mono text-xs font-bold leading-tight truncate ${isAttended ? 'text-muted line-through opacity-60' : 'text-primary'}`}>
                           {evt.title}
                         </div>
-                        <div className="font-mono text-[9px] text-muted flex items-center gap-1.5 mt-0.5">
+                        <div className="font-mono text-[9px] text-muted flex items-center gap-1.5 mt-1">
                           <Clock size={10} className="text-cyan" />
                           <span>{evt.start_time ? (evt.start_time.includes('T') ? evt.start_time.split('T')[1].slice(0, 5) : evt.start_time) : 'All Day'}</span>
                           {evt.location && <span className="truncate">· {evt.location}</span>}
@@ -938,10 +933,10 @@ export default function MissionControl() {
                     <button
                       type="button"
                       onClick={() => toggleEventCompleted(evtId)}
-                      className={`font-mono text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wider shrink-0 transition-all ${
+                      className={`font-mono text-[9px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider shrink-0 transition-all whitespace-nowrap ${
                         isAttended 
                           ? 'bg-cyan/20 text-cyan border border-cyan/40 hover:bg-cyan/30' 
-                          : 'bg-cyan/15 text-cyan hover:bg-cyan/30 border border-cyan/40'
+                          : 'bg-cyan/20 text-cyan hover:bg-cyan/30 border border-cyan/40'
                       }`}
                     >
                       {isAttended ? '✓ DONE' : 'MARK DONE'}
