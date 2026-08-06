@@ -507,7 +507,7 @@ export default function MissionControl() {
       .map(s => s.replace(/^\d+[\.\)]\s*/, '').trim())
       .filter(Boolean)
     if (rawItems.length === 0 && nextWeekPriorities.trim()) {
-      return [{ id: 'p1', title: nextWeekPriorities.trim(), status: 'pending' }]
+      return [{ id: 'p1', title: nextWeekPriorities.trim().replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '').replace(/^[xXvV✓✕]\s+/, '').trim(), status: 'pending' }]
     }
     return rawItems.slice(0, 3).map((rawTitle, idx) => {
       let status = 'pending'
@@ -519,6 +519,11 @@ export default function MissionControl() {
         status = 'failed'
         title = rawTitle.replace('[FAILED]', '').trim()
       }
+      title = title
+        .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
+        .replace(/^[xXvV✓✕]\s+/, '')
+        .replace(/^[-*•]\s*/, '')
+        .trim()
       return {
         id: `p-${idx + 1}`,
         title,
@@ -538,7 +543,12 @@ export default function MissionControl() {
     }
 
     return sourceList.map((item, idx) => {
-      const itemTitle = item.title ? item.title.trim() : String(item).trim()
+      let itemTitle = item.title ? item.title.trim() : String(item).trim()
+      itemTitle = itemTitle
+        .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
+        .replace(/^[xXvV✓✕]\s+/, '')
+        .replace(/^[-*•]\s*/, '')
+        .trim()
 
       // Match ALL tasks in tasks array matching this title or category
       const matchingTasks = tasks.filter(t => 
@@ -585,10 +595,13 @@ export default function MissionControl() {
   // Helper for Tooltip in Recharts
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      const val = payload[0].value
       return (
-        <div style={{ background: 'var(--bg-primary)', border: `1px solid ${arcColor}`, padding: '4px 8px' }}>
-          <p className="font-mono text-[9px] text-muted">{label}</p>
-          <p className="font-mono text-[10px] font-bold" style={{ color: arcColor }}>{payload[0].value} XP</p>
+        <div className="p-2 bg-bg-primary/95 border border-border-color rounded shadow-xl backdrop-blur-md font-mono text-[10px] pointer-events-none">
+          <p className="text-muted text-[9px] mb-0.5">{label}</p>
+          <p className="font-bold" style={{ color: val >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+            {val >= 0 ? `+${val}` : val} XP
+          </p>
         </div>
       )
     }
@@ -1076,10 +1089,10 @@ export default function MissionControl() {
                     }
 
                     return (
-                      <div key={gt.id} className={`flex items-center justify-between gap-3 p-2.5 rounded bg-bg-primary border transition-all ${
+                      <div key={gt.id} className={`flex items-center justify-between gap-2 p-2.5 rounded bg-bg-primary border transition-all w-full max-w-full overflow-hidden ${
                         isDone ? 'border-success/40 bg-success/5' : isFailed ? 'border-danger/40 bg-danger/5' : 'border-border-color'
                       }`}>
-                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
                           {/* Action Buttons */}
                           <div className="flex items-center gap-1 shrink-0">
                             {isDone || isFailed ? (
@@ -1087,7 +1100,7 @@ export default function MissionControl() {
                                 type="button"
                                 onClick={handleReopen}
                                 title="Re-open Priority Goal"
-                                className="w-6 h-6 rounded flex items-center justify-center border border-border-color hover:border-info text-info bg-bg-tertiary transition-all"
+                                className="w-6 h-6 rounded flex items-center justify-center border border-border-color hover:border-info text-info bg-bg-tertiary transition-all shrink-0"
                               >
                                 <RotateCcw size={12} />
                               </button>
@@ -1097,7 +1110,7 @@ export default function MissionControl() {
                                   type="button"
                                   onClick={handleMarkDone}
                                   title="Mark Completed (+25 XP)"
-                                  className="w-6 h-6 rounded flex items-center justify-center border border-success/60 hover:bg-success text-success hover:text-bg-primary transition-all"
+                                  className="w-6 h-6 rounded flex items-center justify-center border border-success/60 hover:bg-success text-success hover:text-bg-primary transition-all shrink-0"
                                 >
                                   <Check size={13} strokeWidth={2.5} />
                                 </button>
@@ -1105,14 +1118,14 @@ export default function MissionControl() {
                                   type="button"
                                   onClick={handleMarkFailed}
                                   title="Mark Failed (-15 XP)"
-                                  className="w-6 h-6 rounded flex items-center justify-center border border-danger/60 hover:bg-danger text-danger hover:text-white transition-all"
+                                  className="w-6 h-6 rounded flex items-center justify-center border border-danger/60 hover:bg-danger text-danger hover:text-white transition-all shrink-0"
                                 >
                                   <X size={13} strokeWidth={2.5} />
                                 </button>
                               </>
                             )}
                           </div>
-                          <span className={`font-mono text-xs truncate transition-all ${
+                          <span className={`font-mono text-xs truncate flex-1 min-w-0 transition-all ${
                             isDone 
                               ? 'text-success line-through decoration-success font-medium opacity-90' 
                               : isFailed 
@@ -1123,11 +1136,11 @@ export default function MissionControl() {
                           </span>
                         </div>
                         {isDone ? (
-                          <span className="font-mono text-[9px] text-success font-bold shrink-0 px-2 py-0.5 rounded bg-success/10 border border-success/30">DONE (+25 XP)</span>
+                          <span className="font-mono text-[9px] text-success font-bold shrink-0 px-1.5 py-0.5 rounded bg-success/10 border border-success/30 whitespace-nowrap">DONE (+25 XP)</span>
                         ) : isFailed ? (
-                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-2 py-0.5 rounded bg-danger/10 border border-danger/30">FAILED (-15 XP)</span>
+                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-1.5 py-0.5 rounded bg-danger/10 border border-danger/30 whitespace-nowrap">FAILED (-15 XP)</span>
                         ) : (
-                          <span className="font-mono text-[9px] text-amber shrink-0 font-semibold">+25 XP</span>
+                          <span className="font-mono text-[9px] text-amber shrink-0 font-semibold whitespace-nowrap">+25 XP</span>
                         )}
                       </div>
                     )

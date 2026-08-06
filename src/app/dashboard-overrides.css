@@ -88,12 +88,32 @@ body {
 
 @media (min-width: 1024px) { .bento-grid { gap: 20px !important; } .dashboard-card { padding: 22px !important; } }
 @media (max-width: 768px) {
-  html, body { background: #07090d; }
-  .main-content { padding: max(16px, env(safe-area-inset-top)) 14px calc(88px + env(safe-area-inset-bottom, 0px)) !important; }
+  html, body {
+    background: #07090d;
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+    position: relative !important;
+  }
+  .main-content {
+    padding-top: max(28px, env(safe-area-inset-top, 28px)) !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .page-container, .bento-grid, .dashboard-card, .hud-panel, .glass-panel {
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
   .bento-grid { display: flex !important; flex-direction: column; gap: 12px !important; }
-  .col-8, .col-4 { display: flex; flex-direction: column; gap: 12px !important; }
-  .dashboard-card { padding: 16px !important; border-radius: 18px; }
-  .main-content .page-container > header h1 { font-size: clamp(1.75rem, 9vw, 2.35rem); letter-spacing: 0.055em; }
+  .col-8, .col-4 { display: flex; flex-direction: column; gap: 12px !important; width: 100% !important; max-width: 100% !important; }
+  .dashboard-card { padding: 14px !important; border-radius: 18px; }
+  .main-content .page-container > header h1 { font-size: clamp(1.6rem, 8vw, 2.2rem); letter-spacing: 0.055em; }
   .dashboard-card:hover { transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
