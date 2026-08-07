@@ -136,6 +136,7 @@ export default function MissionControl() {
   const [eodWellnessData, setEodWellnessData] = useState({ logged: false, detail: '' })
   const [eodSpeakingData, setEodSpeakingData] = useState({ logged: false, detail: '' })
   const [eodQuickLogModal, setEodQuickLogModal] = useState(null) // 'wellness' | 'work' | 'journal' | 'screen' | 'speaking'
+  const [eodJournalLogged, setEodJournalLogged] = useState(false)
 
   // Quick form states
   const [eodScreenForm, setEodScreenForm] = useState({ total_hours: '4', doomscroll_minutes: '30', streaming_hours: '0.5' })
@@ -517,7 +518,6 @@ export default function MissionControl() {
   const submitEodScreen = async (e) => {
     e.preventDefault()
     if (!user) return
-    const sb = createClient()
     const payload = {
       user_id: user.id,
       date: todayStr,
@@ -525,54 +525,76 @@ export default function MissionControl() {
       doom_scroll_minutes: parseInt(eodScreenForm.doomscroll_minutes) || 0,
       streaming_hours: parseFloat(eodScreenForm.streaming_hours) || 0
     }
+    // Optimistic UI updates (0ms delay)
+    setTodayScreenTime(payload)
+    setEodQuickLogModal(null)
+
+    // Background DB sync
+    const sb = createClient()
     const { data } = await sb.from('screen_time_logs').insert(payload).select().single()
     if (data) setTodayScreenTime(data)
     await robustAwardXP(user.id, 50, 'Daily Screen Intel Logged')
-    setEodQuickLogModal(null)
   }
 
   const submitEodJournal = async (e) => {
     e.preventDefault()
     if (!user || !eodJournalForm.content.trim()) return
-    const sb = createClient()
     const payload = {
       user_id: user.id,
       date: todayStr,
       mood: eodJournalForm.mood,
       content: eodJournalForm.content
     }
+    // Optimistic UI updates (0ms delay)
+    setEodJournalLogged(true)
+    setEodQuickLogModal(null)
+
+    // Background DB sync
+    const sb = createClient()
     await sb.from('journal_entries').insert(payload)
     await robustAwardXP(user.id, 50, 'Daily Journal Entry Written')
-    setEodQuickLogModal(null)
-    window.location.reload()
   }
 
   const submitEodWork = async (e) => {
     e.preventDefault()
     if (!user) return
-    const sb = createClient()
+    const hrs = parseFloat(eodWorkForm.hours) || 0
     const payload = {
       user_id: user.id,
       date: todayStr,
-      hours: parseFloat(eodWorkForm.hours) || 0,
-      duration_hours: parseFloat(eodWorkForm.hours) || 0,
+      hours: hrs,
+      duration_hours: hrs,
       work_type: eodWorkForm.work_type,
       notes: eodWorkForm.notes
     }
+    // Optimistic UI updates (0ms delay)
+    setEodWorkData({ logged: true, hours: hrs })
+    setEodQuickLogModal(null)
+
+    // Background DB sync
+    const sb = createClient()
     const { error } = await sb.from('work_hours_logs').insert(payload)
     if (error) {
-      await sb.from('work_logs').insert({ user_id: user.id, title: 'Work Session', description: eodWorkForm.notes, duration_hours: parseFloat(eodWorkForm.hours) || 0 })
+      await sb.from('work_logs').insert({ user_id: user.id, title: 'Work Session', description: eodWorkForm.notes, duration_hours: hrs })
     }
     await robustAwardXP(user.id, 50, 'Daily Work Hours Logged')
-    setEodWorkData({ logged: true, hours: parseFloat(eodWorkForm.hours) || 0 })
-    setEodQuickLogModal(null)
   }
 
   const submitEodWellness = async (e) => {
     e.preventDefault()
     if (!user) return
+    const isSleep = eodWellnessForm.type === 'sleep'
+    const detail = isSleep 
+      ? `Sleep: ${parseFloat(eodWellnessForm.sleep_hours) || 8}h`
+      : `Weight: ${parseFloat(eodWellnessForm.weight_kg) || 75}kg`
+
+    // Optimistic UI updates (0ms delay)
+    setEodWellnessData({ logged: true, detail })
+    setEodQuickLogModal(null)
+
+    // Background DB sync
     const sb = createClient()
-    if (eodWellnessForm.type === 'sleep') {
+    if (isSleep) {
       const payload = {
         user_id: user.id,
         date: todayStr,
@@ -582,7 +604,6 @@ export default function MissionControl() {
         status: 'healthy'
       }
       await sb.from('sleep_logs').insert(payload)
-      setEodWellnessData({ logged: true, detail: `Sleep: ${payload.duration_hours}h` })
     } else {
       const payload = {
         user_id: user.id,
@@ -590,16 +611,13 @@ export default function MissionControl() {
         weight_kg: parseFloat(eodWellnessForm.weight_kg) || 75
       }
       await sb.from('weight_logs').insert(payload)
-      setEodWellnessData({ logged: true, detail: `Weight: ${payload.weight_kg}kg` })
     }
     await robustAwardXP(user.id, 50, 'Daily Morning Wellness Logged')
-    setEodQuickLogModal(null)
   }
 
   const submitEodSpeaking = async (e) => {
     e.preventDefault()
     if (!user || !eodSpeakingForm.drive_link.trim()) return
-    const sb = createClient()
     const payload = {
       user_id: user.id,
       date: todayStr,
@@ -610,21 +628,26 @@ export default function MissionControl() {
       rating: 5,
       created_at: new Date().toISOString()
     }
+    // Optimistic UI updates (0ms delay)
+    setEodSpeakingData({ logged: true, detail: `Video Logged (+25 XP)` })
+    setEodQuickLogModal(null)
+
+    // Background DB sync
+    const sb = createClient()
     const { data, error } = await sb.from('speaking_logs').insert(payload).select().single()
     if (error || !data) {
       const localData = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
       const parsed = localData ? JSON.parse(localData) : []
       localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify([payload, ...parsed]))
     }
-    setEodSpeakingData({ logged: true, detail: `Video Logged` })
-    setEodQuickLogModal(null)
+    await robustAwardXP(user.id, 25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
   }
 
   // ── Derived values ────────────────────────────────────────────────────────
   const totalXp       = profile?.total_xp       || 0
   const currentStreak = profile?.current_streak ?? profile?.streak_days ?? 0
 
-  const journalLoggedToday = (entries || []).some(e => e.date === todayStr)
+  const journalLoggedToday = (entries || []).some(e => e.date === todayStr) || eodJournalLogged
   const screenIntelLoggedToday = !!todayScreenTime
 
   const eodItems = [
@@ -1205,9 +1228,13 @@ export default function MissionControl() {
             const ItemIcon = item.icon
             const displayLabel = item.key === 'wellness' ? 'WELLNESS' : item.key === 'work' ? 'WORK' : item.key === 'journal' ? 'JOURNAL' : item.key === 'screen' ? 'SCREEN INTEL' : item.key === 'speaking' ? 'SPEAKING' : item.label.toUpperCase()
             return (
-              <Link href={item.path} key={item.key} className="block group">
+              <div 
+                key={item.key} 
+                className="block group cursor-pointer"
+                onClick={() => setEodQuickLogModal(item.key)}
+              >
                 <div 
-                  className={`p-2.5 sm:p-3 aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border ${
+                  className={`p-2.5 sm:p-3 aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative ${
                     item.isDone 
                       ? 'bg-bg-tertiary border-border-color hover:border-primary hover:bg-bg-secondary' 
                       : 'bg-bg-tertiary border-border-color hover:border-amber hover:bg-bg-secondary'
@@ -1225,10 +1252,10 @@ export default function MissionControl() {
                     className="font-mono text-[9px] sm:text-[10px] mt-1 font-bold flex items-center justify-center gap-1"
                     style={{ color: item.isDone ? 'var(--success)' : 'var(--warning)' }}
                   >
-                    {item.isDone ? '✓ LOGGED' : '⚠ PENDING'}
+                    {item.isDone ? '✓ LOGGED' : '+ QUICK LOG'}
                   </div>
                 </div>
-              </Link>
+              </div>
             )
           })}
 

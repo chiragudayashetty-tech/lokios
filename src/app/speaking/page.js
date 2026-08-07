@@ -193,6 +193,17 @@ export default function SpeakingPracticePage() {
         localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updated))
       }
 
+      // Award +25 XP with daily deduplication
+      try {
+        if (awardXP) {
+          await awardXP(25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
+        } else {
+          await robustAwardXP(user.id, 25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
+        }
+      } catch (xpErr) {
+        console.warn('Failed to award speaking XP:', xpErr)
+      }
+
       setSubmitSuccess(true)
       setDriveLink('')
       setNotes('')
@@ -415,7 +426,7 @@ export default function SpeakingPracticePage() {
                   className="mb-4 p-3 rounded-lg bg-success/20 border border-success/40 text-success font-mono text-xs flex items-center gap-2"
                 >
                   <CheckCircle2 size={16} />
-                  <span>Practice Session Recorded! 🎉</span>
+                  <span>Practice Session Recorded! +25 XP Awarded! 🎉</span>
                 </motion.div>
               )}
 
@@ -484,7 +495,7 @@ export default function SpeakingPracticePage() {
                   className="btn btn-primary btn-md w-full font-mono text-xs font-bold py-3 flex items-center justify-center gap-2 shadow-xl"
                 >
                   <Award size={16} />
-                  <span>{submitting ? 'RECORDING SESSION...' : 'LOG PRACTICE SESSION'}</span>
+                  <span>{submitting ? 'RECORDING SESSION...' : 'LOG PRACTICE SESSION (+25 XP)'}</span>
                 </button>
               </form>
             </div>
