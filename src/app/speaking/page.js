@@ -14,38 +14,38 @@ import {
   BookOpen, Star, Search
 } from 'lucide-react'
 
-// Pre-loaded 30-Day Speaking Challenge Topics
+// Pre-loaded 30 Topics Pool
 const DEFAULT_30_TOPICS = [
-  { day: 1, topic: 'Explain quantum computing to a 12-year-old.', category: 'Tech & Science' },
-  { day: 2, topic: 'Why do countries have inflation?', category: 'Economics' },
-  { day: 3, topic: 'How does CRISPR gene editing work?', category: 'BioTech & Science' },
-  { day: 4, topic: 'Why do airplanes fly?', category: 'Engineering' },
-  { day: 5, topic: 'How does GPS know your location?', category: 'Technology' },
-  { day: 6, topic: 'Explain the Internet from scratch.', category: 'Technology' },
-  { day: 7, topic: 'Why did the Roman Empire collapse?', category: 'History' },
-  { day: 8, topic: 'How does a nuclear power plant work?', category: 'Physics & Energy' },
-  { day: 9, topic: 'What makes a great teacher?', category: 'Education & Human' },
-  { day: 10, topic: 'Why do humans procrastinate?', category: 'Psychology' },
-  { day: 11, topic: 'How does Bitcoin actually work?', category: 'Finance & Crypto' },
-  { day: 12, topic: 'Why do startups fail?', category: 'Business & Entrepreneurship' },
-  { day: 13, topic: 'Explain machine learning without using the words "AI" or "computer."', category: 'Technology' },
-  { day: 14, topic: 'How do vaccines train the immune system?', category: 'Biology & Health' },
-  { day: 15, topic: 'Why do tsunamis happen?', category: 'Earth Science' },
-  { day: 16, topic: 'What is game theory?', category: 'Strategy & Math' },
-  { day: 17, topic: 'How does Formula 1 make a pit stop in under 2 seconds?', category: 'Engineering & Operations' },
-  { day: 18, topic: 'Why do people trust brands?', category: 'Marketing & Psychology' },
-  { day: 19, topic: 'Explain evolution without mentioning monkeys.', category: 'Biology' },
-  { day: 20, topic: 'How does the stock market work?', category: 'Finance' },
-  { day: 21, topic: 'Why do black holes exist?', category: 'Astrophysics' },
-  { day: 22, topic: 'What makes ideas go viral?', category: 'Media & Marketing' },
-  { day: 23, topic: 'How do Pixar movies tell stories so well?', category: 'Storytelling & Art' },
-  { day: 24, topic: 'Explain cloud computing to your grandparents.', category: 'Technology' },
-  { day: 25, topic: 'Why do civilizations rise and fall?', category: 'History & Philosophy' },
-  { day: 26, topic: 'How does Google Search find answers in milliseconds?', category: 'Computer Science' },
-  { day: 27, topic: 'What makes a speech memorable?', category: 'Communication & Oratory' },
-  { day: 28, topic: 'Explain the greenhouse effect simply.', category: 'Environment & Climate' },
-  { day: 29, topic: 'How does SpaceX land rockets?', category: 'Aerospace Engineering' },
-  { day: 30, topic: 'What is leverage, and why is it Naval Ravikant\'s favorite concept?', category: 'Mental Models & Wealth' }
+  { id: 1, topic: 'Explain quantum computing to a 12-year-old.', category: 'Tech & Science' },
+  { id: 2, topic: 'Why do countries have inflation?', category: 'Economics' },
+  { id: 3, topic: 'How does CRISPR gene editing work?', category: 'BioTech & Science' },
+  { id: 4, topic: 'Why do airplanes fly?', category: 'Engineering' },
+  { id: 5, topic: 'How does GPS know your location?', category: 'Technology' },
+  { id: 6, topic: 'Explain the Internet from scratch.', category: 'Technology' },
+  { id: 7, topic: 'Why did the Roman Empire collapse?', category: 'History' },
+  { id: 8, topic: 'How does a nuclear power plant work?', category: 'Physics & Energy' },
+  { id: 9, topic: 'What makes a great teacher?', category: 'Education & Human' },
+  { id: 10, topic: 'Why do humans procrastinate?', category: 'Psychology' },
+  { id: 11, topic: 'How does Bitcoin actually work?', category: 'Finance & Crypto' },
+  { id: 12, topic: 'Why do startups fail?', category: 'Business & Entrepreneurship' },
+  { id: 13, topic: 'Explain machine learning without using the words "AI" or "computer."', category: 'Technology' },
+  { id: 14, topic: 'How do vaccines train the immune system?', category: 'Biology & Health' },
+  { id: 15, topic: 'Why do tsunamis happen?', category: 'Earth Science' },
+  { id: 16, topic: 'What is game theory?', category: 'Strategy & Math' },
+  { id: 17, topic: 'How does Formula 1 make a pit stop in under 2 seconds?', category: 'Engineering & Operations' },
+  { id: 18, topic: 'Why do people trust brands?', category: 'Marketing & Psychology' },
+  { id: 19, topic: 'Explain evolution without mentioning monkeys.', category: 'Biology' },
+  { id: 20, topic: 'How does the stock market work?', category: 'Finance' },
+  { id: 21, topic: 'Why do black holes exist?', category: 'Astrophysics' },
+  { id: 22, topic: 'What makes ideas go viral?', category: 'Media & Marketing' },
+  { id: 23, topic: 'How do Pixar movies tell stories so well?', category: 'Storytelling & Art' },
+  { id: 24, topic: 'Explain cloud computing to your grandparents.', category: 'Technology' },
+  { id: 25, topic: 'Why do civilizations rise and fall?', category: 'History & Philosophy' },
+  { id: 26, topic: 'How does Google Search find answers in milliseconds?', category: 'Computer Science' },
+  { id: 27, topic: 'What makes a speech memorable?', category: 'Communication & Oratory' },
+  { id: 28, topic: 'Explain the greenhouse effect simply.', category: 'Environment & Climate' },
+  { id: 29, topic: 'How does SpaceX land rockets?', category: 'Aerospace Engineering' },
+  { id: 30, topic: 'What is leverage, and why is it Naval Ravikant\'s favorite concept?', category: 'Mental Models & Wealth' }
 ]
 
 export default function SpeakingPracticePage() {
@@ -133,13 +133,18 @@ export default function SpeakingPracticePage() {
     setTimerSeconds(600)
   }
 
-  // Random Topic Picker
-  const handleRandomTopic = () => {
+  // Pick Today's Topic / Random Topic
+  const handleSelectTodaysTopic = () => {
     setIsShuffling(true)
     let count = 0
+    // Try to pick from uncompleted topics first
+    const completedTopicTitles = new Set(history.map(h => h.topic))
+    const uncompletedTopics = topics.filter(t => !completedTopicTitles.has(t.topic))
+    const pool = uncompletedTopics.length > 0 ? uncompletedTopics : topics
+
     const interval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * topics.length)
-      setSelectedTopic(topics[randomIndex])
+      const randomIndex = Math.floor(Math.random() * pool.length)
+      setSelectedTopic(pool[randomIndex])
       count++
       if (count > 10) {
         clearInterval(interval)
@@ -157,13 +162,14 @@ export default function SpeakingPracticePage() {
 
     const sb = createClient()
     const prepDurationMinutes = Math.round((600 - timerSeconds) / 60)
+    const currentDayNumber = history.length + 1
 
     const newLog = {
       user_id: user.id,
       date: todayStr,
       topic: selectedTopic.topic,
       category: selectedTopic.category || 'General',
-      day_number: selectedTopic.day || null,
+      day_number: currentDayNumber,
       prep_duration_minutes: prepDurationMinutes > 0 ? prepDurationMinutes : 10,
       drive_link: driveLink.trim(),
       notes: notes.trim(),
@@ -222,14 +228,14 @@ export default function SpeakingPracticePage() {
                 SPEAKING PRACTICE HUB <Sparkles className="text-amber animate-pulse" size={24} />
               </h1>
               <p className="font-mono text-xs text-muted max-w-xl mt-1 leading-relaxed">
-                Select a topic, hit the 10-minute countdown to prep your ideas, record yourself in front of the camera, and paste your video proof link!
+                Click <span className="text-amber font-bold">TODAY'S TOPIC</span> to pick a prompt from the 30-topic bank, prep for 10 minutes, and log your video link!
               </p>
             </div>
 
             {/* Quick Metrics */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="p-3 rounded-xl bg-black/50 border border-white/10 text-center min-w-[100px]">
-                <div className="font-mono text-xl font-bold text-amber">{uniqueTopicsCompleted}/30</div>
+                <div className="font-mono text-xl font-bold text-amber">{totalSessions}/30</div>
                 <div className="font-mono text-[9px] uppercase tracking-wider text-muted">Days Done</div>
               </div>
               <div className="p-3 rounded-xl bg-black/50 border border-white/10 text-center min-w-[100px]">
@@ -256,48 +262,57 @@ export default function SpeakingPracticePage() {
                 <div className="flex items-center gap-2">
                   <BookOpen size={18} className="text-amber" />
                   <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                    TOPIC SELECTOR // DAY {selectedTopic.day || '?'} OF 30
+                    TOPIC SELECTOR // 30 RANDOM TOPICS BANK
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleRandomTopic}
-                  disabled={isShuffling}
-                  className="btn btn-primary btn-sm font-mono text-xs flex items-center gap-1.5 font-bold shadow-lg"
-                >
-                  <Shuffle size={14} className={isShuffling ? 'animate-spin' : ''} />
-                  <span>{isShuffling ? 'SHUFFLING...' : 'RANDOM TOPIC'}</span>
-                </button>
+                <div className="font-mono text-xs font-bold text-amber bg-amber/15 border border-amber/30 px-2.5 py-0.5 rounded-full">
+                  NEXT PRACTICE: DAY {history.length + 1}
+                </div>
               </div>
 
-              {/* ACTIVE TOPIC DISPLAY */}
+              {/* ACTIVE TOPIC DISPLAY WITH TODAY'S TOPIC BUTTON IN THE MIDDLE */}
               <motion.div 
-                key={selectedTopic.day}
+                key={selectedTopic.id || selectedTopic.topic}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-5 rounded-xl bg-black/60 border border-amber/30 text-center relative overflow-hidden"
+                className="p-6 rounded-xl bg-black/60 border border-amber/30 text-center relative overflow-hidden space-y-4"
               >
-                <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30 font-bold mb-3 inline-block">
-                  {selectedTopic.category} • DAY {selectedTopic.day}
+                <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30 font-bold inline-block">
+                  {selectedTopic.category || 'General'} • 30 TOPIC POOL
                 </span>
+                
                 <h2 className="text-xl sm:text-2xl font-mono font-bold text-primary leading-snug">
                   "{selectedTopic.topic}"
                 </h2>
+
+                {/* TODAY'S TOPIC BUTTON IN CENTER */}
+                <div className="pt-2 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleSelectTodaysTopic}
+                    disabled={isShuffling}
+                    className="btn btn-primary btn-md font-mono text-xs flex items-center gap-2 font-black tracking-wider uppercase shadow-2xl px-6 py-2.5 bg-amber text-black hover:bg-amber-hover border border-amber-hover transition-all transform hover:scale-105 active:scale-95"
+                  >
+                    <Shuffle size={16} className={isShuffling ? 'animate-spin' : ''} />
+                    <span>{isShuffling ? 'SELECTING TOPIC...' : '🎯 SELECT TODAY\'S TOPIC'}</span>
+                  </button>
+                </div>
               </motion.div>
 
               {/* TOPIC QUICK PICK DIAL */}
               <div className="mt-4 pt-3 border-t border-white/5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-[10px] text-muted uppercase tracking-wider">Jump to Day (1–30):</span>
+                  <span className="font-mono text-[10px] text-muted uppercase tracking-wider">Browse Topic Bank (1–30):</span>
                   <span className="font-mono text-[10px] text-amber">{topics.length} topics available</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
-                  {topics.map((t) => {
+                  {topics.map((t, idx) => {
                     const isDone = history.some(h => h.topic === t.topic)
-                    const isSelected = selectedTopic.day === t.day
+                    const isSelected = selectedTopic.topic === t.topic
+                    const topicNum = t.id || idx + 1
                     return (
                       <button
-                        key={t.day}
+                        key={topicNum}
                         onClick={() => {
                           setSelectedTopic(t)
                           handleResetTimer()
@@ -309,9 +324,9 @@ export default function SpeakingPracticePage() {
                               ? 'bg-success/20 text-success border border-success/40'
                               : 'bg-bg-tertiary text-muted hover:text-primary hover:border-amber/50 border border-border-color'
                         }`}
-                        title={`Day ${t.day}: ${t.topic}`}
+                        title={`Topic ${topicNum}: ${t.topic}`}
                       >
-                        {t.day}
+                        {topicNum}
                       </button>
                     )
                   })}
@@ -406,11 +421,11 @@ export default function SpeakingPracticePage() {
 
               <form onSubmit={handleSubmitSession} className="space-y-4">
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">ACTIVE TOPIC</label>
+                  <label className="font-mono text-xs text-muted mb-1 block">ACTIVE TOPIC FOR TODAY (WILL LOG AS DAY {history.length + 1})</label>
                   <input
                     type="text"
                     readOnly
-                    value={`Day ${selectedTopic.day}: ${selectedTopic.topic}`}
+                    value={`Day ${history.length + 1}: ${selectedTopic.topic}`}
                     className="input w-full font-mono text-xs bg-black/40 text-muted cursor-not-allowed border-white/10"
                   />
                 </div>
@@ -505,7 +520,7 @@ export default function SpeakingPracticePage() {
             <div className="p-8 text-center rounded-xl bg-black/40 border border-dashed border-white/10">
               <Mic size={24} className="mx-auto text-muted mb-2 opacity-50" />
               <div className="font-mono text-xs text-primary font-bold">NO PRACTICE SESSIONS LOGGED YET</div>
-              <p className="font-mono text-[10px] text-muted mt-1">Pick Day 1 topic above, prep for 10 minutes, and paste your video link!</p>
+              <p className="font-mono text-[10px] text-muted mt-1">Select Today's Topic above, prep for 10 minutes, and paste your video link!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -515,9 +530,14 @@ export default function SpeakingPracticePage() {
                   <div key={session.id || idx} className="p-4 rounded-xl bg-black/40 border border-border-color hover:border-amber/40 transition-all flex flex-col justify-between gap-3">
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-white/10 text-muted font-bold">
-                          {session.date}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-amber/20 border border-amber/40 text-amber font-bold uppercase">
+                            DAY {session.day_number || (history.length - idx)}
+                          </span>
+                          <span className="font-mono text-[9px] text-muted font-semibold">
+                            {session.date}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-0.5 text-amber">
                           <Star size={11} className="fill-amber" />
                           <span className="font-mono text-[10px] font-bold">{session.rating || 5}/5</span>

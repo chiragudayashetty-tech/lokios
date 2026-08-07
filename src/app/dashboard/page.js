@@ -1198,103 +1198,65 @@ export default function MissionControl() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            END-OF-DAY RECON // DAILY LOG CHECKLIST WIDGET
+            DAILY PROTOCOL STATUS // COMPACT DIRECT LINK BOXES
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="mb-5 p-4 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 pb-3 border-b border-white/10">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <div className={`w-2.5 h-2.5 rounded-full ${isEodAllDone ? 'bg-success' : 'bg-amber animate-pulse'} shrink-0`} style={{ boxShadow: isEodAllDone ? '0 0 10px var(--success)' : '0 0 10px var(--amber)' }} />
-              <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold truncate">
-                DAILY EOD RECON // LOG CHECKLIST
-              </span>
-              <span className={`font-mono text-[10px] px-3 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 transition-all ${
-                isEodAllDone 
-                  ? 'bg-success/20 text-success border border-success/40' 
-                  : 'bg-amber/20 text-amber border border-amber/40 animate-pulse'
-              }`}>
-                {isEodAllDone ? '✓ DONE (5/5 LOGGED)' : `⏳ PENDING (${5 - eodCompletedCount} MISSING)`}
-              </span>
-            </div>
-            
-            <div className="font-mono text-[10px] text-muted uppercase tracking-wider">
-              {isEodAllDone ? '🎉 All daily logs recorded!' : 'Don\'t get overwhelmed — finish your 5 daily logs'}
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex justify-between items-center font-mono text-[9px] text-muted mb-1 uppercase tracking-wider">
-              <span>Daily Protocol Status</span>
-              <span className={isEodAllDone ? 'text-success font-bold' : 'text-amber font-bold'}>{eodCompletedCount}/5 Logs Complete ({Math.round((eodCompletedCount / 5) * 100)}%)</span>
-            </div>
-            <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
-              <motion.div 
-                className="h-full rounded-full"
-                style={{ background: isEodAllDone ? 'var(--success)' : 'linear-gradient(90deg, #f59e0b, #eab308)' }}
-                initial={{ width: 0 }}
-                animate={{ width: `${(eodCompletedCount / 5) * 100}%` }}
-                transition={{ duration: 0.8 }}
-              />
-            </div>
-          </div>
-
-          {/* 5 Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {eodItems.map((item) => {
-              const ItemIcon = item.icon
-              return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+          {eodItems.map((item) => {
+            const ItemIcon = item.icon
+            const displayLabel = item.key === 'wellness' ? 'WELLNESS' : item.key === 'work' ? 'WORK' : item.key === 'journal' ? 'JOURNAL' : item.key === 'screen' ? 'SCREEN INTEL' : item.key === 'speaking' ? 'SPEAKING' : item.label.toUpperCase()
+            return (
+              <Link href={item.path} key={item.key} className="block group">
                 <div 
-                  key={item.key}
-                  className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-3 text-center transition-all duration-200 flex flex-col justify-center items-center rounded border h-full ${
                     item.isDone 
-                      ? 'bg-success/5 border-success/30 hover:border-success/50' 
-                      : 'bg-black/40 border-amber/30 hover:border-amber/60 shadow-lg'
+                      ? 'bg-bg-tertiary border-border-color hover:border-primary' 
+                      : 'bg-bg-tertiary border-border-color hover:border-amber'
                   }`}
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${item.color}15`, border: `1px solid ${item.color}40` }}>
-                          <ItemIcon size={13} style={{ color: item.color }} />
-                        </div>
-                        <span className="font-mono text-xs font-bold text-primary">{item.label}</span>
-                      </div>
-                      <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                        item.isDone ? 'bg-success/20 text-success border border-success/30' : 'bg-amber/20 text-amber border border-amber/40 animate-pulse'
-                      }`}>
-                        {item.isDone ? 'DONE' : 'PENDING'}
-                      </span>
-                    </div>
-                    <p className="font-mono text-[10px] text-muted leading-tight">{item.subtitle}</p>
-                    <div className="mt-2 font-mono text-[10px] font-bold flex items-center gap-1.5" style={{ color: item.isDone ? 'var(--success)' : 'var(--text-muted)' }}>
-                      <span>{item.isDone ? '✓' : '•'}</span>
-                      <span>{item.detail}</span>
-                    </div>
+                  <ItemIcon 
+                    size={14} 
+                    className="mb-1.5 transition-colors" 
+                    style={{ color: item.isDone ? 'var(--success)' : 'var(--text-muted)' }} 
+                  />
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-muted group-hover:text-primary font-bold">
+                    {displayLabel}
                   </div>
-
-                  <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-                    {!item.isDone ? (
-                      <button 
-                        type="button" 
-                        onClick={() => setEodQuickLogModal(item.key)}
-                        className="btn btn-primary btn-xs w-full font-mono text-[10px] py-1.5 flex items-center justify-center gap-1 font-bold"
-                      >
-                        <Plus size={11} /> QUICK LOG
-                      </button>
-                    ) : (
-                      <Link 
-                        href={item.path} 
-                        className="btn btn-ghost btn-xs w-full font-mono text-[10px] py-1 text-muted hover:text-primary flex items-center justify-center gap-1"
-                      >
-                        <span>VIEW LOG</span>
-                        <ExternalLink size={10} />
-                      </Link>
-                    )}
+                  <div 
+                    className="font-mono text-[9px] mt-1 font-bold flex items-center gap-1"
+                    style={{ color: item.isDone ? 'var(--success)' : 'var(--warning)' }}
+                  >
+                    {item.isDone ? '✓ LOGGED' : '⚠ PENDING'}
                   </div>
                 </div>
-              )
-            })}
-          </div>
+              </Link>
+            )
+          })}
+
+          {/* DEBRIEF BOX */}
+          <Link href="/debriefs" className="block group">
+            <div 
+              className={`p-3 text-center transition-all duration-200 flex flex-col justify-center items-center rounded border h-full ${
+                new Date().getDay() === 0 
+                  ? 'bg-warning/10 border-warning hover:border-amber' 
+                  : 'bg-bg-tertiary border-border-color hover:border-primary'
+              }`}
+            >
+              <ClipboardList 
+                size={14} 
+                className="mb-1.5 transition-colors" 
+                style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }} 
+              />
+              <div className="font-mono text-[9px] uppercase tracking-widest text-muted group-hover:text-primary font-bold">
+                DEBRIEF
+              </div>
+              <div 
+                className="font-mono text-[9px] mt-1 font-bold"
+                style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }}
+              >
+                {new Date().getDay() === 0 ? '+40 XP' : 'WEEKLY'}
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
@@ -2027,36 +1989,7 @@ export default function MissionControl() {
 
 
 
-            {/* JOURNAL STATUS & WEEKLY DEBRIEF */}
-            <div className="flex gap-3 lg:gap-4">
-              <Link href="/journal" className="flex-1">
-                <div style={{
-                  padding: '12px', textAlign: 'center', cursor: 'pointer',
-                  background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', height: '100%'
-                }} className="hover:border-primary transition-colors flex flex-col justify-center items-center">
-                  <BookOpen size={12} color={journalDoneToday ? "var(--success)" : "var(--text-muted)"} className="mb-1.5" />
-                  <div className="font-mono text-[8px] uppercase tracking-widest text-muted">Journal</div>
-                  <div className="font-mono text-[8px] mt-1 font-bold" style={{ color: journalDoneToday ? 'var(--success)' : 'var(--warning)' }}>
-                    {journalDoneToday ? '✓ LOGGED' : '⚠ PENDING'}
-                  </div>
-                </div>
-              </Link>
-              
-              <Link href="/journal" className="flex-1">
-                <div style={{
-                  padding: '12px', textAlign: 'center', cursor: 'pointer',
-                  background: new Date().getDay() === 0 ? 'rgba(245,158,11,0.08)' : 'var(--bg-tertiary)', 
-                  border: `1px solid ${new Date().getDay() === 0 ? 'var(--warning)' : 'var(--border-color)'}`,
-                  height: '100%'
-                }} className="hover:border-amber transition-colors flex flex-col justify-center items-center">
-                  <ClipboardList size={12} color={new Date().getDay() === 0 ? "var(--warning)" : "var(--text-muted)"} className="mb-1.5" />
-                  <div className="font-mono text-[8px] uppercase tracking-widest text-muted">Debrief</div>
-                  {new Date().getDay() === 0 && (
-                     <div className="font-mono text-[8px] mt-1 text-amber">+40 XP</div>
-                  )}
-                </div>
-              </Link>
-            </div>
+
 
           </div>
         </div>

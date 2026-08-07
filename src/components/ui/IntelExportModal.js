@@ -640,7 +640,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                 ${speakingLogs.map(l => `
                   <tr>
                     <td>${l.date}</td>
-                    <td><strong>${l.topic || 'Day Speaking Practice'}</strong></td>
+                    <td><strong>${l.day_number ? `Day ${l.day_number}: ` : ''}${l.topic || 'Speaking Practice'}</strong></td>
                     <td>${l.prep_duration_minutes || 10} min</td>
                     <td>${l.drive_link ? `<a href="${l.drive_link}" target="_blank" style="color: var(--cyan); text-decoration: underline;">${l.drive_link}</a>` : '—'}</td>
                     <td>${l.notes || '—'}</td>
