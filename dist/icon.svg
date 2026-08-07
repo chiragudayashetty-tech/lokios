@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ChiragOS">
+  <rect width="512" height="512" rx="96" fill="#101512"/>
+  <path d="M128 164c0-20 16-36 36-36h184c20 0 36 16 36 36v184c0 20-16 36-36 36H164c-20 0-36-16-36-36V164Z" fill="#f4f7f3"/>
+  <path d="M180 244h152v44H180v-44Z" fill="#101512"/>
+  <path d="M234 180h44v152h-44V180Z" fill="#0f9f6e"/>
+  <path d="M176 348h160v20H176v-20Z" fill="#101512" opacity=".42"/>
+</svg>

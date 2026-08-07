@@ -1,0 +1,33 @@
+{
+  "name": "ChiragOS",
+  "short_name": "ChiragOS",
+  "description": "A personal operating system for quests, focus, goals, journaling, and portfolio growth.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f3",
+  "theme_color": "#101512",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Brain Dump",
+      "short_name": "Capture",
+      "url": "/brain-dump",
+      "description": "Capture an idea, note, task, or goal."
+    },
+    {
+      "name": "Today",
+      "short_name": "Today",
+      "url": "/dashboard",
+      "description": "Open today's operating dashboard."
+    }
+  ]
+}
