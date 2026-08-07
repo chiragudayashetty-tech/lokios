@@ -34,6 +34,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
     weight_recon: true,
     sleep_intel: true,
     speaking_intel: true,
+    xp_timeline: true,
   })
 
   const [isExporting, setIsExporting] = useState(false)
@@ -73,7 +74,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const [
         screenRes, weightRes, sleepRes,
         workHoursRes, workRes, contentRes,
-        habitLogsRes, journalRes, brainDumpRes, speakingRes
+        habitLogsRes, journalRes, brainDumpRes, speakingRes, xpHistoryRes
       ] = await Promise.all([
         supabase.from('screen_time_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('weight_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
@@ -84,7 +85,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
         supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('journal_entries').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
         supabase.from('brain_dump').select('*').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate + 'T23:59:59.999Z').order('created_at', { ascending: false }),
-        supabase.from('speaking_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false })
+        supabase.from('speaking_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
+        supabase.from('xp_history').select('*').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate + 'T23:59:59.999Z').order('created_at', { ascending: false })
       ])
 
       let workLogs = (workHoursRes.data && workHoursRes.data.length > 0) ? workHoursRes.data : []
@@ -652,6 +654,38 @@ export default function IntelExportModal({ isOpen, onClose }) {
         `
       }
 
+      const xpHistoryLogs = xpHistoryRes?.data || []
+
+      // 12. XP TIMELINE AUDIT TRAIL
+      if (selectedModules.xp_timeline) {
+        sectionsHTML += `
+          <div class="section">
+            <h2 class="section-title">⚡ XP TIMELINE AUDIT TRAIL (${xpHistoryLogs.length} Events)</h2>
+            <table>
+              <thead><tr><th>Timestamp</th><th>Description</th><th>Stat Category</th><th>Source</th><th>XP Amount</th></tr></thead>
+              <tbody>
+                ${xpHistoryLogs.map(x => {
+                  const isPos = (x.amount || 0) > 0
+                  const isNeg = (x.amount || 0) < 0
+                  const dtStr = x.created_at ? new Date(x.created_at).toLocaleString() : '—'
+                  const color = isPos ? 'var(--green)' : isNeg ? 'var(--red)' : 'var(--muted)'
+                  const sign = isPos ? '+' : ''
+                  return `
+                    <tr>
+                      <td style="font-family:monospace;font-size:11px;color:var(--muted);">${dtStr}</td>
+                      <td><strong>${x.description || 'XP Event'}</strong></td>
+                      <td><span class="badge badge-warning">${(x.stat_category || 'GENERAL').toUpperCase()}</span></td>
+                      <td style="font-family:monospace;font-size:11px;">${x.source_type || 'system'}</td>
+                      <td><strong style="color:${color};font-family:monospace;">${sign}${x.amount || 0} XP</strong></td>
+                    </tr>
+                  `
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+      }
+
       // ── Full HTML Document ──
       const fullHTML = `
         <!DOCTYPE html>
@@ -758,6 +792,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
     { key: 'weight_recon',    icon: Scale,           label: 'Weight Recon',             color: 'text-amber',   desc: 'Weight & body fat logs' },
     { key: 'sleep_intel',     icon: Moon,            label: 'Sleep Intel',              color: 'text-info',    desc: 'Bedtime, wake, quality' },
     { key: 'speaking_intel',  icon: Mic,             label: 'Speaking Practice',        color: 'text-amber',   desc: '30-day camera challenge & video links' },
+    { key: 'xp_timeline',     icon: Zap,             label: 'XP Timeline Audit Log',    color: 'text-amber',   desc: 'Minute-to-minute XP additions, deductions & auto-penalties' },
   ]
 
   return (

@@ -48,6 +48,9 @@ const DEFAULT_30_TOPICS = [
   { id: 30, topic: 'What is leverage, and why is it Naval Ravikant\'s favorite concept?', category: 'Mental Models & Wealth' }
 ]
 
+import { getSpeakingRestDays, setSpeakingRestDays, isSpeakingRestDay } from '@/lib/utils/restDays'
+import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
+
 export default function SpeakingPracticePage() {
   const { user } = useAuth()
   const { xp: { awardXP } } = useOS()
@@ -58,6 +61,7 @@ export default function SpeakingPracticePage() {
   const [isShuffling, setIsShuffling] = useState(false)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+  const [restDays, setRestDaysState] = useState(getSpeakingRestDays())
 
   // 10-Min Timer State (10 mins = 600 seconds)
   const [timerSeconds, setTimerSeconds] = useState(600)
@@ -75,8 +79,17 @@ export default function SpeakingPracticePage() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const todayStr = getLocalDateStr(new Date())
+  const todayIsRestDay = isSpeakingRestDay()
 
-  // Fetch History from Supabase
+  const handleToggleRestDay = (dayNum) => {
+    const updated = restDays.includes(dayNum)
+      ? restDays.filter(d => d !== dayNum)
+      : [...restDays, dayNum]
+    setRestDaysState(updated)
+    setSpeakingRestDays(updated)
+  }
+
+  // Fetch History from Supabase & Run 3:00 AM Cutoff Auto-Fail Evaluator
   useEffect(() => {
     async function loadData() {
       if (!user) return
@@ -84,6 +97,9 @@ export default function SpeakingPracticePage() {
       const sb = createClient()
 
       try {
+        // Run 3:00 AM Cutoff Evaluator
+        await evaluateProtocolAutoFail(user.id)
+
         const { data, error } = await sb
           .from('speaking_logs')
           .select('*')
@@ -255,6 +271,47 @@ export default function SpeakingPracticePage() {
                 <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Avg Rating</div>
               </div>
             </div>
+          </div>
+
+          {/* Rest Day Config Bar */}
+          <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 font-mono text-xs relative z-10">
+            <div className="flex items-center gap-2">
+              <span className="text-muted uppercase tracking-wider font-bold text-[10px]">SPEAKING REST DAYS:</span>
+              <div className="flex items-center gap-1 bg-black/50 p-1 border border-border-color rounded-lg">
+                {[
+                  { day: 0, label: 'SUN' },
+                  { day: 1, label: 'MON' },
+                  { day: 2, label: 'TUE' },
+                  { day: 3, label: 'WED' },
+                  { day: 4, label: 'THU' },
+                  { day: 5, label: 'FRI' },
+                  { day: 6, label: 'SAT' }
+                ].map((dObj) => {
+                  const isRest = restDays.includes(dObj.day)
+                  return (
+                    <button
+                      key={dObj.day}
+                      type="button"
+                      onClick={() => handleToggleRestDay(dObj.day)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                        isRest
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-400/50 shadow-sm'
+                          : 'text-muted hover:text-primary hover:bg-white/5'
+                      }`}
+                      title={`Toggle ${dObj.label} as Rest Day`}
+                    >
+                      {dObj.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {todayIsRestDay && (
+              <div className="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/50 text-purple-300 text-[10px] font-bold flex items-center gap-1.5 animate-pulse">
+                <span>☕ TODAY IS A REST DAY (NO PENALTY IF SKIPPED)</span>
+              </div>
+            )}
           </div>
         </div>
 

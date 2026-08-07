@@ -53,9 +53,17 @@ function RenderDebrief({ text }) {
   )
 }
 
+import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
+
 export default function JournalPage() {
   const { journal: { entries, loading, saveEntry, clearJournal } } = useOS()
   const { user } = useAuth()
+
+  useEffect(() => {
+    if (user?.id) {
+      evaluateProtocolAutoFail(user.id)
+    }
+  }, [user])
 
   const [activeTab, setActiveTab] = useState('daily')
 
