@@ -952,14 +952,6 @@ export default function DailyOps() {
               </button>
               <button 
                 type="button"
-                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'bg-gray-600 text-white font-bold' : 'active:bg-hover text-muted'}`}
-                onClick={() => setActiveTool('blocked')}
-                title="Block mode (Lock 🔒)"
-              >
-                <Lock size={13} /> <span className="hidden sm:inline">BLOCK</span>
-              </button>
-              <button 
-                type="button"
                 className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary font-bold' : 'active:bg-hover text-muted'}`}
                 onClick={() => setActiveTool('none')}
                 title="Clear mode"
