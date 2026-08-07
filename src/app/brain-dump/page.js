@@ -27,10 +27,10 @@ function TopicBadge({ name, color }) {
   const displayColor = color || getTopicColor(name)
   return (
     <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm font-mono text-[9px] uppercase tracking-widest font-bold"
-      style={{ background: `${displayColor}20`, color: displayColor, border: `1px solid ${displayColor}40` }}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-mono text-[10px] uppercase tracking-wider font-bold"
+      style={{ background: `${displayColor}15`, color: displayColor, border: `1px solid ${displayColor}30` }}
     >
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: displayColor, display: 'inline-block', flexShrink: 0 }} />
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: displayColor, display: 'inline-block', flexShrink: 0 }} />
       {name}
     </span>
   )
@@ -43,48 +43,49 @@ function IntelCard({ item, onDone, onDiscard, onRestore, onDelete, onConvertMiss
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
-      className="rounded-xl mb-3 overflow-hidden shadow-sm"
+      className="rounded-xl mb-3 overflow-hidden transition-all border"
       style={{
-        background: 'rgba(12, 15, 22, 0.85)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        background: 'rgba(14, 17, 24, 0.9)',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
         borderLeft: `4px solid ${color}`,
         opacity: item.status === 'discarded' ? 0.65 : 1,
       }}
     >
       <div className="p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center justify-between gap-3 mb-2.5">
           <TopicBadge name={topicName} color={color} />
           <span className="font-mono text-[10px] text-muted tracking-wider shrink-0">{timeAgo(item.created_at)}</span>
         </div>
+        
         <p className="font-mono text-sm text-primary leading-relaxed whitespace-pre-wrap">{item.content}</p>
 
-        {/* Actions Row with clean spacing & touch buttons */}
-        <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/10">
+        {/* Actions Row with clean spacing */}
+        <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/5">
           {isInbox && (
             <>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onDone(item.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95"
-                  style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.35)' }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95 hover:bg-success/20"
+                  style={{ background: 'rgba(34, 197, 94, 0.12)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)' }}
                 >
                   <CheckCircle2 size={13} /> Done
                 </button>
                 <button
                   onClick={() => onConvertMission(item.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95"
-                  style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.35)' }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95 hover:bg-info/20"
+                  style={{ background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}
                 >
                   <Target size={13} /> Mission
                 </button>
               </div>
               <button
                 onClick={() => onDiscard(item.id)}
-                className="p-2 font-mono text-[10px] uppercase rounded-lg transition-all active:scale-95 hover:opacity-80"
-                style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.35)' }}
+                className="p-2 font-mono text-[10px] uppercase rounded-lg transition-all active:scale-95 hover:bg-danger/20"
+                style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}
                 title="Discard Intel"
               >
                 <Trash2 size={14} />
@@ -95,7 +96,7 @@ function IntelCard({ item, onDone, onDiscard, onRestore, onDelete, onConvertMiss
             <button
               onClick={() => onRestore(item.id)}
               className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95 ml-auto"
-              style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.35)' }}
+              style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}
             >
               <RotateCcw size={13} /> Restore
             </button>
@@ -105,14 +106,14 @@ function IntelCard({ item, onDone, onDiscard, onRestore, onDelete, onConvertMiss
               <button
                 onClick={() => onRestore(item.id)}
                 className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95"
-                style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.35)' }}
+                style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}
               >
                 <RotateCcw size={13} /> Restore
               </button>
               <button
                 onClick={() => onDelete(item.id)}
                 className="ml-auto flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all active:scale-95"
-                style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.35)' }}
+                style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}
               >
                 <Trash2 size={13} /> Delete
               </button>
@@ -129,20 +130,19 @@ function TopicGroup({ topic, color, items, onDone, onDiscard, onRestore, onDelet
   const [open, setOpen] = useState(true)
   const displayColor = color || getTopicColor(topic)
   return (
-    <div className="mb-5">
+    <div className="mb-4">
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-lg mb-3 transition-all hover:opacity-90 active:scale-[0.99]"
-        style={{ background: `${displayColor}12`, border: `1px solid ${displayColor}35` }}
+        className="w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl mb-2.5 transition-all hover:bg-white/5 active:scale-[0.99] font-mono text-xs border border-white/5 bg-black/40"
       >
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: displayColor, flexShrink: 0 }} />
-        <span className="font-mono text-xs uppercase tracking-widest font-bold" style={{ color: displayColor }}>{topic}</span>
-        <span className="font-mono text-[10px] text-muted font-bold ml-1">({items.length})</span>
-        <span className="ml-auto" style={{ color: displayColor }}>{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
+        <span className="font-bold uppercase tracking-wider" style={{ color: displayColor }}>{topic}</span>
+        <span className="text-muted font-bold text-[10px]">({items.length})</span>
+        <span className="ml-auto text-muted">{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             {items.map(item => (
               <IntelCard key={item.id} item={item} onDone={onDone} onDiscard={onDiscard} onRestore={onRestore} onDelete={onDelete} onConvertMission={onConvertMission} isInbox={isInbox} isDone={isDone} />
             ))}
@@ -155,32 +155,31 @@ function TopicGroup({ topic, color, items, onDone, onDiscard, onRestore, onDelet
 
 // ─── Topic Manager Modal ──────────────────────────────────────────────────────
 function TopicManager({ topics, onRename, onDelete, onClose }) {
-  const [editing, setEditing] = useState(null) // { name, newName }
+  const [editing, setEditing] = useState(null)
 
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)' }}
+      style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }}
-        className="w-full max-w-md rounded-sm"
-        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
+        className="w-full max-w-md rounded-xl p-5 border border-border-color shadow-2xl bg-bg-secondary"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--border-color)' }}>
+        <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <Settings2 size={14} className="text-amber" />
-            <span className="font-mono text-xs uppercase tracking-widest text-amber">Topic Management</span>
+            <Settings2 size={16} className="text-amber" />
+            <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">Topic Management</span>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-primary"><X size={14} /></button>
+          <button onClick={onClose} className="text-muted hover:text-primary"><X size={16} /></button>
         </div>
-        <div className="p-4 flex flex-col gap-2 max-h-80 overflow-y-auto">
+        <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
           {topics.filter(t => t.name !== 'General').map(topic => (
-            <div key={topic.name} className="flex items-center gap-3 p-2 rounded-sm" style={{ border: '1px solid var(--border-color)' }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: getTopicColor(topic.name), flexShrink: 0 }} />
+            <div key={topic.name} className="flex items-center gap-3 p-2.5 rounded-lg border border-white/10 bg-black/40">
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: getTopicColor(topic.name), flexShrink: 0 }} />
               {editing?.name === topic.name ? (
                 <input
                   autoFocus
@@ -193,15 +192,15 @@ function TopicManager({ topics, onRename, onDelete, onClose }) {
                   }}
                 />
               ) : (
-                <span className="flex-1 font-mono text-xs text-primary">{topic.name}</span>
+                <span className="flex-1 font-mono text-xs text-primary font-semibold">{topic.name}</span>
               )}
-              <div className="flex gap-1">
+              <div className="flex gap-1.5">
                 {editing?.name === topic.name ? (
-                  <button onClick={() => { onRename(editing.name, editing.newName); setEditing(null) }} className="text-success hover:opacity-80"><CheckCircle2 size={12} /></button>
+                  <button onClick={() => { onRename(editing.name, editing.newName); setEditing(null) }} className="text-success hover:opacity-80"><CheckCircle2 size={14} /></button>
                 ) : (
-                  <button onClick={() => setEditing({ name: topic.name, newName: topic.name })} className="text-muted hover:text-primary"><Pencil size={12} /></button>
+                  <button onClick={() => setEditing({ name: topic.name, newName: topic.name })} className="text-muted hover:text-primary"><Pencil size={14} /></button>
                 )}
-                <button onClick={() => { if (confirm(`Delete topic "${topic.name}"? All intel will move to General.`)) onDelete(topic.name) }} className="text-muted hover:text-danger"><X size={12} /></button>
+                <button onClick={() => { if (confirm(`Delete topic "${topic.name}"? All intel will move to General.`)) onDelete(topic.name) }} className="text-muted hover:text-danger"><X size={14} /></button>
               </div>
             </div>
           ))}
@@ -312,31 +311,29 @@ export default function IntelDrop() {
         )}
       </AnimatePresence>
 
-      <div className="page-container narrow">
+      <div className="max-w-4xl mx-auto space-y-6 pb-12">
         {/* Header */}
-        <header className="page-header mb-6">
-          <div className="flex items-end justify-between">
-            <div>
-              <h1 className="page-title flex items-center gap-2"><Zap size={20} className="text-amber" /> INTEL DROP</h1>
-              <p className="page-subtitle font-mono uppercase text-xs">Capture. Classify. Execute.</p>
-            </div>
-            <button
-              onClick={() => setShowTopicMgr(true)}
-              className="flex items-center gap-1.5 px-3 py-2 font-mono text-[10px] uppercase tracking-widest rounded-sm transition-all hover:opacity-80"
-              style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }}
-            >
-              <Settings2 size={12} /> Topics
-            </button>
+        <header className="flex items-center justify-between pb-2 border-b border-white/10">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-mono font-bold text-primary flex items-center gap-2">
+              <Zap size={22} className="text-amber" /> INTEL DROP
+            </h1>
           </div>
+          <button
+            onClick={() => setShowTopicMgr(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider rounded-lg transition-colors border border-white/10 bg-black/40 text-muted hover:text-primary hover:border-amber/40"
+          >
+            <Settings2 size={13} /> Topics
+          </button>
         </header>
 
         {/* ── Capture Form ── */}
-        <div className="rounded-xl mb-6 overflow-hidden shadow-sm" style={{ background: 'rgba(12, 15, 22, 0.85)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <div className="rounded-xl overflow-hidden border border-white/10 bg-bg-secondary/90 backdrop-blur-md shadow-xl">
           <form onSubmit={handleCapture}>
             <textarea
-              className="w-full bg-transparent p-4 font-mono text-sm text-primary resize-none outline-none placeholder:text-muted/50"
-              style={{ minHeight: 90, caretColor: '#f59e0b', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}
-              placeholder="Awaiting intel transmission..."
+              className="w-full bg-black/30 p-4 font-mono text-sm text-primary resize-none outline-none placeholder:text-muted/40 border-b border-white/10 focus:bg-black/50 transition-colors"
+              style={{ minHeight: 95, caretColor: '#f59e0b' }}
+              placeholder="Type your thought or intel here..."
               value={content}
               onChange={e => setContent(e.target.value)}
               autoFocus
@@ -344,10 +341,9 @@ export default function IntelDrop() {
             />
 
             {/* Topic Selector */}
-            <div className="p-3 sm:p-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <div className="flex items-center gap-1.5 mb-2.5">
-                <Tag size={12} className="text-muted" />
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted font-bold">Topic</span>
+            <div className="p-4 border-b border-white/10 bg-black/20">
+              <div className="flex items-center justify-between mb-3 font-mono text-xs">
+                <span className="text-muted font-bold tracking-wider uppercase text-[10px]">TOPIC</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -360,23 +356,23 @@ export default function IntelDrop() {
                       setFreeTypeTopic('')
                     }
                   }}
-                  className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-md font-mono text-[9px] uppercase tracking-wider font-bold transition-all active:scale-95"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-md font-mono text-[10px] uppercase font-bold transition-all border"
                   style={{
-                    background: isFreeType ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-primary)',
+                    background: isFreeType ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.05)',
                     color: isFreeType ? '#f59e0b' : 'var(--text-muted)',
-                    border: `1px solid ${isFreeType ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`,
+                    borderColor: isFreeType ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.1)',
                   }}
                 >
-                  <Plus size={10} /> New Topic
+                  <Plus size={11} /> {isFreeType ? 'Cancel' : 'New Topic'}
                 </button>
               </div>
 
               {isFreeType ? (
                 <input
                   autoFocus
-                  className="w-full bg-transparent font-mono text-sm text-primary outline-none px-3 py-1.5 rounded-md"
-                  style={{ border: '1px solid rgba(245, 158, 11, 0.6)', caretColor: '#f59e0b' }}
-                  placeholder="Type new topic name..."
+                  className="w-full font-mono text-xs text-primary outline-none px-3 py-2 rounded-lg bg-black/50 border border-amber/50"
+                  style={{ caretColor: '#f59e0b' }}
+                  placeholder="Enter new topic name..."
                   value={freeTypeTopic}
                   onChange={e => setFreeTypeTopic(e.target.value)}
                 />
@@ -390,11 +386,11 @@ export default function IntelDrop() {
                         key={topic.name}
                         type="button"
                         onClick={() => { setSelectedTopic(topic); setIsFreeType(false) }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer active:scale-95"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer border"
                         style={{
-                          background: isSelected ? `${color}25` : 'rgba(255, 255, 255, 0.03)',
+                          background: isSelected ? `${color}20` : 'rgba(255, 255, 255, 0.03)',
                           color: isSelected ? color : 'var(--text-muted)',
-                          border: `1px solid ${isSelected ? color : 'rgba(255, 255, 255, 0.08)'}`,
+                          borderColor: isSelected ? color : 'rgba(255, 255, 255, 0.08)',
                           fontWeight: isSelected ? 700 : 500
                         }}
                       >
@@ -407,82 +403,73 @@ export default function IntelDrop() {
               )}
             </div>
 
-            <div className="p-3 sm:p-4 flex items-center justify-between gap-3">
-              {effectiveTopic ? (
-                <TopicBadge name={effectiveTopic} color={effectiveColor} />
-              ) : <div />}
+            {/* Bottom Transmit Button Row */}
+            <div className="p-3 sm:p-4 flex items-center justify-end bg-black/40">
               <button
                 type="submit"
                 disabled={!canSubmit || saving}
-                className="flex items-center gap-2 px-5 py-2 font-mono text-xs uppercase tracking-widest rounded-lg transition-all active:scale-95"
+                className="flex items-center gap-2 px-6 py-2.5 font-mono text-xs uppercase tracking-widest rounded-lg transition-all shadow-lg font-bold"
                 style={{
                   background: canSubmit ? '#f59e0b' : 'rgba(255, 255, 255, 0.05)',
                   color: canSubmit ? '#000' : 'var(--text-muted)',
                   border: `1px solid ${canSubmit ? '#f59e0b' : 'rgba(255, 255, 255, 0.1)'}`,
                   cursor: canSubmit && !saving ? 'pointer' : 'not-allowed',
-                  fontWeight: 700,
                   opacity: saving ? 0.7 : 1
                 }}
               >
-                <Zap size={13} /> {saving ? 'TRANSMITTING...' : 'TRANSMIT'}
+                <Zap size={14} /> {saving ? 'TRANSMITTING...' : 'TRANSMIT'}
               </button>
             </div>
           </form>
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex items-center gap-4 mb-5 border-b border-white/10 pb-1 overflow-x-auto">
+        <div className="flex items-center gap-2 border-b border-white/10 pb-2">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="flex items-center gap-2 py-2 px-1 font-mono text-xs uppercase tracking-widest transition-all relative shrink-0"
-              style={{
-                color: activeTab === tab.id ? '#f59e0b' : 'var(--text-muted)',
-                background: 'transparent',
-                border: 'none',
-                fontWeight: activeTab === tab.id ? 700 : 500
-              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xs font-bold tracking-wider transition-all border ${
+                activeTab === tab.id
+                  ? 'bg-amber/15 border-amber/40 text-amber'
+                  : 'bg-black/30 border-white/5 text-muted hover:text-primary'
+              }`}
             >
               <span>{tab.label}</span>
-              {tab.count > 0 && (
-                <span 
-                  className="px-2 py-0.5 rounded-full font-mono text-[9px] font-bold inline-flex items-center justify-center" 
-                  style={{ 
-                    background: activeTab === tab.id ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.08)', 
-                    color: activeTab === tab.id ? '#f59e0b' : 'var(--text-muted)',
-                    border: `1px solid ${activeTab === tab.id ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.1)'}`
-                  }}
-                >
-                  {tab.count}
-                </span>
-              )}
-              {activeTab === tab.id && (
-                <motion.div layoutId="tabUnderline" className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#f59e0b' }} />
-              )}
+              <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                activeTab === tab.id ? 'bg-amber/20 text-amber' : 'bg-white/10 text-muted'
+              }`}>
+                {tab.count}
+              </span>
             </button>
           ))}
         </div>
 
-        {/* ── Search ── */}
-        <div className="flex items-center gap-2.5 mb-6 px-4 py-2.5 rounded-xl border border-white/10" style={{ background: 'rgba(12, 15, 22, 0.8)' }}>
-          <Search size={14} className="text-muted shrink-0" />
+        {/* ── Search Bar (Clean Dark Styling) ── */}
+        <div className="relative w-full">
           <input
-            className="flex-1 bg-transparent font-mono text-xs text-primary outline-none placeholder:text-muted/60"
+            type="text"
+            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 pl-10 font-mono text-xs text-primary placeholder:text-muted focus:outline-none focus:border-amber transition-colors"
+            style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: '#f3f4f6' }}
             placeholder="Search intel transmissions..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          {search && <button onClick={() => setSearch('')} className="text-muted hover:text-primary"><X size={14} /></button>}
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted hover:text-primary font-mono text-xs">
+              ×
+            </button>
+          )}
         </div>
 
         {/* ── Intel List ── */}
         <AnimatePresence mode="wait">
           {Object.keys(grouped).length === 0 ? (
-            <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
-              <Zap size={24} className="text-muted mx-auto mb-3" />
+            <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16 rounded-xl border border-dashed border-white/10 bg-black/20">
+              <Zap size={24} className="text-muted mx-auto mb-2 opacity-40" />
               <p className="font-mono text-xs text-muted uppercase tracking-widest">
-                {search ? 'No intel matches your search.' : 'No intel in this directory.'}
+                {search ? 'No intel matches your search query.' : 'No intel entries found.'}
               </p>
             </motion.div>
           ) : (
