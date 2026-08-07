@@ -683,25 +683,25 @@ export default function WorkPage() {
         </div>
 
         {/* DATE SELECTOR */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-tertiary border border-border-color rounded-xl">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-bg-secondary/90 border border-white/10 rounded-xl backdrop-blur-md">
           <div className="flex items-center gap-2.5">
             <Calendar size={15} className="text-amber flex-shrink-0" />
-            <span className="font-mono text-xs text-secondary uppercase font-bold">Log Date:</span>
+            <span className="font-mono text-xs text-muted uppercase font-bold">Log Date:</span>
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="flex-1 sm:flex-none bg-secondary border border-border-color rounded-lg px-2.5 py-1 font-mono text-xs text-primary focus:outline-none focus:border-amber"
-              style={{ background: '#121520', color: '#fff' }}
+              className="bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 font-mono text-xs text-primary focus:outline-none focus:border-amber transition-colors"
+              style={{ color: '#fff' }}
             />
           </div>
 
-          <div className="flex items-center gap-1.5 self-end sm:self-auto">
+          <div className="flex items-center gap-2 self-end sm:self-auto">
             <button
               type="button"
               onClick={() => setSelectedDate(todayStr)}
-              className={`px-3 py-1 rounded-lg font-mono text-xs transition-colors ${
-                selectedDate === todayStr ? 'bg-amber text-black font-bold' : 'bg-secondary text-muted hover:text-primary border border-border-subtle'
+              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all border ${
+                selectedDate === todayStr ? 'bg-amber text-black border-amber' : 'bg-black/40 text-muted hover:text-primary border-white/10'
               }`}
             >
               Today
@@ -709,7 +709,7 @@ export default function WorkPage() {
             <button
               type="button"
               onClick={() => setSelectedDate(getLocalDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000)))}
-              className="px-3 py-1 bg-secondary hover:bg-hover border border-border-subtle rounded-lg font-mono text-xs text-muted hover:text-primary transition-colors"
+              className="px-3 py-1.5 bg-black/40 hover:bg-white/5 border border-white/10 rounded-lg font-mono text-xs text-muted hover:text-primary transition-all"
             >
               Yesterday
             </button>
@@ -721,14 +721,15 @@ export default function WorkPage() {
         {/* ========================================================================= */}
         {activeTab === 'work_log' && (
           <div className="space-y-5">
-            <HudPanel className="p-3.5 sm:p-5 space-y-4">
-              <form onSubmit={handleSaveWorkLog} className="space-y-4">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+            <HudPanel className="p-4 sm:p-6 space-y-5">
+              <form onSubmit={handleSaveWorkLog} className="space-y-5">
+                {/* 4-COLUMN RESPONSIVE METRIC GRID */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {/* 1. Total Hours Worked */}
-                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 focus-within:border-amber/50 transition-colors">
                     <div className="flex items-center justify-between">
-                      <label className="font-mono text-[11px] sm:text-xs text-amber uppercase font-bold flex items-center gap-1 truncate">
-                        <Clock size={12} /> Total Worked
+                      <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
+                        <Clock size={13} /> Total Worked
                       </label>
                       <FieldUnitToggle unit={unitTotalWorked} setUnit={setUnitTotalWorked} />
                     </div>
@@ -739,16 +740,16 @@ export default function WorkPage() {
                       placeholder="0"
                       value={valTotalWorked}
                       onChange={(e) => setValTotalWorked(e.target.value)}
-                      className="w-full bg-tertiary border border-border-color rounded-lg p-2 sm:p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
-                      style={{ background: '#141824', color: '#fff' }}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 font-mono text-lg font-bold text-primary focus:outline-none focus:border-amber transition-colors"
+                      style={{ color: '#fff' }}
                     />
                   </div>
 
                   {/* 2. Beyond Tatva Hours */}
-                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 focus-within:border-cyan/50 transition-colors">
                     <div className="flex items-center justify-between">
-                      <label className="font-mono text-[11px] sm:text-xs text-cyan uppercase font-bold flex items-center gap-1 truncate">
-                        <Target size={12} /> Beyond Tatva
+                      <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
+                        <Target size={13} /> Beyond Tatva
                       </label>
                       <FieldUnitToggle unit={unitBeyondTatva} setUnit={setUnitBeyondTatva} />
                     </div>
@@ -759,16 +760,16 @@ export default function WorkPage() {
                       placeholder="0"
                       value={valBeyondTatva}
                       onChange={(e) => setValBeyondTatva(e.target.value)}
-                      className="w-full bg-tertiary border border-border-color rounded-lg p-2 sm:p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
-                      style={{ background: '#141824', color: '#fff' }}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 font-mono text-lg font-bold text-primary focus:outline-none focus:border-cyan transition-colors"
+                      style={{ color: '#fff' }}
                     />
                   </div>
 
                   {/* 3. Focused Hours */}
-                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 focus-within:border-success/50 transition-colors">
                     <div className="flex items-center justify-between">
-                      <label className="font-mono text-[11px] sm:text-xs text-success uppercase font-bold flex items-center gap-1 truncate">
-                        <Zap size={12} /> Focused
+                      <label className="font-mono text-xs text-success uppercase font-bold flex items-center gap-1.5">
+                        <Zap size={13} /> Focused
                       </label>
                       <FieldUnitToggle unit={unitFocused} setUnit={setUnitFocused} />
                     </div>
@@ -779,16 +780,16 @@ export default function WorkPage() {
                       placeholder="0"
                       value={valFocused}
                       onChange={(e) => setValFocused(e.target.value)}
-                      className="w-full bg-tertiary border border-border-color rounded-lg p-2 sm:p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-success"
-                      style={{ background: '#141824', color: '#fff' }}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 font-mono text-lg font-bold text-primary focus:outline-none focus:border-success transition-colors"
+                      style={{ color: '#fff' }}
                     />
                   </div>
 
                   {/* 4. Unfocused Hours */}
-                  <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 focus-within:border-danger/50 transition-colors">
                     <div className="flex items-center justify-between">
-                      <label className="font-mono text-[11px] sm:text-xs text-danger uppercase font-bold flex items-center gap-1 truncate">
-                        <AlertTriangle size={12} /> Unfocused
+                      <label className="font-mono text-xs text-danger uppercase font-bold flex items-center gap-1.5">
+                        <AlertTriangle size={13} /> Unfocused
                       </label>
                       <FieldUnitToggle unit={unitUnfocused} setUnit={setUnitUnfocused} />
                     </div>
@@ -799,17 +800,17 @@ export default function WorkPage() {
                       placeholder="0"
                       value={valUnfocused}
                       onChange={(e) => setValUnfocused(e.target.value)}
-                      className="w-full bg-tertiary border border-border-color rounded-lg p-2 sm:p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-danger"
-                      style={{ background: '#141824', color: '#fff' }}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 font-mono text-lg font-bold text-primary focus:outline-none focus:border-danger transition-colors"
+                      style={{ color: '#fff' }}
                     />
                   </div>
                 </div>
 
                 <div>
                   {/* TYPE OF WORK — Multi-select tags */}
-                  <div className="space-y-2">
-                    <label className="font-mono text-[11px] sm:text-xs text-purple-400 uppercase font-bold flex items-center gap-1.5">
-                      <Sparkles size={12} /> Type of Work
+                  <div className="space-y-2.5 bg-black/20 p-4 rounded-xl border border-white/5">
+                    <label className="font-mono text-xs text-purple-400 uppercase font-bold flex items-center gap-1.5">
+                      <Sparkles size={13} /> Type of Work
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {WORK_TYPE_OPTIONS.map(opt => {
@@ -823,8 +824,8 @@ export default function WorkPage() {
                                 ? prev.filter(t => t !== opt.label)
                                 : [...prev, opt.label]
                             )}
-                            className={`px-2.5 py-1 rounded-lg font-mono text-[10px] font-bold uppercase tracking-wider border transition-all ${
-                              active ? 'text-black' : 'text-muted hover:text-primary bg-secondary'
+                            className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold uppercase tracking-wider border transition-all ${
+                              active ? 'text-black shadow-md' : 'text-muted hover:text-primary bg-black/40'
                             }`}
                             style={active
                               ? { background: opt.color, borderColor: opt.color }
@@ -837,7 +838,7 @@ export default function WorkPage() {
                       })}
                     </div>
                     {/* Custom type input */}
-                    <div className="flex gap-2 mt-1">
+                    <div className="flex gap-2 pt-1">
                       <input
                         type="text"
                         value={customWorkType}
@@ -851,8 +852,8 @@ export default function WorkPage() {
                           }
                         }}
                         placeholder="Custom type... (press Enter)"
-                        className="flex-1 bg-secondary border border-border-color rounded-lg px-2.5 py-1.5 font-mono text-xs text-primary focus:outline-none focus:border-purple-400"
-                        style={{ background: '#141824', color: '#fff' }}
+                        className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 font-mono text-xs text-primary focus:outline-none focus:border-purple-400 transition-colors"
+                        style={{ color: '#fff' }}
                       />
                       <button
                         type="button"
@@ -861,23 +862,23 @@ export default function WorkPage() {
                           if (val && !workTypes.includes(val)) setWorkTypes(prev => [...prev, val])
                           setCustomWorkType('')
                         }}
-                        className="px-3 py-1.5 bg-purple-500/20 border border-purple-500/40 rounded-lg font-mono text-xs text-purple-300 hover:bg-purple-500/30 transition-all"
+                        className="px-4 py-1.5 bg-purple-500/20 border border-purple-500/40 rounded-lg font-mono text-xs text-purple-300 hover:bg-purple-500/30 transition-all font-bold"
                       >
                         + Add
                       </button>
                     </div>
                     {workTypes.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
+                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-white/5">
                         {workTypes.map(t => (
                           <span
                             key={t}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/30 font-mono text-[10px] text-purple-300"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/20 border border-purple-400/40 font-mono text-xs text-purple-300 font-bold"
                           >
                             {t}
                             <button
                               type="button"
                               onClick={() => setWorkTypes(prev => prev.filter(x => x !== t))}
-                              className="text-purple-400 hover:text-danger ml-0.5"
+                              className="text-purple-400 hover:text-danger ml-0.5 font-bold"
                             >×</button>
                           </span>
                         ))}
@@ -888,12 +889,12 @@ export default function WorkPage() {
 
                 <div>
                   <textarea
-                    rows={2}
-                    placeholder="Notes..."
+                    rows={3}
+                    placeholder="Work session notes..."
                     value={workNotes}
                     onChange={(e) => setWorkNotes(e.target.value)}
-                    className="w-full bg-secondary border border-border-color rounded-xl p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
-                    style={{ background: '#141824', color: '#fff' }}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-amber transition-colors"
+                    style={{ color: '#fff' }}
                   />
                 </div>
 
@@ -901,7 +902,7 @@ export default function WorkPage() {
                   <button
                     type="submit"
                     disabled={savingWork}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50"
                   >
                     <Save size={15} />
                     <span>{savingWork ? 'Saving...' : 'Save Work Log (+2 XP)'}</span>
