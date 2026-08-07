@@ -486,17 +486,18 @@ export default function SpeakingPracticePage() {
 
               <form onSubmit={handleSubmitSession} className="space-y-4">
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">ACTIVE TOPIC (DAY {history.length + 1})</label>
+                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">ACTIVE TOPIC (DAY {history.length + 1})</label>
                   <input
                     type="text"
                     readOnly
                     value={`Day ${history.length + 1}: ${selectedTopic.topic}`}
-                    className="input w-full font-mono text-xs bg-black/40 text-muted cursor-not-allowed border-white/10"
+                    className="w-full font-mono text-xs bg-black/60 text-muted border border-white/10 rounded-xl px-3 py-2.5 cursor-not-allowed"
+                    style={{ color: 'var(--text-muted)' }}
                   />
                 </div>
 
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">VIDEO URL *</label>
+                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">VIDEO URL *</label>
                   <div className="relative">
                     <input
                       type="url"
@@ -504,35 +505,37 @@ export default function SpeakingPracticePage() {
                       placeholder="https://drive.google.com/file/d/..."
                       value={driveLink}
                       onChange={e => setDriveLink(e.target.value)}
-                      className="input w-full font-mono text-xs pl-8"
+                      className="w-full font-mono text-xs bg-black/50 text-primary border border-white/10 rounded-xl px-3 py-2.5 pl-9 focus:outline-none focus:border-amber transition-colors"
+                      style={{ color: '#fff' }}
                     />
-                    <LinkIcon size={14} className="absolute left-2.5 top-3 text-muted" />
+                    <LinkIcon size={14} className="absolute left-3 top-3 text-muted" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">NOTES</label>
+                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">NOTES</label>
                   <textarea
                     rows={3}
-                    placeholder="Session notes..."
+                    placeholder="Session reflections & feedback..."
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
-                    className="textarea w-full font-mono text-xs"
+                    className="w-full font-mono text-xs bg-black/50 text-primary border border-white/10 rounded-xl p-3 focus:outline-none focus:border-amber transition-colors"
+                    style={{ color: '#fff' }}
                   />
                 </div>
 
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">RATING (1 TO 5)</label>
+                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">SELF RATING (1 TO 5)</label>
                   <div className="flex items-center gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
                         onClick={() => setRating(star)}
-                        className={`p-2 rounded-lg font-mono text-xs font-bold flex-1 border transition-all flex items-center justify-center gap-1 ${
+                        className={`p-2 rounded-xl font-mono text-xs font-bold flex-1 border transition-all flex items-center justify-center gap-1 ${
                           rating >= star
-                            ? 'bg-amber/20 border-amber text-amber'
-                            : 'bg-black/40 border-border-color text-muted'
+                            ? 'bg-amber/20 border-amber text-amber shadow-sm'
+                            : 'bg-black/40 border-white/10 text-muted hover:text-primary'
                         }`}
                       >
                         <Star size={12} className={rating >= star ? 'fill-amber' : ''} />
@@ -545,7 +548,7 @@ export default function SpeakingPracticePage() {
                 <button
                   type="submit"
                   disabled={submitting || !driveLink.trim()}
-                  className="btn btn-primary btn-md w-full font-mono text-xs font-bold py-3 flex items-center justify-center gap-2 shadow-xl"
+                  className="w-full font-mono text-xs font-bold py-3 flex items-center justify-center gap-2 rounded-xl bg-amber hover:bg-amber-hover text-black shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Award size={16} />
                   <span>{submitting ? 'RECORDING...' : 'LOG PRACTICE SESSION (+25 XP)'}</span>
@@ -572,7 +575,8 @@ export default function SpeakingPracticePage() {
                 placeholder="Search history..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="input w-full font-mono text-xs pl-8 py-1.5"
+                className="w-full bg-black/50 text-primary border border-white/10 rounded-xl px-3 py-1.5 pl-8 font-mono text-xs focus:outline-none focus:border-amber transition-colors"
+                style={{ color: '#fff' }}
               />
               <Search size={13} className="absolute left-2.5 top-2.5 text-muted" />
             </div>
