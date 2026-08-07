@@ -20,44 +20,62 @@ export async function evaluateProtocolAutoFail(userId) {
     const now = new Date()
     const todayStr = getLocalDateStr(now)
 
-    // 1. Purge any retroactive auto-fail penalties logged for dates before PROTOCOL_START_DATE
-    const { data: pastPenalties } = await supabase
+    // 1. Purge ANY retroactive auto-fail penalties logged for dates before PROTOCOL_START_DATE (2026-08-07)
+    const { data: allHistory } = await supabase
       .from('xp_history')
-      .select('id, amount, source_id, source_type')
+      .select('id, amount, source_id, source_type, description')
       .eq('user_id', userId)
-      .in('source_type', ['journal_missed', 'speaking_missed', 'speaking_rest_day'])
 
-    if (pastPenalties && pastPenalties.length > 0) {
-      const penaltiesToPurge = pastPenalties.filter(p => {
-        const parts = (p.source_id || '').split('_')
-        const datePart = parts[parts.length - 1]
-        return datePart && datePart < PROTOCOL_START_DATE
-      })
+    if (allHistory && allHistory.length > 0) {
+      const purgeIds = []
 
-      if (penaltiesToPurge.length > 0) {
-        const purgeIds = penaltiesToPurge.map(p => p.id)
-        const totalAmountToRestore = penaltiesToPurge.reduce((acc, p) => acc + (p.amount || 0), 0)
+      for (const item of allHistory) {
+        const desc = (item.description || '').toLowerCase()
+        const srcType = (item.source_type || '').toLowerCase()
+        const srcId = (item.source_id || '').toLowerCase()
 
-        // Purge retroactive entries
-        await supabase.from('xp_history').delete().in('id', purgeIds)
+        const isProtocolEntry =
+          desc.includes('3 am cutoff') ||
+          desc.includes('speaking practice off-day') ||
+          srcType.includes('journal_missed') ||
+          srcType.includes('speaking_missed') ||
+          srcType.includes('speaking_rest_day') ||
+          srcId.includes('journal_missed') ||
+          srcId.includes('speaking_missed') ||
+          srcId.includes('speaking_rest_day')
 
-        // Refund deducted XP to profile
-        if (totalAmountToRestore < 0) {
-          const restoreAmount = Math.abs(totalAmountToRestore)
-          if (typeof window !== 'undefined' && window.navigator?.locks) {
-            await window.navigator.locks.request('xp_update_lock', async () => {
-              const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
-              if (prof) {
-                await supabase.from('profiles').update({ total_xp: (prof.total_xp || 0) + restoreAmount }).eq('id', userId)
-              }
-            })
-          } else {
-            const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
-            if (prof) {
-              await supabase.from('profiles').update({ total_xp: (prof.total_xp || 0) + restoreAmount }).eq('id', userId)
+        if (isProtocolEntry) {
+          const textToSearch = `${item.description || ''} ${item.source_id || ''}`
+          const dateMatch = textToSearch.match(/202\d-\d{2}-\d{2}/)
+          if (dateMatch && dateMatch[0]) {
+            const entryDateStr = dateMatch[0]
+            if (entryDateStr < PROTOCOL_START_DATE) {
+              purgeIds.push(item.id)
             }
+          } else {
+            purgeIds.push(item.id)
           }
         }
+      }
+
+      if (purgeIds.length > 0) {
+        for (let i = 0; i < purgeIds.length; i += 50) {
+          const batch = purgeIds.slice(i, i + 50)
+          await supabase.from('xp_history').delete().in('id', batch)
+        }
+
+        // Recalculate true total_xp from remaining history entries
+        const { data: remaining } = await supabase
+          .from('xp_history')
+          .select('amount')
+          .eq('user_id', userId)
+
+        const trueTotalXp = (remaining || []).reduce((sum, r) => sum + (r.amount || 0), 0)
+
+        await supabase
+          .from('profiles')
+          .update({ total_xp: Math.max(0, trueTotalXp) })
+          .eq('id', userId)
       }
     }
 
