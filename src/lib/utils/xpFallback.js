@@ -150,41 +150,79 @@ export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount =
   const supabase = createClient()
   if (!userId) return false
 
-  let totalDeduction = 0
+  let deductionAmount = 0
+  let prevDesc = ''
+  let prevStatCat = 'discipline'
 
-  // Step 1: Look for matching xp_history entries for sourceType + sourceId
+  // Step 1: Look for matching xp_history entries for sourceType + sourceId to find granted XP & details
   if (sourceType || sourceId) {
     try {
-      let query = supabase.from('xp_history').select('id, amount').eq('user_id', userId)
+      let query = supabase.from('xp_history').select('id, amount, description, stat_category').eq('user_id', userId)
       if (sourceType) query = query.eq('source_type', sourceType)
       if (sourceId) query = query.eq('source_id', sourceId)
 
       const { data: items } = await query
       if (items && items.length > 0) {
-        totalDeduction = items.reduce((sum, r) => sum + (r.amount || 0), 0)
-        const ids = items.map(r => r.id)
-        await supabase.from('xp_history').delete().in('id', ids)
+        // Calculate net positive XP granted for this source
+        const positiveItems = items.filter(r => (r.amount || 0) > 0)
+        if (positiveItems.length > 0) {
+          deductionAmount = positiveItems.reduce((sum, r) => sum + r.amount, 0)
+          prevDesc = positiveItems[0].description || ''
+          prevStatCat = positiveItems[0].stat_category || 'discipline'
+        }
       }
     } catch (err) {
       console.warn('Failed to query xp_history during remove:', err)
     }
   }
 
-  // Step 2: Fallback to fixedAmount if no xp_history records were deleted
-  if (totalDeduction === 0 && fixedAmount) {
-    totalDeduction = Math.abs(fixedAmount)
+  // Step 2: Fallback to fixedAmount if no previous positive xp_history record was found
+  if (deductionAmount === 0 && fixedAmount) {
+    deductionAmount = Math.abs(fixedAmount)
   }
 
-  // Step 3: Deduct totalDeduction from profiles.total_xp
-  if (totalDeduction > 0) {
+  // Step 3: Record negative XP deduction in xp_history for complete minute-to-minute audit log
+  if (deductionAmount > 0) {
+    const finalNegativeAmount = -Math.abs(deductionAmount)
+    const logDesc = description || (prevDesc ? `↩ Action Reversed: ${prevDesc}` : `↩ Action Reversed: ${sourceType || 'XP Deduction'}`)
+
+    try {
+      const deductionPayload = {
+        user_id: userId,
+        amount: finalNegativeAmount,
+        source_type: sourceType ? `${sourceType}_reversed` : 'xp_deduction',
+        source_id: sourceId || null,
+        description: logDesc,
+        stat_category: prevStatCat,
+        created_at: new Date().toISOString()
+      }
+
+      const { error: insertErr } = await supabase.from('xp_history').insert(deductionPayload)
+
+      if (insertErr) {
+        console.warn('Full deduction payload insert failed, retrying minimal payload:', insertErr.message || insertErr)
+        const minimalPayload = {
+          user_id: userId,
+          amount: finalNegativeAmount,
+          source_type: sourceType ? `${sourceType}_reversed` : 'xp_deduction',
+          description: logDesc,
+          created_at: new Date().toISOString()
+        }
+        await supabase.from('xp_history').insert(minimalPayload)
+      }
+    } catch (logErr) {
+      console.error('Failed to log XP deduction entry:', logErr)
+    }
+
+    // Step 4: Update profiles.total_xp subtractively so total XP reflects net balance
     try {
       const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
       if (prof) {
-        const newTotal = Math.max(0, (prof.total_xp || 0) - totalDeduction)
+        const newTotal = Math.max(0, (prof.total_xp || 0) + finalNegativeAmount)
         await supabase.from('profiles').update({ total_xp: newTotal }).eq('id', userId)
       }
     } catch (e) {
-      console.error('Failed to deduct profile XP:', e)
+      console.error('Failed to update profile total_xp during deduction:', e)
     }
   }
 

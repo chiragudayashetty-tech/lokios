@@ -238,24 +238,21 @@ export default function SpeakingPracticePage() {
               <h1 className="text-2xl sm:text-3xl font-mono font-black text-primary uppercase tracking-tight flex items-center gap-2">
                 SPEAKING PRACTICE HUB <Sparkles className="text-amber animate-pulse" size={24} />
               </h1>
-              <p className="font-mono text-xs text-muted max-w-xl mt-1 leading-relaxed">
-                Click <span className="text-amber font-bold">TODAY'S TOPIC</span> to pick a prompt from the 30-topic bank, prep for 10 minutes, and log your video link!
-              </p>
             </div>
 
             {/* Quick Metrics */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="p-3 rounded-xl bg-black/50 border border-white/10 text-center min-w-[100px]">
                 <div className="font-mono text-xl font-bold text-amber">{totalSessions}/30</div>
-                <div className="font-mono text-[9px] uppercase tracking-wider text-muted">Days Done</div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Days Done</div>
               </div>
               <div className="p-3 rounded-xl bg-black/50 border border-white/10 text-center min-w-[100px]">
                 <div className="font-mono text-xl font-bold text-success">{totalSessions}</div>
-                <div className="font-mono text-[9px] uppercase tracking-wider text-muted">Total Videos</div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Videos</div>
               </div>
               <div className="p-3 rounded-xl bg-black/50 border border-white/10 text-center min-w-[100px]">
                 <div className="font-mono text-xl font-bold text-purple-400">⭐ {avgRating}</div>
-                <div className="font-mono text-[9px] uppercase tracking-wider text-muted">Avg Self Score</div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Avg Rating</div>
               </div>
             </div>
           </div>
@@ -273,11 +270,11 @@ export default function SpeakingPracticePage() {
                 <div className="flex items-center gap-2">
                   <BookOpen size={18} className="text-amber" />
                   <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                    TOPIC SELECTOR // 30 RANDOM TOPICS BANK
+                    TOPIC SELECTOR
                   </span>
                 </div>
                 <div className="font-mono text-xs font-bold text-amber bg-amber/15 border border-amber/30 px-2.5 py-0.5 rounded-full">
-                  NEXT PRACTICE: DAY {history.length + 1}
+                  DAY {history.length + 1}
                 </div>
               </div>
 
@@ -289,7 +286,7 @@ export default function SpeakingPracticePage() {
                 className="p-6 rounded-xl bg-black/60 border border-amber/30 text-center relative overflow-hidden space-y-4"
               >
                 <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30 font-bold inline-block">
-                  {selectedTopic.category || 'General'} • 30 TOPIC POOL
+                  {selectedTopic.category || 'General'}
                 </span>
                 
                 <h2 className="text-xl sm:text-2xl font-mono font-bold text-primary leading-snug">
@@ -305,7 +302,7 @@ export default function SpeakingPracticePage() {
                     className="btn btn-primary btn-md font-mono text-xs flex items-center gap-2 font-black tracking-wider uppercase shadow-2xl px-6 py-2.5 bg-amber text-black hover:bg-amber-hover border border-amber-hover transition-all transform hover:scale-105 active:scale-95"
                   >
                     <Shuffle size={16} className={isShuffling ? 'animate-spin' : ''} />
-                    <span>{isShuffling ? 'SELECTING TOPIC...' : '🎯 SELECT TODAY\'S TOPIC'}</span>
+                    <span>{isShuffling ? 'SELECTING...' : '🎯 SELECT TODAY\'S TOPIC'}</span>
                   </button>
                 </div>
               </motion.div>
@@ -313,8 +310,8 @@ export default function SpeakingPracticePage() {
               {/* TOPIC QUICK PICK DIAL */}
               <div className="mt-4 pt-3 border-t border-white/5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-[10px] text-muted uppercase tracking-wider">Browse Topic Bank (1–30):</span>
-                  <span className="font-mono text-[10px] text-amber">{topics.length} topics available</span>
+                  <span className="font-mono text-[10px] text-muted uppercase tracking-wider font-bold">Topic Bank:</span>
+                  <span className="font-mono text-[10px] text-amber">{topics.length} available</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
                   {topics.map((t, idx) => {
@@ -351,13 +348,13 @@ export default function SpeakingPracticePage() {
                 <div className="flex items-center gap-2">
                   <Clock size={18} className="text-info" />
                   <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                    PREPARATION TIMER // 10 MINUTES
+                    PREPARATION TIMER
                   </span>
                 </div>
                 <span className={`font-mono text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
                   isTimerRunning ? 'bg-success/20 text-success border border-success/30 animate-pulse' : 'bg-white/10 text-muted'
                 }`}>
-                  {isTimerRunning ? 'PREP IN PROGRESS' : 'PAUSED / READY'}
+                  {isTimerRunning ? 'IN PROGRESS' : 'READY'}
                 </span>
               </div>
 
@@ -384,7 +381,7 @@ export default function SpeakingPracticePage() {
                       onClick={handleStartTimer}
                       className="btn btn-primary btn-md font-mono text-xs font-bold px-6 flex items-center gap-2"
                     >
-                      <Play size={16} /> START 10-MIN PREP
+                      <Play size={16} /> START PREP
                     </button>
                   ) : (
                     <button
@@ -392,7 +389,7 @@ export default function SpeakingPracticePage() {
                       onClick={handlePauseTimer}
                       className="btn btn-warning btn-md font-mono text-xs font-bold px-6 flex items-center gap-2"
                     >
-                      <Pause size={16} /> PAUSE PREP
+                      <Pause size={16} /> PAUSE
                     </button>
                   )}
 
@@ -426,13 +423,13 @@ export default function SpeakingPracticePage() {
                   className="mb-4 p-3 rounded-lg bg-success/20 border border-success/40 text-success font-mono text-xs flex items-center gap-2"
                 >
                   <CheckCircle2 size={16} />
-                  <span>Practice Session Recorded! +25 XP Awarded! 🎉</span>
+                  <span>Session Logged! +25 XP Awarded! 🎉</span>
                 </motion.div>
               )}
 
               <form onSubmit={handleSubmitSession} className="space-y-4">
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">ACTIVE TOPIC FOR TODAY (WILL LOG AS DAY {history.length + 1})</label>
+                  <label className="font-mono text-xs text-muted mb-1 block">ACTIVE TOPIC (DAY {history.length + 1})</label>
                   <input
                     type="text"
                     readOnly
@@ -442,7 +439,7 @@ export default function SpeakingPracticePage() {
                 </div>
 
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">GOOGLE DRIVE / VIDEO URL *</label>
+                  <label className="font-mono text-xs text-muted mb-1 block">VIDEO URL *</label>
                   <div className="relative">
                     <input
                       type="url"
@@ -454,14 +451,13 @@ export default function SpeakingPracticePage() {
                     />
                     <LinkIcon size={14} className="absolute left-2.5 top-3 text-muted" />
                   </div>
-                  <span className="font-mono text-[9px] text-muted mt-1 block">Upload your recording to Google Drive & paste public link here</span>
                 </div>
 
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">SPEAKING NOTES & TAKEAWAYS</label>
+                  <label className="font-mono text-xs text-muted mb-1 block">NOTES</label>
                   <textarea
                     rows={3}
-                    placeholder="Key talking points, main argument, or areas for delivery improvement..."
+                    placeholder="Session notes..."
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
                     className="textarea w-full font-mono text-xs"
@@ -469,7 +465,7 @@ export default function SpeakingPracticePage() {
                 </div>
 
                 <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">SELF-RATING / CONFIDENCE (1 TO 5)</label>
+                  <label className="font-mono text-xs text-muted mb-1 block">RATING (1 TO 5)</label>
                   <div className="flex items-center gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
@@ -495,7 +491,7 @@ export default function SpeakingPracticePage() {
                   className="btn btn-primary btn-md w-full font-mono text-xs font-bold py-3 flex items-center justify-center gap-2 shadow-xl"
                 >
                   <Award size={16} />
-                  <span>{submitting ? 'RECORDING SESSION...' : 'LOG PRACTICE SESSION (+25 XP)'}</span>
+                  <span>{submitting ? 'RECORDING...' : 'LOG PRACTICE SESSION (+25 XP)'}</span>
                 </button>
               </form>
             </div>
@@ -508,7 +504,7 @@ export default function SpeakingPracticePage() {
             <div className="flex items-center gap-2">
               <Calendar size={18} className="text-success" />
               <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                PRACTICE HISTORY & VIDEO PROOF ARCHIVE ({history.length})
+                PRACTICE HISTORY ({history.length})
               </span>
             </div>
 
@@ -516,7 +512,7 @@ export default function SpeakingPracticePage() {
             <div className="relative w-full sm:w-64">
               <input
                 type="text"
-                placeholder="Search topic or notes..."
+                placeholder="Search history..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="input w-full font-mono text-xs pl-8 py-1.5"
@@ -526,12 +522,11 @@ export default function SpeakingPracticePage() {
           </div>
 
           {loading ? (
-            <div className="p-8 text-center font-mono text-xs text-muted">Loading speaking history...</div>
+            <div className="p-8 text-center font-mono text-xs text-muted">Loading history...</div>
           ) : history.length === 0 ? (
             <div className="p-8 text-center rounded-xl bg-black/40 border border-dashed border-white/10">
               <Mic size={24} className="mx-auto text-muted mb-2 opacity-50" />
               <div className="font-mono text-xs text-primary font-bold">NO PRACTICE SESSIONS LOGGED YET</div>
-              <p className="font-mono text-[10px] text-muted mt-1">Select Today's Topic above, prep for 10 minutes, and paste your video link!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

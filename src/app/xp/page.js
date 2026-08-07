@@ -180,13 +180,33 @@ export default function XPDashboard() {
     daysTracked = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
   }
 
+  const [logFilterMode, setLogFilterMode] = useState('all') // 'all' | 'additions' | 'deductions'
+  const [logSearch, setLogSearch] = useState('')
+
+  // Filtered timeline logs
+  const filteredTimeline = timeline.slice().reverse().filter(item => {
+    if (logFilterMode === 'additions' && item.amount <= 0) return false
+    if (logFilterMode === 'deductions' && item.amount >= 0) return false
+    if (logSearch.trim()) {
+      const q = logSearch.toLowerCase()
+      const desc = (item.description || '').toLowerCase()
+      const cat = (item.stat_category || '').toLowerCase()
+      const src = (item.source_type || '').toLowerCase()
+      return desc.includes(q) || cat.includes(q) || src.includes(q)
+    }
+    return true
+  })
+
+  const positiveCount = timeline.filter(t => t.amount > 0).length
+  const deductionCount = timeline.filter(t => t.amount < 0).length
+
   return (
     <AppShell>
       <div className="page-container" style={{ maxWidth: '1400px' }}>
         <header className="page-header mb-8 flex items-start justify-between">
           <div>
             <h1 className="page-title flex items-center gap-3"><Trophy className="text-amber" /> EXPERIENCE METRICS</h1>
-            <p className="page-subtitle font-mono uppercase text-xs">Visualize your character progression and stat distribution.</p>
+            <p className="page-subtitle font-mono uppercase text-xs">Visualize your character progression, minute-to-minute XP activity timeline, and stat distribution.</p>
           </div>
           <div className="flex gap-2">
             <button 
@@ -280,12 +300,12 @@ export default function XPDashboard() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
               <div className="bg-bg-tertiary border border-border-color p-4 rounded-xl flex flex-col items-center text-center">
-                <span className="font-display text-2xl text-success font-bold">{timeline.filter(t => t.amount > 0).length}</span>
+                <span className="font-display text-2xl text-success font-bold">{positiveCount}</span>
                 <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">POSITIVE ACTIONS</span>
               </div>
               <div className="bg-bg-tertiary border border-border-color p-4 rounded-xl flex flex-col items-center text-center">
-                <span className="font-display text-2xl text-danger font-bold">{timeline.filter(t => t.amount < 0).length}</span>
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">PENALTIES</span>
+                <span className="font-display text-2xl text-danger font-bold">{deductionCount}</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">SUBTRACTIONS & PENALTIES</span>
               </div>
               <div className="bg-bg-tertiary border border-border-color p-4 rounded-xl flex flex-col items-center text-center">
                 <span className="font-display text-2xl text-info font-bold">{daysTracked}</span>
@@ -327,7 +347,7 @@ export default function XPDashboard() {
                 </div>
               </div>
 
-              {/* Mode Selector Toggle Strip (3-column grid on mobile, fit on desktop) */}
+              {/* Mode Selector Toggle Strip */}
               <div className="grid grid-cols-3 gap-1 bg-black/50 border border-white/10 rounded-xl p-1 font-mono text-[10px] sm:w-fit">
                 <button
                   type="button"
@@ -554,26 +574,128 @@ export default function XPDashboard() {
           </HudPanel>
         </div>
 
-        {/* FULL ACTIVITY TIMELINE */}
+        {/* FULL MINUTE-TO-MINUTE ACTIVITY TIMELINE */}
         <div className="mt-8">
-          <HudPanel label="FULL ACTIVITY LOG">
-            <div className="flex-col gap-0 max-h-[600px] overflow-y-auto pr-4">
-              {timeline.slice().reverse().map((item, i) => (
-                <div key={item.id} className="relative pl-6 py-4 border-l border-border-strong group hover:border-info transition-colors border-b border-border-color last:border-b-0">
-                  <div className="absolute left-[-4.5px] top-5 w-2 h-2 rounded-full bg-border-color group-hover:bg-info transition-colors" />
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="font-mono text-sm text-primary">{item.description}</div>
-                    <span className={`font-mono text-sm font-bold ${item.amount > 0 ? 'text-success' : item.amount < 0 ? 'text-danger' : 'text-muted'}`}>
-                      {item.amount > 0 ? '+' : ''}{item.amount} XP
-                    </span>
+          <HudPanel label="MINUTE-TO-MINUTE XP AUDIT LOG">
+            {/* Header Toolbar: Filters & Search */}
+            <div className="p-4 border-b border-border-color flex flex-wrap items-center justify-between gap-3 bg-bg-tertiary/50 rounded-t-xl">
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-1 bg-black/40 p-1 border border-border-color rounded-lg font-mono text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setLogFilterMode('all')}
+                  className={`px-3 py-1 rounded font-bold transition-colors ${logFilterMode === 'all' ? 'bg-amber text-black' : 'text-muted hover:text-primary'}`}
+                >
+                  ALL ({timeline.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilterMode('additions')}
+                  className={`px-3 py-1 rounded font-bold transition-colors ${logFilterMode === 'additions' ? 'bg-success text-black' : 'text-muted hover:text-primary'}`}
+                >
+                  + ADDITIONS ({positiveCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilterMode('deductions')}
+                  className={`px-3 py-1 rounded font-bold transition-colors ${logFilterMode === 'deductions' ? 'bg-danger text-black' : 'text-muted hover:text-primary'}`}
+                >
+                  - SUBTRACTIONS ({deductionCount})
+                </button>
+              </div>
+
+              {/* Search Box */}
+              <div className="relative w-full sm:w-64">
+                <input
+                  type="text"
+                  placeholder="Filter by keyword..."
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  className="w-full bg-black/50 border border-border-color rounded-lg px-3 py-1.5 text-xs font-mono text-primary placeholder:text-muted focus:outline-none focus:border-amber transition-colors"
+                />
+                {logSearch && (
+                  <button
+                    onClick={() => setLogSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-primary font-mono"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Timeline Stream */}
+            <div className="flex flex-col gap-0 max-h-[650px] overflow-y-auto pr-2 divide-y divide-border-color">
+              {filteredTimeline.map((item) => {
+                const isPositive = item.amount > 0
+                const isNegative = item.amount < 0
+                const dt = item.created_at ? new Date(item.created_at) : new Date()
+                
+                // Format exact minute and second timestamp
+                const dateStr = dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                const timeStr = dt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+
+                return (
+                  <div 
+                    key={item.id} 
+                    className="relative pl-6 pr-4 py-3.5 group hover:bg-white/[0.02] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  >
+                    {/* Glowing Left Indicator Dot */}
+                    <div 
+                      className={`absolute left-2.5 top-5 w-2.5 h-2.5 rounded-full transition-all ${
+                        isPositive 
+                          ? 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
+                          : isNegative 
+                          ? 'bg-danger shadow-[0_0_8px_rgba(239,68,68,0.6)]' 
+                          : 'bg-muted'
+                      }`} 
+                    />
+
+                    {/* Content & Description */}
+                    <div className="min-w-0 flex-1 pl-2">
+                      <div className="font-mono text-sm text-primary font-semibold flex items-center gap-2 flex-wrap">
+                        <span>{item.description || 'XP Event Logged'}</span>
+                        <span className="font-mono text-[9px] px-1.5 py-0.5 rounded uppercase border bg-bg-tertiary border-border-color text-amber tracking-wider">
+                          {item.stat_category || 'GENERAL'}
+                        </span>
+                        {item.source_type && (
+                          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded text-muted bg-white/5 border border-white/5 font-normal">
+                            {item.source_type}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Exact Minute & Second Timestamp */}
+                      <div className="font-mono text-[10px] text-muted mt-1 flex items-center gap-2">
+                        <span className="text-white/70 font-bold">{dateStr}</span>
+                        <span>at</span>
+                        <span className="text-amber font-mono font-bold">{timeStr}</span>
+                      </div>
+                    </div>
+
+                    {/* Amount Pill */}
+                    <div className="shrink-0 flex items-center">
+                      <span 
+                        className={`font-mono text-xs font-bold px-3 py-1 rounded-lg border shadow-md flex items-center gap-1 ${
+                          isPositive 
+                            ? 'bg-success/15 border-success/40 text-success shadow-success/10' 
+                            : isNegative 
+                            ? 'bg-danger/15 border-danger/40 text-danger shadow-danger/10' 
+                            : 'bg-bg-tertiary border-border-color text-muted'
+                        }`}
+                      >
+                        {isPositive ? `+${item.amount}` : item.amount} XP
+                      </span>
+                    </div>
                   </div>
-                  <div className="font-mono text-[10px] text-muted flex gap-3">
-                    <span>{new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString()}</span>
-                    <span className="uppercase text-amber">{item.stat_category || 'GENERAL'}</span>
-                  </div>
+                )
+              })}
+
+              {filteredTimeline.length === 0 && (
+                <div className="font-mono text-xs text-muted py-12 text-center uppercase tracking-widest">
+                  {logSearch ? 'No XP events match your search query.' : 'No XP activity logs archived.'}
                 </div>
-              ))}
-              {timeline.length === 0 && <div className="font-mono text-sm text-muted py-8 text-center">NO ACTIVITY LOGS ARCHIVED.</div>}
+              )}
             </div>
           </HudPanel>
         </div>
