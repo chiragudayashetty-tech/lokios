@@ -6,7 +6,7 @@ import HudPanel from '@/components/ui/HudPanel'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
-import { getLocalDateStr } from '@/lib/utils/dates'
+import { getLocalDateStr, parseTaskNotes } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
 import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw, AlertTriangle, CheckSquare, Square } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -19,7 +19,8 @@ export default function Missions() {
   const [expandedGoal, setExpandedGoal] = useState(null)
   
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', danger: false, onConfirm: null, onCancel: null, confirmText: 'CONFIRM' })
-  const [proofModal, setProofModal] = useState({ show: false, goal: null, url: '' })
+  const [proofModal, setProofModal] = useState({ show: false, goal: null, url: '', note: '' })
+  const [failMissionModal, setFailMissionModal] = useState({ show: false, goal: null, reason: '' })
   
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
@@ -99,8 +100,8 @@ export default function Missions() {
       return
     }
     
-    setShowForm(false)
     setFormData({ title: '', description: '', type: 'side_quest', difficulty: 'HARD', deadline: '', category: 'personal', customCategory: '' })
+    setShowForm(false)
   }
 
   const startEdit = (goal) => {
@@ -130,12 +131,12 @@ export default function Missions() {
     setConfirmModal({
       isOpen: true,
       title: 'DELETE MISSION',
-      message: 'Are you sure you want to permanently delete this mission?',
+      message: `Are you sure you want to delete "${goal.title}"?`,
       danger: true,
       confirmText: 'DELETE',
       onConfirm: async () => {
         let revokeXp = true
-        if (goal.status === 'completed' || goal.status === 'cancelled') {
+        if (goal.status === 'completed' || goal.status === 'failed') {
           setConfirmModal({
             isOpen: true,
             title: 'REVOKE XP?',
@@ -162,11 +163,25 @@ export default function Missions() {
   }
 
   const handleCompleteGoal = (goal) => {
-    setProofModal({ show: true, goal, url: '' })
+    setProofModal({ show: true, goal, url: '', note: '' })
   }
 
-  const failGoal = async (goal) => {
-    await failMission(goal.id)
+  const submitMissionCompletion = async (skipNotes = false) => {
+    if (!proofModal.goal) return
+    const urlToSend = skipNotes ? null : (proofModal.url.trim() || null)
+    const noteToSend = skipNotes ? null : (proofModal.note.trim() || null)
+    await completeGoal(proofModal.goal.id, urlToSend, false, noteToSend)
+    setProofModal({ show: false, goal: null, url: '', note: '' })
+  }
+
+  const failGoal = (goal) => {
+    setFailMissionModal({ show: true, goal, reason: '' })
+  }
+
+  const submitMissionFailure = async () => {
+    if (!failMissionModal.goal) return
+    await failMission(failMissionModal.goal.id, failMissionModal.reason.trim() || null)
+    setFailMissionModal({ show: false, goal: null, reason: '' })
   }
 
   const renderGoalCard = (goal, i) => {
@@ -233,38 +248,60 @@ export default function Missions() {
 
             {/* Expanded Details */}
             <AnimatePresence>
-              {isExpanded && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <div className="mt-3 pt-3 border-t border-border-color/40 flex flex-col gap-3 font-mono text-xs">
-                    {goal.description && (
-                      <p className="text-secondary whitespace-pre-wrap">{goal.description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted pt-1">
-                      <div>
-                        <span className="uppercase">TYPE: {goal.type?.replace('_', ' ')}</span>
-                        {goal.category && <span className="ml-3 uppercase">CAT: {goal.category}</span>}
-                        {goal.created_at && <span className="ml-3 text-info">DEPLOYED: {new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
-                        {goal.completed_at && <span className="ml-3 text-success font-semibold">COMPLETED: {new Date(goal.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {isCompleted && (
-                          <button type="button" onClick={(e) => { e.stopPropagation(); undoCompleteGoal(goal.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
-                            <RotateCcw size={12} /> RE-OPEN MISSION
+              {isExpanded && (() => {
+                const { cleanDesc, completionNote: itemCompNote, failureNote: itemFailNote } = parseTaskNotes(goal.description)
+                return (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="mt-3 pt-3 border-t border-border-color/40 flex flex-col gap-3 font-mono text-xs">
+                      {cleanDesc && (
+                        <p className="text-secondary whitespace-pre-wrap">{cleanDesc}</p>
+                      )}
+
+                      {itemCompNote && (
+                        <div className="p-3 rounded-lg border border-success/40 bg-success/10 font-mono text-xs my-1">
+                          <div className="text-success font-bold uppercase tracking-wider text-[10px] mb-1 flex items-center gap-1.5">
+                            <CheckCircle2 size={13} /> Mission Accomplishment Reflection:
+                          </div>
+                          <div className="text-primary whitespace-pre-wrap">{itemCompNote}</div>
+                        </div>
+                      )}
+
+                      {itemFailNote && (
+                        <div className="p-3 rounded-lg border border-danger/40 bg-danger/10 font-mono text-xs my-1">
+                          <div className="text-danger font-bold uppercase tracking-wider text-[10px] mb-1 flex items-center gap-1.5">
+                            <AlertTriangle size={13} /> Reason for Failure:
+                          </div>
+                          <div className="text-primary whitespace-pre-wrap">{itemFailNote}</div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted pt-1">
+                        <div>
+                          <span className="uppercase">TYPE: {goal.type?.replace('_', ' ')}</span>
+                          {goal.category && <span className="ml-3 uppercase">CAT: {goal.category}</span>}
+                          {goal.created_at && <span className="ml-3 text-info">DEPLOYED: {new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+                          {goal.completed_at && <span className="ml-3 text-success font-semibold">COMPLETED: {new Date(goal.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isCompleted && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); undoCompleteGoal(goal.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
+                              <RotateCcw size={12} /> RE-OPEN MISSION
+                            </button>
+                          )}
+                          {!isCompleted && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); undoFailMission(goal.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
+                              <RotateCcw size={12} /> RESTORE MISSION
+                            </button>
+                          )}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteGoal(goal); }} className="btn btn-ghost btn-xs text-danger p-1" title="Delete">
+                            <Trash2 size={13} />
                           </button>
-                        )}
-                        {!isCompleted && (
-                          <button type="button" onClick={(e) => { e.stopPropagation(); undoFailMission(goal.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
-                            <RotateCcw size={12} /> RESTORE MISSION
-                          </button>
-                        )}
-                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteGoal(goal); }} className="btn btn-ghost btn-xs text-danger p-1" title="Delete">
-                          <Trash2 size={13} />
-                        </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )
+              })()}
             </AnimatePresence>
           </div>
         </motion.div>
@@ -667,23 +704,88 @@ export default function Missions() {
           )}
         </AnimatePresence>
 
-        {/* Proof of Work Modal */}
+        {/* MISSION ACCOMPLISHED REPORT MODAL */}
         <AnimatePresence>
-          {proofModal.show && (
+          {proofModal.show && proofModal.goal && (
             <div className="modal-overlay">
               <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto p-4">
-                <HudPanel glow label="MISSION ACCOMPLISHED" className="modal-content w-full max-w-md">
-                  <div className="p-4">
-                    <p className="font-mono text-sm text-secondary mb-4">Would you like to attach Proof of Work? This will automatically log to your Portfolio Engine.</p>
-                    <label className="font-mono text-xs text-muted mb-1 block">ATTACH LINK / IMAGE URL (OPTIONAL)</label>
-                    <input type="url" className="input font-mono text-sm mb-6 w-full" value={proofModal.url} onChange={(e) => setProofModal({ ...proofModal, url: e.target.value })} placeholder="https://..." />
+                <HudPanel glow label="MISSION ACCOMPLISHED" className="modal-content w-full max-w-lg border-success">
+                  <div className="p-4 flex flex-col gap-4">
+                    <div>
+                      <span className="font-mono text-[10px] text-muted uppercase block">MISSION TITLE</span>
+                      <p className="font-mono text-base font-bold text-primary">{proofModal.goal.title}</p>
+                    </div>
+
+                    <div>
+                      <label className="font-mono text-xs text-amber font-semibold mb-1 block">
+                        WHAT WAS ACCOMPLISHED? (ACCOMPLISHMENT REFLECTION / NOTES)
+                      </label>
+                      <textarea 
+                        className="textarea font-mono text-xs w-full p-2.5 bg-bg-primary border border-border-color focus:border-success focus:outline-none" 
+                        rows={3}
+                        placeholder="Describe key outcomes, milestones achieved, deliverables..."
+                        value={proofModal.note} 
+                        onChange={(e) => setProofModal({ ...proofModal, note: e.target.value })} 
+                        autoFocus 
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">ATTACH PROOF LINK / IMAGE URL (OPTIONAL)</label>
+                      <input 
+                        type="url" 
+                        className="input font-mono text-xs w-full px-3 py-2 bg-bg-primary border border-border-color" 
+                        value={proofModal.url} 
+                        onChange={(e) => setProofModal({ ...proofModal, url: e.target.value })} 
+                        placeholder="https://..." 
+                      />
+                    </div>
                     
-                    <div className="flex justify-end gap-3">
-                      <button className="btn btn-ghost" onClick={() => setProofModal({ show: false, goal: null, url: '' })}>CANCEL</button>
-                      <button className="btn btn-primary" onClick={async () => {
-                        await completeGoal(proofModal.goal.id, proofModal.url)
-                        setProofModal({ show: false, goal: null, url: '' })
-                      }}>CONFIRM COMPLETION</button>
+                    <div className="flex flex-col gap-2 mt-2">
+                      <button className="btn btn-primary w-full py-2.5 font-bold flex items-center justify-center gap-2" onClick={() => submitMissionCompletion(false)}>
+                        <Check size={16} /> CONFIRM & LOG MISSION
+                      </button>
+                      <button className="btn btn-ghost btn-xs text-muted font-mono" onClick={() => submitMissionCompletion(true)}>
+                        QUICK COMPLETE (SKIP NOTES)
+                      </button>
+                    </div>
+                  </div>
+                </HudPanel>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* MISSION FAILURE REASON MODAL */}
+        <AnimatePresence>
+          {failMissionModal.show && failMissionModal.goal && (
+            <div className="modal-overlay">
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="w-full sm:w-auto p-4">
+                <HudPanel label="FAIL MISSION" className="modal-content w-full max-w-md border-danger">
+                  <div className="p-4 flex flex-col gap-4">
+                    <div>
+                      <span className="font-mono text-[10px] text-muted uppercase block">MISSION TITLE</span>
+                      <p className="font-mono text-base font-bold text-primary">{failMissionModal.goal.title}</p>
+                      <p className="font-mono text-xs text-danger mt-1">XP penalty will be applied based on mission difficulty.</p>
+                    </div>
+
+                    <div>
+                      <label className="font-mono text-xs text-secondary font-semibold mb-1 block">REASON FOR FAILURE / LESSONS (OPTIONAL)</label>
+                      <textarea 
+                        className="textarea font-mono text-xs w-full p-2.5 bg-bg-primary border border-border-color focus:border-danger focus:outline-none" 
+                        rows={3}
+                        placeholder="Why was this mission failed or aborted? Key lessons or bottlenecks..."
+                        value={failMissionModal.reason} 
+                        onChange={(e) => setFailMissionModal({ ...failMissionModal, reason: e.target.value })} 
+                        autoFocus 
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-3 mt-2">
+                      <button className="btn btn-ghost font-mono" onClick={() => setFailMissionModal({ show: false, goal: null, reason: '' })}>CANCEL</button>
+                      <button className="btn btn-primary bg-danger hover:bg-danger/80 border-danger font-bold flex items-center gap-1.5" onClick={submitMissionFailure}>
+                        <X size={16} /> CONFIRM FAILURE (-XP)
+                      </button>
                     </div>
                   </div>
                 </HudPanel>

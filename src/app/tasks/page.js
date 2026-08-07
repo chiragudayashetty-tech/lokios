@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { getLocalDateStr } from '@/lib/utils/dates'
+import { getLocalDateStr, parseTaskNotes } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react'
@@ -35,9 +35,14 @@ export default function Operations() {
     { label: 'SUN', value: 0 }
   ]
 
-  // Proof state
+  // Proof and Completion state
   const [proofTask, setProofTask] = useState(null)
   const [proofUrl, setProofUrl] = useState('')
+  const [completionNote, setCompletionNote] = useState('')
+
+  // Failure modal state
+  const [failModalObj, setFailModalObj] = useState(null)
+  const [failReason, setFailReason] = useState('')
 
   // Drag states
   const [deployDrag, setDeployDrag] = useState({ x: 0, y: 0 })
@@ -133,7 +138,6 @@ export default function Operations() {
       onConfirm: async () => {
         let revokeXp = true
         if (task.status === 'completed' || task.status === 'cancelled') {
-          // Check if user wants to revoke XP
           setConfirmModal({
             isOpen: true,
             title: 'REVOKE XP?',
@@ -159,31 +163,32 @@ export default function Operations() {
     })
   }
 
-  const failTask = async (task) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'FAIL OPERATION',
-      message: 'Are you sure? This will permanently fail the operation and apply a negative XP penalty based on difficulty.',
-      danger: true,
-      confirmText: 'FAIL',
-      onConfirm: async () => {
-        await failOperation(task.id)
-        setConfirmModal({ isOpen: false })
-      },
-      onCancel: () => setConfirmModal({ isOpen: false })
-    })
+  const failTask = (task) => {
+    setFailModalObj(task)
+    setFailReason('')
+  }
+
+  const submitFailure = async () => {
+    if (!failModalObj) return
+    await failOperation(failModalObj.id, failReason)
+    setFailModalObj(null)
+    setFailReason('')
   }
 
   const handleComplete = (task) => {
     setProofTask(task)
     setProofUrl('')
+    setCompletionNote('')
   }
 
-  const submitCompletion = async (skipProof = false) => {
+  const submitCompletion = async (skipNotes = false) => {
     if (!proofTask) return
-    await completeOperation(proofTask.id, skipProof ? null : proofUrl)
+    const urlToSend = skipNotes ? null : (proofUrl.trim() || null)
+    const noteToSend = skipNotes ? null : (completionNote.trim() || null)
+    await completeOperation(proofTask.id, urlToSend, noteToSend)
     setProofTask(null)
     setProofUrl('')
+    setCompletionNote('')
   }
 
   const startEdit = (task) => {
@@ -476,41 +481,70 @@ export default function Operations() {
 
             {/* Expanded Details */}
             <AnimatePresence>
-              {isExpanded && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <div className="mt-3 pt-3 border-t border-border-color/40 flex flex-col gap-3 font-mono text-xs">
-                    {task.description && (
-                      <p className="text-secondary whitespace-pre-wrap">{task.description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted pt-1">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="uppercase">CAT: {task.category || 'GENERAL'}</span>
-                        {task.created_at && <span className="text-info">DEPLOYED: {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
-                        {task.due_date && <span>DUE: {task.due_date}</span>}
-                        {task.completed_at && <span className="text-success font-semibold">COMPLETED: {new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
-                        {task.media_urls && task.media_urls.length > 0 && (
-                          <span className="text-amber font-semibold">[{task.media_urls.length} PROOF ATTACHED]</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {isCompleted && (
-                          <button type="button" onClick={(e) => { e.stopPropagation(); undoCompleteTask(task.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
-                            <RotateCcw size={12} /> UNDO / RE-OPEN OP
+              {isExpanded && (() => {
+                const { cleanDesc, completionNote: itemCompNote, failureNote: itemFailNote } = parseTaskNotes(task.description)
+                return (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="mt-3 pt-3 border-t border-border-color/40 flex flex-col gap-3 font-mono text-xs">
+                      {cleanDesc && (
+                        <p className="text-secondary whitespace-pre-wrap">{cleanDesc}</p>
+                      )}
+
+                      {itemCompNote && (
+                        <div className="p-3 rounded-lg border border-success/40 bg-success/10 font-mono text-xs my-1">
+                          <div className="text-success font-bold uppercase tracking-wider text-[10px] mb-1 flex items-center gap-1.5">
+                            <CheckCircle2 size={13} /> Accomplishment / Completion Reflection:
+                          </div>
+                          <div className="text-primary whitespace-pre-wrap">{itemCompNote}</div>
+                        </div>
+                      )}
+
+                      {itemFailNote && (
+                        <div className="p-3 rounded-lg border border-danger/40 bg-danger/10 font-mono text-xs my-1">
+                          <div className="text-danger font-bold uppercase tracking-wider text-[10px] mb-1 flex items-center gap-1.5">
+                            <AlertTriangle size={13} /> Reason for Failure:
+                          </div>
+                          <div className="text-primary whitespace-pre-wrap">{itemFailNote}</div>
+                        </div>
+                      )}
+
+                      {task.media_urls && task.media_urls.length > 0 && (
+                        <div className="flex flex-wrap gap-2 my-1">
+                          {task.media_urls.map((url, idx) => (
+                            <a key={idx} href={url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="px-2.5 py-1 rounded bg-amber/10 border border-amber/30 text-amber hover:underline text-[11px] font-mono flex items-center gap-1">
+                              🔗 Proof Attachment #{idx + 1}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted pt-1">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="uppercase">CAT: {task.category || 'GENERAL'}</span>
+                          {task.created_at && <span className="text-info">DEPLOYED: {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+                          {task.due_date && <span>DUE: {task.due_date}</span>}
+                          {task.completed_at && <span className="text-success font-semibold">COMPLETED: {new Date(task.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isCompleted && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); undoCompleteTask(task.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
+                              <RotateCcw size={12} /> UNDO / RE-OPEN OP
+                            </button>
+                          )}
+                          {isFailed && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); undoFailOperation(task.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
+                              <RotateCcw size={12} /> RESTORE OP
+                            </button>
+                          )}
+                          <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteOperation(task); }} className="btn btn-ghost btn-xs text-danger p-1" title="Delete">
+                            <Trash2 size={13} />
                           </button>
-                        )}
-                        {isFailed && (
-                          <button type="button" onClick={(e) => { e.stopPropagation(); undoFailOperation(task.id); }} className="btn btn-ghost btn-xs text-info flex items-center gap-1 font-mono">
-                            <RotateCcw size={12} /> RESTORE OP
-                          </button>
-                        )}
-                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteOperation(task); }} className="btn btn-ghost btn-xs text-danger p-1" title="Delete">
-                          <Trash2 size={13} />
-                        </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )
+              })()}
             </AnimatePresence>
           </div>
         </motion.div>
@@ -885,7 +919,7 @@ export default function Operations() {
           )}
         </AnimatePresence>
 
-        {/* PROOF MODAL */}
+        {/* OPERATION COMPLETION / EXECUTION REPORT MODAL */}
         <AnimatePresence>
           {proofTask && (
             <div className="modal-overlay">
@@ -895,33 +929,103 @@ export default function Operations() {
                 exit={{ opacity: 0, y: 50 }} 
                 className="w-full sm:w-auto p-4"
               >
-                <HudPanel className="modal-content border-success" style={{ width: '440px', maxWidth: '100%' }}>
-                  <div className="flex-between mb-4 border-b border-border-color pb-3">
-                    <span className="font-display text-xl uppercase text-success tracking-widest">OPERATION COMPLETE</span>
+                <HudPanel className="modal-content border-success" style={{ width: '480px', maxWidth: '100%' }}>
+                  <div className="flex-between mb-3 border-b border-border-color pb-3">
+                    <span className="font-display text-xl uppercase text-success tracking-widest flex items-center gap-2">
+                      <CheckCircle2 size={20} /> OPERATION COMPLETE
+                    </span>
                     <button type='button' onClick={() => setProofTask(null)} className="text-muted hover:text-danger"><X size={18} /></button>
                   </div>
-                  <p className="font-mono text-sm text-primary mb-4 truncate">{proofTask.title}</p>
-                  <div className="flex-col gap-4">
+                  
+                  <div className="mb-4">
+                    <span className="font-mono text-[10px] text-muted uppercase block">TASK TITLE</span>
+                    <p className="font-mono text-base font-bold text-primary truncate">{proofTask.title}</p>
+                  </div>
+
+                  <div className="flex flex-col gap-4">
                     <div>
-                      <label className="font-mono text-xs text-muted mb-1 block">ATTACH PROOF (URL)</label>
-                      <input type="url" className="input font-mono text-sm w-full" placeholder="https://screenshot.link or drive.google.com/..."
-                        value={proofUrl} onChange={e => setProofUrl(e.target.value)} autoFocus />
+                      <label className="font-mono text-xs text-amber font-semibold mb-1 flex items-center gap-1.5 block">
+                        <span>WHAT WAS ACCOMPLISHED? (NOTES / REFLECTION)</span>
+                      </label>
+                      <textarea 
+                        className="textarea font-mono text-xs w-full p-2.5 rounded-lg bg-bg-primary border border-border-color focus:border-success focus:outline-none" 
+                        rows={3} 
+                        placeholder="Describe key outcomes, what was achieved, or execution details..."
+                        value={completionNote} 
+                        onChange={e => setCompletionNote(e.target.value)} 
+                        autoFocus 
+                      />
                     </div>
-                    <div className="flex-col gap-3 mt-4">
-                      <button type='button' className="btn btn-primary w-full py-2 flex items-center justify-center gap-2" onClick={() => submitCompletion(false)}>
-                        <Check size={16} /> CONFIRM EXECUTION
+
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">ATTACH PROOF LINK / IMAGE URL (OPTIONAL)</label>
+                      <input 
+                        type="url" 
+                        className="input font-mono text-xs w-full px-3 py-2 rounded-lg bg-bg-primary border border-border-color" 
+                        placeholder="https://screenshot.link or drive link..."
+                        value={proofUrl} 
+                        onChange={e => setProofUrl(e.target.value)} 
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2 mt-2">
+                      <button type='button' className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2 font-bold" onClick={() => submitCompletion(false)}>
+                        <Check size={16} /> SUBMIT REPORT & COMPLETE
                       </button>
-                      <div className="flex flex-wrap justify-center gap-2">
-                        <button type='button' className="btn btn-ghost btn-sm" onClick={() => startEdit(proofTask)}>
-                          <Edit2 size={14} /> EDIT
-                        </button>
-                        <button type='button' className="btn btn-ghost btn-sm text-amber" onClick={() => pushToTomorrow(proofTask)}>
-                          <RotateCcw size={14} /> PUSH
-                        </button>
-                        <button type='button' className="btn btn-ghost btn-sm text-danger" onClick={() => failTask(proofTask)}>
-                          <X size={14} /> FAIL
-                        </button>
-                      </div>
+                      
+                      <button type='button' className="btn btn-ghost btn-xs text-muted font-mono" onClick={() => submitCompletion(true)}>
+                        QUICK COMPLETE (SKIP NOTES)
+                      </button>
+                    </div>
+                  </div>
+                </HudPanel>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* OPERATION FAILURE REASON MODAL */}
+        <AnimatePresence>
+          {failModalObj && (
+            <div className="modal-overlay">
+              <motion.div 
+                initial={{ opacity: 0, y: 50 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: 50 }} 
+                className="w-full sm:w-auto p-4"
+              >
+                <HudPanel className="modal-content border-danger" style={{ width: '440px', maxWidth: '100%' }}>
+                  <div className="flex-between mb-3 border-b border-border-color pb-3">
+                    <span className="font-display text-xl uppercase text-danger tracking-widest flex items-center gap-2">
+                      <AlertTriangle size={20} /> FAIL OPERATION
+                    </span>
+                    <button type='button' onClick={() => setFailModalObj(null)} className="text-muted hover:text-danger"><X size={18} /></button>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <span className="font-mono text-[10px] text-muted uppercase block">TASK TITLE</span>
+                    <p className="font-mono text-base font-bold text-primary truncate">{failModalObj.title}</p>
+                    <p className="font-mono text-xs text-danger mt-1">XP penalty will be applied based on difficulty.</p>
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <label className="font-mono text-xs text-secondary font-semibold mb-1 block">REASON FOR FAILURE / LESSONS (OPTIONAL)</label>
+                      <textarea 
+                        className="textarea font-mono text-xs w-full p-2.5 rounded-lg bg-bg-primary border border-border-color focus:border-danger focus:outline-none" 
+                        rows={3} 
+                        placeholder="Why did this operation fail? Bottlenecks, distractions, or missing prerequisites..."
+                        value={failReason} 
+                        onChange={e => setFailReason(e.target.value)} 
+                        autoFocus 
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 mt-2">
+                      <button type='button' className="btn btn-ghost btn-sm font-mono" onClick={() => setFailModalObj(null)}>CANCEL</button>
+                      <button type='button' className="btn btn-primary bg-danger hover:bg-danger/80 border-danger py-2 px-4 flex items-center gap-2 font-bold" onClick={submitFailure}>
+                        <X size={16} /> CONFIRM FAILURE (-XP)
+                      </button>
                     </div>
                   </div>
                 </HudPanel>

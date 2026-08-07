@@ -5,14 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   X, Download, Calendar, CheckSquare, Target, Monitor, 
   Scale, Moon, Crosshair, FileText, Check, Printer, Sparkles, Briefcase,
-  BookOpen, Zap, Camera, Brain, ClipboardList
+  BookOpen, Zap, Camera, Brain, ClipboardList, Mic
 } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
-import { getLocalDateStr } from '@/lib/utils/dates'
+import { getLocalDateStr, parseTaskNotes } from '@/lib/utils/dates'
 
 export default function IntelExportModal({ isOpen, onClose }) {
-  const { auth: { user }, profile: { profile }, goals: { goals }, tasks: { tasks }, habits: { habits, monthLogs } } = useOS()
+  const { auth: { user }, profile: { profile }, goals: { goals }, tasks: { tasks }, habits: { habits, stoppedHabits, allHabits, monthLogs } } = useOS()
 
   const now = new Date()
   const firstDayStr = getLocalDateStr(new Date(now.getFullYear(), now.getMonth(), 1))
@@ -33,6 +33,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
     screen_intel: true,
     weight_recon: true,
     sleep_intel: true,
+    speaking_intel: true,
   })
 
   const [isExporting, setIsExporting] = useState(false)
@@ -72,7 +73,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const [
         screenRes, weightRes, sleepRes,
         workHoursRes, workRes, contentRes,
-        habitLogsRes, journalRes, brainDumpRes
+        habitLogsRes, journalRes, brainDumpRes, speakingRes
       ] = await Promise.all([
         supabase.from('screen_time_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('weight_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
@@ -82,7 +83,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
         supabase.from('content_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('journal_entries').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
-        supabase.from('brain_dump').select('*').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate + 'T23:59:59.999Z').order('created_at', { ascending: false })
+        supabase.from('brain_dump').select('*').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate + 'T23:59:59.999Z').order('created_at', { ascending: false }),
+        supabase.from('speaking_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false })
       ])
 
       let workLogs = (workHoursRes.data && workHoursRes.data.length > 0) ? workHoursRes.data : []
@@ -109,6 +111,14 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const screenLogs = screenRes.data || []
       const weightLogs = weightRes.data || []
       const sleepLogs = sleepRes.data || []
+      let speakingLogs = speakingRes?.data || []
+      if (speakingLogs.length === 0 && typeof window !== 'undefined') {
+        const cached = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+        if (cached) {
+          const parsed = JSON.parse(cached)
+          speakingLogs = parsed.filter(l => l.date >= startDate && l.date <= endDate)
+        }
+      }
       const fetchedHabitLogs = (habitLogsRes.data && habitLogsRes.data.length > 0) ? habitLogsRes.data : (monthLogs || [])
       const journalEntries = journalRes.data || []
       const brainDumps = brainDumpRes.data || []
@@ -256,6 +266,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                   <th style="color:#60A5FA;">Deployed On</th>
                   <th>Deadline</th>
                   <th style="color:#10B981;">Completed On</th>
+                  <th>Accomplishment / Notes</th>
                   <th>Progress</th><th>Reward</th><th>Status</th>
                 </tr>
               </thead>
@@ -264,6 +275,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
                   const deployedStr = g.created_at ? getLocalDateStr(new Date(g.created_at)) : '—'
                   const dueDateStr = g.deadline || g.due_date || 'None'
                   const completedStr = g.completed_at ? getLocalDateStr(new Date(g.completed_at)) : (g.status === 'completed' ? 'Done' : '—')
+                  const { completionNote, failureNote } = parseTaskNotes(g.description)
+                  const noteText = completionNote || failureNote || '—'
                   return `
                     <tr>
                       <td><strong>${g.title}</strong></td>
@@ -272,6 +285,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                       <td><strong style="color:#60A5FA;">${deployedStr}</strong></td>
                       <td>${dueDateStr}</td>
                       <td><span style="${g.status === 'completed' ? 'color:#10B981;font-weight:bold;' : 'color:#9CA3AF;'}">${completedStr}</span></td>
+                      <td style="max-width:200px;font-size:11px;">${noteText}</td>
                       <td>
                         <div class="progress-bar"><div class="progress-fill" style="width:${g.progress || 0}%"></div></div>
                         <small>${g.progress || 0}%</small>
@@ -299,6 +313,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                   <th style="color:#60A5FA;">Deployed On</th>
                   <th>Due Date</th>
                   <th style="color:#10B981;">Completed On</th>
+                  <th>Completion / Failure Notes</th>
                   <th>Reward</th><th>Status</th>
                 </tr>
               </thead>
@@ -308,6 +323,12 @@ export default function IntelExportModal({ isOpen, onClose }) {
                   const dueDateStr = t.due_date || 'None'
                   const completedStr = t.completed_at ? getLocalDateStr(new Date(t.completed_at)) : (t.status === 'completed' ? 'Done' : '—')
                   const diffLabel = (t.difficulty || t.priority || 'MEDIUM').toUpperCase()
+                  const { completionNote, failureNote } = parseTaskNotes(t.description)
+                  const noteHtml = completionNote 
+                    ? `<span style="color:#10B981;">${completionNote}</span>` 
+                    : failureNote 
+                    ? `<span style="color:#EF4444;">${failureNote}</span>` 
+                    : '—'
                   return `
                     <tr>
                       <td><strong>${t.title}</strong></td>
@@ -316,6 +337,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                       <td><strong style="color:#60A5FA;">${deployedStr}</strong></td>
                       <td>${dueDateStr}</td>
                       <td><span style="${t.status === 'completed' ? 'color:#10B981;font-weight:bold;' : 'color:#9CA3AF;'}">${completedStr}</span></td>
+                      <td style="max-width:200px;font-size:11px;">${noteHtml}</td>
                       <td class="text-amber">+${t.xp_reward || 30} XP</td>
                       <td><span class="badge ${t.status === 'completed' ? 'badge-success' : t.status === 'cancelled' || t.status === 'failed' ? 'badge-danger' : 'badge-warning'}">${(t.status || 'pending').toUpperCase()}</span></td>
                     </tr>
@@ -363,7 +385,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                   </tr>
                 </thead>
                 <tbody>
-                  ${habits.map(h => {
+                  ${(allHabits && allHabits.length > 0 ? allHabits : habits).map(h => {
                     let doneCount = 0; let goalCount = 0
                     const rawCreatedAt = h.created_at || h.created_date
                     let createdDateStr = null
@@ -373,24 +395,41 @@ export default function IntelExportModal({ isOpen, onClose }) {
                       else createdDateStr = getLocalDateStr()
                     } else if (rawCreatedAt) { const p = new Date(rawCreatedAt); if (!isNaN(p.getTime())) createdDateStr = getLocalDateStr(p) }
                     else createdDateStr = getLocalDateStr()
+
+                    const stoppedDateStr = h.stopped_at ? getLocalDateStr(new Date(h.stopped_at)) : null
                     const freqDays = h.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+
                     const dayCellsHTML = chunk.map(dItem => {
                       const { dateStr, dayOfWeek } = dItem
                       const explicitStatus = logMap.get(`${h.id}::${dateStr}`)
                       let status = 'none'
-                      if (explicitStatus) status = explicitStatus
-                      else if (createdDateStr && dateStr < createdDateStr) status = 'blocked'
-                      else if (!freqDays.includes(dayOfWeek)) status = 'blocked'
-                      if (freqDays.includes(dayOfWeek)) goalCount++
+
+                      if (createdDateStr && dateStr < createdDateStr) {
+                        status = 'blocked'
+                      } else if (stoppedDateStr && dateStr > stoppedDateStr) {
+                        status = 'blocked'
+                      } else if (!freqDays.includes(dayOfWeek)) {
+                        status = 'blocked'
+                      } else if (explicitStatus) {
+                        status = explicitStatus
+                      }
+
+                      if (freqDays.includes(dayOfWeek) && (!createdDateStr || dateStr >= createdDateStr) && (!stoppedDateStr || dateStr <= stoppedDateStr)) {
+                        goalCount++
+                      }
+
                       if (status === 'completed') { doneCount++; return `<td class="cell cell-done">✓</td>` }
                       else if (status === 'failed') return `<td class="cell cell-fail">✗</td>`
-                      else if (status === 'blocked') { if (freqDays.includes(dayOfWeek)) goalCount--; return `<td class="cell cell-blocked">-</td>` }
+                      else if (status === 'blocked') { return `<td class="cell cell-blocked" title="Pre-creation / Stopped / Off-day">▨</td>` }
                       return `<td class="cell cell-empty"></td>`
                     }).join('')
                     const safeGoal = Math.max(0, goalCount)
                     const pct = safeGoal === 0 ? 0 : Math.round((doneCount / safeGoal) * 100)
                     return `<tr>
-                      <td style="text-align:left;"><strong>${h.title}</strong></td>
+                      <td style="text-align:left;">
+                        <strong>${h.title}</strong>
+                        ${h.is_active === false ? '<span style="font-size:9px;color:#EF4444;margin-left:4px;font-family:monospace;">[STOPPED]</span>' : ''}
+                      </td>
                       <td style="text-align:center;" class="text-amber">${h.xp_per_completion || 25}</td>
                       ${dayCellsHTML}
                       <td style="text-align:center;color:var(--green);font-weight:bold;">${doneCount}</td>
@@ -405,7 +444,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
         })
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">🔥 HABITS & DAILY OPS MATRIX (${habits.length} Routines) · ${startDate} TO ${endDate}</h2>
+            <h2 class="section-title">🔥 HABITS & DAILY OPS MATRIX (${(allHabits && allHabits.length > 0 ? allHabits : habits).length} Routines) · ${startDate} TO ${endDate}</h2>
             ${habitTablesHTML}
           </div>
         `
@@ -590,6 +629,29 @@ export default function IntelExportModal({ isOpen, onClose }) {
         `
       }
 
+      // 11. SPEAKING PRACTICE
+      if (selectedModules.speaking_intel) {
+        sectionsHTML += `
+          <div class="section">
+            <h2 class="section-title">🎙️ SPEAKING PRACTICE & CAMERA CHALLENGE (${speakingLogs.length})</h2>
+            <table>
+              <thead><tr><th>Date</th><th>Topic / Title</th><th>Prep Time</th><th>Drive Link / Video Proof</th><th>Notes</th></tr></thead>
+              <tbody>
+                ${speakingLogs.map(l => `
+                  <tr>
+                    <td>${l.date}</td>
+                    <td><strong>${l.topic || 'Day Speaking Practice'}</strong></td>
+                    <td>${l.prep_duration_minutes || 10} min</td>
+                    <td>${l.drive_link ? `<a href="${l.drive_link}" target="_blank" style="color: var(--cyan); text-decoration: underline;">${l.drive_link}</a>` : '—'}</td>
+                    <td>${l.notes || '—'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+      }
+
       // ── Full HTML Document ──
       const fullHTML = `
         <!DOCTYPE html>
@@ -695,6 +757,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
     { key: 'screen_intel',    icon: Monitor,         label: 'Screen Intel',             color: 'text-success', desc: 'Screen time logs' },
     { key: 'weight_recon',    icon: Scale,           label: 'Weight Recon',             color: 'text-amber',   desc: 'Weight & body fat logs' },
     { key: 'sleep_intel',     icon: Moon,            label: 'Sleep Intel',              color: 'text-info',    desc: 'Bedtime, wake, quality' },
+    { key: 'speaking_intel',  icon: Mic,             label: 'Speaking Practice',        color: 'text-amber',   desc: '30-day camera challenge & video links' },
   ]
 
   return (

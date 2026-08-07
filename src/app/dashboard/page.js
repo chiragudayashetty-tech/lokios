@@ -7,7 +7,7 @@ import {
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
   Activity, Clock, Terminal, ArrowUpRight, BarChart2,
   Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale, X, RotateCcw,
-  Calendar as CalendarIcon, MapPin, Plus, ExternalLink
+  Calendar as CalendarIcon, MapPin, Plus, ExternalLink, Briefcase, Sun, FileText, CheckCircle2, Mic
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
@@ -130,6 +130,19 @@ export default function MissionControl() {
   const [sleepData, setSleepData] = useState(null)
   const [addictionData, setAddictionData] = useState(null)
   const [expandedWidget, setExpandedWidget] = useState(null) // 'sleep' | 'addiction'
+
+  // ── EOD Recon Checklist Widget States ──
+  const [eodWorkData, setEodWorkData] = useState({ logged: false, hours: 0 })
+  const [eodWellnessData, setEodWellnessData] = useState({ logged: false, detail: '' })
+  const [eodSpeakingData, setEodSpeakingData] = useState({ logged: false, detail: '' })
+  const [eodQuickLogModal, setEodQuickLogModal] = useState(null) // 'wellness' | 'work' | 'journal' | 'screen' | 'speaking'
+
+  // Quick form states
+  const [eodScreenForm, setEodScreenForm] = useState({ total_hours: '4', doomscroll_minutes: '30', streaming_hours: '0.5' })
+  const [eodJournalForm, setEodJournalForm] = useState({ mood: 'good', content: '' })
+  const [eodWorkForm, setEodWorkForm] = useState({ hours: '2', work_type: 'deep_work', notes: '' })
+  const [eodWellnessForm, setEodWellnessForm] = useState({ type: 'sleep', sleep_hours: '8', bedtime: '23:00', wake_time: '07:00', weight_kg: '' })
+  const [eodSpeakingForm, setEodSpeakingForm] = useState({ topic: '', drive_link: '', notes: '' })
 
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -418,6 +431,76 @@ export default function MissionControl() {
       } else {
         setAddictionData({ avgScreen: '—', avgDoom: 0, avgStreaming: '0', daysClean: 0, addScore: 50, todaySt: null, total: 0 })
       }
+
+      // ── EOD Recon Checklist Data Fetching ──
+      const { data: workLogRows } = await sb
+        .from('work_hours_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', todayStr)
+        .limit(1)
+
+      let workLogged = false
+      let workHours = 0
+      if (workLogRows && workLogRows.length > 0) {
+        workLogged = true
+        workHours = workLogRows[0].hours || workLogRows[0].duration_hours || 0
+      } else {
+        const { data: fallbackWork } = await sb
+          .from('work_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('created_at', todayStr)
+          .limit(1)
+        if (fallbackWork && fallbackWork.length > 0) {
+          workLogged = true
+          workHours = fallbackWork[0].hours || fallbackWork[0].duration_hours || 1
+        }
+      }
+      setEodWorkData({ logged: workLogged, hours: workHours })
+
+      const { data: todaySleepLog } = await sb
+        .from('sleep_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', todayStr)
+        .maybeSingle()
+
+      const { data: todayWeightLog } = await sb
+        .from('weight_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', todayStr)
+        .maybeSingle()
+
+      const habitCompletedToday = (todayLogs || []).some(l => l.date === todayStr && l.status === 'completed')
+
+      const wellnessLogged = !!todaySleepLog || !!todayWeightLog || habitCompletedToday
+      let wellnessDetail = ''
+      if (todaySleepLog) wellnessDetail = `Sleep: ${todaySleepLog.duration_hours || 8}h`
+      else if (todayWeightLog) wellnessDetail = `Weight: ${todayWeightLog.weight_kg}kg`
+      else if (habitCompletedToday) wellnessDetail = `Routine Logged`
+
+      setEodWellnessData({ logged: wellnessLogged, detail: wellnessDetail })
+
+      // Fetch Today Speaking Practice Log
+      const { data: todaySpeakingLog } = await sb
+        .from('speaking_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', todayStr)
+        .maybeSingle()
+
+      if (todaySpeakingLog) {
+        setEodSpeakingData({ logged: true, detail: `Topic: ${todaySpeakingLog.topic}` })
+      } else {
+        const localData = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+        if (localData) {
+          const parsed = JSON.parse(localData)
+          const found = parsed.find(p => p.date === todayStr)
+          if (found) setEodSpeakingData({ logged: true, detail: `Topic: ${found.topic}` })
+        }
+      }
     }
     fetchMetrics()
 
@@ -430,9 +513,175 @@ export default function MissionControl() {
     return () => window.removeEventListener('lokios_battles_updated', handleBattlesUpdated)
   }, [user, todayLogs])
 
+  // ── Quick Log Submit Handlers for EOD Recon ──
+  const submitEodScreen = async (e) => {
+    e.preventDefault()
+    if (!user) return
+    const sb = createClient()
+    const payload = {
+      user_id: user.id,
+      date: todayStr,
+      total_hours: parseFloat(eodScreenForm.total_hours) || 0,
+      doom_scroll_minutes: parseInt(eodScreenForm.doomscroll_minutes) || 0,
+      streaming_hours: parseFloat(eodScreenForm.streaming_hours) || 0
+    }
+    const { data } = await sb.from('screen_time_logs').insert(payload).select().single()
+    if (data) setTodayScreenTime(data)
+    await robustAwardXP(user.id, 50, 'Daily Screen Intel Logged')
+    setEodQuickLogModal(null)
+  }
+
+  const submitEodJournal = async (e) => {
+    e.preventDefault()
+    if (!user || !eodJournalForm.content.trim()) return
+    const sb = createClient()
+    const payload = {
+      user_id: user.id,
+      date: todayStr,
+      mood: eodJournalForm.mood,
+      content: eodJournalForm.content
+    }
+    await sb.from('journal_entries').insert(payload)
+    await robustAwardXP(user.id, 50, 'Daily Journal Entry Written')
+    setEodQuickLogModal(null)
+    window.location.reload()
+  }
+
+  const submitEodWork = async (e) => {
+    e.preventDefault()
+    if (!user) return
+    const sb = createClient()
+    const payload = {
+      user_id: user.id,
+      date: todayStr,
+      hours: parseFloat(eodWorkForm.hours) || 0,
+      duration_hours: parseFloat(eodWorkForm.hours) || 0,
+      work_type: eodWorkForm.work_type,
+      notes: eodWorkForm.notes
+    }
+    const { error } = await sb.from('work_hours_logs').insert(payload)
+    if (error) {
+      await sb.from('work_logs').insert({ user_id: user.id, title: 'Work Session', description: eodWorkForm.notes, duration_hours: parseFloat(eodWorkForm.hours) || 0 })
+    }
+    await robustAwardXP(user.id, 50, 'Daily Work Hours Logged')
+    setEodWorkData({ logged: true, hours: parseFloat(eodWorkForm.hours) || 0 })
+    setEodQuickLogModal(null)
+  }
+
+  const submitEodWellness = async (e) => {
+    e.preventDefault()
+    if (!user) return
+    const sb = createClient()
+    if (eodWellnessForm.type === 'sleep') {
+      const payload = {
+        user_id: user.id,
+        date: todayStr,
+        duration_hours: parseFloat(eodWellnessForm.sleep_hours) || 8,
+        bedtime: eodWellnessForm.bedtime,
+        wake_time: eodWellnessForm.wake_time,
+        status: 'healthy'
+      }
+      await sb.from('sleep_logs').insert(payload)
+      setEodWellnessData({ logged: true, detail: `Sleep: ${payload.duration_hours}h` })
+    } else {
+      const payload = {
+        user_id: user.id,
+        date: todayStr,
+        weight_kg: parseFloat(eodWellnessForm.weight_kg) || 75
+      }
+      await sb.from('weight_logs').insert(payload)
+      setEodWellnessData({ logged: true, detail: `Weight: ${payload.weight_kg}kg` })
+    }
+    await robustAwardXP(user.id, 50, 'Daily Morning Wellness Logged')
+    setEodQuickLogModal(null)
+  }
+
+  const submitEodSpeaking = async (e) => {
+    e.preventDefault()
+    if (!user || !eodSpeakingForm.drive_link.trim()) return
+    const sb = createClient()
+    const payload = {
+      user_id: user.id,
+      date: todayStr,
+      topic: eodSpeakingForm.topic.trim() || 'Day Speaking Practice',
+      drive_link: eodSpeakingForm.drive_link.trim(),
+      notes: eodSpeakingForm.notes.trim(),
+      prep_duration_minutes: 10,
+      rating: 5,
+      created_at: new Date().toISOString()
+    }
+    const { data, error } = await sb.from('speaking_logs').insert(payload).select().single()
+    if (error || !data) {
+      const localData = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+      const parsed = localData ? JSON.parse(localData) : []
+      localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify([payload, ...parsed]))
+    }
+    setEodSpeakingData({ logged: true, detail: `Video Logged` })
+    setEodQuickLogModal(null)
+  }
+
   // ── Derived values ────────────────────────────────────────────────────────
   const totalXp       = profile?.total_xp       || 0
   const currentStreak = profile?.current_streak ?? profile?.streak_days ?? 0
+
+  const journalLoggedToday = (entries || []).some(e => e.date === todayStr)
+  const screenIntelLoggedToday = !!todayScreenTime
+
+  const eodItems = [
+    {
+      key: 'wellness',
+      label: 'Morning Wellness',
+      subtitle: 'Sleep, weight recon, or morning habits',
+      isDone: eodWellnessData.logged,
+      detail: eodWellnessData.detail || (eodWellnessData.logged ? 'Logged' : 'Missing log for today'),
+      path: '/quests',
+      icon: Flame,
+      color: '#f97316'
+    },
+    {
+      key: 'work',
+      label: 'Work Session',
+      subtitle: 'Work hours & tasks completed',
+      isDone: eodWorkData.logged,
+      detail: eodWorkData.logged ? `${eodWorkData.hours} hrs logged` : 'No work hours logged today',
+      path: '/work',
+      icon: Briefcase,
+      color: '#A78BFA'
+    },
+    {
+      key: 'journal',
+      label: 'Journal Entry',
+      subtitle: 'Daily reflection & emotional debrief',
+      isDone: journalLoggedToday,
+      detail: journalLoggedToday ? 'Daily entry written' : 'No journal entry written today',
+      path: '/journal',
+      icon: BookOpen,
+      color: '#60A5FA'
+    },
+    {
+      key: 'screen',
+      label: 'Screen Intel',
+      subtitle: 'Digital discipline & screen time',
+      isDone: screenIntelLoggedToday,
+      detail: screenIntelLoggedToday ? `${todayScreenTime.total_hours || 0} hrs logged` : 'Screen intel missing for today',
+      path: '/screen-time',
+      icon: Smartphone,
+      color: '#22c55e'
+    },
+    {
+      key: 'speaking',
+      label: 'Speaking Practice',
+      subtitle: '30-day camera challenge & video proof',
+      isDone: eodSpeakingData.logged,
+      detail: eodSpeakingData.detail || (eodSpeakingData.logged ? 'Video proof logged' : 'No speaking practice today'),
+      path: '/speaking',
+      icon: Mic,
+      color: '#EAB308'
+    }
+  ]
+
+  const eodCompletedCount = eodItems.filter(i => i.isDone).length
+  const isEodAllDone = eodCompletedCount === 5
   const longestStreak = profile?.longest_streak ?? 0
 
   const currentLevel                                           = calculateLevel(totalXp)
@@ -946,6 +1195,106 @@ export default function MissionControl() {
               })}
             </div>
           )}
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            END-OF-DAY RECON // DAILY LOG CHECKLIST WIDGET
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="mb-5 p-4 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 pb-3 border-b border-white/10">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <div className={`w-2.5 h-2.5 rounded-full ${isEodAllDone ? 'bg-success' : 'bg-amber animate-pulse'} shrink-0`} style={{ boxShadow: isEodAllDone ? '0 0 10px var(--success)' : '0 0 10px var(--amber)' }} />
+              <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold truncate">
+                DAILY EOD RECON // LOG CHECKLIST
+              </span>
+              <span className={`font-mono text-[10px] px-3 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 transition-all ${
+                isEodAllDone 
+                  ? 'bg-success/20 text-success border border-success/40' 
+                  : 'bg-amber/20 text-amber border border-amber/40 animate-pulse'
+              }`}>
+                {isEodAllDone ? '✓ DONE (5/5 LOGGED)' : `⏳ PENDING (${5 - eodCompletedCount} MISSING)`}
+              </span>
+            </div>
+            
+            <div className="font-mono text-[10px] text-muted uppercase tracking-wider">
+              {isEodAllDone ? '🎉 All daily logs recorded!' : 'Don\'t get overwhelmed — finish your 5 daily logs'}
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center font-mono text-[9px] text-muted mb-1 uppercase tracking-wider">
+              <span>Daily Protocol Status</span>
+              <span className={isEodAllDone ? 'text-success font-bold' : 'text-amber font-bold'}>{eodCompletedCount}/5 Logs Complete ({Math.round((eodCompletedCount / 5) * 100)}%)</span>
+            </div>
+            <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/5">
+              <motion.div 
+                className="h-full rounded-full"
+                style={{ background: isEodAllDone ? 'var(--success)' : 'linear-gradient(90deg, #f59e0b, #eab308)' }}
+                initial={{ width: 0 }}
+                animate={{ width: `${(eodCompletedCount / 5) * 100}%` }}
+                transition={{ duration: 0.8 }}
+              />
+            </div>
+          </div>
+
+          {/* 5 Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {eodItems.map((item) => {
+              const ItemIcon = item.icon
+              return (
+                <div 
+                  key={item.key}
+                  className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
+                    item.isDone 
+                      ? 'bg-success/5 border-success/30 hover:border-success/50' 
+                      : 'bg-black/40 border-amber/30 hover:border-amber/60 shadow-lg'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${item.color}15`, border: `1px solid ${item.color}40` }}>
+                          <ItemIcon size={13} style={{ color: item.color }} />
+                        </div>
+                        <span className="font-mono text-xs font-bold text-primary">{item.label}</span>
+                      </div>
+                      <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                        item.isDone ? 'bg-success/20 text-success border border-success/30' : 'bg-amber/20 text-amber border border-amber/40 animate-pulse'
+                      }`}>
+                        {item.isDone ? 'DONE' : 'PENDING'}
+                      </span>
+                    </div>
+                    <p className="font-mono text-[10px] text-muted leading-tight">{item.subtitle}</p>
+                    <div className="mt-2 font-mono text-[10px] font-bold flex items-center gap-1.5" style={{ color: item.isDone ? 'var(--success)' : 'var(--text-muted)' }}>
+                      <span>{item.isDone ? '✓' : '•'}</span>
+                      <span>{item.detail}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                    {!item.isDone ? (
+                      <button 
+                        type="button" 
+                        onClick={() => setEodQuickLogModal(item.key)}
+                        className="btn btn-primary btn-xs w-full font-mono text-[10px] py-1.5 flex items-center justify-center gap-1 font-bold"
+                      >
+                        <Plus size={11} /> QUICK LOG
+                      </button>
+                    ) : (
+                      <Link 
+                        href={item.path} 
+                        className="btn btn-ghost btn-xs w-full font-mono text-[10px] py-1 text-muted hover:text-primary flex items-center justify-center gap-1"
+                      >
+                        <span>VIEW LOG</span>
+                        <ExternalLink size={10} />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
@@ -1794,6 +2143,195 @@ export default function MissionControl() {
                   CLOSE INTEL
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* QUICK LOG MODAL FOR EOD RECON */}
+      <AnimatePresence>
+        {eodQuickLogModal && (
+          <div className="modal-overlay" onClick={() => setEodQuickLogModal(null)}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-md p-5 bg-bg-secondary border border-border-color rounded-xl shadow-2xl relative m-4"
+            >
+              <button 
+                onClick={() => setEodQuickLogModal(null)}
+                className="absolute top-4 right-4 text-muted hover:text-primary"
+              >
+                <X size={18} />
+              </button>
+
+              {/* SCREEN INTEL QUICK LOG */}
+              {eodQuickLogModal === 'screen' && (
+                <form onSubmit={submitEodScreen} className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 text-success border-b border-white/10 pb-3">
+                    <Smartphone size={18} />
+                    <span className="font-mono text-sm uppercase tracking-widest font-bold text-primary">
+                      QUICK LOG // SCREEN INTEL
+                    </span>
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">TOTAL SCREEN TIME (HOURS)</label>
+                    <input type="number" step="0.1" required className="input w-full font-mono text-xs" value={eodScreenForm.total_hours} onChange={e => setEodScreenForm({...eodScreenForm, total_hours: e.target.value})} placeholder="e.g. 4.5" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">DOOMSCROLL TIME (MINUTES)</label>
+                    <input type="number" required className="input w-full font-mono text-xs" value={eodScreenForm.doomscroll_minutes} onChange={e => setEodScreenForm({...eodScreenForm, doomscroll_minutes: e.target.value})} placeholder="e.g. 30" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">STREAMING / VIDEO TIME (HOURS)</label>
+                    <input type="number" step="0.1" required className="input w-full font-mono text-xs" value={eodScreenForm.streaming_hours} onChange={e => setEodScreenForm({...eodScreenForm, streaming_hours: e.target.value})} placeholder="e.g. 1.0" />
+                  </div>
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button type="button" className="btn btn-ghost btn-sm font-mono text-xs" onClick={() => setEodQuickLogModal(null)}>CANCEL</button>
+                    <button type="submit" className="btn btn-primary btn-sm font-mono text-xs font-bold">+ SAVE SCREEN INTEL</button>
+                  </div>
+                </form>
+              )}
+
+              {/* JOURNAL QUICK LOG */}
+              {eodQuickLogModal === 'journal' && (
+                <form onSubmit={submitEodJournal} className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 text-info border-b border-white/10 pb-3">
+                    <BookOpen size={18} />
+                    <span className="font-mono text-sm uppercase tracking-widest font-bold text-primary">
+                      QUICK LOG // DAILY JOURNAL
+                    </span>
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">TODAY'S MOOD</label>
+                    <select className="select w-full font-mono text-xs" value={eodJournalForm.mood} onChange={e => setEodJournalForm({...eodJournalForm, mood: e.target.value})}>
+                      <option value="great">🟢 GREAT</option>
+                      <option value="good">🟡 GOOD</option>
+                      <option value="okay">🟠 OKAY</option>
+                      <option value="bad">🔴 BAD</option>
+                      <option value="terrible">⚫ TERRIBLE</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">DAILY REFLECTION / NOTES</label>
+                    <textarea rows={4} required className="textarea w-full font-mono text-xs" value={eodJournalForm.content} onChange={e => setEodJournalForm({...eodJournalForm, content: e.target.value})} placeholder="What did you build, accomplish, or learn today?" />
+                  </div>
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button type="button" className="btn btn-ghost btn-sm font-mono text-xs" onClick={() => setEodQuickLogModal(null)}>CANCEL</button>
+                    <button type="submit" className="btn btn-primary btn-sm font-mono text-xs font-bold">+ SAVE JOURNAL ENTRY</button>
+                  </div>
+                </form>
+              )}
+
+              {/* WORK QUICK LOG */}
+              {eodQuickLogModal === 'work' && (
+                <form onSubmit={submitEodWork} className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 text-purple-400 border-b border-white/10 pb-3">
+                    <Briefcase size={18} />
+                    <span className="font-mono text-sm uppercase tracking-widest font-bold text-primary">
+                      QUICK LOG // WORK SESSION
+                    </span>
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">HOURS WORKED TODAY</label>
+                    <input type="number" step="0.5" required className="input w-full font-mono text-xs" value={eodWorkForm.hours} onChange={e => setEodWorkForm({...eodWorkForm, hours: e.target.value})} placeholder="e.g. 4.0" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">WORK TYPE / CATEGORY</label>
+                    <select className="select w-full font-mono text-xs" value={eodWorkForm.work_type} onChange={e => setEodWorkForm({...eodWorkForm, work_type: e.target.value})}>
+                      <option value="deep_work">Deep Work / Engineering</option>
+                      <option value="client_work">Client Work / Business</option>
+                      <option value="learning">Learning / Research</option>
+                      <option value="planning">Strategy & Planning</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">WORK NOTES (OPTIONAL)</label>
+                    <textarea rows={3} className="textarea w-full font-mono text-xs" value={eodWorkForm.notes} onChange={e => setEodWorkForm({...eodWorkForm, notes: e.target.value})} placeholder="Key tasks accomplished in this session..." />
+                  </div>
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button type="button" className="btn btn-ghost btn-sm font-mono text-xs" onClick={() => setEodQuickLogModal(null)}>CANCEL</button>
+                    <button type="submit" className="btn btn-primary btn-sm font-mono text-xs font-bold">+ SAVE WORK LOG</button>
+                  </div>
+                </form>
+              )}
+
+              {/* MORNING WELLNESS QUICK LOG */}
+              {eodQuickLogModal === 'wellness' && (
+                <form onSubmit={submitEodWellness} className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 text-amber border-b border-white/10 pb-3">
+                    <Flame size={18} />
+                    <span className="font-mono text-sm uppercase tracking-widest font-bold text-primary">
+                      QUICK LOG // MORNING WELLNESS
+                    </span>
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">WELLNESS METRIC TYPE</label>
+                    <div className="flex gap-2 mb-2">
+                      <button type="button" className={`btn btn-xs flex-1 font-mono ${eodWellnessForm.type === 'sleep' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEodWellnessForm({...eodWellnessForm, type: 'sleep'})}>😴 Sleep Log</button>
+                      <button type="button" className={`btn btn-xs flex-1 font-mono ${eodWellnessForm.type === 'weight' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEodWellnessForm({...eodWellnessForm, type: 'weight'})}>⚖️ Weight Log</button>
+                    </div>
+                  </div>
+
+                  {eodWellnessForm.type === 'sleep' ? (
+                    <>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">SLEEP DURATION (HOURS)</label>
+                        <input type="number" step="0.5" required className="input w-full font-mono text-xs" value={eodWellnessForm.sleep_hours} onChange={e => setEodWellnessForm({...eodWellnessForm, sleep_hours: e.target.value})} placeholder="e.g. 7.5" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="font-mono text-xs text-muted mb-1 block">BEDTIME</label>
+                          <input type="time" className="input w-full font-mono text-xs" value={eodWellnessForm.bedtime} onChange={e => setEodWellnessForm({...eodWellnessForm, bedtime: e.target.value})} />
+                        </div>
+                        <div>
+                          <label className="font-mono text-xs text-muted mb-1 block">WAKE TIME</label>
+                          <input type="time" className="input w-full font-mono text-xs" value={eodWellnessForm.wake_time} onChange={e => setEodWellnessForm({...eodWellnessForm, wake_time: e.target.value})} />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">BODY WEIGHT (KG)</label>
+                      <input type="number" step="0.1" required className="input w-full font-mono text-xs" value={eodWellnessForm.weight_kg} onChange={e => setEodWellnessForm({...eodWellnessForm, weight_kg: e.target.value})} placeholder="e.g. 75.0" />
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button type="button" className="btn btn-ghost btn-sm font-mono text-xs" onClick={() => setEodQuickLogModal(null)}>CANCEL</button>
+                    <button type="submit" className="btn btn-primary btn-sm font-mono text-xs font-bold">+ SAVE WELLNESS LOG</button>
+                  </div>
+                </form>
+              )}
+
+              {/* SPEAKING PRACTICE QUICK LOG */}
+              {eodQuickLogModal === 'speaking' && (
+                <form onSubmit={submitEodSpeaking} className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 text-amber border-b border-white/10 pb-3">
+                    <Mic size={18} />
+                    <span className="font-mono text-sm uppercase tracking-widest font-bold text-primary">
+                      QUICK LOG // SPEAKING PRACTICE
+                    </span>
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">TOPIC / TITLE</label>
+                    <input type="text" required className="input w-full font-mono text-xs" value={eodSpeakingForm.topic} onChange={e => setEodSpeakingForm({...eodSpeakingForm, topic: e.target.value})} placeholder="e.g. Explain quantum computing..." />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">GOOGLE DRIVE / VIDEO URL *</label>
+                    <input type="url" required className="input w-full font-mono text-xs" value={eodSpeakingForm.drive_link} onChange={e => setEodSpeakingForm({...eodSpeakingForm, drive_link: e.target.value})} placeholder="https://drive.google.com/file/d/..." />
+                  </div>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">SPEAKING NOTES (OPTIONAL)</label>
+                    <textarea rows={3} className="textarea w-full font-mono text-xs" value={eodSpeakingForm.notes} onChange={e => setEodSpeakingForm({...eodSpeakingForm, notes: e.target.value})} placeholder="Key takeaways from this speech..." />
+                  </div>
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button type="button" className="btn btn-ghost btn-sm font-mono text-xs" onClick={() => setEodQuickLogModal(null)}>CANCEL</button>
+                    <button type="submit" className="btn btn-primary btn-sm font-mono text-xs font-bold">+ SAVE SPEAKING LOG</button>
+                  </div>
+                </form>
+              )}
             </motion.div>
           </div>
         )}

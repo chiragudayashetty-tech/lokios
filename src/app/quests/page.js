@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Scale, Moon, Clock, Sparkles, CheckCircle2, Minus } from 'lucide-react'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Scale, Moon, Clock, Sparkles, CheckCircle2, Minus, PauseCircle, PlayCircle } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
@@ -16,8 +16,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export default function DailyOps() {
   const {
-    habits, monthLogs, todayLogs, loading, error,
-    fetchHabits, cycleHabitState, addHabit, deleteHabit, archiveHabit, reorderHabits, reorderHabitsByDrag, updateHabit
+    habits, stoppedHabits, allHabits, monthLogs, todayLogs, loading, error,
+    fetchHabits, cycleHabitState, addHabit, deleteHabit, stopHabit, resumeHabit, archiveHabit, reorderHabits, reorderHabitsByDrag, updateHabit
   } = useOS().habits
 
   const [draggedHabitId, setDraggedHabitId] = useState(null)
@@ -516,15 +516,12 @@ export default function DailyOps() {
   const getStatus = (habitId, day) => {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const dateObj = new Date(viewYear, viewMonth, day)
-    const habit = habits.find(h => h.id === habitId)
+    const habit = (allHabits || habits || []).find(h => h.id === habitId)
     if (!habit) return 'none'
 
     const freqDays = habit.frequency_days || [0,1,2,3,4,5,6]
     
-    const explicitStatus = logMap.get(`${habitId}::${dateStr}`)
-    if (explicitStatus) return explicitStatus
-    
-    // Automatically block days prior to habit creation date (with smart recovery for corrupted timestamps)
+    // 1. Automatically block days prior to habit creation date
     let createdDateStr = null
     const rawCreatedAt = habit.created_at || habit.created_date
 
@@ -549,8 +546,20 @@ export default function DailyOps() {
       return 'blocked'
     }
 
-    // Automatically block days not in the active days array
+    // 2. Automatically block days after habit was stopped
+    if (habit.stopped_at) {
+      const stoppedDateStr = getLocalDateStr(new Date(habit.stopped_at))
+      if (dateStr > stoppedDateStr) return 'blocked'
+    } else if (habit.is_active === false) {
+      return 'blocked'
+    }
+
+    // 3. Automatically block days not in the active days array
     if (!freqDays.includes(dateObj.getDay())) return 'blocked'
+
+    // 4. Return explicit logged status if present
+    const explicitStatus = logMap.get(`${habitId}::${dateStr}`)
+    if (explicitStatus) return explicitStatus
     
     return 'none'
   }
@@ -1196,7 +1205,7 @@ export default function DailyOps() {
                           }}>
                             {status === 'completed' && <Check size={12} color="#fff" strokeWidth={3} />}
                             {status === 'failed' && <X size={12} color="#fff" strokeWidth={3} />}
-                            {status === 'blocked' && <Minus size={12} className="text-muted opacity-50" strokeWidth={3} />}
+                            {status === 'blocked' && <span className="text-muted/60 font-mono text-[11px] font-bold select-none" title="Pre-creation / Stopped / Off-day">▨</span>}
                           </div>
                         </td>
                       )
@@ -1441,6 +1450,68 @@ export default function DailyOps() {
           </div>
         )}
 
+        {/* Stopped Routines Panel */}
+        {stoppedHabits && stoppedHabits.length > 0 && (
+          <div className="mt-8 quests-stopped-routines">
+            <HudPanel label={`STOPPED ROUTINES (${stoppedHabits.length})`}>
+              <p className="font-mono text-xs text-muted mb-4">
+                These routines are currently stopped and hidden from the daily ops table. All historical log data and completion history are completely saved. Click <strong className="text-primary">CONTINUE ROUTINE</strong> anytime to reactivate tracking.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {stoppedHabits.map((h) => {
+                  const cat = QUEST_CATEGORIES.find(c => c.id === h.category) || QUEST_CATEGORIES[0]
+                  return (
+                    <div key={h.id} className="p-4 rounded border border-border-subtle bg-bg-secondary flex-between gap-3">
+                      <div className="flex flex-col gap-1 truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="font-display text-sm text-primary truncate">{h.title}</span>
+                          <span className="px-2 py-0.5 rounded font-mono text-[9px] bg-danger/20 border border-danger/40 text-danger uppercase font-bold">STOPPED</span>
+                        </div>
+                        <div className="font-mono text-[10px] text-muted truncate">
+                          {cat.name} {h.created_at ? `• Deployed: ${h.created_at.substring(0, 10)}` : ''} {h.stopped_at ? `• Stopped: ${h.stopped_at.substring(0, 10)}` : ''}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await resumeHabit(h.id)
+                          }}
+                          className="btn btn-primary btn-sm flex items-center gap-1 text-xs font-mono"
+                          title="Reactivate this routine"
+                        >
+                          <PlayCircle size={14} /> CONTINUE
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConfirmModal({
+                              isOpen: true,
+                              title: 'PERMANENTLY DELETE ROUTINE',
+                              message: `Are you sure you want to permanently delete "${h.title}"?`,
+                              danger: true,
+                              confirmText: 'DELETE PERMANENTLY',
+                              onConfirm: async () => {
+                                await deleteHabit(h.id);
+                                setConfirmModal({ isOpen: false });
+                              },
+                              onCancel: () => setConfirmModal({ isOpen: false })
+                            })
+                          }}
+                          className="p-2 text-muted hover:text-danger rounded border border-border-subtle hover:border-danger transition-colors"
+                          title="Permanently delete routine"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </HudPanel>
+          </div>
+        )}
+
         {/* Add Form Modal */}
         <AnimatePresence>
           {showAddForm && (
@@ -1516,79 +1587,93 @@ export default function DailyOps() {
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 50 }}
-              className="modal-content w-full sm:max-w-[420px] mx-4"
+              className="w-full sm:w-auto p-4"
             >
-              <div className="modal-header">
-                <h3 className="font-display text-lg text-primary tracking-widest">EDIT ROUTINE</h3>
-                <button onClick={() => setEditingHabit(null)} className="text-muted hover:text-primary"><X size={20} /></button>
-              </div>
-              <form onSubmit={handleEditSave} className="flex flex-col gap-4">
-                <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">ROUTINE TITLE</label>
-                  <input type="text" className="input" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required autoFocus />
+              <HudPanel className="modal-content border-amber" style={{ width: '480px', maxWidth: '100%' }}>
+                <div className="flex-between mb-4 border-b border-border-color pb-3">
+                  <span className="font-display text-xl uppercase text-amber">Edit Routine</span>
+                  <button onClick={() => setEditingHabit(null)} className="text-muted hover:text-danger"><X size={18} /></button>
                 </div>
-                <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
-                  <select className="select" value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
-                    {QUEST_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                {editCategory === 'other' && (
+                <form onSubmit={handleEditSave} className="flex-col gap-4">
                   <div>
-                    <label className="font-mono text-xs text-muted mb-1 block">CUSTOM CATEGORY</label>
-                    <input type="text" className="input" value={editCustomCategory} onChange={(e) => setEditCustomCategory(e.target.value)} required placeholder="e.g. Finance" />
+                    <label className="font-mono text-xs text-muted mb-1 block">ROUTINE TITLE</label>
+                    <input type="text" className="input" value={editTitle} onChange={e => setEditTitle(e.target.value)} required autoFocus />
                   </div>
-                )}
-                <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">XP REWARD / PENALTY</label>
-                  <input type="number" className="input" value={editXp} onChange={(e) => setEditXp(Number(e.target.value))} required min="5" max="100" step="5" />
-                  <p className="font-mono text-[10px] text-muted mt-1">XP earned when complete. Penalty for failing is -15 XP (-30 XP if missed 2+ days in a row).</p>
-                </div>
-                <div>
-                  <label className="font-mono text-xs text-muted mb-1 block">ACTIVE DAYS</label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {DAYS_OF_WEEK.map(day => (
-                      <button
-                        key={day.value}
-                        type="button"
-                        onClick={() => setEditFrequencyDays(prev => prev.includes(day.value) ? prev.filter(d => d !== day.value) : [...prev, day.value].sort())}
-                        className={`px-2 py-1 rounded border font-mono text-xs transition-colors`}
-                        style={editFrequencyDays.includes(day.value) ? { backgroundColor: 'var(--warning-subtle)', borderColor: 'var(--warning)', color: 'var(--warning)' } : { backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
-                      >
-                        {day.label}
-                      </button>
-                    ))}
+                  <div className="grid-2 gap-4">
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">CATEGORY</label>
+                      <select className="select font-mono w-full" value={editCategory} onChange={e => setEditCategory(e.target.value)}>
+                        {QUEST_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                      {editCategory === 'other' && (
+                        <div className="mt-2">
+                          <input type="text" className="input font-mono text-xs w-full" 
+                            value={editCustomCategory} 
+                            onChange={e => setEditCustomCategory(e.target.value)}
+                            placeholder="Specify category..." required />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="font-mono text-xs text-muted mb-1 block">XP PER DAY</label>
+                      <input type="number" className="input font-mono" value={editXp} onChange={e => setEditXp(e.target.value)} min="1" max="100" />
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-col gap-3 mt-2">
-                  <div className="flex gap-3">
-                    <button type="button" onClick={() => setEditingHabit(null)} className="btn btn-ghost flex-1">CANCEL</button>
-                    <button type="submit" className="btn btn-primary flex-1">SAVE CHANGES</button>
+                  <div>
+                    <label className="font-mono text-xs text-muted mb-1 block">ACTIVE DAYS</label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {DAYS_OF_WEEK.map(day => (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() => setEditFrequencyDays(prev => prev.includes(day.value) ? prev.filter(d => d !== day.value) : [...prev, day.value].sort())}
+                          className={`px-2 py-1 rounded border font-mono text-xs transition-colors`}
+                          style={editFrequencyDays.includes(day.value) ? { backgroundColor: 'var(--warning-subtle)', borderColor: 'var(--warning)', color: 'var(--warning)' } : { backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
+                        >
+                          {day.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      setConfirmModal({
-                        isOpen: true,
-                        title: 'DELETE ROUTINE',
-                        message: 'Are you sure you want to permanently delete this routine?',
-                        danger: true,
-                        confirmText: 'DELETE',
-                        onConfirm: async () => {
-                          await deleteHabit(editingHabit.id);
-                          setEditingHabit(null);
-                          setConfirmModal({ isOpen: false });
-                        },
-                        onCancel: () => setConfirmModal({ isOpen: false })
-                      })
-                    }} 
-                    className="btn border border-danger text-danger hover:bg-danger/20 transition-colors w-full flex justify-center items-center gap-2 mt-2"
-                  >
-                    <Trash2 size={16} /> DELETE ROUTINE
-                  </button>
-                </div>
-              </form>
+                  <div className="flex flex-col gap-3 mt-2">
+                    <div className="flex gap-3">
+                      <button type="button" onClick={() => setEditingHabit(null)} className="btn btn-ghost flex-1">CANCEL</button>
+                      <button type="submit" className="btn btn-primary flex-1">SAVE CHANGES</button>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={async () => {
+                        await stopHabit(editingHabit.id)
+                        setEditingHabit(null)
+                      }} 
+                      className="btn border border-warning/60 text-warning hover:bg-warning/20 transition-colors w-full flex justify-center items-center gap-2 mt-2 font-mono text-xs font-bold"
+                    >
+                      <PauseCircle size={16} /> STOP ROUTINE (PRESERVE DATA)
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setConfirmModal({
+                          isOpen: true,
+                          title: 'PERMANENTLY DELETE ROUTINE',
+                          message: 'Are you sure you want to permanently delete this routine? This action cannot be undone.',
+                          danger: true,
+                          confirmText: 'DELETE PERMANENTLY',
+                          onConfirm: async () => {
+                            await deleteHabit(editingHabit.id);
+                            setEditingHabit(null);
+                            setConfirmModal({ isOpen: false });
+                          },
+                          onCancel: () => setConfirmModal({ isOpen: false })
+                        })
+                      }} 
+                      className="btn border border-danger/40 text-danger hover:bg-danger/20 transition-colors w-full flex justify-center items-center gap-2 text-xs font-mono opacity-80 hover:opacity-100"
+                    >
+                      <Trash2 size={14} /> PERMANENTLY DELETE
+                    </button>
+                  </div>
+                </form>
+              </HudPanel>
             </motion.div>
           </div>
         )}

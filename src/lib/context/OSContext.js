@@ -116,9 +116,9 @@ export function OSProvider({ children }) {
     userConfig,
     
     // Cross-Domain Orchestration Methods
-    completeOperation: useCallback(async (taskId, proofUrl = null) => {
+    completeOperation: useCallback(async (taskId, proofUrl = null, completionNote = null) => {
       // 1. Complete the underlying task
-      const updatedTask = await tasks.completeTask(taskId, proofUrl)
+      const updatedTask = await tasks.completeTask(taskId, proofUrl, completionNote)
 
       // 2. If it belongs to a Mission (Goal), automate mission progress
       const task = updatedTask || tasks.tasks.find(t => t.id === taskId)
@@ -158,8 +158,8 @@ export function OSProvider({ children }) {
       return success
     }, [tasks, goals, profile]),
 
-    failOperation: useCallback(async (taskId) => {
-      const result = await tasks.failTask(taskId)
+    failOperation: useCallback(async (taskId, failureReason = null) => {
+      const result = await tasks.failTask(taskId, failureReason)
       if (result) {
         await profile.fetchProfile() // Refresh XP immediately
       }

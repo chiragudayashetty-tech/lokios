@@ -120,16 +120,25 @@ export function useGoalsInternal(user) {
     }
   }, [user])
 
-  const completeGoal = useCallback(async (id, proofUrl = null, skipXp = false) => {
+  const completeGoal = useCallback(async (id, proofUrl = null, skipXp = false, completionNote = null) => {
     if (!user) return null
 
     try {
       const goal = goals.find((g) => g.id === id)
       if (!goal) return null
 
+      const updates = { completed_at: new Date().toISOString(), progress: 100, status: 'completed' }
+      if (completionNote && completionNote.trim()) {
+        const currDesc = goal.description || ''
+        const cleanNote = completionNote.trim()
+        if (!currDesc.includes('[Completion Note]')) {
+          updates.description = `${currDesc}\n\n[Completion Note]\n${cleanNote}`.trim()
+        }
+      }
+
       const { data: updated, error } = await supabase
         .from('goals')
-        .update({ completed_at: new Date().toISOString(), progress: 100, status: 'completed' })
+        .update(updates)
         .eq('id', id)
         .eq('user_id', user.id)
         .select()
@@ -137,15 +146,15 @@ export function useGoalsInternal(user) {
 
       if (error) throw error
 
-      if (proofUrl) {
+      if (proofUrl || (completionNote && completionNote.trim())) {
         // Auto-create Portfolio Log
         await supabase.from('work_logs').insert([{
           user_id: user.id,
           title: `Mission Accomplished: ${goal.title}`,
-          description: goal.description || 'Completed Mission.',
+          description: completionNote ? completionNote.trim() : (goal.description || 'Completed Mission.'),
           type: 'other', // safe enum fallback
           date: getLocalDateStr(),
-          media_urls: [proofUrl]
+          media_urls: proofUrl ? [proofUrl] : []
         }])
       }
 
@@ -223,16 +232,25 @@ export function useGoalsInternal(user) {
     }
   }, [user])
 
-  const failGoal = useCallback(async (id) => {
+  const failGoal = useCallback(async (id, failureReason = null) => {
     if (!user) return null
 
     const goal = goals.find((g) => g.id === id)
     if (!goal) return null
 
     try {
+      const updates = { status: 'failed', completed_at: new Date().toISOString() }
+      if (failureReason && failureReason.trim()) {
+        const currDesc = goal.description || ''
+        const cleanReason = failureReason.trim()
+        if (!currDesc.includes('[Failure Note]')) {
+          updates.description = `${currDesc}\n\n[Failure Note]\n${cleanReason}`.trim()
+        }
+      }
+
       const { data: updated, error } = await supabase
         .from('goals')
-        .update({ status: 'failed' })
+        .update(updates)
         .eq('id', id)
         .eq('user_id', user.id)
         .select()

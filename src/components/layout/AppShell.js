@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList, Scale, Download
+  Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList, Scale, Download, Mic
 } from 'lucide-react'
 import IntelExportModal from '@/components/ui/IntelExportModal'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/tasks', icon: CheckSquare, label: 'Operations' },
   { href: '/goals', icon: Target, label: 'Missions' },
   { href: '/work', icon: Briefcase, label: 'Work' },
+  { href: '/speaking', icon: Mic, label: 'Speaking Practice' },
   { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
   { href: '/journal', icon: BookOpen, label: 'Journal' },
   { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },

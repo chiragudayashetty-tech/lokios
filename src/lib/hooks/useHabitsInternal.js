@@ -41,7 +41,7 @@ function getConsecutiveMisses(habitId, targetDateStr, allLogs, habit) {
 }
 
 export function useHabitsInternal(user) {
-  const [habits, setHabits] = useState([])
+  const [allHabits, setAllHabits] = useState([])
   const [monthLogs, setMonthLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -52,6 +52,14 @@ export function useHabitsInternal(user) {
 
   const todayStr = getLocalDateStr()
 
+  const habits = useMemo(() => {
+    return allHabits.filter((h) => h.is_active !== false)
+  }, [allHabits])
+
+  const stoppedHabits = useMemo(() => {
+    return allHabits.filter((h) => h.is_active === false)
+  }, [allHabits])
+
   // Derive todayLogs from monthLogs for backward compat
   const todayLogs = useMemo(() => {
     return monthLogs.filter((l) => l.date === todayStr)
@@ -59,7 +67,7 @@ export function useHabitsInternal(user) {
 
   const fetchHabits = useCallback(async (year, month) => {
     if (!user) {
-      setHabits([])
+      setAllHabits([])
       setMonthLogs([])
       setLoading(false)
       return
@@ -84,7 +92,6 @@ export function useHabitsInternal(user) {
           .from('habits')
           .select('*')
           .eq('user_id', user.id)
-          .eq('is_active', true)
           .order('created_at', { ascending: true }),
         supabase
           .from('habit_logs')
@@ -114,12 +121,8 @@ export function useHabitsInternal(user) {
 
       const fetchedHabits = habitsRes.data || []
       fetchedHabits.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0) || new Date(a.created_at) - new Date(b.created_at))
-      setHabits(fetchedHabits)
+      setAllHabits(fetchedHabits)
       setMonthLogs([...realLogs, ...virtualFailedLogs])
-      
-      // Admin one-time DB clear script if flag not found (Reset tracking from Jun 15)
-      // Removed destructive DB reset to prevent accidental data loss.
-
     } catch (err) {
       console.error('Error fetching habits:', err)
       setError(err.message || JSON.stringify(err) || 'Failed to load data. Please refresh and try again.')
@@ -354,7 +357,7 @@ export function useHabitsInternal(user) {
     if (!user) return null
 
     try {
-      const payload = { created_at: new Date().toISOString(), ...data, user_id: user.id }
+      const payload = { created_at: new Date().toISOString(), is_active: true, ...data, user_id: user.id }
       const { data: newHabit, error } = await supabase
         .from('habits')
         .insert(payload)
@@ -362,7 +365,7 @@ export function useHabitsInternal(user) {
         .single()
 
       if (error) throw error
-      setHabits((prev) => [...prev, newHabit])
+      setAllHabits((prev) => [...prev, newHabit])
       return newHabit
     } catch (error) {
       console.error('Error adding habit:', error)
@@ -379,7 +382,7 @@ export function useHabitsInternal(user) {
         .eq('id', habitId)
         .eq('user_id', user.id)
       if (error) throw error
-      setHabits((prev) => prev.filter((h) => h.id !== habitId))
+      setAllHabits((prev) => prev.filter((h) => h.id !== habitId))
       return true
     } catch (error) {
       console.error('Error deleting habit:', error)
@@ -387,23 +390,69 @@ export function useHabitsInternal(user) {
     }
   }, [user])
 
-  const archiveHabit = useCallback(async (habitId) => {
-    if (!user) return
+  const stopHabit = useCallback(async (habitId) => {
+    if (!user) return null
     try {
-      const { error } = await supabase.from('habits').update({ is_active: false }).eq('id', habitId).eq('user_id', user.id)
-      if (error) throw error
-      setHabits((prev) => prev.filter((h) => h.id !== habitId))
+      const stoppedAt = new Date().toISOString()
+      const { error } = await supabase
+        .from('habits')
+        .update({ is_active: false, stopped_at: stoppedAt })
+        .eq('id', habitId)
+        .eq('user_id', user.id)
+
+      if (error) {
+        const { error: err2 } = await supabase
+          .from('habits')
+          .update({ is_active: false })
+          .eq('id', habitId)
+          .eq('user_id', user.id)
+        if (err2) throw err2
+      }
+
+      setAllHabits((prev) => prev.map((h) => (h.id === habitId ? { ...h, is_active: false, stopped_at: stoppedAt } : h)))
+      return true
     } catch (error) {
-      console.error('Error archiving habit:', error)
+      console.error('Error stopping habit:', error)
+      return null
     }
   }, [user])
+
+  const resumeHabit = useCallback(async (habitId) => {
+    if (!user) return null
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .update({ is_active: true, stopped_at: null })
+        .eq('id', habitId)
+        .eq('user_id', user.id)
+
+      if (error) {
+        const { error: err2 } = await supabase
+          .from('habits')
+          .update({ is_active: true })
+          .eq('id', habitId)
+          .eq('user_id', user.id)
+        if (err2) throw err2
+      }
+
+      setAllHabits((prev) => prev.map((h) => (h.id === habitId ? { ...h, is_active: true, stopped_at: null } : h)))
+      return true
+    } catch (error) {
+      console.error('Error resuming habit:', error)
+      return null
+    }
+  }, [user])
+
+  const archiveHabit = useCallback(async (habitId) => {
+    return stopHabit(habitId)
+  }, [stopHabit])
 
   const updateHabit = useCallback(async (habitId, updates) => {
     if (!user) return null
     try {
       const { data, error } = await supabase.from('habits').update(updates).eq('id', habitId).eq('user_id', user.id).select().single()
       if (error) throw error
-      setHabits((prev) => prev.map(h => h.id === habitId ? data : h))
+      setAllHabits((prev) => prev.map(h => h.id === habitId ? data : h))
       return data
     } catch (error) {
       console.error('Error updating habit:', error)
@@ -430,7 +479,7 @@ export function useHabitsInternal(user) {
       display_order: i + 1
     }))
     
-    setHabits(updatedHabits)
+    setAllHabits(updatedHabits)
     
     const supabase = createClient()
     await Promise.all(
@@ -455,7 +504,7 @@ export function useHabitsInternal(user) {
       display_order: i + 1
     }))
 
-    setHabits(updatedHabits)
+    setAllHabits(updatedHabits)
 
     const supabase = createClient()
     await Promise.all(
@@ -563,6 +612,8 @@ export function useHabitsInternal(user) {
 
   return {
     habits,
+    stoppedHabits,
+    allHabits,
     monthLogs,
     todayLogs,
     loading,
@@ -573,7 +624,9 @@ export function useHabitsInternal(user) {
     toggleHabitForDate,
     addHabit,
     deleteHabit,
-    archiveHabit,
+    stopHabit,
+    resumeHabit,
+    archiveHabit: stopHabit,
     updateHabit,
     reorderHabits,
     reorderHabitsByDrag

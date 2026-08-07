@@ -133,3 +133,33 @@ export function formatDuration(hours) {
   if (m === 0) return `${h}h`
   return `${h}h ${m}m`
 }
+
+/**
+ * Parses task or goal description to extract core description, completion notes, and failure notes.
+ */
+export function parseTaskNotes(description = '') {
+  if (!description) return { cleanDesc: '', completionNote: '', failureNote: '' }
+  let cleanDesc = String(description)
+  let completionNote = ''
+  let failureNote = ''
+
+  if (cleanDesc.includes('[Completion Note]')) {
+    const parts = cleanDesc.split('[Completion Note]')
+    cleanDesc = parts[0].trim()
+    completionNote = parts[1] ? parts[1].trim() : ''
+  }
+  if (cleanDesc.includes('[Failure Note]')) {
+    const parts = cleanDesc.split('[Failure Note]')
+    cleanDesc = parts[0].trim()
+    failureNote = parts[1] ? parts[1].trim() : ''
+  }
+  if (cleanDesc.startsWith('[Category:')) {
+    cleanDesc = cleanDesc.replace(/^\[Category:\s*([^\]]+)\]\n\n?/, '').trim()
+  }
+  if (cleanDesc.startsWith('[Duration:')) {
+    cleanDesc = cleanDesc.replace(/^\[Duration:\s*([^\]]+)\]\n\n?/, '').trim()
+  }
+
+  return { cleanDesc, completionNote, failureNote }
+}
+

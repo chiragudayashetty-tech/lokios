@@ -84,7 +84,7 @@ export function useTasksInternal(user) {
     }
   }, [user])
 
-  const completeTask = useCallback(async (id, proofUrl = null) => {
+  const completeTask = useCallback(async (id, proofUrl = null, completionNote = null) => {
     if (!user) return null
 
     try {
@@ -102,6 +102,13 @@ export function useTasksInternal(user) {
         const { data: curr } = await supabase.from('tasks').select('media_urls').eq('id', id).eq('user_id', user.id).single()
         updates.media_urls = curr?.media_urls ? [...curr.media_urls, proofUrl] : [proofUrl]
       }
+      if (completionNote && completionNote.trim()) {
+        const currDesc = task.description || ''
+        const cleanNote = completionNote.trim()
+        if (!currDesc.includes('[Completion Note]')) {
+          updates.description = `${currDesc}\n\n[Completion Note]\n${cleanNote}`.trim()
+        }
+      }
 
       const { data: updated, error } = await supabase
         .from('tasks')
@@ -112,6 +119,22 @@ export function useTasksInternal(user) {
         .single()
 
       if (error) throw error
+
+      // Auto-create Portfolio / Proof of Work Log if proof or completion note is present
+      if (proofUrl || (completionNote && completionNote.trim())) {
+        try {
+          await supabase.from('work_logs').insert([{
+            user_id: user.id,
+            title: `Operation Completed: ${task.title}`,
+            description: completionNote ? completionNote.trim() : (task.description || 'Completed Operation.'),
+            type: 'project_work',
+            date: getLocalDateStr(),
+            media_urls: proofUrl ? [proofUrl] : []
+          }])
+        } catch (logErr) {
+          console.error("Error creating work_logs entry on task completion:", logErr)
+        }
+      }
 
       // Dynamic XP Calculation based on Difficulty and Overdue Days (-5 XP per day past deadline)
       const diffKey = (task?.difficulty || 'MEDIUM').toUpperCase()
@@ -234,7 +257,7 @@ export function useTasksInternal(user) {
     }
   }, [user, tasks])
 
-  const failTask = useCallback(async (id) => {
+  const failTask = useCallback(async (id, failureReason = null) => {
     if (!user) return null
 
     try {
@@ -245,9 +268,18 @@ export function useTasksInternal(user) {
       }
       if (!task || task.status === 'cancelled' || task.status === 'failed') return null
 
+      const updates = { status: 'cancelled', completed_at: new Date().toISOString() }
+      if (failureReason && failureReason.trim()) {
+        const currDesc = task.description || ''
+        const cleanReason = failureReason.trim()
+        if (!currDesc.includes('[Failure Note]')) {
+          updates.description = `${currDesc}\n\n[Failure Note]\n${cleanReason}`.trim()
+        }
+      }
+
       const { data: updated, error } = await supabase
         .from('tasks')
-        .update({ status: 'cancelled', completed_at: new Date().toISOString() })
+        .update(updates)
         .eq('id', id)
         .eq('user_id', user.id)
         .select()
