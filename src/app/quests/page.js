@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Scale, Moon, Clock, Sparkles, CheckCircle2, Minus, PauseCircle, PlayCircle } from 'lucide-react'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Lock, Scale, Moon, Clock, Sparkles, CheckCircle2, Minus, PauseCircle, PlayCircle } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
@@ -521,7 +521,7 @@ export default function DailyOps() {
 
     const freqDays = habit.frequency_days || [0,1,2,3,4,5,6]
     
-    // 1. Automatically block days prior to habit creation date
+    // 1. Automatically lock days prior to habit creation date
     let createdDateStr = null
     const rawCreatedAt = habit.created_at || habit.created_date
 
@@ -543,19 +543,19 @@ export default function DailyOps() {
     }
     
     if (createdDateStr && !isNaN(new Date(createdDateStr).getTime()) && dateStr < createdDateStr) {
-      return 'blocked'
+      return 'locked'
     }
 
-    // 2. Automatically block days after habit was stopped
+    // 2. Automatically lock days after habit was stopped
     if (habit.stopped_at) {
       const stoppedDateStr = getLocalDateStr(new Date(habit.stopped_at))
-      if (dateStr > stoppedDateStr) return 'blocked'
+      if (dateStr > stoppedDateStr) return 'locked'
     } else if (habit.is_active === false) {
-      return 'blocked'
+      return 'locked'
     }
 
-    // 3. Automatically block days not in the active days array
-    if (!freqDays.includes(dateObj.getDay())) return 'blocked'
+    // 3. Off-day (Rest Day) -> Return 'rest' (Leaf symbol)
+    if (!freqDays.includes(dateObj.getDay())) return 'rest'
 
     // 4. Return explicit logged status if present
     const explicitStatus = logMap.get(`${habitId}::${dateStr}`)
@@ -609,12 +609,12 @@ export default function DailyOps() {
       if (status === 'completed') completed++
       if (status === 'failed') failed++
       // Only reduce goal if it was a manual block on an otherwise active day
-      if (status === 'blocked' && freqDays.includes(dateObj.getDay())) goal--
+      if ((status === 'blocked' || status === 'locked') && freqDays.includes(dateObj.getDay())) goal--
     })
     
     const left = goal - completed - failed
-    const pct = goal === 0 ? 0 : Math.round((completed / goal) * 100)
-    return { completed, failed, left: Math.max(0, left), pct, goal }
+    const pct = goal <= 0 ? (completed > 0 ? 100 : 0) : Math.round((completed / goal) * 100)
+    return { completed, failed, left: Math.max(0, left), pct, goal: Math.max(0, goal) }
   }
 
   const globalStats = useMemo(() => {
@@ -629,7 +629,7 @@ export default function DailyOps() {
         }
         const status = getStatus(h.id, d)
         if (status === 'completed') done++
-        if (status === 'blocked' && freqDays.includes(dateObj.getDay())) total--
+        if ((status === 'blocked' || status === 'locked') && freqDays.includes(dateObj.getDay())) total--
       })
     })
     return { completed: done, goal: total, pct: total === 0 ? 0 : Math.round((done / total) * 100) }
@@ -1197,15 +1197,16 @@ export default function DailyOps() {
                           <div style={{
                             width: '26px', height: '26px', margin: 'auto',
                             border: status === 'none' ? '1px solid var(--border-color)' : 'none',
-                            borderRadius: '4px',
+                            borderRadius: '6px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : 'transparent',
+                            background: status === 'completed' ? cat.color : status === 'failed' ? 'var(--danger)' : status === 'rest' ? 'rgba(16, 185, 129, 0.15)' : status === 'locked' || status === 'blocked' ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
                             transition: 'all 150ms ease',
                             opacity: status !== 'none' ? 1 : 0.4,
                           }}>
                             {status === 'completed' && <Check size={12} color="#fff" strokeWidth={3} />}
                             {status === 'failed' && <X size={12} color="#fff" strokeWidth={3} />}
-                            {status === 'blocked' && <span className="text-muted/60 font-mono text-[11px] font-bold select-none" title="Pre-creation / Stopped / Off-day">▨</span>}
+                            {status === 'rest' && <Leaf size={12} className="text-emerald-400 opacity-90" strokeWidth={2.5} />}
+                            {(status === 'locked' || status === 'blocked') && <Lock size={11} className="text-muted/40" strokeWidth={2} />}
                           </div>
                         </td>
                       )
@@ -1312,7 +1313,8 @@ export default function DailyOps() {
                   >
                     {todayStatus === 'completed' && <Check size={24} color="#fff" strokeWidth={3} />}
                     {todayStatus === 'failed' && <X size={24} color="#fff" strokeWidth={3} />}
-                    {todayStatus === 'blocked' && <Leaf size={20} color="var(--warning)" strokeWidth={2} />}
+                    {todayStatus === 'rest' && <Leaf size={20} className="text-emerald-400" strokeWidth={2} />}
+                    {(todayStatus === 'locked' || todayStatus === 'blocked') && <Lock size={18} className="text-muted/50" strokeWidth={2} />}
                   </button>
                 </div>
               </HudPanel>
