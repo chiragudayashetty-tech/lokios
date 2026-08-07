@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useOS } from '@/lib/context/OSContext'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
+import { getSpeakingRestDays, setSpeakingRestDays, isSpeakingRestDay } from '@/lib/utils/restDays'
+import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Mic, Play, Pause, RotateCcw, Shuffle, Video, Link as LinkIcon,
@@ -47,9 +49,6 @@ const DEFAULT_30_TOPICS = [
   { id: 29, topic: 'How does SpaceX land rockets?', category: 'Aerospace Engineering' },
   { id: 30, topic: 'What is leverage, and why is it Naval Ravikant\'s favorite concept?', category: 'Mental Models & Wealth' }
 ]
-
-import { getSpeakingRestDays, setSpeakingRestDays, isSpeakingRestDay } from '@/lib/utils/restDays'
-import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
 
 export default function SpeakingPracticePage() {
   const { user } = useAuth()
