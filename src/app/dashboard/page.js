@@ -1200,14 +1200,14 @@ export default function MissionControl() {
         {/* ══════════════════════════════════════════════════════════════════
             DAILY PROTOCOL STATUS // COMPACT DIRECT LINK BOXES
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3 mb-5">
           {eodItems.map((item) => {
             const ItemIcon = item.icon
             const displayLabel = item.key === 'wellness' ? 'WELLNESS' : item.key === 'work' ? 'WORK' : item.key === 'journal' ? 'JOURNAL' : item.key === 'screen' ? 'SCREEN INTEL' : item.key === 'speaking' ? 'SPEAKING' : item.label.toUpperCase()
             return (
               <Link href={item.path} key={item.key} className="block group">
                 <div 
-                  className={`p-3 text-center transition-all duration-200 flex flex-col justify-center items-center rounded border h-full ${
+                  className={`p-2.5 sm:p-3 text-center transition-all duration-200 flex flex-col justify-center items-center rounded-lg border h-full ${
                     item.isDone 
                       ? 'bg-bg-tertiary border-border-color hover:border-primary' 
                       : 'bg-bg-tertiary border-border-color hover:border-amber'
@@ -1215,14 +1215,14 @@ export default function MissionControl() {
                 >
                   <ItemIcon 
                     size={14} 
-                    className="mb-1.5 transition-colors" 
+                    className="mb-1 transition-colors" 
                     style={{ color: item.isDone ? 'var(--success)' : 'var(--text-muted)' }} 
                   />
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-muted group-hover:text-primary font-bold">
+                  <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
                     {displayLabel}
                   </div>
                   <div 
-                    className="font-mono text-[9px] mt-1 font-bold flex items-center gap-1"
+                    className="font-mono text-[9px] mt-0.5 font-bold flex items-center justify-center gap-1"
                     style={{ color: item.isDone ? 'var(--success)' : 'var(--warning)' }}
                   >
                     {item.isDone ? '✓ LOGGED' : '⚠ PENDING'}
@@ -1235,7 +1235,7 @@ export default function MissionControl() {
           {/* DEBRIEF BOX */}
           <Link href="/debriefs" className="block group">
             <div 
-              className={`p-3 text-center transition-all duration-200 flex flex-col justify-center items-center rounded border h-full ${
+              className={`p-2.5 sm:p-3 text-center transition-all duration-200 flex flex-col justify-center items-center rounded-lg border h-full ${
                 new Date().getDay() === 0 
                   ? 'bg-warning/10 border-warning hover:border-amber' 
                   : 'bg-bg-tertiary border-border-color hover:border-primary'
@@ -1243,14 +1243,14 @@ export default function MissionControl() {
             >
               <ClipboardList 
                 size={14} 
-                className="mb-1.5 transition-colors" 
+                className="mb-1 transition-colors" 
                 style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }} 
               />
-              <div className="font-mono text-[9px] uppercase tracking-widest text-muted group-hover:text-primary font-bold">
+              <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
                 DEBRIEF
               </div>
               <div 
-                className="font-mono text-[9px] mt-1 font-bold"
+                className="font-mono text-[9px] mt-0.5 font-bold"
                 style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }}
               >
                 {new Date().getDay() === 0 ? '+40 XP' : 'WEEKLY'}
