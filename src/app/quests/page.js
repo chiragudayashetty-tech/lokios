@@ -920,7 +920,7 @@ export default function DailyOps() {
             <div className="flex flex-row items-center bg-tertiary border border-border-color rounded overflow-hidden">
               <button 
                 type="button"
-                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary' : 'active:bg-hover text-primary'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary font-bold' : 'active:bg-hover text-primary'}`}
                 onClick={() => setActiveTool('cycle')}
                 title="Cycle mode"
               >
@@ -928,7 +928,7 @@ export default function DailyOps() {
               </button>
               <button 
                 type="button"
-                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary' : 'active:bg-hover text-success'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'completed' ? 'bg-success text-bg-primary font-bold' : 'active:bg-hover text-success'}`}
                 onClick={() => setActiveTool('completed')}
                 title="Done mode"
               >
@@ -936,7 +936,7 @@ export default function DailyOps() {
               </button>
               <button 
                 type="button"
-                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white' : 'active:bg-hover text-danger'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'failed' ? 'bg-danger text-white font-bold' : 'active:bg-hover text-danger'}`}
                 onClick={() => setActiveTool('failed')}
                 title="Fail mode"
               >
@@ -944,16 +944,23 @@ export default function DailyOps() {
               </button>
               <button 
                 type="button"
-                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'text-bg-primary' : 'active:bg-hover'}`}
-                style={activeTool === 'blocked' ? { backgroundColor: 'var(--warning)' } : { color: 'var(--warning)' }}
-                onClick={() => setActiveTool('blocked')}
-                title="Block mode"
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'rest' ? 'bg-emerald-500 text-black font-bold' : 'active:bg-hover text-emerald-400'}`}
+                onClick={() => setActiveTool('rest')}
+                title="Rest Day mode (Leaf 🍃)"
               >
-                <Leaf size={13} /> <span className="hidden sm:inline">BLOCK</span>
+                <Leaf size={13} /> <span className="hidden sm:inline">REST</span>
               </button>
               <button 
                 type="button"
-                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary' : 'active:bg-hover text-muted'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'blocked' ? 'bg-gray-600 text-white font-bold' : 'active:bg-hover text-muted'}`}
+                onClick={() => setActiveTool('blocked')}
+                title="Block mode (Lock 🔒)"
+              >
+                <Lock size={13} /> <span className="hidden sm:inline">BLOCK</span>
+              </button>
+              <button 
+                type="button"
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors border-l border-border-color ${activeTool === 'none' ? 'bg-secondary text-bg-primary font-bold' : 'active:bg-hover text-muted'}`}
                 onClick={() => setActiveTool('none')}
                 title="Clear mode"
               >
