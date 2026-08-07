@@ -48,6 +48,8 @@ export default function XPDashboard() {
   const [totalXp, setTotalXp] = useState(0)
   const [loading, setLoading] = useState(true)
   const [chartViewMode, setChartViewMode] = useState('cumulative') // 'cumulative' | 'daily' | 'both'
+  const [logFilterMode, setLogFilterMode] = useState('all') // 'all' | 'additions' | 'deductions'
+  const [logSearch, setLogSearch] = useState('')
 
   useEffect(() => {
     if (!user) return
@@ -179,9 +181,6 @@ export default function XPDashboard() {
     const diffTime = Math.abs(today - firstDate)
     daysTracked = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
   }
-
-  const [logFilterMode, setLogFilterMode] = useState('all') // 'all' | 'additions' | 'deductions'
-  const [logSearch, setLogSearch] = useState('')
 
   // Filtered timeline logs
   const filteredTimeline = timeline.slice().reverse().filter(item => {
