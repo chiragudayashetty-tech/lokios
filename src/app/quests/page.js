@@ -519,34 +519,21 @@ export default function DailyOps() {
     const habit = (allHabits || habits || []).find(h => h.id === habitId)
     if (!habit) return 'none'
 
-    const freqDays = habit.frequency_days || [0,1,2,3,4,5,6]
-    
-    // 1. Automatically lock days prior to habit creation date
-    let createdDateStr = null
-    const rawCreatedAt = habit.created_at || habit.created_date
+    // 1. Explicit user log ALWAYS takes top priority!
+    const explicitStatus = logMap.get(`${habitId}::${dateStr}`)
+    if (explicitStatus) return explicitStatus
 
-    if (rawCreatedAt && (rawCreatedAt.startsWith('2026-01-01') || rawCreatedAt.startsWith('2026-01-02'))) {
-      const logsForHabit = monthLogs.filter(l => l.habit_id === habitId && l.date)
-      if (logsForHabit.length > 0) {
-        const sortedLogs = [...logsForHabit].sort((a, b) => a.date.localeCompare(b.date))
-        createdDateStr = sortedLogs[0].date
-      } else {
-        createdDateStr = getLocalDateStr()
-      }
-    } else if (rawCreatedAt) {
+    // 2. Automatically lock days prior to actual habit creation date
+    const rawCreatedAt = habit.created_at || habit.created_date
+    if (rawCreatedAt) {
       const parsedDate = new Date(rawCreatedAt)
       if (!isNaN(parsedDate.getTime())) {
-        createdDateStr = getLocalDateStr(parsedDate)
+        const createdDateStr = getLocalDateStr(parsedDate)
+        if (dateStr < createdDateStr) return 'locked'
       }
-    } else {
-      createdDateStr = getLocalDateStr()
-    }
-    
-    if (createdDateStr && !isNaN(new Date(createdDateStr).getTime()) && dateStr < createdDateStr) {
-      return 'locked'
     }
 
-    // 2. Automatically lock days after habit was stopped
+    // 3. Automatically lock days after habit was stopped
     if (habit.stopped_at) {
       const stoppedDateStr = getLocalDateStr(new Date(habit.stopped_at))
       if (dateStr > stoppedDateStr) return 'locked'
@@ -554,12 +541,12 @@ export default function DailyOps() {
       return 'locked'
     }
 
-    // 3. Off-day (Rest Day) -> Return 'rest' (Leaf symbol)
-    if (!freqDays.includes(dateObj.getDay())) return 'rest'
+    // 4. Off-day (Rest Day) -> Return 'rest' (Leaf symbol)
+    const freqDays = Array.isArray(habit.frequency_days) && habit.frequency_days.length > 0
+      ? habit.frequency_days
+      : [0, 1, 2, 3, 4, 5, 6]
 
-    // 4. Return explicit logged status if present
-    const explicitStatus = logMap.get(`${habitId}::${dateStr}`)
-    if (explicitStatus) return explicitStatus
+    if (!freqDays.includes(dateObj.getDay())) return 'rest'
     
     return 'none'
   }
@@ -597,7 +584,7 @@ export default function DailyOps() {
     let completed = 0
     let failed = 0
     const habit = habits.find(h => h.id === habitId)
-    const freqDays = habit?.frequency_days || [0,1,2,3,4,5,6]
+    const freqDays = Array.isArray(habit?.frequency_days) && habit.frequency_days.length > 0 ? habit.frequency_days : [0,1,2,3,4,5,6]
     let goal = 0
 
     days.forEach((d) => {
@@ -608,7 +595,6 @@ export default function DailyOps() {
       const status = getStatus(habitId, d)
       if (status === 'completed') completed++
       if (status === 'failed') failed++
-      // Only reduce goal if it was a manual block on an otherwise active day
       if ((status === 'blocked' || status === 'locked') && freqDays.includes(dateObj.getDay())) goal--
     })
     
