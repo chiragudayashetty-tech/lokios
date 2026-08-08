@@ -341,7 +341,7 @@ export default function WorkPage() {
     const endOfWeek = new Date(startOfWeek)
     endOfWeek.setDate(startOfWeek.getDate() + 6)
 
-    const opt = { day: '02-digit', month: 'short' }
+    const opt = { day: '2-digit', month: 'short' }
     const startStr = startOfWeek.toLocaleDateString('en-GB', opt)
     const endStr = endOfWeek.toLocaleDateString('en-GB', opt)
     const yearStr = endOfWeek.getFullYear()
