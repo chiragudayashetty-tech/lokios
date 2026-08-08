@@ -290,10 +290,33 @@ export default function XPDashboard() {
               <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-primary mb-2">
                 {currentRank.name}
               </h2>
-              <div className="font-mono text-sm mb-6 flex items-center justify-center gap-2" style={{ color: currentRank.color }}>
+              <div className="font-mono text-sm mb-5 flex items-center justify-center gap-2" style={{ color: currentRank.color }}>
                 <span className="font-bold text-2xl">{totalXp.toLocaleString()}</span>
                 <span className="text-muted font-normal">XP TOTAL</span>
               </div>
+            </div>
+
+            {/* Level Progress Card */}
+            <div className="w-full max-w-2xl bg-black/40 border border-white/10 rounded-2xl p-5 shadow-2xl backdrop-blur-md mb-6 text-left">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0" style={{ background: `${currentRank.color}20`, border: `1px solid ${currentRank.color}40` }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2L22 12L12 22L2 12L12 2Z" fill={currentRank.color} />
+                    </svg>
+                  </div>
+                  <span className="font-display text-base font-bold text-white">Level {currentLevel}</span>
+                </div>
+                <span className="font-mono text-xs font-bold text-muted tracking-wider">{current} / {required} XP</span>
+              </div>
+
+              <div className="mb-3">
+                <TacticalProgress value={progressPct} height={8} showValue={false} color={currentRank.color} />
+              </div>
+
+              <p className="font-mono text-xs text-muted leading-relaxed">
+                {currentRank.flavor || "You are proficient in executing daily disciplines, completing missions, and maintaining high operational performance."}
+              </p>
             </div>
 
             {/* Stats Grid */}
