@@ -1228,10 +1228,10 @@ export default function MissionControl() {
             const ItemIcon = item.icon
             const displayLabel = item.key === 'wellness' ? 'WELLNESS' : item.key === 'work' ? 'WORK' : item.key === 'journal' ? 'JOURNAL' : item.key === 'screen' ? 'SCREEN INTEL' : item.key === 'speaking' ? 'SPEAKING' : item.label.toUpperCase()
             return (
-              <div 
+              <Link 
                 key={item.key} 
-                className="block group cursor-pointer"
-                onClick={() => setEodQuickLogModal(item.key)}
+                href={item.path}
+                className="block group"
               >
                 <div 
                   className={`p-2.5 sm:p-3 aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative ${
@@ -1252,10 +1252,10 @@ export default function MissionControl() {
                     className="font-mono text-[9px] sm:text-[10px] mt-1 font-bold flex items-center justify-center gap-1"
                     style={{ color: item.isDone ? 'var(--success)' : 'var(--warning)' }}
                   >
-                    {item.isDone ? '✓ LOGGED' : '+ QUICK LOG'}
+                    {item.isDone ? '✓ LOGGED' : '→ OPEN'}
                   </div>
                 </div>
-              </div>
+              </Link>
             )
           })}
 
