@@ -8,12 +8,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useOS } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid 
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, PieChart, Pie, Cell 
 } from 'recharts'
 import { 
   Briefcase, Video, Film, Clock, Calendar, Save, Download, 
   Sparkles, TrendingUp, Target, Zap, AlertTriangle, Scissors, Camera,
-  ChevronDown, ChevronUp, ChevronLeft, ChevronRight
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Flag, Shield,
+  FileText, MoreHorizontal, Plus, Trash2, CheckCircle2, Layers, Share2, Youtube, RotateCcw
 } from 'lucide-react'
 
 export default function WorkPage() {
@@ -22,7 +23,7 @@ export default function WorkPage() {
   // Primary subpage tab: 'work_log' | 'content_ops' | 'analytics'
   const [activeTab, setActiveTab] = useState('work_log')
 
-  // Content Operations sub-mode: 'shoot' | 'edit'
+  // Content Operations sub-mode: 'shoot' | 'edit' | 'planner'
   const [contentMode, setContentMode] = useState('shoot')
 
   // Export Modal trigger state
@@ -40,6 +41,9 @@ export default function WorkPage() {
 
   // XP Toast State
   const [xpToast, setXpToast] = useState(null)
+
+  // Analytics Period Selector ('7days' | '30days' | 'all')
+  const [analyticsRange, setAnalyticsRange] = useState('7days')
 
   // ----------------------------------------------------
   // INDIVIDUAL FIELD TIME UNITS ('h' | 'm')
@@ -60,21 +64,31 @@ export default function WorkPage() {
   const [valBeyondTatva, setValBeyondTatva] = useState('')
   const [valFocused, setValFocused] = useState('')
   const [valUnfocused, setValUnfocused] = useState('')
+  const [workWhatDidYouDo, setWorkWhatDidYouDo] = useState('')
   const [workNotes, setWorkNotes] = useState('')
   const [workTypes, setWorkTypes] = useState([]) // selected work type tags
   const [customWorkType, setCustomWorkType] = useState('')
+  const [focusLevel, setFocusLevel] = useState(3) // 1=😠, 2=🙁, 3=😐 (Focused), 4=🙂, 5=😄
+
+  const FOCUS_LEVEL_OPTIONS = [
+    { level: 1, emoji: '😠', label: 'Very Distracted', color: '#ef4444' },
+    { level: 2, emoji: '🙁', label: 'Distracted', color: '#f97316' },
+    { level: 3, emoji: '😐', label: 'Focused', color: '#22c55e' },
+    { level: 4, emoji: '🙂', label: 'Deep Focus', color: '#00F0FF' },
+    { level: 5, emoji: '😄', label: 'Flow State', color: '#D4AF37' },
+  ]
 
   const WORK_TYPE_OPTIONS = [
-    { label: 'Deep Work', color: '#D4AF37' },
-    { label: 'Beyond Tatva', color: '#00F0FF' },
-    { label: 'Meetings', color: '#A78BFA' },
-    { label: 'Admin', color: '#9CA3AF' },
-    { label: 'Research', color: '#60A5FA' },
-    { label: 'Strategy', color: '#F97316' },
-    { label: 'Content', color: '#10B981' },
-    { label: 'Editing', color: '#EC4899' },
-    { label: 'Learning', color: '#34D399' },
-    { label: 'Client Work', color: '#FBBF24' },
+    { label: 'DEEP WORK', color: '#D4AF37' },
+    { label: 'BEYOND TATVA', color: '#00F0FF' },
+    { label: 'MEETINGS', color: '#A78BFA' },
+    { label: 'ADMIN', color: '#9CA3AF' },
+    { label: 'RESEARCH', color: '#60A5FA' },
+    { label: 'STRATEGY', color: '#F97316' },
+    { label: 'CONTENT', color: '#10B981' },
+    { label: 'EDITING', color: '#EC4899' },
+    { label: 'LEARNING', color: '#34D399' },
+    { label: 'CLIENT WORK', color: '#FBBF24' },
   ]
 
   const [valShootHours, setValShootHours] = useState('')
@@ -84,6 +98,15 @@ export default function WorkPage() {
   const [valEditHours, setValEditHours] = useState('')
   const [valEditFinished, setValEditFinished] = useState('')
   const [editNotes, setEditNotes] = useState('')
+
+  // Content Pipeline Ideas State
+  const [contentIdeas, setContentIdeas] = useState([
+    { id: 1, title: 'Building ChiragOS MVP: Modern Agentic System', platform: 'YouTube', status: 'Scripting', length: '15m' },
+    { id: 2, title: 'How I Built My Personal AI Ecosystem with Gemini 2.0', platform: 'X / Twitter', status: 'Editing', length: '8m' },
+    { id: 3, title: 'Weekly Review: High Performance Execution Framework', platform: 'Newsletter', status: 'Idea', length: '5m read' }
+  ])
+  const [newIdeaTitle, setNewIdeaTitle] = useState('')
+  const [newIdeaPlatform, setNewIdeaPlatform] = useState('YouTube')
 
   // DATA STATES
   const [workLogs, setWorkLogs] = useState([])
@@ -118,33 +141,23 @@ export default function WorkPage() {
     })
   }
 
-  // Helper: get YYYY-MM-DD for a date offset by N days from today
-  const offsetDate = (daysOffset) => {
-    const d = new Date()
-    d.setDate(d.getDate() + daysOffset)
-    return getLocalDateStr(d)
-  }
-
-  // Date Range Filter for Analytics: '7days' | '30days' | 'all'
-  const [analyticsRange, setAnalyticsRange] = useState('30days')
-
-  // ----------------------------------------------------
-  // FETCH LOGS (Dual-table fetch + localStorage merge)
-  // ----------------------------------------------------
+  // FETCH ALL WORK & CONTENT LOGS
   useEffect(() => {
     if (!user) return
 
     const fetchAllLogs = async () => {
-      const sb = createClient()
       try {
+        const sb = createClient()
         let fetchedW = []
+
+        // Try work_hours_logs first, fallback to work_logs
         const { data: whData, error: whErr } = await sb
           .from('work_hours_logs')
           .select('*')
           .eq('user_id', user.id)
           .order('date', { ascending: false })
 
-        if (!whErr && whData && whData.length > 0) {
+        if (!whErr && whData) {
           fetchedW = whData
         } else {
           const { data: wData } = await sb
@@ -224,13 +237,23 @@ export default function WorkPage() {
       setValBeyondTatva(toInputValue(w.beyond_tatva_hours, unitBeyondTatva))
       setValFocused(toInputValue(w.focused_hours, unitFocused))
       setValUnfocused(toInputValue(w.unfocused_hours ?? w.deep_execution_hours, unitUnfocused))
-      setWorkNotes(w.notes ?? '')
+      
+      const fullNotes = w.notes ?? ''
+      if (fullNotes.includes('--- WIN/LEARNING ---')) {
+        const parts = fullNotes.split('--- WIN/LEARNING ---')
+        setWorkWhatDidYouDo(parts[0]?.trim() || '')
+        setWorkNotes(parts[1]?.trim() || '')
+      } else {
+        setWorkWhatDidYouDo(fullNotes)
+        setWorkNotes('')
+      }
       setWorkTypes(w.work_type ? w.work_type.split(',').map(s => s.trim()).filter(Boolean) : [])
     } else {
       setValTotalWorked('')
       setValBeyondTatva('')
       setValFocused('')
       setValUnfocused('')
+      setWorkWhatDidYouDo('')
       setWorkNotes('')
       setWorkTypes([])
     }
@@ -290,6 +313,41 @@ export default function WorkPage() {
     })
   }, [contentLogs])
 
+  // Compute Today's Metric Totals for Top Summary Bar
+  const todayWorkLog = useMemo(() => {
+    return workLogs.find(l => l.date === selectedDate) || {}
+  }, [workLogs, selectedDate])
+
+  const todayTotals = useMemo(() => {
+    const tot = parseFloat(todayWorkLog.total_hours_worked ?? todayWorkLog.duration_hours) || toHours(valTotalWorked, unitTotalWorked)
+    const bt = parseFloat(todayWorkLog.beyond_tatva_hours) || toHours(valBeyondTatva, unitBeyondTatva)
+    const foc = parseFloat(todayWorkLog.focused_hours) || toHours(valFocused, unitFocused)
+    const unfoc = parseFloat(todayWorkLog.unfocused_hours ?? todayWorkLog.deep_execution_hours) || toHours(valUnfocused, unitUnfocused)
+    return { tot, bt, foc, unfoc }
+  }, [todayWorkLog, valTotalWorked, valBeyondTatva, valFocused, valUnfocused, unitTotalWorked, unitBeyondTatva, unitFocused, unitUnfocused])
+
+  // Helper for Date Navigation Formatting (e.g. 02 Aug - 08 Aug 2026)
+  const offsetDate = (daysOffset) => {
+    const d = new Date()
+    d.setDate(d.getDate() + daysOffset)
+    return getLocalDateStr(d)
+  }
+
+  const formatWeekRange = (weekOffset) => {
+    const now = new Date()
+    const currentDayOfWeek = now.getDay() // 0 = Sun
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - currentDayOfWeek + (weekOffset * 7))
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6)
+
+    const opt = { day: '02-digit', month: 'short' }
+    const startStr = startOfWeek.toLocaleDateString('en-GB', opt)
+    const endStr = endOfWeek.toLocaleDateString('en-GB', opt)
+    const yearStr = endOfWeek.getFullYear()
+    return `${startStr} – ${endStr} ${yearStr}`
+  }
+
   // ----------------------------------------------------
   // SAVE WORK LOG ENTRY (BULLETPROOF SYNC & +2 XP REWARD)
   // ----------------------------------------------------
@@ -297,6 +355,10 @@ export default function WorkPage() {
     e.preventDefault()
     if (!user) return
     setSavingWork(true)
+
+    const combinedNotes = workWhatDidYouDo && workNotes 
+      ? `${workWhatDidYouDo}\n--- WIN/LEARNING ---\n${workNotes}`
+      : workWhatDidYouDo || workNotes || ''
 
     const payload = {
       user_id: user.id,
@@ -306,19 +368,18 @@ export default function WorkPage() {
       focused_hours: toHours(valFocused, unitFocused),
       unfocused_hours: toHours(valUnfocused, unitUnfocused),
       deep_execution_hours: toHours(valUnfocused, unitUnfocused),
-      notes: workNotes || '',
+      notes: combinedNotes,
       work_type: workTypes.join(', ')
     }
 
-    // 1. Update local state & localStorage cache immediately for 0ms latency
+    // Update local state & localStorage cache immediately
     const updated = [payload, ...workLogs.filter(l => l.date !== selectedDate)].sort((a, b) => b.date.localeCompare(a.date))
     setWorkLogs(updated)
     if (typeof window !== 'undefined') localStorage.setItem('lokios_work_logs_cache', JSON.stringify(updated))
 
-    // 2. Sync to Supabase: try work_hours_logs first, fallback to work_logs
+    // Sync to Supabase
     try {
       const sb = createClient()
-      
       let targetTable = 'work_hours_logs'
       let { data: existing, error: selectErr } = await sb
         .from('work_hours_logs')
@@ -339,67 +400,43 @@ export default function WorkPage() {
       }
 
       if (existing && existing.length > 0) {
-        const { error: updateErr } = await sb
-          .from(targetTable)
-          .update({
-            total_hours_worked: payload.total_hours_worked,
-            beyond_tatva_hours: payload.beyond_tatva_hours,
-            focused_hours: payload.focused_hours,
-            unfocused_hours: payload.unfocused_hours,
-            deep_execution_hours: payload.deep_execution_hours,
-            notes: payload.notes,
-            work_type: payload.work_type
-          })
-          .eq('id', existing[0].id)
-
-        if (updateErr) console.error(`Work log update error on ${targetTable}:`, updateErr)
+        await sb.from(targetTable).update({
+          total_hours_worked: payload.total_hours_worked,
+          beyond_tatva_hours: payload.beyond_tatva_hours,
+          focused_hours: payload.focused_hours,
+          unfocused_hours: payload.unfocused_hours,
+          deep_execution_hours: payload.deep_execution_hours,
+          notes: payload.notes,
+          work_type: payload.work_type
+        }).eq('id', existing[0].id)
       } else {
-        const { data: inserted, error: insertErr } = await sb
-          .from(targetTable)
-          .insert([payload])
-          .select()
-
-        if (insertErr) {
-          console.error(`Work log insert error on ${targetTable}:`, insertErr)
-          const minimal = {
-            user_id: user.id,
-            date: selectedDate,
-            title: 'Daily Work Hours',
-            duration_hours: payload.total_hours_worked,
-            notes: payload.notes || ''
-          }
-          await sb.from('work_logs').insert([minimal])
-        } else if (inserted && inserted.length > 0) {
-          setWorkLogs(prev => prev.map(l => l.date === selectedDate ? { ...l, id: inserted[0].id } : l))
-        }
+        await sb.from(targetTable).insert(payload)
       }
     } catch (err) {
       console.error('Save work log exception:', err)
     }
 
-    awardXP(2, 'Logged Work Hours')
+    awardXP(2, 'Logged Work Session')
     setXpToast('+2 XP: Work Log Recorded')
     setTimeout(() => setXpToast(null), 3000)
     setSavingWork(false)
   }
 
-  // ----------------------------------------------------
-  // SAVE SHOOT LOG ENTRY (BULLETPROOF SYNC & +2 XP REWARD)
-  // ----------------------------------------------------
+  // SAVE SHOOT LOG
   const handleSaveShootLog = async (e) => {
     e.preventDefault()
     if (!user) return
     setSavingShoot(true)
 
-    const existing = contentLogs.find(l => l.date === selectedDate) || {}
+    const currentLog = contentLogs.find(l => l.date === selectedDate) || {}
     const payload = {
       user_id: user.id,
       date: selectedDate,
       shoot_hours: toHours(valShootHours, unitShootHours),
       shoot_raw_minutes: toMinutes(valShootRaw, unitShootRaw),
-      edit_hours: parseFloat(existing.edit_hours) || 0,
-      edit_finished_minutes: parseFloat(existing.edit_finished_minutes) || 0,
-      notes: shootNotes || existing.notes || ''
+      edit_hours: currentLog.edit_hours || 0,
+      edit_finished_minutes: currentLog.edit_finished_minutes || 0,
+      notes: shootNotes || currentLog.notes || ''
     }
 
     const updated = [payload, ...contentLogs.filter(l => l.date !== selectedDate)].sort((a, b) => b.date.localeCompare(a.date))
@@ -408,37 +445,13 @@ export default function WorkPage() {
 
     try {
       const sb = createClient()
-      const { data: dbExisting } = await sb
-        .from('content_logs')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('date', selectedDate)
-        .limit(1)
-
-      if (dbExisting && dbExisting.length > 0) {
-        await sb
-          .from('content_logs')
-          .update({
-            shoot_hours: payload.shoot_hours,
-            shoot_raw_minutes: payload.shoot_raw_minutes,
-            edit_hours: payload.edit_hours,
-            edit_finished_minutes: payload.edit_finished_minutes,
-            notes: payload.notes
-          })
-          .eq('id', dbExisting[0].id)
+      const { data: existing } = await sb.from('content_logs').select('id').eq('user_id', user.id).eq('date', selectedDate).limit(1)
+      if (existing && existing.length > 0) {
+        await sb.from('content_logs').update(payload).eq('id', existing[0].id)
       } else {
-        const { data: inserted } = await sb
-          .from('content_logs')
-          .insert([payload])
-          .select()
-
-        if (inserted && inserted.length > 0) {
-          setContentLogs(prev => prev.map(l => l.date === selectedDate ? { ...l, id: inserted[0].id } : l))
-        }
+        await sb.from('content_logs').insert(payload)
       }
-    } catch (err) {
-      console.error('Save shoot log exception:', err)
-    }
+    } catch (err) {}
 
     awardXP(2, 'Logged Video Shoot')
     setXpToast('+2 XP: Shoot Log Recorded')
@@ -446,23 +459,21 @@ export default function WorkPage() {
     setSavingShoot(false)
   }
 
-  // ----------------------------------------------------
-  // SAVE EDIT LOG ENTRY (BULLETPROOF SYNC & +2 XP REWARD)
-  // ----------------------------------------------------
+  // SAVE EDIT LOG
   const handleSaveEditLog = async (e) => {
     e.preventDefault()
     if (!user) return
     setSavingEdit(true)
 
-    const existing = contentLogs.find(l => l.date === selectedDate) || {}
+    const currentLog = contentLogs.find(l => l.date === selectedDate) || {}
     const payload = {
       user_id: user.id,
       date: selectedDate,
-      shoot_hours: parseFloat(existing.shoot_hours) || 0,
-      shoot_raw_minutes: parseFloat(existing.shoot_raw_minutes) || 0,
+      shoot_hours: currentLog.shoot_hours || 0,
+      shoot_raw_minutes: currentLog.shoot_raw_minutes || 0,
       edit_hours: toHours(valEditHours, unitEditHours),
       edit_finished_minutes: toMinutes(valEditFinished, unitEditFinished),
-      notes: editNotes || existing.notes || ''
+      notes: editNotes || currentLog.notes || ''
     }
 
     const updated = [payload, ...contentLogs.filter(l => l.date !== selectedDate)].sort((a, b) => b.date.localeCompare(a.date))
@@ -471,37 +482,13 @@ export default function WorkPage() {
 
     try {
       const sb = createClient()
-      const { data: dbExisting } = await sb
-        .from('content_logs')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('date', selectedDate)
-        .limit(1)
-
-      if (dbExisting && dbExisting.length > 0) {
-        await sb
-          .from('content_logs')
-          .update({
-            shoot_hours: payload.shoot_hours,
-            shoot_raw_minutes: payload.shoot_raw_minutes,
-            edit_hours: payload.edit_hours,
-            edit_finished_minutes: payload.edit_finished_minutes,
-            notes: payload.notes
-          })
-          .eq('id', dbExisting[0].id)
+      const { data: existing } = await sb.from('content_logs').select('id').eq('user_id', user.id).eq('date', selectedDate).limit(1)
+      if (existing && existing.length > 0) {
+        await sb.from('content_logs').update(payload).eq('id', existing[0].id)
       } else {
-        const { data: inserted } = await sb
-          .from('content_logs')
-          .insert([payload])
-          .select()
-
-        if (inserted && inserted.length > 0) {
-          setContentLogs(prev => prev.map(l => l.date === selectedDate ? { ...l, id: inserted[0].id } : l))
-        }
+        await sb.from('content_logs').insert(payload)
       }
-    } catch (err) {
-      console.error('Save edit log exception:', err)
-    }
+    } catch (err) {}
 
     awardXP(2, 'Logged Video Edit')
     setXpToast('+2 XP: Edit Log Recorded')
@@ -577,14 +564,14 @@ export default function WorkPage() {
     })
   }, [filteredWorkLogs, filteredContentLogs])
 
-  // Inline Unit Toggle Component for Each Individual Field
+  // Field Unit Toggle Helper
   const FieldUnitToggle = ({ unit, setUnit }) => (
-    <div className="flex items-center bg-tertiary border border-border-color rounded-md p-0.5 ml-auto">
+    <div className="flex items-center bg-black/60 border border-white/10 rounded-md p-0.5 ml-auto">
       <button
         type="button"
         onClick={() => setUnit('h')}
-        className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
-          unit === 'h' ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+        className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
+          unit === 'h' ? 'bg-[#D4AF37] text-black shadow-sm' : 'text-muted hover:text-primary'
         }`}
       >
         h
@@ -592,8 +579,8 @@ export default function WorkPage() {
       <button
         type="button"
         onClick={() => setUnit('m')}
-        className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
-          unit === 'm' ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+        className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
+          unit === 'm' ? 'bg-[#D4AF37] text-black shadow-sm' : 'text-muted hover:text-primary'
         }`}
       >
         m
@@ -610,7 +597,7 @@ export default function WorkPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[99999] bg-amber text-black font-mono font-bold text-xs px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border border-amber/40"
+            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[99999] bg-[#D4AF37] text-black font-mono font-bold text-xs px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border border-[#D4AF37]/40"
           >
             <Sparkles size={15} />
             <span>{xpToast}</span>
@@ -618,14 +605,17 @@ export default function WorkPage() {
         )}
       </AnimatePresence>
 
-      <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5 sm:space-y-7">
-        {/* HEADER & EXPORT INTEL MODAL TRIGGER */}
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-border-color">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber/10 border border-amber/30 text-amber flex-shrink-0">
-              <Briefcase size={20} />
+      <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5 sm:space-y-6">
+        
+        {/* ========================================================================= */}
+        {/* TOP BAR: HEADER & SUBPAGE TABS */}
+        {/* ========================================================================= */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37]">
+              <Briefcase size={22} />
             </div>
-            <h1 className="font-display text-lg sm:text-2xl tracking-widest text-primary uppercase">
+            <h1 className="font-display text-xl sm:text-2xl tracking-wider text-white font-extrabold uppercase flex items-center gap-2">
               WORK INTELLIGENCE
             </h1>
           </div>
@@ -633,75 +623,79 @@ export default function WorkPage() {
           <button
             type="button"
             onClick={() => setExportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] hover:opacity-90 text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg transition-all active:scale-95 shrink-0 self-start sm:self-auto"
           >
             <Download size={14} />
             <span>Export Intel</span>
           </button>
         </div>
 
-        {/* SUBPAGE NAVIGATION TABS (TOUCH-FRIENDLY & COMPACT) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-border-color/60 no-scrollbar">
+        {/* 3 MAIN SUBPAGE TABS */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('work_log')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap border ${
               activeTab === 'work_log'
-                ? 'bg-amber/15 border border-amber text-amber shadow-sm'
-                : 'bg-tertiary border border-border-color text-muted hover:text-primary'
+                ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-[#D4AF37] shadow-lg'
+                : 'bg-black/40 border-white/10 text-muted hover:text-primary hover:border-white/20'
             }`}
           >
             <Clock size={14} />
-            <span>1. Work Log</span>
+            <span>-01. WORK LOG</span>
+            <RotateCcw size={11} className="opacity-70" />
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('content_ops')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap border ${
               activeTab === 'content_ops'
-                ? 'bg-cyan/15 border border-cyan text-cyan shadow-sm'
-                : 'bg-tertiary border border-border-color text-muted hover:text-primary'
+                ? 'bg-[#00F0FF]/15 border-[#00F0FF] text-[#00F0FF] shadow-lg'
+                : 'bg-black/40 border-white/10 text-muted hover:text-primary hover:border-white/20'
             }`}
           >
             <Video size={14} />
-            <span>2. Content Operations</span>
+            <span>-02. CONTENT OPERATIONS</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap border ${
               activeTab === 'analytics'
-                ? 'bg-success/15 border border-success text-success shadow-sm'
-                : 'bg-tertiary border border-border-color text-muted hover:text-primary'
+                ? 'bg-[#22c55e]/15 border-[#22c55e] text-[#22c55e] shadow-lg'
+                : 'bg-black/40 border-white/10 text-muted hover:text-primary hover:border-white/20'
             }`}
           >
             <TrendingUp size={14} />
-            <span>3. Analytics</span>
+            <span>-03. ANALYTICS</span>
           </button>
         </div>
 
-        {/* DATE SELECTOR */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-bg-secondary/90 border border-white/10 rounded-xl backdrop-blur-md">
-          <div className="flex items-center gap-2.5">
-            <Calendar size={15} className="text-amber flex-shrink-0" />
-            <span className="font-mono text-xs text-muted uppercase font-bold">Log Date:</span>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 font-mono text-xs text-primary focus:outline-none focus:border-amber transition-colors"
-              style={{ color: '#fff' }}
-            />
+        {/* DATE SELECTOR ROW */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-black/60 border border-white/10 rounded-2xl backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs text-[#D4AF37] uppercase font-bold tracking-widest flex items-center gap-1.5">
+              LOG DATE:
+            </span>
+            <div className="relative flex items-center">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="bg-black/80 border border-white/15 rounded-xl px-3.5 py-1.5 font-mono text-sm font-bold text-white focus:outline-none focus:border-[#D4AF37] transition-colors"
+                style={{ colorScheme: 'dark' }}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
             <button
               type="button"
               onClick={() => setSelectedDate(todayStr)}
-              className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold transition-all border ${
-                selectedDate === todayStr ? 'bg-amber text-black border-amber' : 'bg-black/40 text-muted hover:text-primary border-white/10'
+              className={`px-4 py-1.5 rounded-xl font-mono text-xs font-bold transition-all border ${
+                selectedDate === todayStr ? 'bg-[#D4AF37] text-black border-[#D4AF37]' : 'bg-black/40 text-muted hover:text-primary border-white/10'
               }`}
             >
               Today
@@ -709,7 +703,7 @@ export default function WorkPage() {
             <button
               type="button"
               onClick={() => setSelectedDate(getLocalDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000)))}
-              className="px-3 py-1.5 bg-black/40 hover:bg-white/5 border border-white/10 rounded-lg font-mono text-xs text-muted hover:text-primary transition-all"
+              className="px-4 py-1.5 bg-black/40 hover:bg-white/5 border border-white/10 rounded-xl font-mono text-xs text-muted hover:text-primary transition-all font-bold"
             >
               Yesterday
             </button>
@@ -720,323 +714,399 @@ export default function WorkPage() {
         {/* SUBPAGE 1: WORK LOG */}
         {/* ========================================================================= */}
         {activeTab === 'work_log' && (
-          <div className="space-y-5">
-            <HudPanel className="p-4 sm:p-6 space-y-5">
-              <form onSubmit={handleSaveWorkLog} className="space-y-5">
-                {/* 4-COLUMN RESPONSIVE METRIC GRID */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {/* 1. Total Hours Worked */}
-                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 focus-within:border-amber/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
-                        <Clock size={13} /> Total Worked
-                      </label>
-                      <FieldUnitToggle unit={unitTotalWorked} setUnit={setUnitTotalWorked} />
-                    </div>
-                    <input
-                      type="number"
-                      step={unitTotalWorked === 'm' ? '1' : '0.1'}
-                      min="0"
-                      placeholder="0"
-                      value={valTotalWorked}
-                      onChange={(e) => setValTotalWorked(e.target.value)}
-                      className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 font-mono text-lg font-bold text-primary focus:outline-none focus:border-amber transition-colors"
-                      style={{ color: '#fff' }}
-                    />
+          <div className="space-y-6">
+            
+            {/* TOP 4 METRIC SUMMARY CARDS (MATCHING REFERENCE IMAGE) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              
+              {/* 1. TOTAL WORKED */}
+              <div className="p-4 rounded-2xl bg-black/50 border border-[#D4AF37]/40 shadow-xl flex items-center gap-3.5 relative overflow-hidden group">
+                <div className="p-3 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] shrink-0">
+                  <Clock size={22} />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono text-[10px] text-muted uppercase tracking-widest font-bold block">
+                    TOTAL WORKED
+                  </span>
+                  <div className="font-display text-2xl font-extrabold text-white leading-none mt-1">
+                    {todayTotals.tot > 0 ? `${todayTotals.tot.toFixed(1)}h` : '0h'}
                   </div>
+                  <span className="font-mono text-[10px] text-muted block mt-1">Today</span>
+                </div>
+              </div>
 
-                  {/* 2. Beyond Tatva Hours */}
-                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 focus-within:border-cyan/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
-                        <Target size={13} /> Beyond Tatva
-                      </label>
-                      <FieldUnitToggle unit={unitBeyondTatva} setUnit={setUnitBeyondTatva} />
-                    </div>
-                    <input
-                      type="number"
-                      step={unitBeyondTatva === 'm' ? '1' : '0.1'}
-                      min="0"
-                      placeholder="0"
-                      value={valBeyondTatva}
-                      onChange={(e) => setValBeyondTatva(e.target.value)}
-                      className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 font-mono text-lg font-bold text-primary focus:outline-none focus:border-cyan transition-colors"
-                      style={{ color: '#fff' }}
-                    />
+              {/* 2. BEYOND TATVA */}
+              <div className="p-4 rounded-2xl bg-black/50 border border-[#00F0FF]/40 shadow-xl flex items-center gap-3.5 relative overflow-hidden group">
+                <div className="p-3 rounded-xl bg-[#00F0FF]/15 border border-[#00F0FF]/40 text-[#00F0FF] shrink-0">
+                  <Flag size={22} />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono text-[10px] text-muted uppercase tracking-widest font-bold block">
+                    BEYOND TATVA
+                  </span>
+                  <div className="font-display text-2xl font-extrabold text-white leading-none mt-1">
+                    {todayTotals.bt > 0 ? `${todayTotals.bt.toFixed(1)}h` : '0h'}
                   </div>
+                  <span className="font-mono text-[10px] text-muted block mt-1">Today</span>
+                </div>
+              </div>
 
-                  {/* 3. Focused Hours */}
-                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 focus-within:border-success/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <label className="font-mono text-xs text-success uppercase font-bold flex items-center gap-1.5">
-                        <Zap size={13} /> Focused
-                      </label>
-                      <FieldUnitToggle unit={unitFocused} setUnit={setUnitFocused} />
-                    </div>
-                    <input
-                      type="number"
-                      step={unitFocused === 'm' ? '1' : '0.1'}
-                      min="0"
-                      placeholder="0"
-                      value={valFocused}
-                      onChange={(e) => setValFocused(e.target.value)}
-                      className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 font-mono text-lg font-bold text-primary focus:outline-none focus:border-success transition-colors"
-                      style={{ color: '#fff' }}
-                    />
+              {/* 3. FOCUSED */}
+              <div className="p-4 rounded-2xl bg-black/50 border border-[#22c55e]/40 shadow-xl flex items-center gap-3.5 relative overflow-hidden group">
+                <div className="p-3 rounded-xl bg-[#22c55e]/15 border border-[#22c55e]/40 text-[#22c55e] shrink-0">
+                  <Target size={22} />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono text-[10px] text-muted uppercase tracking-widest font-bold block">
+                    FOCUSED
+                  </span>
+                  <div className="font-display text-2xl font-extrabold text-white leading-none mt-1">
+                    {todayTotals.foc > 0 ? `${todayTotals.foc.toFixed(1)}h` : '0h'}
                   </div>
+                  <span className="font-mono text-[10px] text-muted block mt-1">Deep Work</span>
+                </div>
+              </div>
 
-                  {/* 4. Unfocused Hours */}
-                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 focus-within:border-danger/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <label className="font-mono text-xs text-danger uppercase font-bold flex items-center gap-1.5">
-                        <AlertTriangle size={13} /> Unfocused
-                      </label>
-                      <FieldUnitToggle unit={unitUnfocused} setUnit={setUnitUnfocused} />
-                    </div>
-                    <input
-                      type="number"
-                      step={unitUnfocused === 'm' ? '1' : '0.1'}
-                      min="0"
-                      placeholder="0"
-                      value={valUnfocused}
-                      onChange={(e) => setValUnfocused(e.target.value)}
-                      className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 font-mono text-lg font-bold text-primary focus:outline-none focus:border-danger transition-colors"
-                      style={{ color: '#fff' }}
-                    />
+              {/* 4. UNFOCUSED */}
+              <div className="p-4 rounded-2xl bg-black/50 border border-[#ef4444]/40 shadow-xl flex items-center gap-3.5 relative overflow-hidden group">
+                <div className="p-3 rounded-xl bg-[#ef4444]/15 border border-[#ef4444]/40 text-[#ef4444] shrink-0">
+                  <AlertTriangle size={22} />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-mono text-[10px] text-muted uppercase tracking-widest font-bold block">
+                    UNFOCUSED
+                  </span>
+                  <div className="font-display text-2xl font-extrabold text-white leading-none mt-1">
+                    {todayTotals.unfoc > 0 ? `${todayTotals.unfoc.toFixed(1)}h` : '0h'}
                   </div>
+                  <span className="font-mono text-[10px] text-muted block mt-1">Distractions</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* LOG YOUR WORK FORM SECTION */}
+            <HudPanel className="p-5 sm:p-7 space-y-6">
+              <form onSubmit={handleSaveWorkLog} className="space-y-6">
+                
+                {/* SECTION HEADER */}
+                <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                  <span className="text-base">📝</span>
+                  <h3 className="font-display text-xs uppercase tracking-widest text-white font-extrabold">
+                    LOG YOUR WORK
+                  </h3>
                 </div>
 
-                <div>
-                  {/* TYPE OF WORK — Multi-select tags */}
-                  <div className="space-y-2.5 bg-black/20 p-4 rounded-xl border border-white/5">
-                    <label className="font-mono text-xs text-purple-400 uppercase font-bold flex items-center gap-1.5">
-                      <Sparkles size={13} /> Type of Work
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {WORK_TYPE_OPTIONS.map(opt => {
-                        const active = workTypes.includes(opt.label)
-                        return (
-                          <button
-                            key={opt.label}
-                            type="button"
-                            onClick={() => setWorkTypes(prev =>
-                              prev.includes(opt.label)
-                                ? prev.filter(t => t !== opt.label)
-                                : [...prev, opt.label]
-                            )}
-                            className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold uppercase tracking-wider border transition-all ${
-                              active ? 'text-black shadow-md' : 'text-muted hover:text-primary bg-black/40'
-                            }`}
-                            style={active
-                              ? { background: opt.color, borderColor: opt.color }
-                              : { borderColor: `${opt.color}40` }
-                            }
-                          >
-                            {opt.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {/* Custom type input */}
-                    <div className="flex gap-2 pt-1">
-                      <input
-                        type="text"
-                        value={customWorkType}
-                        onChange={e => setCustomWorkType(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' && customWorkType.trim()) {
-                            e.preventDefault()
-                            const val = customWorkType.trim()
-                            if (!workTypes.includes(val)) setWorkTypes(prev => [...prev, val])
-                            setCustomWorkType('')
+                {/* TYPE OF WORK TAG PILLS */}
+                <div className="space-y-2.5">
+                  <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider block">
+                    TYPE OF WORK
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {WORK_TYPE_OPTIONS.map(opt => {
+                      const active = workTypes.includes(opt.label)
+                      return (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => setWorkTypes(prev =>
+                            prev.includes(opt.label)
+                              ? prev.filter(t => t !== opt.label)
+                              : [...prev, opt.label]
+                          )}
+                          className={`px-3.5 py-1.5 rounded-full font-mono text-xs font-bold tracking-wider border transition-all ${
+                            active 
+                              ? 'bg-black text-white shadow-md' 
+                              : 'bg-black/40 text-muted hover:text-primary border-white/10'
+                          }`}
+                          style={active
+                            ? { borderColor: opt.color, color: opt.color, boxShadow: `0 0 12px ${opt.color}30` }
+                            : {}
                           }
-                        }}
-                        placeholder="Custom type... (press Enter)"
-                        className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 font-mono text-xs text-primary focus:outline-none focus:border-purple-400 transition-colors"
-                        style={{ color: '#fff' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const val = customWorkType.trim()
-                          if (val && !workTypes.includes(val)) setWorkTypes(prev => [...prev, val])
-                          setCustomWorkType('')
-                        }}
-                        className="px-4 py-1.5 bg-purple-500/20 border border-purple-500/40 rounded-lg font-mono text-xs text-purple-300 hover:bg-purple-500/30 transition-all font-bold"
-                      >
-                        + Add
-                      </button>
-                    </div>
-                    {workTypes.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-white/5">
-                        {workTypes.map(t => (
-                          <span
-                            key={t}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/20 border border-purple-400/40 font-mono text-xs text-purple-300 font-bold"
-                          >
-                            {t}
-                            <button
-                              type="button"
-                              onClick={() => setWorkTypes(prev => prev.filter(x => x !== t))}
-                              className="text-purple-400 hover:text-danger ml-0.5 font-bold"
-                            >×</button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
-                <div>
-                  <textarea
-                    rows={3}
-                    placeholder="Work session notes..."
-                    value={workNotes}
-                    onChange={(e) => setWorkNotes(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-amber transition-colors"
-                    style={{ color: '#fff' }}
-                  />
+                {/* TWO-COLUMN GRID LAYOUT (MATCHING REFERENCE IMAGE) */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  
+                  {/* LEFT COLUMN: WHAT DID YOU WORK ON & SESSION NOTES (2 COLS) */}
+                  <div className="lg:col-span-2 space-y-4">
+                    
+                    {/* 1. What did you work on? */}
+                    <div className="space-y-2">
+                      <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider block">
+                        What did you work on?
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Describe what you did, wins, learnings, challenges..."
+                        value={workWhatDidYouDo}
+                        onChange={(e) => setWorkWhatDidYouDo(e.target.value)}
+                        className="w-full bg-black/60 border border-white/15 rounded-xl p-3.5 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
+                      />
+                    </div>
+
+                    {/* 2. WORK SESSION NOTES (OPTIONAL) */}
+                    <div className="space-y-2">
+                      <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider block">
+                        WORK SESSION NOTES (OPTIONAL)
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Add any extra context, thoughts or reflections..."
+                        value={workNotes}
+                        onChange={(e) => setWorkNotes(e.target.value)}
+                        className="w-full bg-black/60 border border-white/15 rounded-xl p-3.5 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
+                      />
+                    </div>
+
+                  </div>
+
+                  {/* RIGHT COLUMN: DURATION, FOCUS LEVEL & SAVE BUTTON (1 COL) */}
+                  <div className="space-y-5 flex flex-col justify-between">
+                    
+                    {/* DURATION INPUT */}
+                    <div className="space-y-2">
+                      <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider flex items-center justify-between">
+                        <span>DURATION</span>
+                        <FieldUnitToggle unit={unitTotalWorked} setUnit={setUnitTotalWorked} />
+                      </label>
+                      <div className="relative flex items-center">
+                        <input
+                          type="number"
+                          step={unitTotalWorked === 'm' ? '1' : '0.1'}
+                          min="0"
+                          placeholder="0h 00m"
+                          value={valTotalWorked}
+                          onChange={(e) => setValTotalWorked(e.target.value)}
+                          className="w-full bg-black/70 border border-white/15 rounded-xl p-3 font-mono text-base font-bold text-white focus:outline-none focus:border-[#D4AF37] transition-colors pr-10"
+                        />
+                        <Clock size={16} className="absolute right-3.5 text-muted pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* FOCUS LEVEL (5 SENTIMENT FACE ICONS) */}
+                    <div className="space-y-2">
+                      <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider block">
+                        FOCUS LEVEL
+                      </label>
+                      <div className="flex items-center justify-between gap-2 p-2 bg-black/60 border border-white/10 rounded-xl">
+                        {FOCUS_LEVEL_OPTIONS.map(opt => {
+                          const active = focusLevel === opt.level
+                          return (
+                            <button
+                              key={opt.level}
+                              type="button"
+                              onClick={() => setFocusLevel(opt.level)}
+                              className={`p-2.5 rounded-xl text-xl transition-all flex flex-col items-center gap-1 ${
+                                active 
+                                  ? 'bg-[#22c55e]/20 border-2 border-[#22c55e] scale-110 shadow-lg' 
+                                  : 'opacity-40 hover:opacity-100 hover:bg-white/5'
+                              }`}
+                            >
+                              <span>{opt.emoji}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="text-center font-mono text-[11px] text-[#22c55e] font-bold">
+                        {FOCUS_LEVEL_OPTIONS.find(o => o.level === focusLevel)?.label}
+                      </div>
+                    </div>
+
+                    {/* SAVE BUTTON */}
+                    <button
+                      type="submit"
+                      disabled={savingWork}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-[#D4AF37] via-[#FBBF24] to-[#B8860B] hover:opacity-95 text-black font-mono text-xs font-extrabold uppercase rounded-xl shadow-xl transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      <Save size={16} />
+                      <span>{savingWork ? 'SAVING...' : 'SAVE WORK LOG'}</span>
+                      <span className="ml-1 px-2 py-0.5 rounded bg-black/20 text-black font-mono text-[10px] font-bold">+2 XP</span>
+                    </button>
+
+                  </div>
+
                 </div>
 
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={savingWork}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <Save size={15} />
-                    <span>{savingWork ? 'Saving...' : 'Save Work Log (+2 XP)'}</span>
-                  </button>
-                </div>
               </form>
             </HudPanel>
 
-            {/* RECENT WORK LOGS (DROPDOWN ACCORDION MENU) */}
+            {/* WORK HISTORY SECTION */}
             {(() => {
               const windowEnd = offsetDate(workWeekOffset * 7)
               const windowStart = offsetDate(workWeekOffset * 7 - 6)
               const visibleLogs = nonEmptyWorkLogs.filter(l => l.date >= windowStart && l.date <= windowEnd)
               const hasPrev = nonEmptyWorkLogs.some(l => l.date < windowStart)
               const hasNext = workWeekOffset < 0
+
+              const weekBeyond = visibleLogs.reduce((acc, l) => acc + (parseFloat(l.beyond_tatva_hours) || 0), 0)
+              const weekFocused = visibleLogs.reduce((acc, l) => acc + (parseFloat(l.focused_hours) || 0), 0)
+              const weekUnfocused = visibleLogs.reduce((acc, l) => acc + (parseFloat(l.unfocused_hours ?? l.deep_execution_hours) || 0), 0)
+              const weekTotal = visibleLogs.reduce((acc, l) => acc + (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0), 0)
+
               return (
-                <HudPanel className="p-3.5 sm:p-5 space-y-3">
-                  {/* Clean Header */}
-                  <div className="flex items-center justify-between gap-3 border-b border-white/5 pb-2">
-                    <h3 className="font-display text-xs uppercase tracking-widest text-amber font-bold flex items-center gap-2">
-                      <Briefcase size={13} />
-                      Work History
+                <HudPanel className="p-5 sm:p-6 space-y-4">
+                  
+                  {/* WORK HISTORY HEADER */}
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+                    <h3 className="font-display text-xs uppercase tracking-widest text-[#D4AF37] font-extrabold flex items-center gap-2">
+                      <Clock size={15} />
+                      WORK HISTORY
                     </h3>
-                    <span className="font-mono text-[10px] text-muted uppercase">
-                      {visibleLogs.length} LOG{visibleLogs.length !== 1 ? 'S' : ''}
+                    <span className="font-mono text-xs text-muted uppercase font-bold">
+                      {visibleLogs.length} LOGS
                     </span>
                   </div>
 
-                  {/* Dedicated Week Navigation Bar */}
-                  <div className="flex items-center justify-between gap-2 p-2 sm:p-2.5 rounded-xl bg-black/40 border border-white/10 font-mono text-xs">
+                  {/* WEEK NAVIGATION BAR */}
+                  <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-black/60 border border-white/10 font-mono text-xs">
                     <button
                       type="button"
                       onClick={() => setWorkWeekOffset(w => w - 1)}
                       disabled={!hasPrev}
-                      className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-primary font-bold text-[10px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <ChevronLeft size={13} />
-                      <span>Prev Week</span>
+                      <ChevronLeft size={14} />
+                      <span>PREV WEEK</span>
                     </button>
 
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-bold text-amber text-[11px] tracking-wider uppercase truncate">
-                        {windowStart.slice(5).replace('-', '/')} – {windowEnd.slice(5).replace('-', '/')}
+                      <Calendar size={14} className="text-[#D4AF37] shrink-0" />
+                      <span className="font-bold text-white text-xs tracking-wider uppercase truncate">
+                        {formatWeekRange(workWeekOffset)}
                       </span>
-                      {workWeekOffset < 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setWorkWeekOffset(0)}
-                          className="px-2 py-0.5 rounded bg-amber/20 border border-amber/40 text-amber text-[9px] font-bold uppercase hover:bg-amber/30 transition-all shrink-0"
-                        >
-                          CURRENT
-                        </button>
-                      )}
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setWorkWeekOffset(w => Math.min(0, w + 1))}
                       disabled={!hasNext}
-                      className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-primary font-bold text-[10px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <span>Next Week</span>
-                      <ChevronRight size={13} />
+                      <span>NEXT WEEK</span>
+                      <ChevronRight size={14} />
                     </button>
                   </div>
 
+                  {/* SUMMARY METRICS BAR */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-black/40 border border-white/10 text-center font-mono text-xs">
+                    <div>
+                      <div className="text-muted uppercase text-[9px] font-bold">BEYOND TATVA</div>
+                      <div className="text-[#00F0FF] font-bold mt-0.5">{weekBeyond.toFixed(1)}h</div>
+                    </div>
+                    <div>
+                      <div className="text-muted uppercase text-[9px] font-bold">FOCUSED</div>
+                      <div className="text-[#22c55e] font-bold mt-0.5">{weekFocused.toFixed(1)}h</div>
+                    </div>
+                    <div>
+                      <div className="text-muted uppercase text-[9px] font-bold">UNFOCUSED</div>
+                      <div className="text-[#ef4444] font-bold mt-0.5">{weekUnfocused.toFixed(1)}h</div>
+                    </div>
+                    <div>
+                      <div className="text-muted uppercase text-[9px] font-bold">TOTAL</div>
+                      <div className="text-white font-bold mt-0.5">{weekTotal.toFixed(1)}h</div>
+                    </div>
+                  </div>
+
+                  {/* HISTORY ITEM ROWS */}
                   {visibleLogs.length === 0 ? (
-                    <p className="font-mono text-[10px] text-muted text-center py-6">No logs for this week.</p>
+                    <p className="font-mono text-xs text-muted text-center py-8">No work logs recorded for this week.</p>
                   ) : (
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       {visibleLogs.map((l, idx) => {
                         const tot = (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0).toFixed(1)
+                        const logDateObj = new Date(l.date)
+                        const monthStr = logDateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
+                        const dayStr = logDateObj.getDate().toString().padStart(2, '0')
                         const isExpanded = expandedWorkDates.has(l.date) || (expandedWorkDates.size === 0 && idx === 0)
+
+                        const titleText = l.notes 
+                          ? l.notes.split('\n')[0].slice(0, 50)
+                          : 'Work Session Log'
+
                         return (
-                          <div key={l.date} className="rounded-lg bg-bg-primary border border-border-color overflow-hidden">
-                            <button
-                              type="button"
+                          <div key={l.date} className="rounded-xl bg-black/60 border border-white/10 overflow-hidden hover:border-[#D4AF37]/40 transition-all">
+                            <div 
+                              className="p-3.5 flex items-center justify-between gap-3 cursor-pointer"
                               onClick={() => toggleWorkDate(l.date)}
-                              className="w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-white/[0.03] transition-colors"
                             >
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <span className="font-mono text-[10px] text-secondary font-bold shrink-0">{l.date}</span>
-                                <span className="font-mono text-[9px] text-cyan truncate hidden sm:inline">
-                                  {(l.beyond_tatva_hours || 0).toFixed(1)}h beyond
+                              <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                {/* Date Badge */}
+                                <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-center shrink-0 min-w-[50px]">
+                                  <div className="font-mono text-[9px] text-muted font-bold uppercase">{monthStr}</div>
+                                  <div className="font-mono text-sm text-white font-extrabold">{dayStr}</div>
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-mono text-xs font-bold text-white truncate">
+                                    {titleText}
+                                  </div>
+                                  {l.notes && (
+                                    <div className="font-mono text-[10px] text-muted truncate mt-0.5">
+                                      {l.notes.replace('\n--- WIN/LEARNING ---\n', ' · ')}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className="font-mono text-xs font-extrabold text-[#D4AF37]">
+                                  {tot}h
                                 </span>
-                                {l.notes && (
-                                  <span className="font-mono text-[9px] text-muted truncate hidden md:inline">
-                                    · {l.notes.slice(0, 40)}{l.notes.length > 40 ? '…' : ''}
+
+                                {l.work_type && (
+                                  <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 font-mono text-[9px] text-white font-bold uppercase hidden sm:inline">
+                                    {l.work_type.split(',')[0]}
                                   </span>
                                 )}
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="font-mono text-[10px] text-amber font-bold">{tot}h</span>
-                                {isExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
-                              </div>
-                            </button>
 
+                                <button type="button" className="text-muted hover:text-white p-1">
+                                  <MoreHorizontal size={16} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* EXPANDED DETAILS */}
                             {isExpanded && (
-                              <div className="px-3.5 pb-3 pt-1 border-t border-border-subtle/40 bg-black/20 space-y-2">
-                                <div className="flex gap-2 text-center">
-                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-cyan/20">
-                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">Beyond</div>
-                                    <div className="font-mono text-sm text-cyan font-bold">{(l.beyond_tatva_hours || 0).toFixed(1)}h</div>
+                              <div className="px-4 pb-4 pt-1 border-t border-white/10 bg-black/40 space-y-3">
+                                <div className="grid grid-cols-3 gap-2 text-center font-mono text-xs">
+                                  <div className="p-2 rounded-lg bg-black/40 border border-[#00F0FF]/30">
+                                    <div className="text-[9px] text-muted uppercase">Beyond Tatva</div>
+                                    <div className="text-[#00F0FF] font-bold">{(l.beyond_tatva_hours || 0).toFixed(1)}h</div>
                                   </div>
-                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-success/20">
-                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">Focused</div>
-                                    <div className="font-mono text-sm text-success font-bold">{(l.focused_hours || 0).toFixed(1)}h</div>
+                                  <div className="p-2 rounded-lg bg-black/40 border border-[#22c55e]/30">
+                                    <div className="text-[9px] text-muted uppercase">Focused</div>
+                                    <div className="text-[#22c55e] font-bold">{(l.focused_hours || 0).toFixed(1)}h</div>
                                   </div>
-                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-danger/20">
-                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">Unfocused</div>
-                                    <div className="font-mono text-sm text-danger font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)}h</div>
+                                  <div className="p-2 rounded-lg bg-black/40 border border-[#ef4444]/30">
+                                    <div className="text-[9px] text-muted uppercase">Unfocused</div>
+                                    <div className="text-[#ef4444] font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)}h</div>
                                   </div>
                                 </div>
                                 {l.notes && (
-                                  <div className="font-mono text-[10px] text-muted leading-relaxed pt-1 border-t border-border-subtle/30">{l.notes}</div>
-                                )}
-                                {l.work_type && (
-                                  <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border-subtle/30">
-                                    <span className="font-mono text-[9px] text-muted uppercase">Type:</span>
-                                    {l.work_type.split(',').map(t => t.trim()).filter(Boolean).map(t => (
-                                      <span key={t} className="px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/30 font-mono text-[9px] text-purple-300">{t}</span>
-                                    ))}
+                                  <div className="font-mono text-xs text-muted leading-relaxed whitespace-pre-line p-2.5 rounded-lg bg-black/30 border border-white/5">
+                                    {l.notes}
                                   </div>
                                 )}
                               </div>
                             )}
+
                           </div>
                         )
                       })}
                     </div>
                   )}
+
                 </HudPanel>
               )
             })()}
+
           </div>
         )}
 
@@ -1044,41 +1114,42 @@ export default function WorkPage() {
         {/* SUBPAGE 2: CONTENT OPERATIONS */}
         {/* ========================================================================= */}
         {activeTab === 'content_ops' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
+            
             {/* CONTENT MODE SUB-SWITCHER */}
-            <div className="flex items-center gap-2 p-1 bg-tertiary border border-border-color rounded-xl">
+            <div className="flex items-center gap-2 p-1.5 bg-black/60 border border-white/10 rounded-2xl">
               <button
                 type="button"
                 onClick={() => setContentMode('shoot')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
-                  contentMode === 'shoot' ? 'bg-cyan text-black shadow-md' : 'text-muted hover:text-primary'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all ${
+                  contentMode === 'shoot' ? 'bg-[#00F0FF] text-black shadow-lg' : 'text-muted hover:text-white'
                 }`}
               >
-                <Camera size={14} />
-                <span>1. Log Shoot</span>
+                <Camera size={15} />
+                <span>1. Log Video Shoot</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setContentMode('edit')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
-                  contentMode === 'edit' ? 'bg-amber text-black shadow-md' : 'text-muted hover:text-primary'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all ${
+                  contentMode === 'edit' ? 'bg-[#D4AF37] text-black shadow-lg' : 'text-muted hover:text-white'
                 }`}
               >
-                <Scissors size={14} />
-                <span>2. Log Edit</span>
+                <Scissors size={15} />
+                <span>2. Log Video Edit</span>
               </button>
             </div>
 
-            {/* SEPARATE FORM 1: SHOOT LOG */}
+            {/* SHOOT LOG FORM */}
             {contentMode === 'shoot' && (
-              <HudPanel className="p-3.5 sm:p-5 space-y-4 border-cyan/40">
-                <form onSubmit={handleSaveShootLog} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+              <HudPanel className="p-5 sm:p-7 space-y-5 border-[#00F0FF]/40">
+                <form onSubmit={handleSaveShootLog} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-black/60 border border-white/10 space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
-                          <Clock size={12} /> Hours Shot
+                        <label className="font-mono text-xs text-[#00F0FF] uppercase font-bold flex items-center gap-1.5">
+                          <Clock size={14} /> Hours Shot
                         </label>
                         <FieldUnitToggle unit={unitShootHours} setUnit={setUnitShootHours} />
                       </div>
@@ -1089,15 +1160,14 @@ export default function WorkPage() {
                         placeholder="0"
                         value={valShootHours}
                         onChange={(e) => setValShootHours(e.target.value)}
-                        className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
-                        style={{ background: '#141824', color: '#fff' }}
+                        className="w-full bg-black/80 border border-white/10 rounded-lg p-2.5 font-mono text-base font-bold text-white focus:outline-none focus:border-[#00F0FF]"
                       />
                     </div>
 
-                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="p-4 rounded-xl bg-black/60 border border-white/10 space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="font-mono text-xs text-cyan uppercase font-bold flex items-center gap-1.5">
-                          <Film size={12} /> Raw Footage
+                        <label className="font-mono text-xs text-[#00F0FF] uppercase font-bold flex items-center gap-1.5">
+                          <Film size={14} /> Raw Footage (Minutes)
                         </label>
                         <FieldUnitToggle unit={unitShootRaw} setUnit={setUnitShootRaw} />
                       </div>
@@ -1108,20 +1178,18 @@ export default function WorkPage() {
                         placeholder="0"
                         value={valShootRaw}
                         onChange={(e) => setValShootRaw(e.target.value)}
-                        className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-cyan"
-                        style={{ background: '#141824', color: '#fff' }}
+                        className="w-full bg-black/80 border border-white/10 rounded-lg p-2.5 font-mono text-base font-bold text-white focus:outline-none focus:border-[#00F0FF]"
                       />
                     </div>
                   </div>
 
                   <div>
                     <textarea
-                      rows={2}
-                      placeholder="Notes..."
+                      rows={3}
+                      placeholder="Shoot session notes & video title..."
                       value={shootNotes}
                       onChange={(e) => setShootNotes(e.target.value)}
-                      className="w-full bg-secondary border border-border-color rounded-xl p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-cyan"
-                      style={{ background: '#141824', color: '#fff' }}
+                      className="w-full bg-black/60 border border-white/15 rounded-xl p-3.5 font-mono text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                     />
                   </div>
 
@@ -1129,25 +1197,25 @@ export default function WorkPage() {
                     <button
                       type="submit"
                       disabled={savingShoot}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-cyan hover:bg-cyan-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-[#00F0FF] hover:opacity-90 text-black font-mono text-xs font-extrabold uppercase rounded-xl shadow-lg transition-all"
                     >
                       <Save size={15} />
-                      <span>{savingShoot ? 'Saving...' : 'Save Shoot Log (+2 XP)'}</span>
+                      <span>{savingShoot ? 'SAVING...' : 'SAVE SHOOT LOG (+2 XP)'}</span>
                     </button>
                   </div>
                 </form>
               </HudPanel>
             )}
 
-            {/* SEPARATE FORM 2: EDIT LOG */}
+            {/* EDIT LOG FORM */}
             {contentMode === 'edit' && (
-              <HudPanel className="p-3.5 sm:p-5 space-y-4 border-amber/40">
-                <form onSubmit={handleSaveEditLog} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+              <HudPanel className="p-5 sm:p-7 space-y-5 border-[#D4AF37]/40">
+                <form onSubmit={handleSaveEditLog} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-black/60 border border-white/10 space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
-                          <Clock size={12} /> Hours Edited
+                        <label className="font-mono text-xs text-[#D4AF37] uppercase font-bold flex items-center gap-1.5">
+                          <Clock size={14} /> Hours Edited
                         </label>
                         <FieldUnitToggle unit={unitEditHours} setUnit={setUnitEditHours} />
                       </div>
@@ -1158,15 +1226,14 @@ export default function WorkPage() {
                         placeholder="0"
                         value={valEditHours}
                         onChange={(e) => setValEditHours(e.target.value)}
-                        className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
-                        style={{ background: '#141824', color: '#fff' }}
+                        className="w-full bg-black/80 border border-white/10 rounded-lg p-2.5 font-mono text-base font-bold text-white focus:outline-none focus:border-[#D4AF37]"
                       />
                     </div>
 
-                    <div className="p-3 rounded-xl bg-secondary border border-border-color space-y-1.5">
+                    <div className="p-4 rounded-xl bg-black/60 border border-white/10 space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="font-mono text-xs text-amber uppercase font-bold flex items-center gap-1.5">
-                          <Video size={12} /> Finished Output
+                        <label className="font-mono text-xs text-[#D4AF37] uppercase font-bold flex items-center gap-1.5">
+                          <Video size={14} /> Finished Output (Minutes)
                         </label>
                         <FieldUnitToggle unit={unitEditFinished} setUnit={setUnitEditFinished} />
                       </div>
@@ -1177,20 +1244,18 @@ export default function WorkPage() {
                         placeholder="0"
                         value={valEditFinished}
                         onChange={(e) => setValEditFinished(e.target.value)}
-                        className="w-full bg-tertiary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
-                        style={{ background: '#141824', color: '#fff' }}
+                        className="w-full bg-black/80 border border-white/10 rounded-lg p-2.5 font-mono text-base font-bold text-white focus:outline-none focus:border-[#D4AF37]"
                       />
                     </div>
                   </div>
 
                   <div>
                     <textarea
-                      rows={2}
-                      placeholder="Notes..."
+                      rows={3}
+                      placeholder="Editing notes, cuts, audio edits..."
                       value={editNotes}
                       onChange={(e) => setEditNotes(e.target.value)}
-                      className="w-full bg-secondary border border-border-color rounded-xl p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
-                      style={{ background: '#141824', color: '#fff' }}
+                      className="w-full bg-black/60 border border-white/15 rounded-xl p-3.5 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37]"
                     />
                   </div>
 
@@ -1198,17 +1263,17 @@ export default function WorkPage() {
                     <button
                       type="submit"
                       disabled={savingEdit}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-[#D4AF37] hover:opacity-90 text-black font-mono text-xs font-extrabold uppercase rounded-xl shadow-lg transition-all"
                     >
                       <Save size={15} />
-                      <span>{savingEdit ? 'Saving...' : 'Save Edit Log (+2 XP)'}</span>
+                      <span>{savingEdit ? 'SAVING...' : 'SAVE EDIT LOG (+2 XP)'}</span>
                     </button>
                   </div>
                 </form>
               </HudPanel>
             )}
 
-            {/* CONTENT LOG HISTORY (DROPDOWN ACCORDION MENU) */}
+            {/* CONTENT LOG HISTORY */}
             {(() => {
               const windowEnd = offsetDate(contentWeekOffset * 7)
               const windowStart = offsetDate(contentWeekOffset * 7 - 6)
@@ -1216,116 +1281,39 @@ export default function WorkPage() {
               const hasPrev = nonEmptyContentLogs.some(l => l.date < windowStart)
               const hasNext = contentWeekOffset < 0
               return (
-                <HudPanel className="p-3.5 sm:p-5 space-y-3">
-                  {/* Clean Header */}
-                  <div className="flex items-center justify-between gap-3 border-b border-white/5 pb-2">
-                    <h3 className="font-display text-xs uppercase tracking-widest text-cyan font-bold flex items-center gap-2">
-                      <Film size={13} />
-                      Content History
+                <HudPanel className="p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <h3 className="font-display text-xs uppercase tracking-widest text-[#00F0FF] font-extrabold flex items-center gap-2">
+                      <Film size={15} />
+                      CONTENT HISTORY
                     </h3>
-                    <span className="font-mono text-[10px] text-muted uppercase">
-                      {visibleLogs.length} LOG{visibleLogs.length !== 1 ? 'S' : ''}
+                    <span className="font-mono text-xs text-muted uppercase font-bold">
+                      {visibleLogs.length} LOGS
                     </span>
                   </div>
 
-                  {/* Dedicated Week Navigation Bar */}
-                  <div className="flex items-center justify-between gap-2 p-2 sm:p-2.5 rounded-xl bg-black/40 border border-white/10 font-mono text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setContentWeekOffset(w => w - 1)}
-                      disabled={!hasPrev}
-                      className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-primary font-bold text-[10px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft size={13} />
-                      <span>Prev Week</span>
-                    </button>
-
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-bold text-cyan text-[11px] tracking-wider uppercase truncate">
-                        {windowStart.slice(5).replace('-', '/')} – {windowEnd.slice(5).replace('-', '/')}
-                      </span>
-                      {contentWeekOffset < 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setContentWeekOffset(0)}
-                          className="px-2 py-0.5 rounded bg-cyan/20 border border-cyan/40 text-cyan text-[9px] font-bold uppercase hover:bg-cyan/30 transition-all shrink-0"
-                        >
-                          CURRENT
-                        </button>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setContentWeekOffset(w => Math.min(0, w + 1))}
-                      disabled={!hasNext}
-                      className="flex items-center gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-primary font-bold text-[10px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <span>Next Week</span>
-                      <ChevronRight size={13} />
-                    </button>
-                  </div>
-
                   {visibleLogs.length === 0 ? (
-                    <p className="font-mono text-[10px] text-muted text-center py-6">No logs for this week.</p>
+                    <p className="font-mono text-xs text-muted text-center py-6">No content logs for this week.</p>
                   ) : (
-                    <div className="space-y-1.5">
-                      {visibleLogs.map((l, idx) => {
-                        const editHrs = parseFloat(l.edit_hours) || 0
-                        const finMins = parseFloat(l.edit_finished_minutes) || 0
-                        const ratio = finMins > 0 ? ((editHrs * 60) / finMins).toFixed(1) : '—'
-                        const isExpanded = expandedContentDates.has(l.date) || (expandedContentDates.size === 0 && idx === 0)
-                        return (
-                          <div key={l.date} className="rounded-lg bg-bg-primary border border-border-color overflow-hidden">
-                            <button
-                              type="button"
-                              onClick={() => toggleContentDate(l.date)}
-                              className="w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left hover:bg-white/[0.03] transition-colors"
-                            >
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <span className="font-mono text-[10px] text-secondary font-bold shrink-0">{l.date}</span>
-                                <span className="font-mono text-[9px] text-amber truncate hidden sm:inline">
-                                  ✂ {(l.edit_hours || 0).toFixed(1)}h edit
-                                </span>
-                                {l.notes && (
-                                  <span className="font-mono text-[9px] text-muted truncate hidden md:inline">
-                                    · {l.notes.slice(0, 40)}{l.notes.length > 40 ? '…' : ''}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className="font-mono text-[9px] text-cyan font-bold">{ratio} m/m</span>
-                                {isExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
-                              </div>
-                            </button>
-
-                            {isExpanded && (
-                              <div className="px-3.5 pb-3 pt-1 border-t border-border-subtle/40 bg-black/20 space-y-2">
-                                <div className="flex gap-2 text-center">
-                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-cyan/20">
-                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">🎥 Shoot</div>
-                                    <div className="font-mono text-sm text-cyan font-bold">{(l.shoot_hours || 0).toFixed(1)}h</div>
-                                    <div className="font-mono text-[8px] text-muted">{l.shoot_raw_minutes || 0}m raw</div>
-                                  </div>
-                                  <div className="flex-1 py-2 rounded-lg bg-bg-primary border border-amber/20">
-                                    <div className="font-mono text-[8px] text-muted uppercase tracking-wider">✂ Edit</div>
-                                    <div className="font-mono text-sm text-amber font-bold">{(l.edit_hours || 0).toFixed(1)}h</div>
-                                    <div className="font-mono text-[8px] text-muted">{l.edit_finished_minutes || 0}m out</div>
-                                  </div>
-                                </div>
-                                {l.notes && (
-                                  <div className="font-mono text-[10px] text-muted leading-relaxed pt-1 border-t border-border-subtle/30">{l.notes}</div>
-                                )}
-                              </div>
-                            )}
+                    <div className="space-y-2">
+                      {visibleLogs.map((l) => (
+                        <div key={l.date} className="p-3.5 rounded-xl bg-black/60 border border-white/10 flex items-center justify-between gap-3">
+                          <div>
+                            <span className="font-mono text-xs text-white font-bold">{l.date}</span>
+                            {l.notes && <div className="font-mono text-[10px] text-muted">{l.notes}</div>}
                           </div>
-                        )
-                      })}
+                          <div className="flex items-center gap-3 font-mono text-xs font-bold">
+                            <span className="text-[#00F0FF]">🎥 {(l.shoot_hours || 0).toFixed(1)}h</span>
+                            <span className="text-[#D4AF37]">✂ {(l.edit_hours || 0).toFixed(1)}h</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </HudPanel>
               )
             })()}
+
           </div>
         )}
 
@@ -1333,164 +1321,120 @@ export default function WorkPage() {
         {/* SUBPAGE 3: ANALYTICS */}
         {/* ========================================================================= */}
         {activeTab === 'analytics' && (
-          <div className="space-y-5">
+          <div className="space-y-6">
+            
             {/* RANGE SELECTOR */}
-            <div className="flex items-center justify-between p-3 bg-tertiary border border-border-color rounded-xl">
-              <span className="font-mono text-xs text-secondary uppercase font-bold">Analytics Period:</span>
-              <div className="flex items-center bg-secondary border border-border-color rounded-lg p-0.5">
+            <div className="flex items-center justify-between p-3.5 bg-black/60 border border-white/10 rounded-2xl">
+              <span className="font-mono text-xs text-muted uppercase font-bold tracking-wider">Analytics Period:</span>
+              <div className="flex items-center bg-black border border-white/10 rounded-xl p-1">
                 {['7days', '30days', 'all'].map(rangeKey => (
                   <button
                     key={rangeKey}
                     type="button"
                     onClick={() => setAnalyticsRange(rangeKey)}
-                    className={`px-3 py-1 rounded font-mono text-xs uppercase font-bold transition-all ${
-                      analyticsRange === rangeKey ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+                    className={`px-4 py-1.5 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
+                      analyticsRange === rangeKey ? 'bg-[#D4AF37] text-black shadow-md' : 'text-muted hover:text-white'
                     }`}
                   >
-                    {rangeKey === '7days' ? '7 Days' : rangeKey === '30days' ? '30 Days' : 'All'}
+                    {rangeKey === '7days' ? '7 Days' : rangeKey === '30days' ? '30 Days' : 'All Time'}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* KPI STAT CARDS */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
-              <HudPanel className="p-3.5 space-y-1">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <HudPanel className="p-4 space-y-1">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>TOTAL WORKED</span>
-                  <Clock size={13} className="text-amber" />
+                  <Clock size={14} className="text-[#D4AF37]" />
                 </div>
-                <div className="font-display text-xl sm:text-2xl text-amber font-bold">
+                <div className="font-display text-2xl text-white font-extrabold">
                   {totals.totWork.toFixed(1)} h
                 </div>
-                <div className="font-mono text-[9px] sm:text-[10px] text-muted truncate">
-                  BT: {totals.totBeyond.toFixed(1)} h ({totals.beyondRatio}%)
+                <div className="font-mono text-[10px] text-muted truncate">
+                  Beyond Tatva: {totals.totBeyond.toFixed(1)} h
                 </div>
               </HudPanel>
 
-              <HudPanel className="p-3.5 space-y-1">
+              <HudPanel className="p-4 space-y-1">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>FOCUS RATIO</span>
-                  <Zap size={13} className="text-success" />
+                  <Zap size={14} className="text-[#22c55e]" />
                 </div>
-                <div className="font-display text-xl sm:text-2xl text-success font-bold">
+                <div className="font-display text-2xl text-[#22c55e] font-extrabold">
                   {totals.focusRatio}%
                 </div>
-                <div className="font-mono text-[9px] sm:text-[10px] text-muted truncate">
-                  Focus: {totals.totFocus.toFixed(1)} h
+                <div className="font-mono text-[10px] text-muted truncate">
+                  Focused: {totals.totFocus.toFixed(1)} h
                 </div>
               </HudPanel>
 
-              <HudPanel className="p-3.5 space-y-1">
+              <HudPanel className="p-4 space-y-1">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>RAW FOOTAGE</span>
-                  <Film size={13} className="text-cyan" />
+                  <Film size={14} className="text-[#00F0FF]" />
                 </div>
-                <div className="font-display text-xl sm:text-2xl text-cyan font-bold">
+                <div className="font-display text-2xl text-[#00F0FF] font-extrabold">
                   {totals.totShootRawMins} m
                 </div>
-                <div className="font-mono text-[9px] sm:text-[10px] text-muted truncate">
+                <div className="font-mono text-[10px] text-muted truncate">
                   Shoot: {totals.totShootHrs.toFixed(1)} h
                 </div>
               </HudPanel>
 
-              <HudPanel className="p-3.5 space-y-1">
+              <HudPanel className="p-4 space-y-1">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>FINISHED VIDEO</span>
-                  <Video size={13} className="text-amber" />
+                  <Video size={14} className="text-[#D4AF37]" />
                 </div>
-                <div className="font-display text-xl sm:text-2xl text-amber font-bold">
+                <div className="font-display text-2xl text-[#D4AF37] font-extrabold">
                   {totals.totEditFinishedMins} m
                 </div>
-                <div className="font-mono text-[9px] sm:text-[10px] text-muted truncate">
-                  Speed: {totals.editRatio} m/m
+                <div className="font-mono text-[10px] text-muted truncate">
+                  Edit: {totals.totEditHrs.toFixed(1)} h
                 </div>
               </HudPanel>
             </div>
 
-            {/* RECHARTS CHART 1: WORK ALLOCATION */}
-            <HudPanel className="p-3.5 sm:p-5 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border-color">
-                <div className="flex items-center gap-2 text-amber font-display text-xs uppercase">
-                  <TrendingUp size={14} />
-                  <span>Work Hours Allocation (Hours)</span>
-                </div>
+            {/* WORK & CONTENT RECHARTS VISUALIZATION */}
+            <HudPanel label="WORK & CONTENT EXECUTION TRENDS" glow>
+              <div className="h-72 w-full pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="gradWork" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gradFocus" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="date" stroke="#888" fontSize={11} />
+                    <YAxis stroke="#888" fontSize={11} />
+                    <Tooltip contentStyle={{ background: '#0a0a0c', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontFamily: 'var(--font-mono)' }} />
+                    <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }} />
+                    <Area type="monotone" dataKey="Worked" stroke="#D4AF37" fill="url(#gradWork)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="Focused" stroke="#22c55e" fill="url(#gradFocus)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-
-              {chartData.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-6">No data for selected period.</p>
-              ) : (
-                <div className="h-56 sm:h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="gradWorked" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="gradBeyond" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#00F0FF" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#00F0FF" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="gradFocused" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="gradUnfocused" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#EF4444" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#262B3D" />
-                      <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                      <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                      <Tooltip contentStyle={{ backgroundColor: '#12151E', borderColor: '#262B3D', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
-                      <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '6px' }} />
-                      <Area type="monotone" dataKey="Worked" stroke="#D4AF37" fillOpacity={1} fill="url(#gradWorked)" name="Total Worked" />
-                      <Area type="monotone" dataKey="BeyondTatva" stroke="#00F0FF" fillOpacity={1} fill="url(#gradBeyond)" name="Beyond Tatva" />
-                      <Area type="monotone" dataKey="Focused" stroke="#10B981" fillOpacity={1} fill="url(#gradFocused)" name="Focused" />
-                      <Area type="monotone" dataKey="Unfocused" stroke="#EF4444" fillOpacity={1} fill="url(#gradUnfocused)" name="Unfocused" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
             </HudPanel>
 
-            {/* RECHARTS CHART 2: CONTENT VELOCITY */}
-            <HudPanel className="p-3.5 sm:p-5 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border-color">
-                <div className="flex items-center gap-2 text-cyan font-display text-xs uppercase">
-                  <Video size={14} />
-                  <span>Content Velocity (Raw vs Finished Minutes)</span>
-                </div>
-              </div>
-
-              {chartData.length === 0 ? (
-                <p className="font-mono text-xs text-muted text-center py-6">No data for selected period.</p>
-              ) : (
-                <div className="h-56 sm:h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#262B3D" />
-                      <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                      <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                      <Tooltip contentStyle={{ backgroundColor: '#12151E', borderColor: '#262B3D', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
-                      <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '6px' }} />
-                      <Bar dataKey="RawMins" fill="#00F0FF" radius={[4, 4, 0, 0]} name="Raw Footage (m)" />
-                      <Bar dataKey="FinishedMins" fill="#D4AF37" radius={[4, 4, 0, 0]} name="Finished Output (m)" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </HudPanel>
           </div>
         )}
+
       </div>
 
-      {/* INTEL EXPORT MODAL */}
+      {/* EXPORT INTEL MODAL */}
       <IntelExportModal
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
+        workLogs={workLogs}
+        contentLogs={contentLogs}
       />
     </AppShell>
   )
