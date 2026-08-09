@@ -19,7 +19,6 @@ import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { RANK_CONFIG } from '@/lib/constants'
 import { getLocalDateStr, getEndOfWeek } from '@/lib/utils/dates'
-import { syncWarRoomDailyEvaluator } from '@/lib/utils/warRoomSync'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
@@ -122,11 +121,9 @@ export default function MissionControl() {
   
   // New metrics states
   const [xpTrajectory, setXpTrajectory] = useState([])
-  const [battles, setBattles] = useState([])
   const [weightData, setWeightData] = useState(null)
   const [latestDebrief, setLatestDebrief] = useState(null)
   const [todayScreenTime, setTodayScreenTime] = useState(null)
-  const [selectedBattleIntel, setSelectedBattleIntel] = useState(null)
   const [sleepData, setSleepData] = useState(null)
   const [addictionData, setAddictionData] = useState(null)
   const [expandedWidget, setExpandedWidget] = useState(null) // 'sleep' | 'addiction'
@@ -174,25 +171,7 @@ export default function MissionControl() {
         .eq('user_id', user.id)
         .gte('created_at', thirtyDaysAgoStr)
 
-      // 1b. Fetch Active Battles (War Room) & Run Daily Catch-up Evaluator
-      const evaluatedBattles = await syncWarRoomDailyEvaluator(user.id)
-      if (evaluatedBattles && evaluatedBattles.length > 0) {
-        setBattles(evaluatedBattles)
-      } else {
-        const { data: blueprintRows } = await sb
-          .from('user_blueprints')
-          .select('id, battles, last_evaluated_date')
-          .eq('user_id', user.id)
-
-        const blueprints = blueprintRows?.[0]
-        const rawBattles = (blueprints?.battles && Array.isArray(blueprints.battles) && blueprints.battles.length > 0)
-          ? blueprints.battles
-          : DEFAULT_BATTLES
-
-        setBattles(rawBattles)
-      }
-
-      // Fetch today's screen time log for live battle calculations
+      // Fetch today's screen time log
       const { data: stLogs } = await sb
         .from('screen_time_logs')
         .select('*')
@@ -202,47 +181,6 @@ export default function MissionControl() {
 
       if (stLogs && stLogs.length > 0) {
         setTodayScreenTime(stLogs[0])
-      }
-
-      // Handle Strike Back Action for a War Room Battle
-      window.__strikeBackBattle = async (battleName) => {
-        const { data: blueprints } = await sb
-          .from('user_blueprints')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-
-        if (!blueprints || !blueprints.battles) return
-
-        const updatedBattles = [...blueprints.battles]
-        const idx = updatedBattles.findIndex(b => b.name === battleName)
-        if (idx === -1) return
-
-        const target = updatedBattles[idx]
-        const oldHp = target.hp ?? 100
-        const newHp = Math.max(0, oldHp - 10)
-        target.hp = newHp
-
-        if (!target.combat_logs) target.combat_logs = []
-        target.combat_logs.unshift({
-          date: getLocalDateStr(new Date()),
-          action: '⚡ STRIKE BACK EXECUTED',
-          hpChange: -10
-        })
-
-        let xpAward = 25
-        if (newHp === 0 && oldHp > 0) {
-          target.status = 'defeated'
-          xpAward = 200
-        }
-
-        await sb
-          .from('user_blueprints')
-          .update({ battles: updatedBattles })
-          .eq('user_id', user.id)
-
-        await robustAwardXP(user.id, xpAward, `War Room Strike Back: ${target.name}`)
-        setBattles(updatedBattles.filter(b => b.status !== 'defeated'))
       }
 
       // 1c. Fetch Latest Weekly Debrief (Work Log)
@@ -1352,114 +1290,7 @@ export default function MissionControl() {
               </div>
             )}
 
-            {/* ACTIVE BATTLES (War Room Widget) */}
-            {battles.length > 0 && (
-              <div className="dashboard-card border-danger-subtle" style={{ borderLeft: '3px solid var(--danger)' }}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Swords size={14} className="text-danger animate-pulse" />
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-danger font-bold">War Room // Live Active Battles</span>
-                  </div>
-                  <span className="font-mono text-[8px] text-muted">CLICK FOR INTEL</span>
-                </div>
-                <div className="flex flex-col gap-3">
-                  {battles.map((battle, idx) => {
-                    const Icon       = BATTLE_ICONS[battle.name] || Swords
-                    const sevColor   = SEVERITY_COLORS[battle.severity] || 'var(--info)'
 
-                    // Persistent HP & Live Intel Factors for Today
-                    const liveIntel  = (function() {
-                      const hp = Math.max(0, Math.min(100, battle.hp !== undefined ? battle.hp : 50))
-                      const succeeded = []
-                      const failed = []
-
-                      const targetHabits = (battle.linked_habits && Array.isArray(battle.linked_habits) && battle.linked_habits.length > 0)
-                        ? battle.linked_habits
-                        : (habits || []).map(h => h.id)
-
-                      targetHabits.forEach(habitId => {
-                        if (habitId === 'sys_screen_intel') return
-                        const habit = (habits || []).find(h => h.id === habitId)
-                        const log = (todayLogs || []).find(l => l.habit_id === habitId)
-                        const title = habit?.title || 'Routine'
-
-                        if (log?.status === 'completed') {
-                          succeeded.push(`Completed habit "${title}" (-15 HP to threat)`)
-                        } else if (log?.status === 'failed') {
-                          failed.push(`Failed habit "${title}" (+20 HP to threat)`)
-                        }
-                      })
-
-                      const bName = battle.name?.toLowerCase() || ''
-                      if (bName.includes('phone') || bName.includes('screen') || bName.includes('addiction') || bName.includes('execution')) {
-                        if (todayScreenTime) {
-                          const tHours = parseFloat(todayScreenTime.total_hours) || 0
-                          const dMins  = parseInt(todayScreenTime.doom_scroll_minutes ?? todayScreenTime.doomscroll_minutes) || 0
-                          const sHours = parseFloat(todayScreenTime.streaming_hours) || 0
-
-                          if (tHours < 6) {
-                            succeeded.push(`Screen Time (${tHours}h) < 6h limit`)
-                          } else {
-                            failed.push(`Screen Time (${tHours}h) ≥ 6h limit`)
-                          }
-
-                          if (dMins < 60) {
-                            succeeded.push(`Doomscroll (${dMins}m) < 60m limit`)
-                          } else {
-                            failed.push(`Doomscroll (${dMins}m) ≥ 60m limit`)
-                          }
-
-                          if (sHours < 1) {
-                            succeeded.push(`Streaming (${sHours}h) < 1h limit`)
-                          } else {
-                            failed.push(`Streaming (${sHours}h) ≥ 1h limit`)
-                          }
-                        }
-                      }
-
-                      return { hp, succeeded, failed }
-                    })()
-
-                    const hp = liveIntel.hp
-                    const isCritical = hp > 75
-
-                    return (
-                      <div 
-                        key={idx} 
-                        onClick={() => setSelectedBattleIntel({ battle, intel: liveIntel })}
-                        className="p-3 bg-bg-primary border border-border-color rounded-sm cursor-pointer hover:border-danger transition-colors group"
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="flex items-center justify-center shrink-0" style={{ width: 26, height: 26, background: `${sevColor}15`, border: `1px solid ${sevColor}50` }}>
-                            <Icon size={13} style={{ color: sevColor }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-display text-primary tracking-tight truncate group-hover:text-danger transition-colors" style={{ fontSize: '0.95rem' }}>{battle.name}</span>
-                              <span className="font-mono text-[10px] font-bold shrink-0" style={{ color: isCritical ? 'var(--danger)' : 'var(--warning)' }}>
-                                {hp} HP
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div style={{ height: '4px', background: 'var(--bg-secondary)', overflow: 'hidden', borderRadius: '2px' }}>
-                          <motion.div
-                            style={{
-                              height: '100%',
-                              width: `${Math.min(100, Math.max(0, hp))}%`,
-                              background: isCritical ? 'var(--danger)' : hp > 50 ? 'var(--warning)' : 'var(--success)',
-                            }}
-                            animate={isCritical ? { opacity: [1, 0.4, 1] } : {}}
-                            transition={isCritical ? { repeat: Infinity, duration: 1.5 } : {}}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* NEXT WEEK PRIORITIES // WEEKLY DEBRIEF WIDGET */}
             <div className="dashboard-card border-info-subtle" style={{ borderLeft: '3px solid var(--info)' }}>
