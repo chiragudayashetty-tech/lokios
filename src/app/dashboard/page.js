@@ -18,7 +18,7 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { RANK_CONFIG } from '@/lib/constants'
-import { getLocalDateStr, getEndOfWeek } from '@/lib/utils/dates'
+import { getLocalDateStr, getEndOfWeek, getStartOfWeek } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
@@ -684,7 +684,13 @@ export default function MissionControl() {
   const rawMomentum          = habitComponent + opsComponent + missionsComponent + streakComponent + winRateComponent
   const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
   const momentumColor        = momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)'
-  const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
+  // Check if Weekly Debrief has been completed for the current week starting Monday
+  const isDebriefDoneThisWeek = useMemo(() => {
+    if (!latestDebrief) return false
+    const startOfWeekStr = getLocalDateStr(getStartOfWeek(new Date()))
+    const debriefDate = latestDebrief.date || (latestDebrief.created_at ? getLocalDateStr(new Date(latestDebrief.created_at)) : '')
+    return debriefDate >= startOfWeekStr
+  }, [latestDebrief])
 
   // Parse Next Week Priorities from latest Weekly Debrief log
   const nextWeekPriorities = (function() {
@@ -1199,27 +1205,34 @@ export default function MissionControl() {
           })}
 
           {/* DEBRIEF BOX */}
-          <Link href="/debriefs" className="block group">
+          <Link href="/journal?tab=weekly" className="block group">
             <div 
               className={`p-2.5 sm:p-3 aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border ${
-                new Date().getDay() === 0 
-                  ? 'bg-warning/10 border-warning hover:border-amber' 
+                isDebriefDoneThisWeek
+                  ? 'bg-success/15 border-success text-success shadow-lg'
+                  : new Date().getDay() === 0 
+                  ? 'bg-warning/15 border-warning hover:border-amber text-warning' 
                   : 'bg-bg-tertiary border-border-color hover:border-primary hover:bg-bg-secondary'
               }`}
             >
-              <ClipboardList 
-                size={18} 
-                className="mb-1.5 transition-transform group-hover:scale-110" 
-                style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }} 
-              />
+              {isDebriefDoneThisWeek ? (
+                <CheckCircle2 size={18} className="mb-1.5 text-success transition-transform group-hover:scale-110" />
+              ) : (
+                <ClipboardList 
+                  size={18} 
+                  className="mb-1.5 transition-transform group-hover:scale-110" 
+                  style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }} 
+                />
+              )}
               <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
                 DEBRIEF
               </div>
               <div 
-                className="font-mono text-[9px] sm:text-[10px] mt-1 font-bold"
-                style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }}
+                className={`font-mono text-[9px] sm:text-[10px] mt-1 font-bold ${
+                  isDebriefDoneThisWeek ? 'text-success' : new Date().getDay() === 0 ? 'text-warning' : 'text-muted'
+                }`}
               >
-                {new Date().getDay() === 0 ? '+40 XP' : 'WEEKLY'}
+                {isDebriefDoneThisWeek ? 'DONE (+5 XP)' : new Date().getDay() === 0 ? 'DUE TODAY (+5 XP)' : 'DUE SUN (+5 XP)'}
               </div>
             </div>
           </Link>

@@ -173,7 +173,7 @@ export default function JournalPage() {
         }])
       }
 
-      await robustAwardXP(user.id, 5, 'task', todayStr, 'Weekly Review Completed', 'discipline')
+      await robustAwardXP(user.id, 5, 'weekly_review', todayStr, 'Weekly Review Completed', 'discipline')
       setWins(''); setFails(''); setNextGoal1(''); setNextGoal2(''); setNextGoal3('')
       const { data } = await supabase.from('work_logs').select('*').eq('user_id', user.id).ilike('title', 'Weekly Debrief%').order('created_at', { ascending: false })
       if (data) setHistoryLogs(data)

@@ -44,7 +44,7 @@ export const XP_REWARDS = {
   streak_30_days: 200,
   streak_100_days: 500,
   daily_all_habits: 25,
-  weekly_review: 40,
+  weekly_review: 5,
   FOCUS_HOUR: 60
 };
 
