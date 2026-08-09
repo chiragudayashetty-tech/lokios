@@ -122,6 +122,7 @@ export default function WorkPage() {
   // Week-based calendar navigation (0 = current week, -1 = prev week, etc.)
   const [workWeekOffset, setWorkWeekOffset] = useState(0)
   const [contentWeekOffset, setContentWeekOffset] = useState(0)
+  const [showAllWorkHistory, setShowAllWorkHistory] = useState(false)
 
   const toggleWorkDate = (date) => {
     setExpandedWorkDates(prev => {
@@ -714,11 +715,11 @@ export default function WorkPage() {
         {/* SUBPAGE 1: WORK LOG */}
         {/* ========================================================================= */}
         {activeTab === 'work_log' && (
-          <div className="space-y-6">
+          <div className="max-w-6xl mx-auto space-y-6">
 
             {/* LOG YOUR WORK FORM SECTION */}
-            <HudPanel className="p-5 sm:p-7 space-y-6">
-              <form onSubmit={handleSaveWorkLog} className="space-y-6">
+            <HudPanel className="p-5 sm:p-6 space-y-5">
+              <form onSubmit={handleSaveWorkLog} className="space-y-5">
                 
                 {/* SECTION HEADER */}
                 <div className="flex items-center gap-2 border-b border-white/10 pb-3">
@@ -729,8 +730,8 @@ export default function WorkPage() {
                 </div>
 
                 {/* TYPE OF WORK TAG PILLS */}
-                <div className="space-y-2.5">
-                  <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider block">
+                <div className="space-y-2">
+                  <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
                     TYPE OF WORK
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -745,13 +746,13 @@ export default function WorkPage() {
                               ? prev.filter(t => t !== opt.label)
                               : [...prev, opt.label]
                           )}
-                          className={`px-3.5 py-1.5 rounded-full font-mono text-xs font-bold tracking-wider border transition-all ${
+                          className={`px-3 py-1 rounded-full font-mono text-[11px] font-bold tracking-wider border transition-all ${
                             active 
                               ? 'bg-black text-white shadow-md' 
                               : 'bg-black/40 text-muted hover:text-primary border-white/10'
                           }`}
                           style={active
-                            ? { borderColor: opt.color, color: opt.color, boxShadow: `0 0 12px ${opt.color}30` }
+                            ? { borderColor: opt.color, color: opt.color, boxShadow: `0 0 10px ${opt.color}30` }
                             : {}
                           }
                         >
@@ -762,15 +763,15 @@ export default function WorkPage() {
                   </div>
                 </div>
 
-                {/* TWO-COLUMN GRID LAYOUT (MATCHING REFERENCE IMAGE) */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* COMPACT TWO-COLUMN GRID LAYOUT */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   
-                  {/* LEFT COLUMN: WHAT DID YOU WORK ON & SESSION NOTES (2 COLS) */}
-                  <div className="lg:col-span-2 space-y-4">
+                  {/* LEFT COLUMN: WHAT DID YOU WORK ON & SESSION NOTES */}
+                  <div className="space-y-4">
                     
                     {/* 1. What did you work on? */}
-                    <div className="space-y-2">
-                      <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider block">
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
                         What did you work on?
                       </label>
                       <textarea
@@ -778,13 +779,13 @@ export default function WorkPage() {
                         placeholder="Describe what you did, wins, learnings, challenges..."
                         value={workWhatDidYouDo}
                         onChange={(e) => setWorkWhatDidYouDo(e.target.value)}
-                        className="w-full bg-black/60 border border-white/15 rounded-xl p-3.5 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
+                        className="w-full bg-black/60 border border-white/15 rounded-xl p-3 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
                       />
                     </div>
 
                     {/* 2. WORK SESSION NOTES (OPTIONAL) */}
-                    <div className="space-y-2">
-                      <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider block">
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
                         WORK SESSION NOTES (OPTIONAL)
                       </label>
                       <textarea
@@ -792,18 +793,18 @@ export default function WorkPage() {
                         placeholder="Add any extra context, thoughts or reflections..."
                         value={workNotes}
                         onChange={(e) => setWorkNotes(e.target.value)}
-                        className="w-full bg-black/60 border border-white/15 rounded-xl p-3.5 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
+                        className="w-full bg-black/60 border border-white/15 rounded-xl p-3 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
                       />
                     </div>
 
                   </div>
 
-                  {/* RIGHT COLUMN: DURATION, FOCUS LEVEL & SAVE BUTTON (1 COL) */}
-                  <div className="space-y-5 flex flex-col justify-between">
+                  {/* RIGHT COLUMN: DURATION, FOCUS LEVEL & SAVE BUTTON */}
+                  <div className="space-y-4 flex flex-col justify-between">
                     
                     {/* DURATION INPUT */}
-                    <div className="space-y-2">
-                      <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider flex items-center justify-between">
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider flex items-center justify-between">
                         <span>DURATION</span>
                         <FieldUnitToggle unit={unitTotalWorked} setUnit={setUnitTotalWorked} />
                       </label>
@@ -815,18 +816,18 @@ export default function WorkPage() {
                           placeholder="0h 00m"
                           value={valTotalWorked}
                           onChange={(e) => setValTotalWorked(e.target.value)}
-                          className="w-full bg-black/70 border border-white/15 rounded-xl p-3 font-mono text-base font-bold text-white focus:outline-none focus:border-[#D4AF37] transition-colors pr-10"
+                          className="w-full bg-black/70 border border-white/15 rounded-xl p-2.5 font-mono text-sm font-bold text-white focus:outline-none focus:border-[#D4AF37] transition-colors pr-10"
                         />
-                        <Clock size={16} className="absolute right-3.5 text-muted pointer-events-none" />
+                        <Clock size={15} className="absolute right-3.5 text-muted pointer-events-none" />
                       </div>
                     </div>
 
                     {/* FOCUS LEVEL (5 SENTIMENT FACE ICONS) */}
-                    <div className="space-y-2">
-                      <label className="font-mono text-xs text-muted uppercase font-bold tracking-wider block">
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
                         FOCUS LEVEL
                       </label>
-                      <div className="flex items-center justify-between gap-2 p-2 bg-black/60 border border-white/10 rounded-xl">
+                      <div className="flex items-center justify-around p-2.5 bg-black/60 border border-white/10 rounded-xl">
                         {FOCUS_LEVEL_OPTIONS.map(opt => {
                           const active = focusLevel === opt.level
                           return (
@@ -834,18 +835,19 @@ export default function WorkPage() {
                               key={opt.level}
                               type="button"
                               onClick={() => setFocusLevel(opt.level)}
-                              className={`p-2.5 rounded-xl text-xl transition-all flex flex-col items-center gap-1 ${
+                              className={`p-2 rounded-xl text-lg transition-all flex flex-col items-center gap-0.5 ${
                                 active 
                                   ? 'bg-[#22c55e]/20 border-2 border-[#22c55e] scale-110 shadow-lg' 
                                   : 'opacity-40 hover:opacity-100 hover:bg-white/5'
                               }`}
+                              title={opt.label}
                             >
                               <span>{opt.emoji}</span>
                             </button>
                           )
                         })}
                       </div>
-                      <div className="text-center font-mono text-[11px] text-[#22c55e] font-bold">
+                      <div className="text-center font-mono text-[10px] text-[#22c55e] font-bold">
                         {FOCUS_LEVEL_OPTIONS.find(o => o.level === focusLevel)?.label}
                       </div>
                     </div>
@@ -854,11 +856,11 @@ export default function WorkPage() {
                     <button
                       type="submit"
                       disabled={savingWork}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-[#D4AF37] via-[#FBBF24] to-[#B8860B] hover:opacity-95 text-black font-mono text-xs font-extrabold uppercase rounded-xl shadow-xl transition-all active:scale-95 disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#D4AF37] via-[#FBBF24] to-[#B8860B] hover:opacity-95 text-black font-mono text-xs font-extrabold uppercase rounded-xl shadow-xl transition-all active:scale-95 disabled:opacity-50"
                     >
-                      <Save size={16} />
+                      <Save size={15} />
                       <span>{savingWork ? 'SAVING...' : 'SAVE WORK LOG'}</span>
-                      <span className="ml-1 px-2 py-0.5 rounded bg-black/20 text-black font-mono text-[10px] font-bold">+2 XP</span>
+                      <span className="ml-1 px-2 py-0.5 rounded bg-black/20 text-black font-mono text-[9px] font-bold">+2 XP</span>
                     </button>
 
                   </div>
@@ -872,7 +874,10 @@ export default function WorkPage() {
             {(() => {
               const windowEnd = offsetDate(workWeekOffset * 7)
               const windowStart = offsetDate(workWeekOffset * 7 - 6)
-              const visibleLogs = nonEmptyWorkLogs.filter(l => l.date >= windowStart && l.date <= windowEnd)
+              const weekFilteredLogs = nonEmptyWorkLogs.filter(l => l.date >= windowStart && l.date <= windowEnd)
+              
+              // Automatically fall back to showing ALL logs if week filter returns 0 entries!
+              const visibleLogs = (showAllWorkHistory || weekFilteredLogs.length === 0) ? nonEmptyWorkLogs : weekFilteredLogs
               const hasPrev = nonEmptyWorkLogs.some(l => l.date < windowStart)
               const hasNext = workWeekOffset < 0
 
@@ -884,49 +889,65 @@ export default function WorkPage() {
               return (
                 <HudPanel className="p-5 sm:p-6 space-y-4">
                   
-                  {/* WORK HISTORY HEADER */}
+                  {/* WORK HISTORY HEADER WITH TOGGLE */}
                   <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-                    <h3 className="font-display text-xs uppercase tracking-widest text-[#D4AF37] font-extrabold flex items-center gap-2">
-                      <Clock size={15} />
-                      WORK HISTORY
-                    </h3>
-                    <span className="font-mono text-xs text-muted uppercase font-bold">
-                      {visibleLogs.length} LOGS
-                    </span>
-                  </div>
-
-                  {/* WEEK NAVIGATION BAR */}
-                  <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-black/60 border border-white/10 font-mono text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setWorkWeekOffset(w => w - 1)}
-                      disabled={!hasPrev}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft size={14} />
-                      <span>PREV WEEK</span>
-                    </button>
-
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Calendar size={14} className="text-[#D4AF37] shrink-0" />
-                      <span className="font-bold text-white text-xs tracking-wider uppercase truncate">
-                        {formatWeekRange(workWeekOffset)}
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-display text-xs uppercase tracking-widest text-[#D4AF37] font-extrabold flex items-center gap-2">
+                        <Clock size={15} />
+                        WORK HISTORY
+                      </h3>
+                      <span className="font-mono text-xs text-muted uppercase font-bold">
+                        ({visibleLogs.length} LOGS)
                       </span>
                     </div>
 
                     <button
                       type="button"
-                      onClick={() => setWorkWeekOffset(w => Math.min(0, w + 1))}
-                      disabled={!hasNext}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      onClick={() => setShowAllWorkHistory(prev => !prev)}
+                      className={`px-3 py-1 rounded-lg font-mono text-[10px] font-bold uppercase transition-all border ${
+                        showAllWorkHistory 
+                          ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37]' 
+                          : 'bg-black/40 border-white/10 text-muted hover:text-white'
+                      }`}
                     >
-                      <span>NEXT WEEK</span>
-                      <ChevronRight size={14} />
+                      {showAllWorkHistory ? 'SHOW WEEKLY VIEW' : `SHOW ALL (${nonEmptyWorkLogs.length})`}
                     </button>
                   </div>
 
+                  {/* WEEK NAVIGATION BAR */}
+                  {!showAllWorkHistory && (
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-black/60 border border-white/10 font-mono text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setWorkWeekOffset(w => w - 1)}
+                        disabled={!hasPrev}
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft size={13} />
+                        <span>PREV WEEK</span>
+                      </button>
+
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Calendar size={13} className="text-[#D4AF37] shrink-0" />
+                        <span className="font-bold text-white text-[11px] tracking-wider uppercase truncate">
+                          {formatWeekRange(workWeekOffset)}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setWorkWeekOffset(w => Math.min(0, w + 1))}
+                        disabled={!hasNext}
+                        className="flex items-center gap-1 px-3 py-1 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <span>NEXT WEEK</span>
+                        <ChevronRight size={13} />
+                      </button>
+                    </div>
+                  )}
+
                   {/* SUMMARY METRICS BAR */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-black/40 border border-white/10 text-center font-mono text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-xl bg-black/40 border border-white/10 text-center font-mono text-xs">
                     <div>
                       <div className="text-muted uppercase text-[9px] font-bold">BEYOND TATVA</div>
                       <div className="text-[#00F0FF] font-bold mt-0.5">{weekBeyond.toFixed(1)}h</div>
@@ -947,7 +968,7 @@ export default function WorkPage() {
 
                   {/* HISTORY ITEM ROWS */}
                   {visibleLogs.length === 0 ? (
-                    <p className="font-mono text-xs text-muted text-center py-8">No work logs recorded for this week.</p>
+                    <p className="font-mono text-xs text-muted text-center py-8">No work logs recorded yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {visibleLogs.map((l, idx) => {
@@ -959,17 +980,17 @@ export default function WorkPage() {
 
                         const titleText = l.notes 
                           ? l.notes.split('\n')[0].slice(0, 50)
-                          : 'Work Session Log'
+                          : l.what_did_i_do || 'Work Session Log'
 
                         return (
                           <div key={l.date} className="rounded-xl bg-black/60 border border-white/10 overflow-hidden hover:border-[#D4AF37]/40 transition-all">
                             <div 
-                              className="p-3.5 flex items-center justify-between gap-3 cursor-pointer"
+                              className="p-3 flex items-center justify-between gap-3 cursor-pointer"
                               onClick={() => toggleWorkDate(l.date)}
                             >
-                              <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
                                 {/* Date Badge */}
-                                <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-center shrink-0 min-w-[50px]">
+                                <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-center shrink-0 min-w-[55px]">
                                   <div className="font-mono text-[9px] text-muted font-bold uppercase">{monthStr}</div>
                                   <div className="font-mono text-sm text-white font-extrabold">{dayStr}</div>
                                 </div>
@@ -986,26 +1007,24 @@ export default function WorkPage() {
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-3 shrink-0">
+                              <div className="flex items-center gap-2.5 shrink-0">
                                 <span className="font-mono text-xs font-extrabold text-[#D4AF37]">
                                   {tot}h
                                 </span>
 
                                 {l.work_type && (
-                                  <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 font-mono text-[9px] text-white font-bold uppercase hidden sm:inline">
+                                  <span className="px-2 py-0.5 rounded-full bg-white/10 border border-white/15 font-mono text-[9px] text-white font-bold uppercase hidden sm:inline">
                                     {l.work_type.split(',')[0]}
                                   </span>
                                 )}
 
-                                <button type="button" className="text-muted hover:text-white p-1">
-                                  <MoreHorizontal size={16} />
-                                </button>
+                                {isExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
                               </div>
                             </div>
 
                             {/* EXPANDED DETAILS */}
                             {isExpanded && (
-                              <div className="px-4 pb-4 pt-1 border-t border-white/10 bg-black/40 space-y-3">
+                              <div className="px-4 pb-3.5 pt-1 border-t border-white/10 bg-black/40 space-y-2.5">
                                 <div className="grid grid-cols-3 gap-2 text-center font-mono text-xs">
                                   <div className="p-2 rounded-lg bg-black/40 border border-[#00F0FF]/30">
                                     <div className="text-[9px] text-muted uppercase">Beyond Tatva</div>
