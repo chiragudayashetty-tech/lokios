@@ -331,6 +331,13 @@ export default function IntelExportModal({ isOpen, onClose }) {
                     : failureNote 
                     ? `<span style="color:#EF4444;">${failureNote}</span>` 
                     : '—'
+
+                  const isTaskFailed = t.status === 'failed' || t.status === 'cancelled'
+                  const isWeeklyGoal = t.category === 'weekly_goal' || (t.description || '').includes('[Weekly Goal]')
+                  const xpAmount = isWeeklyGoal ? 25 : (t.xp_reward || 30)
+                  const xpDisplay = isTaskFailed ? `-${xpAmount} XP` : `+${xpAmount} XP`
+                  const xpColorStyle = isTaskFailed ? 'color:#EF4444;font-weight:bold;' : 'color:#D4AF37;font-weight:bold;'
+
                   return `
                     <tr>
                       <td><strong>${t.title}</strong></td>
@@ -340,8 +347,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
                       <td>${dueDateStr}</td>
                       <td><span style="${t.status === 'completed' ? 'color:#10B981;font-weight:bold;' : 'color:#9CA3AF;'}">${completedStr}</span></td>
                       <td style="max-width:200px;font-size:11px;">${noteHtml}</td>
-                      <td class="text-amber">+${t.xp_reward || 30} XP</td>
-                      <td><span class="badge ${t.status === 'completed' ? 'badge-success' : t.status === 'cancelled' || t.status === 'failed' ? 'badge-danger' : 'badge-warning'}">${(t.status || 'pending').toUpperCase()}</span></td>
+                      <td><span style="${xpColorStyle}">${xpDisplay}</span></td>
+                      <td><span class="badge ${t.status === 'completed' ? 'badge-success' : isTaskFailed ? 'badge-danger' : 'badge-warning'}">${(t.status || 'pending').toUpperCase()}</span></td>
                     </tr>
                   `
                 }).join('')}

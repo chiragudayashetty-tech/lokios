@@ -137,12 +137,13 @@ export function useTasksInternal(user) {
       }
 
       // Dynamic XP Calculation based on Difficulty and Overdue Days (-5 XP per day past deadline)
+      const isWeeklyGoal = task?.category === 'weekly_goal' || (task?.description || '').includes('[Weekly Goal]')
       const diffKey = (task?.difficulty || 'MEDIUM').toUpperCase()
       const difficultyData = DIFFICULTY_LEVELS[diffKey] || DIFFICULTY_LEVELS.MEDIUM
-      let xpAward = difficultyData.xp
+      let xpAward = isWeeklyGoal ? 25 : difficultyData.xp
 
-      // Check if overdue: -5 XP per calendar day past deadline
-      if (task?.due_date) {
+      // Check if overdue: -5 XP per calendar day past deadline (non-weekly tasks)
+      if (!isWeeklyGoal && task?.due_date) {
         const todayStr = getLocalDateStr()
         const dueDateStr = getLocalDateStr(new Date(task.due_date))
         if (dueDateStr < todayStr) {
@@ -287,10 +288,11 @@ export function useTasksInternal(user) {
 
       if (error) throw error
 
-      // Dynamic XP Penalty based on Difficulty
+      // Dynamic XP Penalty based on Difficulty (or -25 XP for weekly goals)
+      const isWeeklyGoal = task?.category === 'weekly_goal' || (task?.description || '').includes('[Weekly Goal]')
       const diffKey = (task?.difficulty || 'MEDIUM').toUpperCase()
       const difficultyData = DIFFICULTY_LEVELS[diffKey] || DIFFICULTY_LEVELS.MEDIUM
-      const penalty = difficultyData.penalty
+      const penalty = isWeeklyGoal ? 25 : difficultyData.penalty
 
       if (penalty > 0) {
         await robustAwardXP(
