@@ -660,39 +660,39 @@ export default function XPDashboard() {
                 return (
                   <div 
                     key={item.id} 
-                    className="px-3.5 py-2.5 hover:bg-white/[0.03] transition-colors flex items-center justify-between gap-3 font-mono text-xs border-b border-border-color/40"
+                    className="px-4 py-3.5 hover:bg-white/[0.04] transition-colors flex items-center justify-between gap-4 font-mono border-b border-border-color/60"
                   >
                     {/* Left Details: Dot + Timestamp + Description + Category + Source */}
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
                       {/* Indicator Dot */}
                       <div 
-                        className={`w-2 h-2 rounded-full shrink-0 ${
+                        className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                           isPositive 
-                            ? 'bg-success shadow-[0_0_6px_rgba(34,197,94,0.6)]' 
+                            ? 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
                             : isNegative 
-                            ? 'bg-danger shadow-[0_0_6px_rgba(239,68,68,0.6)]' 
+                            ? 'bg-danger shadow-[0_0_8px_rgba(239,68,68,0.6)]' 
                             : 'bg-muted'
                         }`} 
                       />
 
                       {/* Date & Time Timestamp */}
-                      <span className="text-muted/80 text-[11px] shrink-0 whitespace-nowrap">
-                        {dateStr} {timeStr}
+                      <span className="text-muted/80 text-xs shrink-0 whitespace-nowrap font-medium">
+                        {dateStr} <span className="text-amber/80 font-bold">{timeStr}</span>
                       </span>
 
                       {/* Description */}
-                      <span className="text-primary font-semibold truncate min-w-0">
+                      <span className="text-primary font-bold text-sm truncate min-w-0">
                         {typeof item.description === 'string' ? item.description : 'XP Event Logged'}
                       </span>
 
                       {/* Category Badge */}
-                      <span className="text-[9px] px-1.5 py-0.5 rounded uppercase border bg-bg-tertiary border-border-color text-amber tracking-wider shrink-0 hidden sm:inline-block">
+                      <span className="text-[10px] px-2 py-0.5 rounded uppercase border bg-bg-tertiary border-border-color text-amber font-bold tracking-wider shrink-0 hidden sm:inline-block">
                         {item.stat_category || 'GENERAL'}
                       </span>
 
                       {/* Source Badge */}
                       {item.source_type && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded text-muted bg-white/5 border border-white/5 shrink-0 hidden md:inline-block">
+                        <span className="text-[10px] px-2 py-0.5 rounded text-muted bg-white/5 border border-white/10 shrink-0 hidden md:inline-block">
                           {item.source_type}
                         </span>
                       )}
@@ -701,7 +701,7 @@ export default function XPDashboard() {
                     {/* Right XP Amount Pill */}
                     <div className="shrink-0">
                       <span 
-                        className={`text-xs font-bold px-2.5 py-0.5 rounded border shadow-sm ${
+                        className={`text-sm font-extrabold px-3 py-1 rounded-lg border shadow-md ${
                           isPositive 
                             ? 'bg-success/15 border-success/40 text-success' 
                             : isNegative 
