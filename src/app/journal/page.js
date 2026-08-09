@@ -106,6 +106,15 @@ export default function JournalPage() {
 
   useEffect(() => {
     if (!user || activeTab !== 'weekly') return
+
+    // Synchronously read cached debrief history for 0ms delay
+    try {
+      const cached = localStorage.getItem(`lokios_debrief_history_${user.id}`)
+      if (cached) {
+        setHistoryLogs(JSON.parse(cached))
+      }
+    } catch (e) {}
+
     const supabase = createClient()
     const today = new Date()
     const startOfWeek = getStartOfWeek(today)
@@ -127,7 +136,20 @@ export default function JournalPage() {
         tasks: (taskRes.data || []).length,
         missions: (goalRes.data || []).length
       })
-      if (historyRes.data) setHistoryLogs(historyRes.data)
+      if (historyRes.data) {
+        setHistoryLogs(prev => {
+          const map = new Map()
+          // Add local cached entries first
+          prev.forEach(l => map.set(l.title || l.id, l))
+          // Add Supabase entries
+          historyRes.data.forEach(l => map.set(l.title || l.id, l))
+          const merged = Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(merged))
+          }
+          return merged
+        })
+      }
       setLoadingStats(false)
     })
   }, [user, activeTab])
@@ -145,26 +167,70 @@ export default function JournalPage() {
   const handleSaveDebrief = async (e) => {
     e.preventDefault()
     if (!user || savingDebrief) return
-    const goalsList = [nextGoal1, nextGoal2, nextGoal3].filter(g => g.trim())
+    const goalsList = [nextGoal1, nextGoal2, nextGoal3].filter(g => typeof g === 'string' && g.trim())
     if (!wins.trim() || !fails.trim() || goalsList.length === 0) { alert('Please fill out wins, fails, and at least 1 Next Week Priority Goal.'); return }
     setSavingDebrief(true)
     const supabase = createClient()
-    const todayStr = getLocalDateStr()
+    const todayStr = getLocalDateStr(new Date())
     const formattedGoals = goalsList.map((g, i) => `${i + 1}. ${g.trim()}`).join('\n')
     const formattedContent = `### What went well?\n${wins}\n\n### Bottlenecks & Fails\n${fails}\n\n### Priorities for Next Week\n${formattedGoals}`
-    try {
-      await supabase.from('work_logs').insert([{
-        user_id: user.id,
-        title: `Weekly Debrief: ${dateRange.start} - ${dateRange.end}`,
-        type: 'project_work', description: formattedContent, date: todayStr
-      }])
+    
+    const debriefTitle = `Weekly Debrief: ${dateRange.start} - ${dateRange.end}`
+    const newLog = {
+      id: 'debrief_' + Date.now(),
+      user_id: user.id,
+      title: debriefTitle,
+      type: 'project_work',
+      description: formattedContent,
+      date: todayStr,
+      created_at: new Date().toISOString()
+    }
 
-      // Deploy priority goals to tasks table for Command Center widget
+    // 1. Immediately update local state & localStorage cache for zero delay
+    setHistoryLogs(prev => {
+      const next = [newLog, ...prev.filter(l => l.title !== debriefTitle)]
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
+        // Update dashboard status cache immediately!
+        const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+        try {
+          const existingCache = localStorage.getItem(cacheKey)
+          const parsed = existingCache ? JSON.parse(existingCache) : {}
+          parsed.latestDebrief = newLog
+          localStorage.setItem(cacheKey, JSON.stringify(parsed))
+        } catch (errCache) {}
+      }
+      return next
+    })
+
+    try {
+      // 2. Insert into Supabase work_logs
+      const { data: inserted } = await supabase.from('work_logs').insert([{
+        user_id: user.id,
+        title: debriefTitle,
+        type: 'project_work',
+        description: formattedContent,
+        date: todayStr
+      }]).select()
+
+      if (inserted && inserted.length > 0) {
+        setHistoryLogs(prev => {
+          const next = [inserted[0], ...prev.filter(l => l.title !== debriefTitle && l.id !== newLog.id)]
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
+          }
+          return next
+        })
+      }
+
+      // 3. Deploy priority goals to tasks table for Command Center widget
       const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
       for (const goalText of goalsList) {
+        const cleanTitle = typeof goalText === 'string' ? goalText.trim() : String(goalText)
+        if (!cleanTitle) continue
         await supabase.from('tasks').insert([{
           user_id: user.id,
-          title: goalText.trim(),
+          title: cleanTitle,
           type: 'custom',
           category: 'weekly_goal',
           due_date: endOfWeekStr,
@@ -175,10 +241,9 @@ export default function JournalPage() {
 
       await robustAwardXP(user.id, 5, 'weekly_review', todayStr, 'Weekly Review Completed', 'discipline')
       setWins(''); setFails(''); setNextGoal1(''); setNextGoal2(''); setNextGoal3('')
-      const { data } = await supabase.from('work_logs').select('*').eq('user_id', user.id).ilike('title', 'Weekly Debrief%').order('created_at', { ascending: false })
-      if (data) setHistoryLogs(data)
       setShowDebriefHistory(true)
     } catch (err) {
+      console.error('Failed to save review:', err)
       alert('Failed to save review. Please try again.')
     } finally { setSavingDebrief(false) }
   }

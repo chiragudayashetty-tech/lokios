@@ -783,7 +783,18 @@ export default function MissionControl() {
     }
 
     return sourceList.map((item, idx) => {
-      let itemTitle = item.title ? item.title.trim() : String(item).trim()
+      let itemTitle = ''
+      if (typeof item === 'string') {
+        itemTitle = item.trim()
+      } else if (item && typeof item === 'object') {
+        if (typeof item.title === 'string') itemTitle = item.title.trim()
+        else if (item.title && typeof item.title === 'object' && typeof item.title.title === 'string') itemTitle = item.title.title.trim()
+        else if (typeof item.name === 'string') itemTitle = item.name.trim()
+      }
+      if (!itemTitle || itemTitle === '[object Object]') {
+        itemTitle = `Priority Goal #${idx + 1}`
+      }
+
       itemTitle = itemTitle
         .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
         .replace(/^[xXvV✓✕]\s+/, '')
