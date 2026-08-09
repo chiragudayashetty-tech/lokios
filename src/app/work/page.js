@@ -312,12 +312,27 @@ export default function WorkPage() {
   // ----------------------------------------------------
   const nonEmptyWorkLogs = useMemo(() => {
     return workLogs.filter(l => {
+      const titleLower = (l.title || '').toLowerCase()
+      // Exclude Weekly Debrief logs from work session history
+      if (titleLower.startsWith('weekly debrief')) return false
+      // Exclude Operation Completed proof entries from work session history
+      if (titleLower.startsWith('operation completed')) return false
+
       const tot = parseFloat(l.total_hours_worked ?? l.duration_hours) || 0
       const bt = parseFloat(l.beyond_tatva_hours) || 0
       const foc = parseFloat(l.focused_hours) || 0
       const unfoc = parseFloat(l.unfocused_hours ?? l.deep_execution_hours) || 0
-      const text = (l.notes || l.description || l.title || l.what_did_i_do || '').trim()
-      return tot > 0 || bt > 0 || foc > 0 || unfoc > 0 || text.length > 0
+      const sumMetrics = tot || (bt + foc + unfoc)
+
+      // Exclude zero-hour proof entries
+      if (Array.isArray(l.media_urls) && l.media_urls.length > 0 && sumMetrics === 0) return false
+
+      const text = (l.notes || l.description || l.what_did_i_do || '').trim()
+
+      if (sumMetrics > 0) return true
+      if (text.length > 0 && (l.work_type || l.focus_level || l.id?.toString().startsWith('wh_'))) return true
+
+      return false
     })
   }, [workLogs])
 
