@@ -542,6 +542,7 @@ export default function MissionControl() {
         status: 'healthy'
       }
       await sb.from('sleep_logs').insert(payload)
+      await robustAwardXP(user.id, 50, 'Daily Sleep Logged')
     } else {
       const payload = {
         user_id: user.id,
@@ -549,8 +550,8 @@ export default function MissionControl() {
         weight_kg: parseFloat(eodWellnessForm.weight_kg) || 75
       }
       await sb.from('weight_logs').insert(payload)
+      await robustAwardXP(user.id, 2, 'weight', todayStr, 'Daily Weight Logged')
     }
-    await robustAwardXP(user.id, 50, 'Daily Morning Wellness Logged')
   }
 
   const submitEodSpeaking = async (e) => {
