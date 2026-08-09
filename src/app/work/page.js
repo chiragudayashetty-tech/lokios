@@ -390,9 +390,7 @@ export default function WorkPage() {
     if (!user) return
     setSavingWork(true)
 
-    const combinedNotes = workWhatDidYouDo && workNotes 
-      ? `${workWhatDidYouDo}\n--- WIN/LEARNING ---\n${workNotes}`
-      : workWhatDidYouDo || workNotes || ''
+    const cleanNotes = (workNotes || '').trim()
 
     const payload = {
       user_id: user.id,
@@ -402,7 +400,8 @@ export default function WorkPage() {
       focused_hours: toHours(valFocused, unitFocused),
       unfocused_hours: toHours(valUnfocused, unitUnfocused),
       deep_execution_hours: toHours(valUnfocused, unitUnfocused),
-      notes: combinedNotes,
+      notes: cleanNotes,
+      description: cleanNotes,
       work_type: workTypes.join(', ')
     }
 
@@ -411,30 +410,20 @@ export default function WorkPage() {
     setWorkLogs(updated)
     if (typeof window !== 'undefined') localStorage.setItem('lokios_work_logs_cache', JSON.stringify(updated))
 
-    // Sync to Supabase
+    // Sync to Supabase in both work_hours_logs and work_logs
     try {
       const sb = createClient()
-      let targetTable = 'work_hours_logs'
-      let { data: existing, error: selectErr } = await sb
+      
+      // 1. Upsert work_hours_logs
+      const { data: existingHours } = await sb
         .from('work_hours_logs')
         .select('id')
         .eq('user_id', user.id)
         .eq('date', selectedDate)
         .limit(1)
 
-      if (selectErr) {
-        targetTable = 'work_logs'
-        const fallbackRes = await sb
-          .from('work_logs')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('date', selectedDate)
-          .limit(1)
-        existing = fallbackRes.data
-      }
-
-      if (existing && existing.length > 0) {
-        await sb.from(targetTable).update({
+      if (existingHours && existingHours.length > 0) {
+        await sb.from('work_hours_logs').update({
           total_hours_worked: payload.total_hours_worked,
           beyond_tatva_hours: payload.beyond_tatva_hours,
           focused_hours: payload.focused_hours,
@@ -442,18 +431,54 @@ export default function WorkPage() {
           deep_execution_hours: payload.deep_execution_hours,
           notes: payload.notes,
           work_type: payload.work_type
-        }).eq('id', existing[0].id)
+        }).eq('id', existingHours[0].id)
       } else {
-        await sb.from(targetTable).insert(payload)
+        await sb.from('work_hours_logs').insert(payload)
       }
+
+      // 2. Upsert work_logs
+      const { data: existingWorkLog } = await sb
+        .from('work_logs')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('date', selectedDate)
+        .limit(1)
+
+      if (existingWorkLog && existingWorkLog.length > 0) {
+        await sb.from('work_logs').update({
+          title: 'Work Session',
+          description: payload.notes,
+          total_hours_worked: payload.total_hours_worked,
+          beyond_tatva_hours: payload.beyond_tatva_hours,
+          focused_hours: payload.focused_hours,
+          unfocused_hours: payload.unfocused_hours,
+          notes: payload.notes,
+          work_type: payload.work_type
+        }).eq('id', existingWorkLog[0].id)
+      } else {
+        await sb.from('work_logs').insert({
+          user_id: user.id,
+          date: selectedDate,
+          title: 'Work Session',
+          description: payload.notes,
+          type: 'work_session',
+          total_hours_worked: payload.total_hours_worked,
+          beyond_tatva_hours: payload.beyond_tatva_hours,
+          focused_hours: payload.focused_hours,
+          unfocused_hours: payload.unfocused_hours,
+          notes: payload.notes,
+          work_type: payload.work_type
+        })
+      }
+
+      await robustAwardXP(user.id, 2, 'task', selectedDate, 'Work Logged', 'creation')
+      setXpToast('+2 XP: Work Log Recorded')
+      setTimeout(() => setXpToast(null), 3000)
     } catch (err) {
       console.error('Save work log exception:', err)
+    } finally {
+      setSavingWork(false)
     }
-
-    awardXP(2, 'Logged Work Session')
-    setXpToast('+2 XP: Work Log Recorded')
-    setTimeout(() => setXpToast(null), 3000)
-    setSavingWork(false)
   }
 
   // SAVE SHOOT LOG
@@ -755,11 +780,85 @@ export default function WorkPage() {
               <form onSubmit={handleSaveWorkLog} className="space-y-5">
                 
                 {/* SECTION HEADER */}
-                <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-                  <span className="text-base">📝</span>
-                  <h3 className="font-display text-xs uppercase tracking-widest text-white font-extrabold">
-                    LOG YOUR WORK
-                  </h3>
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📝</span>
+                    <h3 className="font-display text-xs uppercase tracking-widest text-white font-extrabold">
+                      LOG YOUR WORK
+                    </h3>
+                  </div>
+                  <span className="font-mono text-[10px] text-muted uppercase font-bold">DATE: {selectedDate}</span>
+                </div>
+
+                {/* 4 METRIC HOUR INPUTS GRID */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* 1. TOTAL WORKED */}
+                  <div className="space-y-1.5 p-3 rounded-xl bg-black/50 border border-white/15">
+                    <div className="flex items-center justify-between font-mono text-[10px] font-bold text-white uppercase tracking-wider">
+                      <span>TOTAL WORKED</span>
+                      <FieldUnitToggle unit={unitTotalWorked} setUnit={setUnitTotalWorked} />
+                    </div>
+                    <input 
+                      type="number"
+                      step={unitTotalWorked === 'm' ? '1' : '0.1'}
+                      min="0"
+                      placeholder="0"
+                      value={valTotalWorked}
+                      onChange={e => setValTotalWorked(e.target.value)}
+                      className="w-full bg-transparent font-mono text-base font-bold text-white outline-none"
+                    />
+                  </div>
+
+                  {/* 2. BEYOND TATVA */}
+                  <div className="space-y-1.5 p-3 rounded-xl bg-black/50 border border-[#00F0FF]/30">
+                    <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#00F0FF] uppercase tracking-wider">
+                      <span>BEYOND TATVA</span>
+                      <FieldUnitToggle unit={unitBeyondTatva} setUnit={setUnitBeyondTatva} />
+                    </div>
+                    <input 
+                      type="number"
+                      step={unitBeyondTatva === 'm' ? '1' : '0.1'}
+                      min="0"
+                      placeholder="0"
+                      value={valBeyondTatva}
+                      onChange={e => setValBeyondTatva(e.target.value)}
+                      className="w-full bg-transparent font-mono text-base font-bold text-[#00F0FF] outline-none"
+                    />
+                  </div>
+
+                  {/* 3. FOCUSED */}
+                  <div className="space-y-1.5 p-3 rounded-xl bg-black/50 border border-[#22c55e]/30">
+                    <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#22c55e] uppercase tracking-wider">
+                      <span>FOCUSED</span>
+                      <FieldUnitToggle unit={unitFocused} setUnit={setUnitFocused} />
+                    </div>
+                    <input 
+                      type="number"
+                      step={unitFocused === 'm' ? '1' : '0.1'}
+                      min="0"
+                      placeholder="0"
+                      value={valFocused}
+                      onChange={e => setValFocused(e.target.value)}
+                      className="w-full bg-transparent font-mono text-base font-bold text-[#22c55e] outline-none"
+                    />
+                  </div>
+
+                  {/* 4. UNFOCUSED */}
+                  <div className="space-y-1.5 p-3 rounded-xl bg-black/50 border border-[#ef4444]/30">
+                    <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#ef4444] uppercase tracking-wider">
+                      <span>UNFOCUSED</span>
+                      <FieldUnitToggle unit={unitUnfocused} setUnit={setUnitUnfocused} />
+                    </div>
+                    <input 
+                      type="number"
+                      step={unitUnfocused === 'm' ? '1' : '0.1'}
+                      min="0"
+                      placeholder="0"
+                      value={valUnfocused}
+                      onChange={e => setValUnfocused(e.target.value)}
+                      className="w-full bg-transparent font-mono text-base font-bold text-[#ef4444] outline-none"
+                    />
+                  </div>
                 </div>
 
                 {/* TYPE OF WORK TAG PILLS */}
@@ -767,7 +866,7 @@ export default function WorkPage() {
                   <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
                     TYPE OF WORK
                   </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     {WORK_TYPE_OPTIONS.map(opt => {
                       const active = workTypes.includes(opt.label)
                       return (
@@ -793,112 +892,49 @@ export default function WorkPage() {
                         </button>
                       )
                     })}
+
+                    <input 
+                      type="text"
+                      placeholder="Custom type... (press Enter)"
+                      value={customWorkType}
+                      onChange={e => setCustomWorkType(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && customWorkType.trim()) {
+                          e.preventDefault()
+                          const newTag = customWorkType.trim().toUpperCase()
+                          if (!workTypes.includes(newTag)) setWorkTypes(prev => [...prev, newTag])
+                          setCustomWorkType('')
+                        }
+                      }}
+                      className="px-3 py-1 rounded-full font-mono text-[11px] bg-black/60 border border-white/15 text-white placeholder:text-muted/60 focus:outline-none focus:border-[#D4AF37]"
+                    />
                   </div>
                 </div>
 
-                {/* COMPACT TWO-COLUMN GRID LAYOUT */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  
-                  {/* LEFT COLUMN: WHAT DID YOU WORK ON & SESSION NOTES */}
-                  <div className="space-y-4">
-                    
-                    {/* 1. What did you work on? */}
-                    <div className="space-y-1.5">
-                      <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
-                        What did you work on?
-                      </label>
-                      <textarea
-                        rows={3}
-                        placeholder="Describe what you did, wins, learnings, challenges..."
-                        value={workWhatDidYouDo}
-                        onChange={(e) => setWorkWhatDidYouDo(e.target.value)}
-                        className="w-full bg-black/60 border border-white/15 rounded-xl p-3 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
-                      />
-                    </div>
-
-                    {/* 2. WORK SESSION NOTES (OPTIONAL) */}
-                    <div className="space-y-1.5">
-                      <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
-                        WORK SESSION NOTES (OPTIONAL)
-                      </label>
-                      <textarea
-                        rows={2}
-                        placeholder="Add any extra context, thoughts or reflections..."
-                        value={workNotes}
-                        onChange={(e) => setWorkNotes(e.target.value)}
-                        className="w-full bg-black/60 border border-white/15 rounded-xl p-3 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
-                      />
-                    </div>
-
-                  </div>
-
-                  {/* RIGHT COLUMN: DURATION, FOCUS LEVEL & SAVE BUTTON */}
-                  <div className="space-y-4 flex flex-col justify-between">
-                    
-                    {/* DURATION INPUT */}
-                    <div className="space-y-1.5">
-                      <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider flex items-center justify-between">
-                        <span>DURATION</span>
-                        <FieldUnitToggle unit={unitTotalWorked} setUnit={setUnitTotalWorked} />
-                      </label>
-                      <div className="relative flex items-center">
-                        <input
-                          type="number"
-                          step={unitTotalWorked === 'm' ? '1' : '0.1'}
-                          min="0"
-                          placeholder="0h 00m"
-                          value={valTotalWorked}
-                          onChange={(e) => setValTotalWorked(e.target.value)}
-                          className="w-full bg-black/70 border border-white/15 rounded-xl p-2.5 font-mono text-sm font-bold text-white focus:outline-none focus:border-[#D4AF37] transition-colors pr-10"
-                        />
-                        <Clock size={15} className="absolute right-3.5 text-muted pointer-events-none" />
-                      </div>
-                    </div>
-
-                    {/* FOCUS LEVEL (5 SENTIMENT FACE ICONS) */}
-                    <div className="space-y-1.5">
-                      <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
-                        FOCUS LEVEL
-                      </label>
-                      <div className="flex items-center justify-around p-2.5 bg-black/60 border border-white/10 rounded-xl">
-                        {FOCUS_LEVEL_OPTIONS.map(opt => {
-                          const active = focusLevel === opt.level
-                          return (
-                            <button
-                              key={opt.level}
-                              type="button"
-                              onClick={() => setFocusLevel(opt.level)}
-                              className={`p-2 rounded-xl text-lg transition-all flex flex-col items-center gap-0.5 ${
-                                active 
-                                  ? 'bg-[#22c55e]/20 border-2 border-[#22c55e] scale-110 shadow-lg' 
-                                  : 'opacity-40 hover:opacity-100 hover:bg-white/5'
-                              }`}
-                              title={opt.label}
-                            >
-                              <span>{opt.emoji}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                      <div className="text-center font-mono text-[10px] text-[#22c55e] font-bold">
-                        {FOCUS_LEVEL_OPTIONS.find(o => o.level === focusLevel)?.label}
-                      </div>
-                    </div>
-
-                    {/* SAVE BUTTON */}
-                    <button
-                      type="submit"
-                      disabled={savingWork}
-                      className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#D4AF37] via-[#FBBF24] to-[#B8860B] hover:opacity-95 text-black font-mono text-xs font-extrabold uppercase rounded-xl shadow-xl transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      <Save size={15} />
-                      <span>{savingWork ? 'SAVING...' : 'SAVE WORK LOG'}</span>
-                      <span className="ml-1 px-2 py-0.5 rounded bg-black/20 text-black font-mono text-[9px] font-bold">+2 XP</span>
-                    </button>
-
-                  </div>
-
+                {/* WORK SESSION NOTES */}
+                <div className="space-y-1.5">
+                  <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
+                    WORK SESSION NOTES
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Describe what you worked on, wins, learnings, or challenges..."
+                    value={workNotes}
+                    onChange={(e) => setWorkNotes(e.target.value)}
+                    className="w-full bg-black/60 border border-white/15 rounded-xl p-3 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
+                  />
                 </div>
+
+                {/* SAVE BUTTON */}
+                <button
+                  type="submit"
+                  disabled={savingWork}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#D4AF37] via-[#FBBF24] to-[#B8860B] hover:opacity-95 text-black font-mono text-xs font-extrabold uppercase rounded-xl shadow-xl transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <Save size={15} />
+                  <span>{savingWork ? 'SAVING...' : 'SAVE WORK LOG'}</span>
+                  <span className="ml-1 px-2 py-0.5 rounded bg-black/20 text-black font-mono text-[9px] font-bold">+2 XP</span>
+                </button>
 
               </form>
             </HudPanel>
