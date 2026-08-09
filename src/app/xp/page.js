@@ -660,49 +660,52 @@ export default function XPDashboard() {
                 return (
                   <div 
                     key={item.id} 
-                    className="relative pl-6 pr-4 py-3.5 group hover:bg-white/[0.02] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                    className="px-3.5 py-2.5 hover:bg-white/[0.03] transition-colors flex items-center justify-between gap-3 font-mono text-xs border-b border-border-color/40"
                   >
-                    {/* Glowing Left Indicator Dot */}
-                    <div 
-                      className={`absolute left-2.5 top-5 w-2.5 h-2.5 rounded-full transition-all ${
-                        isPositive 
-                          ? 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
-                          : isNegative 
-                          ? 'bg-danger shadow-[0_0_8px_rgba(239,68,68,0.6)]' 
-                          : 'bg-muted'
-                      }`} 
-                    />
+                    {/* Left Details: Dot + Timestamp + Description + Category + Source */}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {/* Indicator Dot */}
+                      <div 
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          isPositive 
+                            ? 'bg-success shadow-[0_0_6px_rgba(34,197,94,0.6)]' 
+                            : isNegative 
+                            ? 'bg-danger shadow-[0_0_6px_rgba(239,68,68,0.6)]' 
+                            : 'bg-muted'
+                        }`} 
+                      />
 
-                    {/* Content & Description */}
-                    <div className="min-w-0 flex-1 pl-2">
-                      <div className="font-mono text-sm text-primary font-semibold flex items-center gap-2 flex-wrap">
-                        <span>{item.description || 'XP Event Logged'}</span>
-                        <span className="font-mono text-[9px] px-1.5 py-0.5 rounded uppercase border bg-bg-tertiary border-border-color text-amber tracking-wider">
-                          {item.stat_category || 'GENERAL'}
+                      {/* Date & Time Timestamp */}
+                      <span className="text-muted/80 text-[11px] shrink-0 whitespace-nowrap">
+                        {dateStr} {timeStr}
+                      </span>
+
+                      {/* Description */}
+                      <span className="text-primary font-semibold truncate min-w-0">
+                        {typeof item.description === 'string' ? item.description : 'XP Event Logged'}
+                      </span>
+
+                      {/* Category Badge */}
+                      <span className="text-[9px] px-1.5 py-0.5 rounded uppercase border bg-bg-tertiary border-border-color text-amber tracking-wider shrink-0 hidden sm:inline-block">
+                        {item.stat_category || 'GENERAL'}
+                      </span>
+
+                      {/* Source Badge */}
+                      {item.source_type && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded text-muted bg-white/5 border border-white/5 shrink-0 hidden md:inline-block">
+                          {item.source_type}
                         </span>
-                        {item.source_type && (
-                          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded text-muted bg-white/5 border border-white/5 font-normal">
-                            {item.source_type}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Exact Minute & Second Timestamp */}
-                      <div className="font-mono text-[10px] text-muted mt-1 flex items-center gap-2">
-                        <span className="text-white/70 font-bold">{dateStr}</span>
-                        <span>at</span>
-                        <span className="text-amber font-mono font-bold">{timeStr}</span>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Amount Pill */}
-                    <div className="shrink-0 flex items-center">
+                    {/* Right XP Amount Pill */}
+                    <div className="shrink-0">
                       <span 
-                        className={`font-mono text-xs font-bold px-3 py-1 rounded-lg border shadow-md flex items-center gap-1 ${
+                        className={`text-xs font-bold px-2.5 py-0.5 rounded border shadow-sm ${
                           isPositive 
-                            ? 'bg-success/15 border-success/40 text-success shadow-success/10' 
+                            ? 'bg-success/15 border-success/40 text-success' 
                             : isNegative 
-                            ? 'bg-danger/15 border-danger/40 text-danger shadow-danger/10' 
+                            ? 'bg-danger/15 border-danger/40 text-danger' 
                             : 'bg-bg-tertiary border-border-color text-muted'
                         }`}
                       >

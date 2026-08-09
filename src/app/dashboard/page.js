@@ -1345,14 +1345,15 @@ export default function MissionControl() {
                     }
 
                     const handleMarkDone = async () => {
-                      const stableSourceId = `debrief_p_${gt.title.trim().toLowerCase().replace(/\s+/g, '_')}`
-                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'completed', [gt.title]: 'completed' }))
+                      const goalTitleText = typeof gt.title === 'string' ? gt.title : (gt.title?.title || gt.title?.name || 'Priority Goal')
+                      const stableSourceId = `debrief_p_${goalTitleText.trim().toLowerCase().replace(/\s+/g, '_')}`
+                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'completed', [goalTitleText]: 'completed' }))
                       let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
 
                       if (targetIds.length === 0 && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
                         const res = await addTask({
-                          title: gt.title,
+                          title: goalTitleText,
                           type: 'custom',
                           category: 'weekly_goal',
                           due_date: endOfWeekStr,
@@ -1368,22 +1369,23 @@ export default function MissionControl() {
                         await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
                       }
 
-                      await updateDebriefWorkLog(gt.title, '[DONE]')
-                      await robustAwardXP(user.id, 25, 'task_complete', stableSourceId, `Completed Priority Goal: ${gt.title}`, 'discipline')
+                      await updateDebriefWorkLog(goalTitleText, '[DONE]')
+                      await robustAwardXP(user.id, 25, 'task_complete', stableSourceId, `Completed Priority Goal: ${goalTitleText}`, 'discipline')
 
                       await profile.fetchProfile()
                       if (fetchTasks) await fetchTasks()
                     }
 
                     const handleMarkFailed = async () => {
-                      const stableSourceId = `debrief_p_${gt.title.trim().toLowerCase().replace(/\s+/g, '_')}`
-                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'failed', [gt.title]: 'failed' }))
+                      const goalTitleText = typeof gt.title === 'string' ? gt.title : (gt.title?.title || gt.title?.name || 'Priority Goal')
+                      const stableSourceId = `debrief_p_${goalTitleText.trim().toLowerCase().replace(/\s+/g, '_')}`
+                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'failed', [goalTitleText]: 'failed' }))
                       let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
 
                       if (targetIds.length === 0 && user) {
                         const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
                         const res = await addTask({
-                          title: gt.title,
+                          title: goalTitleText,
                           type: 'custom',
                           category: 'weekly_goal',
                           due_date: endOfWeekStr,
@@ -1399,8 +1401,8 @@ export default function MissionControl() {
                         await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
                       }
 
-                      await updateDebriefWorkLog(gt.title, '[FAILED]')
-                      await robustAwardXP(user.id, -25, 'task_failed', stableSourceId, `Failed Priority Goal: ${gt.title}`, 'discipline')
+                      await updateDebriefWorkLog(goalTitleText, '[FAILED]')
+                      await robustAwardXP(user.id, -25, 'task_failed', stableSourceId, `Failed Priority Goal: ${goalTitleText}`, 'discipline')
 
                       await profile.fetchProfile()
                       if (fetchTasks) await fetchTasks()
