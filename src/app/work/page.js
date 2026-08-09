@@ -995,18 +995,12 @@ export default function WorkPage() {
                         const btNum = parseFloat(l.beyond_tatva_hours) || 0
                         const focNum = parseFloat(l.focused_hours) || 0
                         const unfocNum = parseFloat(l.unfocused_hours ?? l.deep_execution_hours) || 0
-                        const hasMetrics = btNum > 0 || focNum > 0 || unfocNum > 0
-
-                        const logDateObj = new Date(l.date)
-                        const monthStr = logDateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
-                        const dayStr = logDateObj.getDate().toString().padStart(2, '0')
                         
                         // Clean ID key for expansion toggle (defaults to collapsed)
                         const logKey = l.id ? `id_${l.id}` : `date_${l.date}_${idx}`
                         const isExpanded = expandedWorkDates.has(logKey)
 
                         const rawText = (l.notes || l.description || l.what_did_i_do || l.title || '').replace(/\n--- WIN\/LEARNING ---\n/g, ' · ').trim()
-                        const titleText = rawText ? (rawText.length > 75 ? rawText.slice(0, 75) + '...' : rawText) : 'Work Log Session'
 
                         return (
                           <div key={logKey} className="rounded-xl bg-black/60 border border-white/10 overflow-hidden hover:border-[#D4AF37]/40 transition-all">
@@ -1014,62 +1008,42 @@ export default function WorkPage() {
                               className="p-3.5 flex items-center justify-between gap-3 cursor-pointer"
                               onClick={() => toggleWorkDate(logKey)}
                             >
-                              <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                {/* Date Badge */}
-                                <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-center shrink-0 min-w-[55px]">
-                                  <div className="font-mono text-[9px] text-muted font-bold uppercase">{monthStr}</div>
-                                  <div className="font-mono text-sm text-white font-extrabold">{dayStr}</div>
-                                </div>
-
-                                <div className="min-w-0 flex-1">
-                                  <div className="font-mono text-xs font-bold text-white truncate">
-                                    {titleText}
-                                  </div>
-                                </div>
+                              <div className="font-mono text-xs sm:text-sm font-bold text-white tracking-wider">
+                                {l.date}
                               </div>
 
-                              <div className="flex items-center gap-2.5 shrink-0">
-                                {totNum > 0 && (
-                                  <span className="font-mono text-xs font-extrabold text-[#D4AF37]">
-                                    {tot}h
-                                  </span>
-                                )}
-
-                                {l.work_type && (
-                                  <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 font-mono text-[9px] text-white font-bold uppercase hidden sm:inline">
-                                    {l.work_type.split(',')[0]}
-                                  </span>
-                                )}
-
+                              <div className="flex items-center gap-2.5">
+                                <span className="font-mono text-xs sm:text-sm font-extrabold text-[#D4AF37]">
+                                  {tot}h
+                                </span>
                                 <div className="p-1 text-muted hover:text-white">
                                   {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                                 </div>
                               </div>
                             </div>
 
-                            {/* EXPANDED DETAILS (ONLY SHOWN WHEN CLICKED) */}
+                            {/* EXPANDED DETAILS */}
                             {isExpanded && (
                               <div className="px-4 pb-4 pt-2 border-t border-white/10 bg-black/40 space-y-3">
-                                {/* ONLY SHOW METRIC BOXES IF ACTUAL METRICS (> 0) EXIST */}
-                                {hasMetrics && (
-                                  <div className="grid grid-cols-3 gap-2 text-center font-mono text-xs">
-                                    <div className="p-2 rounded-lg bg-black/40 border border-[#00F0FF]/30">
-                                      <div className="text-[9px] text-muted uppercase">Beyond Tatva</div>
-                                      <div className="text-[#00F0FF] font-bold">{btNum.toFixed(1)}h</div>
-                                    </div>
-                                    <div className="p-2 rounded-lg bg-black/40 border border-[#22c55e]/30">
-                                      <div className="text-[9px] text-muted uppercase">Focused</div>
-                                      <div className="text-[#22c55e] font-bold">{focNum.toFixed(1)}h</div>
-                                    </div>
-                                    <div className="p-2 rounded-lg bg-black/40 border border-[#ef4444]/30">
-                                      <div className="text-[9px] text-muted uppercase">Unfocused</div>
-                                      <div className="text-[#ef4444] font-bold">{unfocNum.toFixed(1)}h</div>
-                                    </div>
+                                {/* 3 METRIC CARDS ROW */}
+                                <div className="grid grid-cols-3 gap-2.5 text-center font-mono text-xs">
+                                  <div className="p-2.5 rounded-xl bg-black/40 border border-[#00F0FF]/30">
+                                    <div className="text-[10px] text-muted uppercase font-bold tracking-wider">BEYOND</div>
+                                    <div className="text-[#00F0FF] font-extrabold text-sm mt-0.5">{btNum.toFixed(1)}h</div>
                                   </div>
-                                )}
+                                  <div className="p-2.5 rounded-xl bg-black/40 border border-[#22c55e]/30">
+                                    <div className="text-[10px] text-muted uppercase font-bold tracking-wider">FOCUSED</div>
+                                    <div className="text-[#22c55e] font-extrabold text-sm mt-0.5">{focNum.toFixed(1)}h</div>
+                                  </div>
+                                  <div className="p-2.5 rounded-xl bg-black/40 border border-[#ef4444]/30">
+                                    <div className="text-[10px] text-muted uppercase font-bold tracking-wider">UNFOCUSED</div>
+                                    <div className="text-[#ef4444] font-extrabold text-sm mt-0.5">{unfocNum.toFixed(1)}h</div>
+                                  </div>
+                                </div>
 
+                                {/* FULL SESSION NOTES BOX */}
                                 {rawText && (
-                                  <div className="font-mono text-xs text-muted leading-relaxed whitespace-pre-line p-3 rounded-lg bg-black/50 border border-white/10 text-slate-200">
+                                  <div className="font-mono text-xs text-slate-200 leading-relaxed whitespace-pre-line p-3.5 rounded-xl bg-black/50 border border-white/10">
                                     {rawText}
                                   </div>
                                 )}
