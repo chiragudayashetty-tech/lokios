@@ -717,6 +717,7 @@ export default function MissionControl() {
   const rawMomentum          = habitComponent + opsComponent + missionsComponent + streakComponent + winRateComponent
   const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
   const momentumColor        = momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)'
+  const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
   // Check if Weekly Debrief has been completed for the current week starting Monday
   const isDebriefDoneThisWeek = useMemo(() => {
     if (!latestDebrief) return false
