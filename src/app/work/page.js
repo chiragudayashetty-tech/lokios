@@ -149,33 +149,51 @@ export default function WorkPage() {
     const fetchAllLogs = async () => {
       try {
         const sb = createClient()
-        let fetchedW = []
+        // Query both work_logs and work_hours_logs concurrently to capture all descriptions and metrics
+        const [wRes, whRes, cRes] = await Promise.all([
+          sb.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+          sb.from('work_hours_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+          sb.from('content_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
+        ])
 
-        // Try work_hours_logs first, fallback to work_logs
-        const { data: whData, error: whErr } = await sb
-          .from('work_hours_logs')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false })
+        const wData = wRes.data || []
+        const whData = whRes.data || []
 
-        if (!whErr && whData) {
-          fetchedW = whData
-        } else {
-          const { data: wData } = await sb
-            .from('work_logs')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('date', { ascending: false })
-          if (wData) fetchedW = wData
-        }
+        // Merge work_logs and work_hours_logs by date / id so no descriptions or metrics are lost
+        const mergedMap = new Map()
 
-        const { data: cData } = await sb
-          .from('content_logs')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false })
+        wData.forEach(l => {
+          const key = l.id ? `id_${l.id}` : `date_${l.date}`
+          mergedMap.set(key, { ...l })
+        })
 
-        let fetchedC = cData || []
+        whData.forEach(l => {
+          // Check if entry for this date already exists
+          const existingKey = Array.from(mergedMap.keys()).find(k => {
+            const item = mergedMap.get(k)
+            return item && item.date === l.date
+          })
+
+          if (existingKey) {
+            const existing = mergedMap.get(existingKey)
+            mergedMap.set(existingKey, {
+              ...existing,
+              beyond_tatva_hours: existing.beyond_tatva_hours ?? l.beyond_tatva_hours,
+              focused_hours: existing.focused_hours ?? l.focused_hours,
+              unfocused_hours: existing.unfocused_hours ?? l.unfocused_hours,
+              total_hours_worked: existing.total_hours_worked ?? l.total_hours_worked,
+              work_type: existing.work_type || l.work_type,
+              notes: existing.notes || l.notes || existing.description || l.description
+            })
+          } else {
+            const key = l.id ? `id_${l.id}` : `date_${l.date}`
+            mergedMap.set(key, { ...l })
+          }
+        })
+
+        fetchedW = Array.from(mergedMap.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+
+        let fetchedC = cRes.data || []
 
         // Merge with local cache if local has entries not yet in DB
         if (typeof window !== 'undefined') {
@@ -298,8 +316,8 @@ export default function WorkPage() {
       const bt = parseFloat(l.beyond_tatva_hours) || 0
       const foc = parseFloat(l.focused_hours) || 0
       const unfoc = parseFloat(l.unfocused_hours ?? l.deep_execution_hours) || 0
-      const hasNotes = l.notes && l.notes.trim() !== ''
-      return tot > 0 || bt > 0 || foc > 0 || unfoc > 0 || hasNotes
+      const text = (l.notes || l.description || l.title || l.what_did_i_do || '').trim()
+      return tot > 0 || bt > 0 || foc > 0 || unfoc > 0 || text.length > 0
     })
   }, [workLogs])
 
@@ -715,7 +733,7 @@ export default function WorkPage() {
         {/* SUBPAGE 1: WORK LOG */}
         {/* ========================================================================= */}
         {activeTab === 'work_log' && (
-          <div className="max-w-6xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6">
 
             {/* LOG YOUR WORK FORM SECTION */}
             <HudPanel className="p-5 sm:p-6 space-y-5">
@@ -970,25 +988,33 @@ export default function WorkPage() {
                   {visibleLogs.length === 0 ? (
                     <p className="font-mono text-xs text-muted text-center py-8">No work logs recorded yet.</p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {visibleLogs.map((l, idx) => {
-                        const tot = (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0).toFixed(1)
+                        const totNum = parseFloat(l.total_hours_worked ?? l.duration_hours) || 0
+                        const tot = totNum.toFixed(1)
+                        const btNum = parseFloat(l.beyond_tatva_hours) || 0
+                        const focNum = parseFloat(l.focused_hours) || 0
+                        const unfocNum = parseFloat(l.unfocused_hours ?? l.deep_execution_hours) || 0
+                        const hasMetrics = btNum > 0 || focNum > 0 || unfocNum > 0
+
                         const logDateObj = new Date(l.date)
                         const monthStr = logDateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
                         const dayStr = logDateObj.getDate().toString().padStart(2, '0')
-                        const isExpanded = expandedWorkDates.has(l.date) || (expandedWorkDates.size === 0 && idx === 0)
+                        
+                        // Clean ID key for expansion toggle (defaults to collapsed)
+                        const logKey = l.id ? `id_${l.id}` : `date_${l.date}_${idx}`
+                        const isExpanded = expandedWorkDates.has(logKey)
 
-                        const titleText = l.notes 
-                          ? l.notes.split('\n')[0].slice(0, 50)
-                          : l.what_did_i_do || 'Work Session Log'
+                        const rawText = (l.notes || l.description || l.what_did_i_do || l.title || '').replace(/\n--- WIN\/LEARNING ---\n/g, ' · ').trim()
+                        const titleText = rawText ? (rawText.length > 75 ? rawText.slice(0, 75) + '...' : rawText) : 'Work Log Session'
 
                         return (
-                          <div key={l.date} className="rounded-xl bg-black/60 border border-white/10 overflow-hidden hover:border-[#D4AF37]/40 transition-all">
+                          <div key={logKey} className="rounded-xl bg-black/60 border border-white/10 overflow-hidden hover:border-[#D4AF37]/40 transition-all">
                             <div 
-                              className="p-3 flex items-center justify-between gap-3 cursor-pointer"
-                              onClick={() => toggleWorkDate(l.date)}
+                              className="p-3.5 flex items-center justify-between gap-3 cursor-pointer"
+                              onClick={() => toggleWorkDate(logKey)}
                             >
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className="flex items-center gap-3.5 min-w-0 flex-1">
                                 {/* Date Badge */}
                                 <div className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-center shrink-0 min-w-[55px]">
                                   <div className="font-mono text-[9px] text-muted font-bold uppercase">{monthStr}</div>
@@ -999,49 +1025,52 @@ export default function WorkPage() {
                                   <div className="font-mono text-xs font-bold text-white truncate">
                                     {titleText}
                                   </div>
-                                  {l.notes && (
-                                    <div className="font-mono text-[10px] text-muted truncate mt-0.5">
-                                      {l.notes.replace('\n--- WIN/LEARNING ---\n', ' · ')}
-                                    </div>
-                                  )}
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-2.5 shrink-0">
-                                <span className="font-mono text-xs font-extrabold text-[#D4AF37]">
-                                  {tot}h
-                                </span>
+                                {totNum > 0 && (
+                                  <span className="font-mono text-xs font-extrabold text-[#D4AF37]">
+                                    {tot}h
+                                  </span>
+                                )}
 
                                 {l.work_type && (
-                                  <span className="px-2 py-0.5 rounded-full bg-white/10 border border-white/15 font-mono text-[9px] text-white font-bold uppercase hidden sm:inline">
+                                  <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 font-mono text-[9px] text-white font-bold uppercase hidden sm:inline">
                                     {l.work_type.split(',')[0]}
                                   </span>
                                 )}
 
-                                {isExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
+                                <div className="p-1 text-muted hover:text-white">
+                                  {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                                </div>
                               </div>
                             </div>
 
-                            {/* EXPANDED DETAILS */}
+                            {/* EXPANDED DETAILS (ONLY SHOWN WHEN CLICKED) */}
                             {isExpanded && (
-                              <div className="px-4 pb-3.5 pt-1 border-t border-white/10 bg-black/40 space-y-2.5">
-                                <div className="grid grid-cols-3 gap-2 text-center font-mono text-xs">
-                                  <div className="p-2 rounded-lg bg-black/40 border border-[#00F0FF]/30">
-                                    <div className="text-[9px] text-muted uppercase">Beyond Tatva</div>
-                                    <div className="text-[#00F0FF] font-bold">{(l.beyond_tatva_hours || 0).toFixed(1)}h</div>
+                              <div className="px-4 pb-4 pt-2 border-t border-white/10 bg-black/40 space-y-3">
+                                {/* ONLY SHOW METRIC BOXES IF ACTUAL METRICS (> 0) EXIST */}
+                                {hasMetrics && (
+                                  <div className="grid grid-cols-3 gap-2 text-center font-mono text-xs">
+                                    <div className="p-2 rounded-lg bg-black/40 border border-[#00F0FF]/30">
+                                      <div className="text-[9px] text-muted uppercase">Beyond Tatva</div>
+                                      <div className="text-[#00F0FF] font-bold">{btNum.toFixed(1)}h</div>
+                                    </div>
+                                    <div className="p-2 rounded-lg bg-black/40 border border-[#22c55e]/30">
+                                      <div className="text-[9px] text-muted uppercase">Focused</div>
+                                      <div className="text-[#22c55e] font-bold">{focNum.toFixed(1)}h</div>
+                                    </div>
+                                    <div className="p-2 rounded-lg bg-black/40 border border-[#ef4444]/30">
+                                      <div className="text-[9px] text-muted uppercase">Unfocused</div>
+                                      <div className="text-[#ef4444] font-bold">{unfocNum.toFixed(1)}h</div>
+                                    </div>
                                   </div>
-                                  <div className="p-2 rounded-lg bg-black/40 border border-[#22c55e]/30">
-                                    <div className="text-[9px] text-muted uppercase">Focused</div>
-                                    <div className="text-[#22c55e] font-bold">{(l.focused_hours || 0).toFixed(1)}h</div>
-                                  </div>
-                                  <div className="p-2 rounded-lg bg-black/40 border border-[#ef4444]/30">
-                                    <div className="text-[9px] text-muted uppercase">Unfocused</div>
-                                    <div className="text-[#ef4444] font-bold">{((l.unfocused_hours ?? l.deep_execution_hours) || 0).toFixed(1)}h</div>
-                                  </div>
-                                </div>
-                                {l.notes && (
-                                  <div className="font-mono text-xs text-muted leading-relaxed whitespace-pre-line p-2.5 rounded-lg bg-black/30 border border-white/5">
-                                    {l.notes}
+                                )}
+
+                                {rawText && (
+                                  <div className="font-mono text-xs text-muted leading-relaxed whitespace-pre-line p-3 rounded-lg bg-black/50 border border-white/10 text-slate-200">
+                                    {rawText}
                                   </div>
                                 )}
                               </div>
