@@ -3,13 +3,13 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { isSpeakingRestDay } from '@/lib/utils/restDays'
 
-export const PROTOCOL_START_DATE = '2026-08-07'
+export const PROTOCOL_START_DATE = '2026-08-09'
 
 /**
  * Evaluates 3:00 AM cutoff auto-penalties for Journal and Speaking Practice.
  * Deadline: 3:00 AM of the NEXT calendar day.
  * 
- * Evaluation STRICTLY starts from PROTOCOL_START_DATE (2026-08-07).
+ * Evaluation STRICTLY starts from PROTOCOL_START_DATE (2026-08-09).
  * Any retroactive penalties prior to start date are automatically purged and refunded.
  */
 export async function evaluateProtocolAutoFail(userId) {

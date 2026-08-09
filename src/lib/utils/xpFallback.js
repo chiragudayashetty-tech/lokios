@@ -100,7 +100,7 @@ export async function cleanupAllDuplicateXP(userId) {
 
   if (!allHistory || allHistory.length === 0) return 0
 
-  const PROTOCOL_START_DATE = '2026-08-07'
+  const PROTOCOL_START_DATE = '2026-08-09'
   const seenKeys = new Set()
   const toDeleteIds = []
 
