@@ -147,6 +147,27 @@ export default function MissionControl() {
     return () => clearInterval(t)
   }, [])
 
+  // Instant cache loader from localStorage for zero-delay initial widget status
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user) return
+    const todayStr = getLocalDateStr(new Date())
+    const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+    try {
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed.eodWorkData) setEodWorkData(parsed.eodWorkData)
+        if (parsed.eodWellnessData) setEodWellnessData(parsed.eodWellnessData)
+        if (parsed.eodSpeakingData) setEodSpeakingData(parsed.eodSpeakingData)
+        if (parsed.todayScreenTime) setTodayScreenTime(parsed.todayScreenTime)
+        if (parsed.latestDebrief) setLatestDebrief(parsed.latestDebrief)
+        if (parsed.eodJournalLogged !== undefined) setEodJournalLogged(parsed.eodJournalLogged)
+      }
+    } catch (e) {
+      console.warn('Recon cache read error:', e)
+    }
+  }, [user])
+
   useEffect(() => {
     async function fetchMetrics() {
       if (!user) return
@@ -440,6 +461,18 @@ export default function MissionControl() {
           if (found) setEodSpeakingData({ logged: true, detail: `Topic: ${found.topic}` })
         }
       }
+
+      try {
+        const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+        localStorage.setItem(cacheKey, JSON.stringify({
+          eodWorkData: { logged: workLogged, hours: workHours },
+          eodWellnessData: { logged: wellnessLogged, detail: wellnessDetail },
+          eodSpeakingData: todaySpeakingLog ? { logged: true, detail: `Topic: ${todaySpeakingLog.topic}` } : { logged: false, detail: '' },
+          todayScreenTime: stLogs && stLogs.length > 0 ? stLogs[0] : null,
+          latestDebrief: debriefLogs && debriefLogs.length > 0 ? debriefLogs[0] : null,
+          eodJournalLogged: (entries || []).some(e => e.date === todayStr)
+        }))
+      } catch (e) {}
     }
     fetchMetrics()
 
