@@ -33,8 +33,8 @@ export const RANK_CONFIG = {
 export const XP_REWARDS = {
   task_complete: 10,
   habit_complete: 5,
-  journal_full: 30,
-  journal_partial: 15,
+  journal_full: 10,
+  journal_partial: 10,
   goal_complete_main: 100,
   goal_complete_side: 50,
   goal_complete_weekly: 30,

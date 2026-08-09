@@ -295,7 +295,7 @@ export default function JournalPage() {
                       <div className="flex items-center gap-2">
                         <Zap size={16} className="text-amber" />
                         <span className="font-mono text-xs text-muted">
-                          REWARD: <span className="text-amber font-bold">+30 XP</span>
+                          REWARD: <span className="text-amber font-bold">+10 XP</span>
                         </span>
                       </div>
                       <button type="submit" disabled={saving} className="btn btn-primary btn-lg flex items-center gap-2">

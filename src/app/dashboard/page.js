@@ -490,7 +490,7 @@ export default function MissionControl() {
     // Background DB sync
     const sb = createClient()
     await sb.from('journal_entries').insert(payload)
-    await robustAwardXP(user.id, 50, 'Daily Journal Entry Written')
+    await robustAwardXP(user.id, 10, 'Daily Journal Entry Written')
   }
 
   const submitEodWork = async (e) => {
