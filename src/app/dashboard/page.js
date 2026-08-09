@@ -1387,7 +1387,7 @@ export default function MissionControl() {
                       }
 
                       await updateDebriefWorkLog(gt.title, '[FAILED]')
-                      await robustAwardXP(user.id, -15, 'task_failed', stableSourceId, `Failed Priority Goal: ${gt.title}`, 'discipline')
+                      await robustAwardXP(user.id, -25, 'task_failed', stableSourceId, `Failed Priority Goal: ${gt.title}`, 'discipline')
 
                       await profile.fetchProfile()
                       if (fetchTasks) await fetchTasks()
@@ -1437,7 +1437,7 @@ export default function MissionControl() {
                                 <button
                                   type="button"
                                   onClick={handleMarkFailed}
-                                  title="Mark Failed (-15 XP)"
+                                  title="Mark Failed (-25 XP)"
                                   className="w-6 h-6 rounded flex items-center justify-center border border-danger/60 hover:bg-danger text-danger hover:text-white transition-all shrink-0"
                                 >
                                   <X size={13} strokeWidth={2.5} />
@@ -1458,7 +1458,7 @@ export default function MissionControl() {
                         {isDone ? (
                           <span className="font-mono text-[9px] text-success font-bold shrink-0 px-1.5 py-0.5 rounded bg-success/10 border border-success/30 whitespace-nowrap">DONE (+25 XP)</span>
                         ) : isFailed ? (
-                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-1.5 py-0.5 rounded bg-danger/10 border border-danger/30 whitespace-nowrap">FAILED (-15 XP)</span>
+                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-1.5 py-0.5 rounded bg-danger/10 border border-danger/30 whitespace-nowrap">FAILED (-25 XP)</span>
                         ) : (
                           <span className="font-mono text-[9px] text-amber shrink-0 font-semibold whitespace-nowrap">+25 XP</span>
                         )}
