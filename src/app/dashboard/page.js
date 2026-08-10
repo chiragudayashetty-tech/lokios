@@ -1096,16 +1096,19 @@ export default function MissionControl() {
               {/* Scheduled Operations / Tasks */}
               {todayTasksScheduled.map(task => {
                 const isDone = task.status === 'completed'
+                const titleText = typeof task.title === 'string' ? task.title : (task.title?.title || task.title?.name || 'Operation')
+                const isLongTitle = titleText.length > 35
+
                 return (
                   <div
                     key={task.id}
-                    className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                    className={`p-3 rounded-xl border transition-all flex items-start sm:items-center justify-between gap-3 ${
                       isDone 
                         ? 'bg-success/5 border-success/30' 
                         : 'bg-black/50 border-white/10 hover:border-amber/40'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
                       {/* Checkbox button */}
                       <button
                         type="button"
@@ -1114,7 +1117,7 @@ export default function MissionControl() {
                           else completeTask(task.id)
                         }}
                         title={isDone ? "Mark as Pending" : "Mark as Completed"}
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all mt-0.5 sm:mt-0 ${
                           isDone 
                             ? 'bg-success text-black border border-success' 
                             : 'border border-amber/60 hover:bg-amber/20 text-amber'
@@ -1124,10 +1127,14 @@ export default function MissionControl() {
                       </button>
 
                       <div className="min-w-0 flex-1">
-                        <div className={`font-mono text-xs font-bold leading-tight truncate ${isDone ? 'text-muted line-through opacity-60' : 'text-primary'}`}>
-                          {task.title}
+                        <div 
+                          className={`font-mono font-bold leading-snug break-words whitespace-normal ${
+                            isLongTitle ? 'text-[11px]' : 'text-xs'
+                          } ${isDone ? 'text-muted line-through opacity-60' : 'text-primary'}`}
+                        >
+                          {titleText}
                         </div>
-                        <div className="font-mono text-[9px] text-muted uppercase tracking-wider flex items-center gap-1.5 mt-1">
+                        <div className="font-mono text-[9px] text-muted uppercase tracking-wider flex items-center gap-1.5 mt-1 flex-wrap">
                           <span className="text-amber font-semibold">{task.category ? task.category.replace('_', ' ') : 'OPERATION'}</span>
                           {task.difficulty && <span className="text-secondary">• {task.difficulty}</span>}
                         </div>
@@ -1141,7 +1148,7 @@ export default function MissionControl() {
                         if (isDone) undoCompleteTask(task.id)
                         else completeTask(task.id)
                       }}
-                      className={`font-mono text-[9px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider shrink-0 transition-all whitespace-nowrap ${
+                      className={`font-mono text-[9px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider shrink-0 transition-all whitespace-nowrap self-center ${
                         isDone 
                           ? 'bg-success/20 text-success border border-success/40 hover:bg-success/30' 
                           : 'bg-amber/20 text-amber hover:bg-amber/30 border border-amber/40'
@@ -1157,21 +1164,24 @@ export default function MissionControl() {
               {todayCalendarEvents.map((evt, idx) => {
                 const evtId = evt.id || `evt-${idx}`
                 const isAttended = completedEventIds.has(evtId)
+                const titleText = evt.title || evt.summary || 'Calendar Event'
+                const isLongTitle = titleText.length > 35
+
                 return (
                   <div
                     key={evtId}
-                    className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                    className={`p-3 rounded-xl border transition-all flex items-start sm:items-center justify-between gap-3 ${
                       isAttended 
                         ? 'bg-cyan/5 border-cyan/30' 
                         : 'bg-black/50 border-white/10 hover:border-cyan/40'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
                       <button
                         type="button"
                         onClick={() => toggleEventCompleted(evtId)}
                         title={isAttended ? "Mark as Pending" : "Mark as Completed"}
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all mt-0.5 sm:mt-0 ${
                           isAttended 
                             ? 'bg-cyan text-black border border-cyan' 
                             : 'border border-cyan/60 hover:bg-cyan/20 text-cyan'
@@ -1181,13 +1191,17 @@ export default function MissionControl() {
                       </button>
 
                       <div className="min-w-0 flex-1">
-                        <div className={`font-mono text-xs font-bold leading-tight truncate ${isAttended ? 'text-muted line-through opacity-60' : 'text-primary'}`}>
-                          {evt.title}
+                        <div 
+                          className={`font-mono font-bold leading-snug break-words whitespace-normal ${
+                            isLongTitle ? 'text-[11px]' : 'text-xs'
+                          } ${isAttended ? 'text-muted line-through opacity-60' : 'text-primary'}`}
+                        >
+                          {titleText}
                         </div>
-                        <div className="font-mono text-[9px] text-muted flex items-center gap-1.5 mt-1">
-                          <Clock size={10} className="text-cyan" />
+                        <div className="font-mono text-[9px] text-muted flex items-center gap-1.5 mt-1 flex-wrap">
+                          <Clock size={10} className="text-cyan shrink-0" />
                           <span>{evt.start_time ? (evt.start_time.includes('T') ? evt.start_time.split('T')[1].slice(0, 5) : evt.start_time) : 'All Day'}</span>
-                          {evt.location && <span className="truncate">· {evt.location}</span>}
+                          {evt.location && <span className="break-words">· {evt.location}</span>}
                         </div>
                       </div>
                     </div>
@@ -1195,7 +1209,7 @@ export default function MissionControl() {
                     <button
                       type="button"
                       onClick={() => toggleEventCompleted(evtId)}
-                      className={`font-mono text-[9px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider shrink-0 transition-all whitespace-nowrap ${
+                      className={`font-mono text-[9px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider shrink-0 transition-all whitespace-nowrap self-center ${
                         isAttended 
                           ? 'bg-cyan/20 text-cyan border border-cyan/40 hover:bg-cyan/30' 
                           : 'bg-cyan/20 text-cyan hover:bg-cyan/30 border border-cyan/40'
@@ -1468,13 +1482,16 @@ export default function MissionControl() {
                       if (fetchTasks) await fetchTasks()
                     }
 
+                    const goalTitleText = typeof gt.title === 'string' ? gt.title : (gt.title?.title || gt.title?.name || 'Priority Goal')
+                    const isLongTitle = goalTitleText.length > 35
+
                     return (
-                      <div key={gt.id} className={`flex items-center justify-between gap-2 p-2.5 rounded bg-bg-primary border transition-all w-full max-w-full overflow-hidden ${
+                      <div key={gt.id} className={`flex items-start sm:items-center justify-between gap-2.5 p-2.5 rounded bg-bg-primary border transition-all w-full max-w-full overflow-hidden ${
                         isDone ? 'border-success/40 bg-success/5' : isFailed ? 'border-danger/40 bg-danger/5' : 'border-border-color'
                       }`}>
-                        <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0">
                           {/* Action Buttons */}
-                          <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex items-center gap-1 shrink-0 mt-0.5 sm:mt-0">
                             {isDone || isFailed ? (
                               <button
                                 type="button"
@@ -1505,22 +1522,24 @@ export default function MissionControl() {
                               </>
                             )}
                           </div>
-                          <span className={`font-mono text-xs truncate flex-1 min-w-0 transition-all ${
+                          <span className={`font-mono leading-snug break-words whitespace-normal flex-1 min-w-0 transition-all ${
+                            isLongTitle ? 'text-[11px]' : 'text-xs'
+                          } ${
                             isDone 
                               ? 'text-success line-through decoration-success font-medium opacity-90' 
                               : isFailed 
                               ? 'text-danger line-through decoration-danger font-medium opacity-90' 
                               : 'text-primary font-medium'
                           }`}>
-                            {gt.title}
+                            {goalTitleText}
                           </span>
                         </div>
                         {isDone ? (
-                          <span className="font-mono text-[9px] text-success font-bold shrink-0 px-1.5 py-0.5 rounded bg-success/10 border border-success/30 whitespace-nowrap">DONE (+25 XP)</span>
+                          <span className="font-mono text-[9px] text-success font-bold shrink-0 px-1.5 py-0.5 rounded bg-success/10 border border-success/30 whitespace-nowrap self-center">DONE (+25 XP)</span>
                         ) : isFailed ? (
-                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-1.5 py-0.5 rounded bg-danger/10 border border-danger/30 whitespace-nowrap">FAILED (-25 XP)</span>
+                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-1.5 py-0.5 rounded bg-danger/10 border border-danger/30 whitespace-nowrap self-center">FAILED (-25 XP)</span>
                         ) : (
-                          <span className="font-mono text-[9px] text-amber shrink-0 font-semibold whitespace-nowrap">+25 XP</span>
+                          <span className="font-mono text-[9px] text-amber shrink-0 font-semibold whitespace-nowrap self-center">+25 XP</span>
                         )}
                       </div>
                     )
