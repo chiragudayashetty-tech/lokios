@@ -12,7 +12,8 @@ import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
 import {
   BookOpen, Smile, Frown, Meh, Save, Zap, Flame, ShieldAlert,
-  CalendarDays, Trophy, CheckSquare, Target, ArrowRight, AlertTriangle
+  CalendarDays, Trophy, CheckSquare, Target, ArrowRight, AlertTriangle,
+  Pencil, ChevronLeft, ChevronRight, RotateCcw, X
 } from 'lucide-react'
 
 const MOODS = [
@@ -28,24 +29,23 @@ function RenderDebrief({ text }) {
   const sections = text.split('### ').filter(s => s.trim())
   return (
     <div className="space-y-6">
-      {sections.map((section, idx) => {
-        let title = '', content = section.trim()
-        const knownTitles = ['What went well?', 'Bottlenecks & Fails', 'Priorities for Next Week']
-        for (const kt of knownTitles) {
-          if (content.startsWith(kt)) { title = kt; content = content.substring(kt.length).trim(); break }
-        }
-        if (!title) { const lines = content.split('\n'); title = lines[0]; content = lines.slice(1).join('\n').trim() }
-        let colorClass = 'text-primary', Icon = ArrowRight
-        if (title.toLowerCase().includes('went well')) { colorClass = 'text-success'; Icon = Target }
-        else if (title.toLowerCase().includes('fail') || title.toLowerCase().includes('bottleneck')) { colorClass = 'text-danger'; Icon = AlertTriangle }
-        else if (title.toLowerCase().includes('priorit')) { colorClass = 'text-info'; Icon = ArrowRight }
+      {sections.map((sec, idx) => {
+        const lines = sec.split('\n')
+        const header = lines[0].trim()
+        const body = lines.slice(1).join('\n').trim()
+
+        let color = 'text-primary'
+        if (header.includes('What went well')) color = 'text-success'
+        if (header.includes('Bottlenecks')) color = 'text-danger'
+        if (header.includes('Priorities')) color = 'text-info'
+
         return (
-          <div key={idx} className="space-y-3">
-            <h4 className={`font-display tracking-widest uppercase flex items-center gap-2 ${colorClass}`}>
-              <Icon size={16} /> {title}
+          <div key={idx} className="space-y-2">
+            <h4 className={`font-mono text-sm font-bold uppercase tracking-wider ${color}`}>
+              {header}
             </h4>
-            <div className="font-mono text-sm text-secondary whitespace-pre-wrap pl-6 border-l-2 border-border-color ml-2 opacity-90 leading-relaxed">
-              {content || 'None recorded.'}
+            <div className="font-mono text-xs text-muted whitespace-pre-wrap leading-relaxed pl-3 border-l-2 border-border-color">
+              {body}
             </div>
           </div>
         )
@@ -88,21 +88,79 @@ export default function JournalPage() {
   const [historyLogs, setHistoryLogs] = useState([])
   const [expandedDebrief, setExpandedDebrief] = useState(null)
 
+  // Past Week Navigation & Edit State for Weekly Debriefs
+  const [debriefWeekOffset, setDebriefWeekOffset] = useState(0)
+  const [editingDebriefLog, setEditingDebriefLog] = useState(null)
+
+  const parseDebriefContent = (description = '') => {
+    let winsText = ''
+    let failsText = ''
+    let goal1 = ''
+    let goal2 = ''
+    let goal3 = ''
+
+    const winsIdx = description.indexOf('### What went well?')
+    const failsIdx = description.indexOf('### Bottlenecks & Fails')
+    const goalsIdx = description.indexOf('### Priorities for Next Week')
+
+    if (winsIdx !== -1) {
+      const endIdx = failsIdx !== -1 ? failsIdx : (goalsIdx !== -1 ? goalsIdx : description.length)
+      winsText = description.substring(winsIdx + '### What went well?'.length, endIdx).trim()
+    }
+
+    if (failsIdx !== -1) {
+      const endIdx = goalsIdx !== -1 ? goalsIdx : description.length
+      failsText = description.substring(failsIdx + '### Bottlenecks & Fails'.length, endIdx).trim()
+    }
+
+    if (goalsIdx !== -1) {
+      const goalsText = description.substring(goalsIdx + '### Priorities for Next Week'.length).trim()
+      const lines = goalsText.split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').replace(/\[DONE\]|\[FAILED\]/g, '').trim()).filter(Boolean)
+      if (lines[0]) goal1 = lines[0]
+      if (lines[1]) goal2 = lines[1]
+      if (lines[2]) goal3 = lines[2]
+    }
+
+    return { wins: winsText, fails: failsText, goal1, goal2, goal3 }
+  }
+
+  const handleStartEditDebrief = (log) => {
+    setEditingDebriefLog(log)
+    const parsed = parseDebriefContent(log.description)
+    setWins(parsed.wins)
+    setFails(parsed.fails)
+    setNextGoal1(parsed.goal1)
+    setNextGoal2(parsed.goal2)
+    setNextGoal3(parsed.goal3)
+    setShowDebriefHistory(false)
+  }
+
+  const handleCancelEditDebrief = () => {
+    setEditingDebriefLog(null)
+    setWins('')
+    setFails('')
+    setNextGoal1('')
+    setNextGoal2('')
+    setNextGoal3('')
+  }
+
   const getWordCount = (str) => {
     if (!str || !str.trim()) return 0
     return str.trim().split(/\s+/).length
   }
 
-  const handleGoalChange = (val, setter) => {
-    const words = val.trim().split(/\s+/)
-    if (words.length > 20) {
-      setter(words.slice(0, 20).join(' '))
-    } else {
-      setter(val)
-    }
-  }
-
   useEffect(() => { setEntryDate(getLocalDateStr()) }, [])
+
+  useEffect(() => {
+    if (editingDebriefLog) return
+    const targetDate = new Date()
+    targetDate.setDate(targetDate.getDate() + (debriefWeekOffset * 7))
+    const startOfWeek = getStartOfWeek(targetDate)
+    const endOfWeek = getEndOfWeek(targetDate)
+    const startStr = getLocalDateStr(startOfWeek)
+    const endStr = getLocalDateStr(endOfWeek)
+    setDateRange({ start: formatDate(startStr, 'MMM DD'), end: formatDate(endStr, 'MMM DD') })
+  }, [debriefWeekOffset, editingDebriefLog])
 
   useEffect(() => {
     if (!user || activeTab !== 'weekly') return
@@ -121,7 +179,6 @@ export default function JournalPage() {
     const endOfWeek = getEndOfWeek(today)
     const startStr = getLocalDateStr(startOfWeek)
     const endStr = getLocalDateStr(endOfWeek)
-    setDateRange({ start: formatDate(startStr, 'MMM DD'), end: formatDate(endStr, 'MMM DD') })
 
     Promise.all([
       supabase.from('xp_history').select('amount').eq('user_id', user.id).gte('created_at', startStr).lte('created_at', endStr + 'T23:59:59.999Z'),
@@ -175,56 +232,69 @@ export default function JournalPage() {
     const formattedGoals = goalsList.map((g, i) => `${i + 1}. ${g.trim()}`).join('\n')
     const formattedContent = `### What went well?\n${wins}\n\n### Bottlenecks & Fails\n${fails}\n\n### Priorities for Next Week\n${formattedGoals}`
     
-    const debriefTitle = `Weekly Debrief: ${dateRange.start} - ${dateRange.end}`
-    const newLog = {
-      id: 'debrief_' + Date.now(),
+    const debriefTitle = editingDebriefLog ? editingDebriefLog.title : `Weekly Debrief: ${dateRange.start} - ${dateRange.end}`
+    const targetLogId = editingDebriefLog ? editingDebriefLog.id : ('debrief_' + Date.now())
+
+    const logPayload = {
+      id: targetLogId,
       user_id: user.id,
       title: debriefTitle,
       type: 'project_work',
       description: formattedContent,
-      date: todayStr,
-      created_at: new Date().toISOString()
+      date: editingDebriefLog?.date || todayStr,
+      created_at: editingDebriefLog?.created_at || new Date().toISOString()
     }
 
     // 1. Immediately update local state & localStorage cache for zero delay
     setHistoryLogs(prev => {
-      const next = [newLog, ...prev.filter(l => l.title !== debriefTitle)]
+      const next = [logPayload, ...prev.filter(l => l.id !== targetLogId && l.title !== debriefTitle)]
       if (typeof window !== 'undefined') {
         localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
-        // Update dashboard status cache immediately!
-        const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
-        try {
-          const existingCache = localStorage.getItem(cacheKey)
-          const parsed = existingCache ? JSON.parse(existingCache) : {}
-          parsed.latestDebrief = newLog
-          localStorage.setItem(cacheKey, JSON.stringify(parsed))
-        } catch (errCache) {}
+        if (debriefWeekOffset === 0 || editingDebriefLog?.date === todayStr) {
+          const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+          try {
+            const existingCache = localStorage.getItem(cacheKey)
+            const parsed = existingCache ? JSON.parse(existingCache) : {}
+            parsed.latestDebrief = logPayload
+            localStorage.setItem(cacheKey, JSON.stringify(parsed))
+          } catch (errCache) {}
+        }
       }
       return next
     })
 
     try {
-      // 2. Insert into Supabase work_logs
-      const { data: inserted } = await supabase.from('work_logs').insert([{
-        user_id: user.id,
-        title: debriefTitle,
-        type: 'project_work',
-        description: formattedContent,
-        date: todayStr
-      }]).select()
+      // 2. Insert or Update Supabase work_logs
+      if (editingDebriefLog && editingDebriefLog.id && !editingDebriefLog.id.toString().startsWith('debrief_')) {
+        await supabase.from('work_logs').update({
+          description: formattedContent,
+          title: debriefTitle
+        }).eq('id', editingDebriefLog.id)
+      } else {
+        const { data: inserted } = await supabase.from('work_logs').insert([{
+          user_id: user.id,
+          title: debriefTitle,
+          type: 'project_work',
+          description: formattedContent,
+          date: logPayload.date
+        }]).select()
 
-      if (inserted && inserted.length > 0) {
-        setHistoryLogs(prev => {
-          const next = [inserted[0], ...prev.filter(l => l.title !== debriefTitle && l.id !== newLog.id)]
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
-          }
-          return next
-        })
+        if (inserted && inserted.length > 0) {
+          setHistoryLogs(prev => {
+            const next = [inserted[0], ...prev.filter(l => l.title !== debriefTitle && l.id !== targetLogId)]
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
+            }
+            return next
+          })
+        }
       }
 
       // 3. Deploy priority goals to tasks table for Command Center widget
-      const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
+      const targetDateObj = new Date()
+      targetDateObj.setDate(targetDateObj.getDate() + (debriefWeekOffset * 7))
+      const endOfWeekStr = getLocalDateStr(getEndOfWeek(targetDateObj))
+
       for (const goalText of goalsList) {
         const cleanTitle = typeof goalText === 'string' ? goalText.trim() : String(goalText)
         if (!cleanTitle) continue
@@ -239,8 +309,12 @@ export default function JournalPage() {
         }])
       }
 
-      await robustAwardXP(user.id, 5, 'weekly_review', todayStr, 'Weekly Review Completed', 'discipline')
+      if (!editingDebriefLog) {
+        await robustAwardXP(user.id, 5, 'weekly_review', todayStr, 'Weekly Review Completed', 'discipline')
+      }
+
       setWins(''); setFails(''); setNextGoal1(''); setNextGoal2(''); setNextGoal3('')
+      setEditingDebriefLog(null)
       setShowDebriefHistory(true)
     } catch (err) {
       console.error('Failed to save review:', err)
@@ -440,6 +514,51 @@ export default function JournalPage() {
 
                 {/* Form */}
                 <HudPanel label="WEEKLY DEBRIEF">
+                  {/* EDITING BANNER */}
+                  {editingDebriefLog && (
+                    <div className="p-3 bg-amber/15 border border-amber/40 rounded-xl flex items-center justify-between font-mono text-xs text-amber mb-4">
+                      <span className="font-bold flex items-center gap-2">
+                        <Pencil size={14} /> EDITING: {editingDebriefLog.title}
+                      </span>
+                      <button 
+                        type="button" 
+                        onClick={handleCancelEditDebrief} 
+                        className="px-2.5 py-1 rounded bg-black/40 text-white hover:bg-black/60 font-bold text-[10px] uppercase border border-white/10"
+                      >
+                        CANCEL EDIT
+                      </button>
+                    </div>
+                  )}
+
+                  {/* WEEK NAVIGATION BAR */}
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-black/40 border border-white/10 font-mono text-xs mb-4">
+                    <button
+                      type="button"
+                      onClick={() => { setEditingDebriefLog(null); setDebriefWeekOffset(w => w - 1); }}
+                      className="flex items-center gap-1 px-3 py-1 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] uppercase transition-all"
+                    >
+                      <ChevronLeft size={13} />
+                      <span>PREV WEEK</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <CalendarDays size={14} className="text-amber" />
+                      <span className="font-bold text-amber text-[11px] tracking-wider uppercase">
+                        {dateRange.start} – {dateRange.end} {debriefWeekOffset === 0 ? '(THIS WEEK)' : ''}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => { setEditingDebriefLog(null); setDebriefWeekOffset(w => Math.min(0, w + 1)); }}
+                      disabled={debriefWeekOffset >= 0}
+                      className="flex items-center gap-1 px-3 py-1 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] uppercase transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <span>NEXT WEEK</span>
+                      <ChevronRight size={13} />
+                    </button>
+                  </div>
+
                   <form onSubmit={handleSaveDebrief} className="space-y-6">
                     {/* Section 1: Wins */}
                     <div>
@@ -492,7 +611,7 @@ export default function JournalPage() {
                         <span className="font-mono text-xs text-muted">REWARD: <span className="text-amber font-bold">+5 XP on completion</span></span>
                       </div>
                       <button type="submit" disabled={savingDebrief} className="btn btn-primary btn-lg flex items-center gap-2">
-                        <Save size={18} />{savingDebrief ? 'SAVING...' : 'SEAL DEBRIEF'}
+                        <Save size={18} />{savingDebrief ? 'SAVING...' : (editingDebriefLog ? 'UPDATE DEBRIEF' : 'SEAL DEBRIEF')}
                       </button>
                     </div>
                   </form>
@@ -505,9 +624,22 @@ export default function JournalPage() {
                 ) : (
                   historyLogs.map(log => (
                     <HudPanel key={log.id} className="cursor-pointer" onClick={() => setExpandedDebrief(expandedDebrief === log.id ? null : log.id)}>
-                      <div className={`flex-between ${expandedDebrief === log.id ? 'mb-4 border-b border-border-color pb-2' : ''}`}>
-                        <span className="font-display text-base text-primary tracking-widest">{log.title}</span>
-                        <span className="font-mono text-xs text-muted">{log.date}</span>
+                      <div className={`flex items-center justify-between gap-3 ${expandedDebrief === log.id ? 'mb-4 border-b border-border-color pb-2' : ''}`}>
+                        <div>
+                          <span className="font-display text-base text-primary tracking-widest block">{log.title}</span>
+                          <span className="font-mono text-xs text-muted">{log.date}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleStartEditDebrief(log)
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber/15 border border-amber/40 hover:bg-amber/30 text-amber font-mono text-[10px] font-bold uppercase transition-all shrink-0"
+                        >
+                          <Pencil size={12} />
+                          <span>EDIT DEBRIEF</span>
+                        </button>
                       </div>
                       {expandedDebrief === log.id && (
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}>
