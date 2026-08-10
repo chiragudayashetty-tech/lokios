@@ -596,10 +596,10 @@ export default function JournalPage() {
                             </div>
                             <input 
                               type="text"
-                              className="input w-full font-mono text-xs py-2 px-3 bg-bg-primary border border-border-color focus:border-amber rounded"
+                              className="input w-full font-mono text-xs py-2 px-3 bg-bg-primary border border-border-color focus:border-amber rounded text-primary"
                               placeholder={item.placeholder}
-                              value={item.val}
-                              onChange={e => handleGoalChange(e.target.value, item.set)}
+                              value={item.val || ''}
+                              onChange={e => item.set(e.target.value)}
                             />
                           </div>
                         )
