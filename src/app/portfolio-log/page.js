@@ -8,12 +8,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/hooks/useProfile'
 import { useOS } from '@/lib/context/OSContext'
+import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, 
   Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText, Clock, 
   ChevronDown, ChevronUp, Trash2, BookOpen, Star, Sparkles, Search, Filter, Book,
-  Check, CheckSquare, Trophy, Printer, RefreshCw
+  Check, CheckSquare, Trophy, Printer, RefreshCw, Target, Flame
 } from 'lucide-react'
 
 export default function ProofOfWork() {
@@ -27,6 +28,19 @@ export default function ProofOfWork() {
   const [expandedLogId, setExpandedLogId] = useState(null)
   const [expandedBookId, setExpandedBookId] = useState(null)
   const [showAllResumeLogs, setShowAllResumeLogs] = useState(false)
+
+  // Dynamic Level & Rank Calculations
+  const userXp = profile?.total_xp || 0
+  const dynamicLevel = calculateLevel(userXp)
+  const dynamicRank = getRankForXp(userXp)
+
+  const completedMissions = useMemo(() => {
+    return goals.filter(g => g.status === 'completed' || g.completed_at)
+  }, [goals])
+
+  const ongoingMissions = useMemo(() => {
+    return goals.filter(g => g.status !== 'completed' && !g.completed_at && g.status !== 'cancelled')
+  }, [goals])
 
   // Executive Resume Bullet Point Parser (Strips raw markdown section headers)
   const parseResumeHighlights = (description) => {
@@ -91,7 +105,7 @@ export default function ProofOfWork() {
   const [logs, setLogs] = useState([])
   const [projects, setProjects] = useState([])
   const [books, setBooks] = useState([])
-  const [completedTasks, setCompletedTasks] = useState([])
+  const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(true)
 
   const [editingId, setEditingId] = useState(null)
@@ -136,12 +150,12 @@ export default function ProofOfWork() {
   const fetchData = async () => {
     const supabase = createClient()
     try {
-      const [logsRes, workHoursRes, projRes, booksRes, tasksRes] = await Promise.all([
+      const [logsRes, workHoursRes, projRes, booksRes, goalsRes] = await Promise.all([
         supabase.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
         supabase.from('work_hours_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
         supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('books_completed').select('*').eq('user_id', user.id).order('date_completed', { ascending: false }),
-        supabase.from('tasks').select('*').eq('user_id', user.id).eq('status', 'completed').order('completed_at', { ascending: false }).limit(20)
+        supabase.from('goals').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
       ])
 
       let combinedLogs = logsRes.data || []
@@ -165,7 +179,7 @@ export default function ProofOfWork() {
 
       setLogs(combinedLogs)
       if (projRes.data) setProjects(projRes.data)
-      if (tasksRes.data) setCompletedTasks(tasksRes.data)
+      if (goalsRes.data) setGoals(goalsRes.data)
       
       if (booksRes.data) {
         setBooks(booksRes.data)
@@ -1255,15 +1269,15 @@ export default function ProofOfWork() {
                 </p>
 
                 <div className="flex flex-wrap items-center justify-center gap-3 pt-2 font-mono text-xs text-muted">
-                  <span className="px-3 py-1 rounded-full bg-secondary border border-border-color text-primary font-bold">
-                    SAGA V: The King
+                  <span className="px-3 py-1 rounded-full bg-secondary border border-border-color font-bold" style={{ color: dynamicRank.color }}>
+                    {dynamicRank.name}
                   </span>
                   <span>•</span>
-                  <span className="text-cyan font-bold">LEVEL {profile?.level || 1}</span>
+                  <span className="text-cyan font-bold">LEVEL {dynamicLevel}</span>
                   <span>•</span>
-                  <span className="text-amber font-bold">{(profile?.total_xp || 0).toLocaleString()} XP</span>
+                  <span className="text-amber font-bold">{userXp.toLocaleString()} XP</span>
                   <span>•</span>
-                  <span className="text-success font-bold">{profile?.current_rank || 'E'} RANK</span>
+                  <span className="text-success font-bold">{dynamicRank.code} RANK</span>
                 </div>
               </div>
 
@@ -1271,19 +1285,19 @@ export default function ProofOfWork() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs text-center">
                 <div className="p-3 rounded-xl bg-tertiary border border-border-subtle">
                   <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Discipline Level</span>
-                  <span className="text-cyan font-display text-xl font-bold">LVL {profile?.level || 1}</span>
+                  <span className="text-cyan font-display text-xl font-bold">LVL {dynamicLevel}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-tertiary border border-border-subtle">
                   <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Total XP Earned</span>
-                  <span className="text-amber font-display text-xl font-bold">{(profile?.total_xp || 0).toLocaleString()}</span>
+                  <span className="text-amber font-display text-xl font-bold">{userXp.toLocaleString()}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-tertiary border border-border-subtle">
-                  <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Literature Completed</span>
-                  <span className="text-success font-display text-xl font-bold">{books.length} Books</span>
+                  <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Missions Completed</span>
+                  <span className="text-success font-display text-xl font-bold">{completedMissions.length} Finished</span>
                 </div>
                 <div className="p-3 rounded-xl bg-tertiary border border-border-subtle">
-                  <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Shipped Projects</span>
-                  <span className="text-primary font-display text-xl font-bold">{projects.length} Systems</span>
+                  <span className="text-muted text-[9px] uppercase tracking-wider block font-bold mb-1">Active Missions</span>
+                  <span className="text-info font-display text-xl font-bold">{ongoingMissions.length} Ongoing</span>
                 </div>
               </div>
 
@@ -1306,78 +1320,71 @@ export default function ProofOfWork() {
                 </div>
               </div>
 
-              {/* Parsed Executive Accomplishments (Replaces raw markdown text wall!) */}
+              {/* OPERATIONAL MISSIONS & STRATEGIC GOALS (COMPLETED & ONGOING) */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-border-color pb-2">
                   <h2 className="font-display text-lg uppercase tracking-wider text-amber flex items-center gap-2">
-                    <Briefcase size={18} /> OPERATIONAL MILESTONES & WEEKLY ACCOMPLISHMENTS
+                    <Target size={18} /> OPERATIONAL MISSIONS & STRATEGIC GOALS
                   </h2>
                   <span className="font-mono text-[10px] text-muted">
-                    {showAllResumeLogs ? `Showing All ${logs.length} Weeks` : `Recent Top ${Math.min(5, logs.length)} Weeks`}
+                    {completedMissions.length} Completed • {ongoingMissions.length} Ongoing
                   </span>
                 </div>
 
-                <div className="space-y-4">
-                  {(showAllResumeLogs ? logs : logs.slice(0, 5)).map(log => {
-                    const highlights = parseResumeHighlights(log.description || log.notes || '')
-                    
-                    return (
-                      <div key={log.id} className="p-4 rounded-xl bg-tertiary/70 border border-border-color space-y-2.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle/50 pb-2">
-                          <h3 className="font-mono text-sm font-bold text-primary uppercase">
-                            {log.title}
-                          </h3>
-                          {log.date && (
-                            <span className="font-mono text-[10px] text-amber font-semibold px-2 py-0.5 rounded bg-amber/10 border border-amber/30">
-                              {log.date}
-                            </span>
-                          )}
-                        </div>
-
-                        {highlights.length > 0 ? (
-                          <ul className="space-y-1.5 font-mono text-xs text-secondary pl-1">
-                            {highlights.map((point, pIdx) => (
-                              <li key={pIdx} className="flex items-start gap-2 leading-relaxed">
-                                <span className="text-success shrink-0 mt-0.5"><Check size={12} strokeWidth={3} /></span>
-                                <span>{point}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="font-mono text-xs text-secondary leading-relaxed">
-                            {log.description ? log.description.replace(/###/g, '').trim() : 'Executed operational directive with verified proof.'}
-                          </p>
-                        )}
-                      </div>
-                    )
-                  })}
-
-                  {logs.length === 0 && (
-                    <p className="font-mono text-xs text-muted text-center py-6">No operational debriefs logged yet.</p>
-                  )}
-                </div>
-
-                {/* RECENT COMPLETED OPERATIONS (LIVE SYNC FROM TASKS TABLE) */}
-                {completedTasks.length > 0 && (
-                  <div className="space-y-3 pt-4">
-                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-success border-b border-border-color pb-2 flex items-center gap-2">
-                      <CheckSquare size={14} /> RECENT FINISHED OPERATIONS & TASK VERIFICATIONS ({completedTasks.length})
+                {/* Section A: Active & Ongoing Missions */}
+                {ongoingMissions.length > 0 && (
+                  <div className="space-y-2.5">
+                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-info flex items-center gap-2">
+                      <Flame size={14} /> ACTIVE & ONGOING MISSIONS ({ongoingMissions.length})
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 font-mono text-xs">
-                      {completedTasks.map(t => (
-                        <div key={t.id} className="p-3 rounded-xl bg-tertiary border border-border-color/80 flex items-start justify-between gap-2">
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <div className="text-primary font-bold leading-snug break-words">{t.title}</div>
-                            <div className="text-muted text-[9px] uppercase flex items-center gap-2 flex-wrap">
-                              <span className="text-amber font-semibold">{t.category ? t.category.replace('_', ' ') : 'OPERATION'}</span>
-                              {t.completed_at && <span className="text-secondary">• {t.completed_at.slice(0, 10)}</span>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
+                      {ongoingMissions.map(g => (
+                        <div key={g.id} className="p-3.5 rounded-xl bg-tertiary border border-info/30 flex flex-col justify-between space-y-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-primary font-bold text-sm leading-snug">{g.title}</span>
+                              <span className="font-mono text-[9px] text-info font-bold px-2 py-0.5 rounded bg-info/10 border border-info/30 uppercase shrink-0">ONGOING</span>
                             </div>
+                            {g.description && <p className="text-muted text-xs line-clamp-2">{g.description}</p>}
                           </div>
-                          <span className="font-mono text-[9px] text-success font-bold px-2 py-0.5 rounded bg-success/10 border border-success/30 shrink-0 self-center">✓ DONE</span>
+                          <div className="flex items-center justify-between text-[10px] text-muted uppercase pt-1 border-t border-border-subtle/50">
+                            <span className="text-amber font-semibold">{g.type ? g.type.replace('_', ' ') : 'MISSION'}</span>
+                            {g.target_date && <span>Target: {g.target_date}</span>}
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
+                )}
+
+                {/* Section B: Completed Missions */}
+                {completedMissions.length > 0 && (
+                  <div className="space-y-2.5 pt-2">
+                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-success flex items-center gap-2">
+                      <Trophy size={14} /> COMPLETED MISSIONS & KEY MILESTONES ({completedMissions.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
+                      {completedMissions.map(g => (
+                        <div key={g.id} className="p-3.5 rounded-xl bg-tertiary border border-success/30 flex flex-col justify-between space-y-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-primary font-bold text-sm leading-snug">{g.title}</span>
+                              <span className="font-mono text-[9px] text-success font-bold px-2 py-0.5 rounded bg-success/10 border border-success/30 uppercase shrink-0">✓ COMPLETED</span>
+                            </div>
+                            {g.description && <p className="text-secondary text-xs line-clamp-2">{g.description}</p>}
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-muted uppercase pt-1 border-t border-border-subtle/50">
+                            <span className="text-amber font-semibold">{g.type ? g.type.replace('_', ' ') : 'MISSION'}</span>
+                            {g.completed_at && <span className="text-success">Achieved: {g.completed_at.slice(0, 10)}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ongoingMissions.length === 0 && completedMissions.length === 0 && (
+                  <p className="font-mono text-xs text-muted text-center py-6">No strategic missions logged yet.</p>
                 )}
               </div>
 
