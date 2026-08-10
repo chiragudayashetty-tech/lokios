@@ -34,23 +34,37 @@ export default function ProofOfWork() {
     const cleanText = description.replace(/\r\n/g, '\n')
     const highlights = []
 
+    const isSectionHeader = (str) => {
+      if (!str || str.trim().length < 4) return true
+      const lower = str.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
+      if (
+        lower === 'what went well' || 
+        lower === 'priorities for next week' || 
+        lower === 'bottlenecks  fails' || 
+        lower === 'bottlenecks fails' || 
+        lower === 'priorities'
+      ) return true
+      if (str.trim().startsWith('###')) return true
+      return false
+    }
+
     // Extract What Went Well / Achievements
     const wentWellMatch = cleanText.match(/###\s*What went well\??([\s\S]*?)(?=###|$)/i)
     if (wentWellMatch && wentWellMatch[1]) {
       const points = wentWellMatch[1]
         .split(/\n+/)
         .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^[\-\*\•]\s*/, '').trim())
-        .filter(s => s.length > 8 && !s.toLowerCase().startsWith('what went well'))
+        .filter(s => !isSectionHeader(s))
       highlights.push(...points)
     }
 
     // Extract Priorities / Key Wins
-    const prioritiesMatch = cleanText.match(/###\s*Priorities for Next Week[\s\S]*?(?=\n\n|$)/i)
-    if (prioritiesMatch && prioritiesMatch[0]) {
-      const points = prioritiesMatch[0]
-        .split('\n')
-        .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/\[DONE\]/g, '✓').replace(/\[FAILED\]/g, '').trim())
-        .filter(s => s.length > 8 && !s.startsWith('###'))
+    const prioritiesMatch = cleanText.match(/###\s*Priorities for Next Week([\s\S]*?)(?=###|$)/i)
+    if (prioritiesMatch && prioritiesMatch[1]) {
+      const points = prioritiesMatch[1]
+        .split(/\n+/)
+        .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^[\-\*\•]\s*/, '').replace(/\[DONE\]/g, '').replace(/\[FAILED\]/g, '').trim())
+        .filter(s => !isSectionHeader(s))
       highlights.push(...points)
     }
 
@@ -59,11 +73,11 @@ export default function ProofOfWork() {
       const cleanLines = cleanText
         .split(/\n+/)
         .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^[\-\*\•]\s*/, '').trim())
-        .filter(s => s.length > 8)
-      return cleanLines.slice(0, 4)
+        .filter(s => !isSectionHeader(s))
+      return cleanLines.slice(0, 5)
     }
 
-    return Array.from(new Set(highlights)).slice(0, 5)
+    return Array.from(new Set(highlights)).filter(s => !isSectionHeader(s)).slice(0, 6)
   }
 
   useEffect(() => {
@@ -77,6 +91,7 @@ export default function ProofOfWork() {
   const [logs, setLogs] = useState([])
   const [projects, setProjects] = useState([])
   const [books, setBooks] = useState([])
+  const [completedTasks, setCompletedTasks] = useState([])
   const [loading, setLoading] = useState(true)
 
   const [editingId, setEditingId] = useState(null)
@@ -121,11 +136,12 @@ export default function ProofOfWork() {
   const fetchData = async () => {
     const supabase = createClient()
     try {
-      const [logsRes, workHoursRes, projRes, booksRes] = await Promise.all([
+      const [logsRes, workHoursRes, projRes, booksRes, tasksRes] = await Promise.all([
         supabase.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
         supabase.from('work_hours_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
         supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('books_completed').select('*').eq('user_id', user.id).order('date_completed', { ascending: false })
+        supabase.from('books_completed').select('*').eq('user_id', user.id).order('date_completed', { ascending: false }),
+        supabase.from('tasks').select('*').eq('user_id', user.id).eq('status', 'completed').order('completed_at', { ascending: false }).limit(20)
       ])
 
       let combinedLogs = logsRes.data || []
@@ -149,6 +165,7 @@ export default function ProofOfWork() {
 
       setLogs(combinedLogs)
       if (projRes.data) setProjects(projRes.data)
+      if (tasksRes.data) setCompletedTasks(tasksRes.data)
       
       if (booksRes.data) {
         setBooks(booksRes.data)
@@ -1339,6 +1356,29 @@ export default function ProofOfWork() {
                     <p className="font-mono text-xs text-muted text-center py-6">No operational debriefs logged yet.</p>
                   )}
                 </div>
+
+                {/* RECENT COMPLETED OPERATIONS (LIVE SYNC FROM TASKS TABLE) */}
+                {completedTasks.length > 0 && (
+                  <div className="space-y-3 pt-4">
+                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-success border-b border-border-color pb-2 flex items-center gap-2">
+                      <CheckSquare size={14} /> RECENT FINISHED OPERATIONS & TASK VERIFICATIONS ({completedTasks.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 font-mono text-xs">
+                      {completedTasks.map(t => (
+                        <div key={t.id} className="p-3 rounded-xl bg-tertiary border border-border-color/80 flex items-start justify-between gap-2">
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="text-primary font-bold leading-snug break-words">{t.title}</div>
+                            <div className="text-muted text-[9px] uppercase flex items-center gap-2 flex-wrap">
+                              <span className="text-amber font-semibold">{t.category ? t.category.replace('_', ' ') : 'OPERATION'}</span>
+                              {t.completed_at && <span className="text-secondary">• {t.completed_at.slice(0, 10)}</span>}
+                            </div>
+                          </div>
+                          <span className="font-mono text-[9px] text-success font-bold px-2 py-0.5 rounded bg-success/10 border border-success/30 shrink-0 self-center">✓ DONE</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Literature & Knowledge Intake (Books Completed) */}
