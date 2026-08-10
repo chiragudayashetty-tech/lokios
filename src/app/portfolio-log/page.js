@@ -121,13 +121,33 @@ export default function ProofOfWork() {
   const fetchData = async () => {
     const supabase = createClient()
     try {
-      const [logsRes, projRes, booksRes] = await Promise.all([
+      const [logsRes, workHoursRes, projRes, booksRes] = await Promise.all([
         supabase.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+        supabase.from('work_hours_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
         supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('books_completed').select('*').eq('user_id', user.id).order('date_completed', { ascending: false })
       ])
 
-      if (logsRes.data) setLogs(logsRes.data)
+      let combinedLogs = logsRes.data || []
+      if (workHoursRes.data && workHoursRes.data.length > 0) {
+        const mappedHours = workHoursRes.data.map(h => ({
+          id: `wh_${h.id}`,
+          title: `Work Session (${h.work_type || 'General'}: ${h.hours}h)`,
+          description: h.notes || `Logged ${h.hours}h focused work. Focused: ${h.focused_hours || h.hours}h, Beyond Tatva: ${h.beyond_tatva_hours || 0}h.`,
+          type: 'project_work',
+          date: h.date,
+          created_at: h.created_at
+        }))
+        
+        const map = new Map()
+        combinedLogs.forEach(l => map.set(l.id, l))
+        mappedHours.forEach(h => {
+          if (!map.has(h.id)) map.set(h.id, h)
+        })
+        combinedLogs = Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      }
+
+      setLogs(combinedLogs)
       if (projRes.data) setProjects(projRes.data)
       
       if (booksRes.data) {
@@ -227,6 +247,9 @@ export default function ProofOfWork() {
     }
   }
 
+  const [editingProjectId, setEditingProjectId] = useState(null)
+  const [editProjForm, setEditProjForm] = useState({})
+
   const handleCreateProject = async (e) => {
     e.preventDefault()
     if (!newProj.title.trim()) return
@@ -243,6 +266,39 @@ export default function ProofOfWork() {
       setProjects([data[0], ...projects])
       setShowAddProject(false)
       setNewProj({ title: '', description: '', status: 'active', tech_stack: '' })
+    }
+  }
+
+  const startEditProject = (proj) => {
+    setEditingProjectId(proj.id)
+    setEditProjForm({
+      title: proj.title || '',
+      description: proj.description || '',
+      status: proj.status || 'active',
+      tech_stack: Array.isArray(proj.tech_stack) ? proj.tech_stack.join(', ') : (proj.tech_stack || '')
+    })
+  }
+
+  const saveEditProject = async (id) => {
+    const supabase = createClient()
+    const updatedStack = (editProjForm.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean)
+    const payload = {
+      title: editProjForm.title,
+      description: editProjForm.description,
+      status: editProjForm.status,
+      tech_stack: updatedStack
+    }
+
+    await supabase.from('projects').update(payload).eq('id', id)
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...payload } : p))
+    setEditingProjectId(null)
+  }
+
+  const handleDeleteProject = async (id, title) => {
+    if (confirm(`Are you sure you want to delete project "${title || 'this project'}"?`)) {
+      const supabase = createClient()
+      await supabase.from('projects').delete().eq('id', id)
+      setProjects(prev => prev.filter(p => p.id !== id))
     }
   }
 
@@ -1008,28 +1064,111 @@ export default function ProofOfWork() {
             </AnimatePresence>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {projects.map((proj) => (
-                <div key={proj.id} className="bg-tertiary border border-border-color p-5 hover:border-info transition-colors flex-col h-full group">
-                  <div className="flex-between mb-3">
-                    <h3 className="font-display text-2xl uppercase tracking-wider text-primary group-hover:text-info transition-colors">{proj.title}</h3>
-                    <span className={`badge ${proj.status === 'active' ? 'badge-amber' : proj.status === 'completed' ? 'badge-success' : ''}`}>
-                      {String(proj.status || 'UNKNOWN').toUpperCase()}
-                    </span>
+              {projects.map((proj) => {
+                const isEditing = editingProjectId === proj.id
+                return (
+                  <div key={proj.id} className="bg-tertiary border border-border-color p-5 hover:border-info transition-colors flex flex-col justify-between h-full group rounded-xl">
+                    {isEditing ? (
+                      <form onSubmit={(e) => { e.preventDefault(); saveEditProject(proj.id); }} className="space-y-3">
+                        <div>
+                          <label className="font-mono text-[10px] text-amber uppercase font-bold block mb-1">Project Title</label>
+                          <input
+                            type="text"
+                            className="input w-full font-mono text-xs py-1.5 px-2 bg-bg-primary border border-border-color"
+                            value={editProjForm.title}
+                            onChange={e => setEditProjForm({ ...editProjForm, title: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="font-mono text-[10px] text-amber uppercase font-bold block mb-1">Status</label>
+                          <select
+                            className="select w-full font-mono text-xs py-1.5 px-2 bg-bg-primary border border-border-color"
+                            value={editProjForm.status}
+                            onChange={e => setEditProjForm({ ...editProjForm, status: e.target.value })}
+                          >
+                            <option value="idea">IDEA</option>
+                            <option value="active">ACTIVE</option>
+                            <option value="paused">PAUSED</option>
+                            <option value="completed">COMPLETED</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="font-mono text-[10px] text-amber uppercase font-bold block mb-1">Description</label>
+                          <textarea
+                            className="textarea w-full font-mono text-xs py-1.5 px-2 bg-bg-primary border border-border-color h-16"
+                            value={editProjForm.description}
+                            onChange={e => setEditProjForm({ ...editProjForm, description: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="font-mono text-[10px] text-amber uppercase font-bold block mb-1">Tech Stack (comma separated)</label>
+                          <input
+                            type="text"
+                            className="input w-full font-mono text-xs py-1.5 px-2 bg-bg-primary border border-border-color"
+                            value={editProjForm.tech_stack}
+                            onChange={e => setEditProjForm({ ...editProjForm, tech_stack: e.target.value })}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button type="submit" className="btn btn-primary btn-xs font-mono font-bold flex items-center gap-1">
+                            <Save size={12} /> SAVE
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingProjectId(null)}
+                            className="btn btn-secondary btn-xs font-mono font-bold text-muted"
+                          >
+                            CANCEL
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <h3 className="font-display text-2xl uppercase tracking-wider text-primary group-hover:text-info transition-colors">{proj.title}</h3>
+                            <span className={`badge ${proj.status === 'active' ? 'badge-amber' : proj.status === 'completed' ? 'badge-success' : 'badge-ghost'}`}>
+                              {String(proj.status || 'UNKNOWN').toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="font-mono text-sm text-secondary mb-4">{proj.description}</p>
+                        </div>
+
+                        <div className="space-y-3 mt-auto pt-3 border-t border-border-subtle/50">
+                          {Array.isArray(proj.tech_stack) && proj.tech_stack.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {proj.tech_stack.map((tech, idx) => (
+                                <span key={idx} className="font-mono text-[10px] text-muted bg-bg-primary px-2 py-0.5 border border-border-strong rounded">
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between pt-2 border-t border-border-subtle/40 font-mono text-[10px]">
+                            <button
+                              type="button"
+                              onClick={() => startEditProject(proj)}
+                              className="text-muted hover:text-amber transition-colors flex items-center gap-1 font-bold"
+                            >
+                              <Edit2 size={11} /> EDIT PROJECT
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProject(proj.id, proj.title)}
+                              className="text-danger/70 hover:text-danger transition-colors flex items-center gap-1 font-bold"
+                            >
+                              <Trash2 size={11} /> DELETE
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <p className="font-mono text-sm text-secondary mb-4 flex-1">{proj.description}</p>
-                  
-                  {Array.isArray(proj.tech_stack) && proj.tech_stack.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-auto">
-                      {proj.tech_stack.map((tech, idx) => (
-                        <span key={idx} className="font-mono text-[10px] text-muted bg-bg-primary px-2 py-1 border border-border-strong">
-                          {tech}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {projects.length === 0 && <div className="font-mono text-sm text-muted col-span-2 py-8 text-center">NO PROJECTS ARCHIVED.</div>}
+                )
+              })}
+              {projects.length === 0 && <div className="font-mono text-sm text-muted col-span-2 py-8 text-center border border-dashed border-border-color rounded-xl">NO PROJECTS ARCHIVED YET.</div>}
             </div>
           </div>
         )}
@@ -1060,11 +1199,17 @@ export default function ProofOfWork() {
 
                 <button
                   type="button"
-                  onClick={fetchData}
-                  className="p-2 rounded-lg border border-border-color bg-secondary hover:bg-hover text-secondary transition-colors"
-                  title="Refresh Intel Data"
+                  onClick={async () => {
+                    setLoading(true)
+                    await fetchData()
+                    setXpToast('✨ Live Executive Resume Re-Generated with Latest Intel')
+                    setTimeout(() => setXpToast(null), 3500)
+                  }}
+                  className="px-3.5 py-2 rounded-lg border border-amber/40 bg-amber/15 hover:bg-amber/30 text-amber font-mono text-xs uppercase font-bold transition-all flex items-center gap-1.5"
+                  title="Re-aggregate all projects, debriefs, and work sessions into resume"
                 >
-                  <RefreshCw size={14} />
+                  <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                  <span>RE-GENERATE RESUME</span>
                 </button>
 
                 <button
