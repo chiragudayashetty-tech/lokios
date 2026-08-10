@@ -13,7 +13,7 @@ import {
   Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, 
   Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText, Clock, 
   ChevronDown, ChevronUp, Trash2, BookOpen, Star, Sparkles, Search, Filter, Book,
-  Check, Trophy, Printer, RefreshCw
+  Check, CheckSquare, Trophy, Printer, RefreshCw
 } from 'lucide-react'
 
 export default function ProofOfWork() {
