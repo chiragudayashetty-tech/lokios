@@ -660,13 +660,13 @@ export default function XPDashboard() {
                 return (
                   <div 
                     key={item.id} 
-                    className="px-4 py-3.5 hover:bg-white/[0.04] transition-colors flex items-center justify-between gap-4 font-mono border-b border-border-color/60"
+                    className="px-4 py-3.5 hover:bg-white/[0.04] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 font-mono border-b border-border-color/60"
                   >
-                    {/* Left Details: Dot + Timestamp + Description + Category + Source */}
-                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                    {/* Left & Main Content Block */}
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                       {/* Indicator Dot */}
                       <div 
-                        className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                        className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 sm:mt-0 ${
                           isPositive 
                             ? 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
                             : isNegative 
@@ -675,33 +675,37 @@ export default function XPDashboard() {
                         }`} 
                       />
 
-                      {/* Date & Time Timestamp */}
-                      <span className="text-muted/80 text-xs shrink-0 whitespace-nowrap font-medium">
-                        {dateStr} <span className="text-amber/80 font-bold">{timeStr}</span>
-                      </span>
-
-                      {/* Description */}
-                      <span className="text-primary font-bold text-sm truncate min-w-0">
-                        {typeof item.description === 'string' ? item.description : 'XP Event Logged'}
-                      </span>
-
-                      {/* Category Badge */}
-                      <span className="text-[10px] px-2 py-0.5 rounded uppercase border bg-bg-tertiary border-border-color text-amber font-bold tracking-wider shrink-0 hidden sm:inline-block">
-                        {item.stat_category || 'GENERAL'}
-                      </span>
-
-                      {/* Source Badge */}
-                      {item.source_type && (
-                        <span className="text-[10px] px-2 py-0.5 rounded text-muted bg-white/5 border border-white/10 shrink-0 hidden md:inline-block">
-                          {item.source_type}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 min-w-0 flex-1">
+                        {/* LINE 1 ON PHONE: Task / Activity Description */}
+                        <span className="text-primary font-bold text-sm leading-snug break-words whitespace-normal">
+                          {typeof item.description === 'string' ? item.description : 'XP Event Logged'}
                         </span>
-                      )}
+
+                        {/* LINE 2 ON PHONE: Date & Time + Badges */}
+                        <div className="flex items-center flex-wrap gap-2 text-[11px] sm:text-xs text-muted/80">
+                          <span className="font-medium whitespace-nowrap">
+                            {dateStr} <span className="text-amber/80 font-bold">{timeStr}</span>
+                          </span>
+
+                          {/* Category Badge */}
+                          <span className="text-[9px] px-2 py-0.5 rounded uppercase border bg-bg-tertiary border-border-color text-amber font-bold tracking-wider shrink-0">
+                            {item.stat_category || 'GENERAL'}
+                          </span>
+
+                          {/* Source Badge */}
+                          {item.source_type && (
+                            <span className="text-[9px] px-2 py-0.5 rounded text-muted bg-white/5 border border-white/10 shrink-0">
+                              {item.source_type}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Right XP Amount Pill */}
-                    <div className="shrink-0">
+                    <div className="shrink-0 self-end sm:self-center pt-1 sm:pt-0">
                       <span 
-                        className={`text-sm font-extrabold px-3 py-1 rounded-lg border shadow-md ${
+                        className={`text-xs sm:text-sm font-extrabold px-3 py-1 rounded-lg border shadow-md font-mono ${
                           isPositive 
                             ? 'bg-success/15 border-success/40 text-success' 
                             : isNegative 
