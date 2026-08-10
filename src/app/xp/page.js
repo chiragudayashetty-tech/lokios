@@ -224,93 +224,50 @@ export default function XPDashboard() {
         </header>
 
         {/* Level Up Banner / Core Stats */}
-        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8 relative overflow-hidden">
+        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-6 sm:mb-8 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-bg-tertiary to-transparent z-0" />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 opacity-15 blur-[120px] pointer-events-none" style={{ background: currentRank.color }} />
           
-          <HudPanel className="relative z-10 p-8 md:p-10 flex flex-col items-center text-center" style={{ borderColor: `${currentRank.color}50` }}>
+          <HudPanel className="relative z-10 p-5 sm:p-8 flex flex-col items-center text-center space-y-6" style={{ borderColor: `${currentRank.color}50` }}>
             
-            {/* Glowing Progress Wave */}
-            <div className="relative w-full max-w-2xl mb-2" style={{ height: '160px' }}>
+            {/* Clean Top Header Card (NO CIRCLES OR SVG WAVES) */}
+            <div className="w-full max-w-2xl text-center space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/40 border border-white/10 font-mono text-[10px] sm:text-xs text-muted uppercase font-bold tracking-widest">
+                <span>SAGA {currentRank.code}</span>
+                <span>•</span>
+                <span style={{ color: currentRank.color }}>LEVEL {currentLevel}</span>
+              </div>
 
-              {/* The wave SVG */}
-              <svg
-                className="absolute inset-0 w-full h-full"
-                viewBox="0 0 600 160"
-                preserveAspectRatio="xMidYMid meet"
-              >
-                <defs>
-                  <linearGradient id="waveGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={currentRank.color} stopOpacity="0.30" />
-                    <stop offset="100%" stopColor={currentRank.color} stopOpacity="0" />
-                  </linearGradient>
-                  <filter id="glowDot" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="5" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                  <filter id="lineGlow" x="-20%" y="-100%" width="140%" height="300%">
-                    <feGaussianBlur stdDeviation="3" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-
-                {/* Fill area under curve */}
-                <motion.path
-                  d="M0,140 C80,140 160,135 230,115 C280,100 310,60 340,28 C360,12 380,20 410,55 C450,100 510,138 600,140 L600,160 L0,160 Z"
-                  fill="url(#waveGrad)"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 1.2 }}
-                />
-
-                {/* Main curve line */}
-                <motion.path
-                  d="M0,140 C80,140 160,135 230,115 C280,100 310,60 340,28 C360,12 380,20 410,55 C450,100 510,138 600,140"
-                  fill="none"
-                  stroke={currentRank.color}
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  filter="url(#lineGlow)"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                />
-              </svg>
-            </div>
-
-            <div className="relative z-10 mt-2">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-1">
-                SAGA {currentRank.code} · LEVEL {currentLevel}
-              </span>
-              <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-primary mb-2">
+              <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-primary uppercase">
                 {currentRank.name}
               </h2>
-              <div className="font-mono text-sm mb-5 flex items-center justify-center gap-2" style={{ color: currentRank.color }}>
-                <span className="font-bold text-2xl">{totalXp.toLocaleString()}</span>
-                <span className="text-muted font-normal">XP TOTAL</span>
+
+              {/* Main XP Counter */}
+              <div className="flex items-center justify-center gap-2.5 pt-1">
+                <span className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight" style={{ color: currentRank.color }}>
+                  {totalXp.toLocaleString()}
+                </span>
+                <span className="font-mono text-xs sm:text-sm text-muted font-bold tracking-widest uppercase">
+                  TOTAL XP
+                </span>
               </div>
             </div>
 
             {/* Level Progress Card */}
-            <div className="w-full max-w-2xl bg-black/40 border border-white/10 rounded-2xl p-5 shadow-2xl backdrop-blur-md mb-6 text-left">
-              <div className="flex items-center justify-between mb-2">
+            <div className="w-full max-w-2xl bg-black/40 border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl backdrop-blur-md text-left space-y-3">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0" style={{ background: `${currentRank.color}20`, border: `1px solid ${currentRank.color}40` }}>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
                       <path d="M12 2L22 12L12 22L2 12L12 2Z" fill={currentRank.color} />
                     </svg>
                   </div>
-                  <span className="font-display text-base font-bold text-white">Level {currentLevel}</span>
+                  <span className="font-display text-sm sm:text-base font-bold text-white">Level {currentLevel}</span>
                 </div>
                 <span className="font-mono text-xs font-bold text-muted tracking-wider">{current} / {required} XP</span>
               </div>
 
-              <div className="mb-3">
+              <div>
                 <TacticalProgress value={progressPct} height={8} showValue={false} color={currentRank.color} />
               </div>
 
@@ -320,16 +277,16 @@ export default function XPDashboard() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
-              <div className="bg-bg-tertiary border border-border-color p-4 rounded-xl flex flex-col items-center text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full max-w-2xl">
+              <div className="bg-bg-tertiary border border-border-color p-3.5 sm:p-4 rounded-xl flex flex-col items-center text-center">
                 <span className="font-display text-2xl text-success font-bold">{positiveCount}</span>
                 <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">POSITIVE ACTIONS</span>
               </div>
-              <div className="bg-bg-tertiary border border-border-color p-4 rounded-xl flex flex-col items-center text-center">
+              <div className="bg-bg-tertiary border border-border-color p-3.5 sm:p-4 rounded-xl flex flex-col items-center text-center">
                 <span className="font-display text-2xl text-danger font-bold">{deductionCount}</span>
                 <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">SUBTRACTIONS & PENALTIES</span>
               </div>
-              <div className="bg-bg-tertiary border border-border-color p-4 rounded-xl flex flex-col items-center text-center">
+              <div className="bg-bg-tertiary border border-border-color p-3.5 sm:p-4 rounded-xl flex flex-col items-center text-center">
                 <span className="font-display text-2xl text-info font-bold">{daysTracked}</span>
                 <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">DAYS TRACKED</span>
               </div>
@@ -646,8 +603,8 @@ export default function XPDashboard() {
               </div>
             </div>
 
-            {/* Timeline Stream */}
-            <div className="flex flex-col gap-0 max-h-[650px] overflow-y-auto pr-2 divide-y divide-border-color">
+            {/* Timeline Stream (Smooth natural scroll on phone, fixed container on desktop) */}
+            <div className="flex flex-col gap-0 sm:max-h-[650px] sm:overflow-y-auto touch-pan-y divide-y divide-border-color">
               {filteredTimeline.map((item) => {
                 const isPositive = item.amount > 0
                 const isNegative = item.amount < 0
