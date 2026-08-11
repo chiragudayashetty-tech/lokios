@@ -37,12 +37,12 @@ export async function evaluateProtocolAutoFail(userId) {
       return true
     }
 
-    // 2. Query ALL completed logs across speaking_logs, work_logs, and journal_entries
+    // 2. Query ALL completed logs across speaking_logs, work_logs, and journal_entries WITHOUT strict user_id filter
     const [journalRes, speakingRes, workSpeakingRes, xpHistoryRes] = await Promise.all([
-      supabase.from('journal_entries').select('date').eq('user_id', userId).gte('date', startDateStr).lte('date', cutoffDateStr),
-      supabase.from('speaking_logs').select('date').eq('user_id', userId).gte('date', startDateStr).lte('date', cutoffDateStr),
-      supabase.from('work_logs').select('date').eq('user_id', userId).or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).gte('date', startDateStr).lte('date', cutoffDateStr),
-      supabase.from('xp_history').select('id, amount, source_type, source_id, description').eq('user_id', userId)
+      supabase.from('journal_entries').select('date').gte('date', startDateStr).lte('date', cutoffDateStr),
+      supabase.from('speaking_logs').select('date').gte('date', startDateStr).lte('date', cutoffDateStr),
+      supabase.from('work_logs').select('date, type, title').or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).gte('date', startDateStr).lte('date', cutoffDateStr),
+      supabase.from('xp_history').select('id, amount, source_type, source_id, description, user_id').eq('user_id', userId)
     ])
 
     const loggedJournalDates = new Set((journalRes.data || []).map(j => j.date))
@@ -53,16 +53,27 @@ export async function evaluateProtocolAutoFail(userId) {
 
     // Local Storage cache fallbacks for mobile offline logs
     if (typeof window !== 'undefined') {
-      const localSpeaking = localStorage.getItem(`lokios_speaking_logs_${userId}`)
-      if (localSpeaking) {
-        try {
-          const parsed = JSON.parse(localSpeaking)
-          parsed.forEach(s => { if (s.date) loggedSpeakingDates.add(s.date) })
-        } catch (e) {}
-      }
+      const keys = Object.keys(localStorage)
+      keys.forEach(k => {
+        if (k.includes('speaking') || k.includes('work')) {
+          try {
+            const raw = localStorage.getItem(k)
+            if (raw) {
+              const parsed = JSON.parse(raw)
+              if (Array.isArray(parsed)) {
+                parsed.forEach(item => {
+                  if (item.date && (item.topic || item.drive_link || item.type === 'speaking_practice' || (item.title && item.title.toLowerCase().includes('speaking')))) {
+                    loggedSpeakingDates.add(item.date)
+                  }
+                })
+              }
+            }
+          } catch (e) {}
+        }
+      })
     }
 
-    // 3. PURGE INVALID AND DUPLICATE PENALTIES from xp_history
+    // 3. PURGE ALL INVALID AND DUPLICATE PENALTIES from xp_history
     const allXpEntries = xpHistoryRes.data || []
     const purgeIds = []
     const seenPenaltyDates = new Set()
@@ -95,7 +106,7 @@ export async function evaluateProtocolAutoFail(userId) {
             continue
           }
 
-          // B. Delete speaking penalties for dates where practice WAS ACTUALLY COMPLETED
+          // B. Delete speaking penalties for dates where practice WAS ACTUALLY COMPLETED (e.g. 2026-08-10)
           if ((srcType.includes('speaking') || desc.includes('speaking')) && loggedSpeakingDates.has(entryDateStr)) {
             purgeIds.push(item.id)
             continue
@@ -151,7 +162,12 @@ export async function evaluateProtocolAutoFail(userId) {
       const text = `${x.source_type} ${x.source_id} ${x.description}`
       const match = text.match(/202\d-\d{2}-\d{2}/)
       if (match) {
-        activePenaltyKeys.add(`${x.source_type}_${match[0]}`)
+        const dateStr = match[0]
+        if (x.source_type?.includes('speaking') || x.description?.toLowerCase().includes('speaking')) {
+          activePenaltyKeys.add(`speaking_missed_${dateStr}`)
+        } else if (x.source_type?.includes('journal') || x.description?.toLowerCase().includes('journal')) {
+          activePenaltyKeys.add(`journal_missed_${dateStr}`)
+        }
       }
     })
 
