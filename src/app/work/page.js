@@ -410,65 +410,66 @@ export default function WorkPage() {
     setWorkLogs(updated)
     if (typeof window !== 'undefined') localStorage.setItem('lokios_work_logs_cache', JSON.stringify(updated))
 
-    // Sync to Supabase in both work_hours_logs and work_logs
+    // Sync to Supabase in both work_hours_logs and work_logs with clean column payloads
     try {
       const sb = createClient()
       
-      // 1. Upsert work_hours_logs
-      const { data: existingHours } = await sb
-        .from('work_hours_logs')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('date', selectedDate)
-        .limit(1)
+      const cleanWorkHoursData = {
+        user_id: user.id,
+        date: selectedDate,
+        hours: payload.total_hours_worked || 0,
+        duration_hours: payload.total_hours_worked || 0,
+        focused_hours: payload.focused_hours || 0,
+        beyond_tatva_hours: payload.beyond_tatva_hours || 0,
+        unfocused_hours: payload.unfocused_hours || 0,
+        notes: payload.notes || '',
+        work_type: payload.work_type || 'General'
+      }
 
-      if (existingHours && existingHours.length > 0) {
-        await sb.from('work_hours_logs').update({
-          total_hours_worked: payload.total_hours_worked,
-          beyond_tatva_hours: payload.beyond_tatva_hours,
-          focused_hours: payload.focused_hours,
-          unfocused_hours: payload.unfocused_hours,
-          deep_execution_hours: payload.deep_execution_hours,
-          notes: payload.notes,
-          work_type: payload.work_type
-        }).eq('id', existingHours[0].id)
-      } else {
-        await sb.from('work_hours_logs').insert(payload)
+      const cleanWorkLogData = {
+        user_id: user.id,
+        date: selectedDate,
+        title: `Work Session (${payload.work_type || 'General'}: ${payload.total_hours_worked || 0}h)`,
+        description: payload.notes || `Logged ${payload.total_hours_worked || 0}h focused work.`,
+        type: 'project_work',
+        duration_hours: payload.total_hours_worked || 0,
+        notes: payload.notes || ''
+      }
+
+      // 1. Upsert work_hours_logs
+      try {
+        const { data: existingHours } = await sb
+          .from('work_hours_logs')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('date', selectedDate)
+          .limit(1)
+
+        if (existingHours && existingHours.length > 0) {
+          await sb.from('work_hours_logs').update(cleanWorkHoursData).eq('id', existingHours[0].id)
+        } else {
+          await sb.from('work_hours_logs').insert(cleanWorkHoursData)
+        }
+      } catch (whErr) {
+        console.warn('work_hours_logs sync warning:', whErr)
       }
 
       // 2. Upsert work_logs
-      const { data: existingWorkLog } = await sb
-        .from('work_logs')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('date', selectedDate)
-        .limit(1)
+      try {
+        const { data: existingWorkLog } = await sb
+          .from('work_logs')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('date', selectedDate)
+          .limit(1)
 
-      if (existingWorkLog && existingWorkLog.length > 0) {
-        await sb.from('work_logs').update({
-          title: 'Work Session',
-          description: payload.notes,
-          total_hours_worked: payload.total_hours_worked,
-          beyond_tatva_hours: payload.beyond_tatva_hours,
-          focused_hours: payload.focused_hours,
-          unfocused_hours: payload.unfocused_hours,
-          notes: payload.notes,
-          work_type: payload.work_type
-        }).eq('id', existingWorkLog[0].id)
-      } else {
-        await sb.from('work_logs').insert({
-          user_id: user.id,
-          date: selectedDate,
-          title: 'Work Session',
-          description: payload.notes,
-          type: 'work_session',
-          total_hours_worked: payload.total_hours_worked,
-          beyond_tatva_hours: payload.beyond_tatva_hours,
-          focused_hours: payload.focused_hours,
-          unfocused_hours: payload.unfocused_hours,
-          notes: payload.notes,
-          work_type: payload.work_type
-        })
+        if (existingWorkLog && existingWorkLog.length > 0) {
+          await sb.from('work_logs').update(cleanWorkLogData).eq('id', existingWorkLog[0].id)
+        } else {
+          await sb.from('work_logs').insert(cleanWorkLogData)
+        }
+      } catch (wlErr) {
+        console.warn('work_logs sync warning:', wlErr)
       }
 
       await robustAwardXP(user.id, 2, 'task', selectedDate, 'Work Logged', 'creation')

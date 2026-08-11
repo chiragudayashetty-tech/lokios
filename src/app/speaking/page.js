@@ -275,20 +275,24 @@ export default function SpeakingPracticePage() {
 
     // 2. Dual-Table DB Write (speaking_logs AND work_logs for 100% cross-device sync)
     try {
-      await Promise.all([
-        sb.from('speaking_logs').insert(newLog),
-        sb.from('work_logs').insert({
-          user_id: user.id,
-          date: todayStr,
-          title: `Speaking Practice: ${selectedTopic.topic}`,
-          description: notes.trim() || selectedTopic.topic,
-          type: 'speaking_practice',
-          media_urls: formattedLink ? [formattedLink] : [],
-          created_at: new Date().toISOString()
-        })
-      ])
-    } catch (err) {
-      console.warn('Dual table sync warning:', err)
+      await sb.from('speaking_logs').insert(newLog)
+    } catch (spErr) {
+      console.warn('speaking_logs insert error:', spErr)
+    }
+
+    try {
+      await sb.from('work_logs').insert({
+        user_id: user.id,
+        date: todayStr,
+        title: `Speaking Practice: ${selectedTopic.topic}`,
+        description: notes.trim() || selectedTopic.topic,
+        type: 'speaking_practice',
+        media_urls: formattedLink ? [formattedLink] : [],
+        duration_hours: 0.25,
+        created_at: new Date().toISOString()
+      })
+    } catch (wlErr) {
+      console.warn('work_logs insert error:', wlErr)
     }
 
     // Award +25 XP with daily deduplication

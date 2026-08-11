@@ -621,20 +621,24 @@ export default function MissionControl() {
     // Background DB sync to dual tables (speaking_logs AND work_logs for 100% cross-device sync)
     const sb = createClient()
     try {
-      await Promise.all([
-        sb.from('speaking_logs').insert(payload),
-        sb.from('work_logs').insert({
-          user_id: user.id,
-          date: todayStr,
-          title: `Speaking Practice: ${topicName}`,
-          description: eodSpeakingForm.notes.trim() || topicName,
-          type: 'speaking_practice',
-          media_urls: formattedLink ? [formattedLink] : [],
-          created_at: new Date().toISOString()
-        })
-      ])
-    } catch (err) {
-      console.warn('Background sync speaking log error:', err)
+      await sb.from('speaking_logs').insert(payload)
+    } catch (spErr) {
+      console.warn('speaking_logs insert error:', spErr)
+    }
+
+    try {
+      await sb.from('work_logs').insert({
+        user_id: user.id,
+        date: todayStr,
+        title: `Speaking Practice: ${topicName}`,
+        description: eodSpeakingForm.notes.trim() || topicName,
+        type: 'speaking_practice',
+        media_urls: formattedLink ? [formattedLink] : [],
+        duration_hours: 0.25,
+        created_at: new Date().toISOString()
+      })
+    } catch (wlErr) {
+      console.warn('work_logs insert error:', wlErr)
     }
     await robustAwardXP(user.id, 25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
   }
