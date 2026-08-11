@@ -34,6 +34,9 @@ export default function ProofOfWork() {
   const dynamicLevel = calculateLevel(userXp)
   const dynamicRank = getRankForXp(userXp)
 
+  // DATA STATES - declared before useMemo to prevent TDZ crash
+  const [goals, setGoals] = useState([])
+
   const completedMissions = useMemo(() => {
     return goals.filter(g => g.status === 'completed' || g.completed_at)
   }, [goals])
@@ -105,7 +108,7 @@ export default function ProofOfWork() {
   const [logs, setLogs] = useState([])
   const [projects, setProjects] = useState([])
   const [books, setBooks] = useState([])
-  const [goals, setGoals] = useState([])
+  // (goals state already declared above)
   const [loading, setLoading] = useState(true)
 
   const [editingId, setEditingId] = useState(null)
