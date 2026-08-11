@@ -588,29 +588,42 @@ export default function MissionControl() {
   }
 
   const submitEodSpeaking = async (e) => {
-    e.preventDefault()
-    if (!user || !eodSpeakingForm.drive_link.trim()) return
+    if (e && e.preventDefault) e.preventDefault()
+    if (!user) return
+
+    let formattedLink = eodSpeakingForm.drive_link.trim()
+    if (formattedLink && !formattedLink.startsWith('http://') && !formattedLink.startsWith('https://')) {
+      formattedLink = `https://${formattedLink}`
+    }
+
+    const topicName = eodSpeakingForm.topic.trim() || 'Daily Speaking Practice'
+
     const payload = {
       user_id: user.id,
       date: todayStr,
-      topic: eodSpeakingForm.topic.trim() || 'Day Speaking Practice',
-      drive_link: eodSpeakingForm.drive_link.trim(),
+      topic: topicName,
+      drive_link: formattedLink,
       notes: eodSpeakingForm.notes.trim(),
       prep_duration_minutes: 10,
       rating: 5,
       created_at: new Date().toISOString()
     }
     // Optimistic UI updates (0ms delay)
-    setEodSpeakingData({ logged: true, detail: `Video Logged (+25 XP)` })
+    setEodSpeakingData({ logged: true, detail: `Topic: ${topicName}` })
     setEodQuickLogModal(null)
+
+    // Save to local storage first for 100% phone reliability
+    const localData = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+    const parsed = localData ? JSON.parse(localData) : []
+    const updatedLocal = [payload, ...parsed.filter(p => p.date !== todayStr)]
+    localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updatedLocal))
 
     // Background DB sync
     const sb = createClient()
-    const { data, error } = await sb.from('speaking_logs').insert(payload).select().single()
-    if (error || !data) {
-      const localData = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
-      const parsed = localData ? JSON.parse(localData) : []
-      localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify([payload, ...parsed]))
+    try {
+      await sb.from('speaking_logs').insert(payload)
+    } catch (err) {
+      console.warn('Background sync speaking log error:', err)
     }
     await robustAwardXP(user.id, 25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
   }
@@ -2105,8 +2118,8 @@ export default function MissionControl() {
                     <input type="text" required className="input w-full font-mono text-xs" value={eodSpeakingForm.topic} onChange={e => setEodSpeakingForm({...eodSpeakingForm, topic: e.target.value})} placeholder="e.g. Explain quantum computing..." />
                   </div>
                   <div>
-                    <label className="font-mono text-xs text-muted mb-1 block">GOOGLE DRIVE / VIDEO URL *</label>
-                    <input type="url" required className="input w-full font-mono text-xs" value={eodSpeakingForm.drive_link} onChange={e => setEodSpeakingForm({...eodSpeakingForm, drive_link: e.target.value})} placeholder="https://drive.google.com/file/d/..." />
+                    <label className="font-mono text-xs text-muted mb-1 block">GOOGLE DRIVE / VIDEO URL (OPTIONAL)</label>
+                    <input type="text" className="input w-full font-mono text-xs" value={eodSpeakingForm.drive_link} onChange={e => setEodSpeakingForm({...eodSpeakingForm, drive_link: e.target.value})} placeholder="https://drive.google.com/file/d/..." />
                   </div>
                   <div>
                     <label className="font-mono text-xs text-muted mb-1 block">SPEAKING NOTES (OPTIONAL)</label>

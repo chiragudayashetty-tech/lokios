@@ -99,6 +99,10 @@ export default function SpeakingPracticePage() {
         // Run 3:00 AM Cutoff Evaluator
         await evaluateProtocolAutoFail(user.id)
 
+        // Read local storage cache first for instant mobile responsiveness
+        const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+        const localLogs = localRaw ? JSON.parse(localRaw) : []
+
         const { data, error } = await sb
           .from('speaking_logs')
           .select('*')
@@ -106,14 +110,31 @@ export default function SpeakingPracticePage() {
           .order('created_at', { ascending: false })
 
         if (!error && data) {
-          setHistory(data)
-        } else {
-          // Fallback to local storage if table doesn't exist yet
-          const localData = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
-          if (localData) setHistory(JSON.parse(localData))
+          // Merge remote and local logs by date & id so local offline logs are preserved
+          const map = new Map()
+          data.forEach(item => map.set(item.id || item.date, item))
+          localLogs.forEach(item => {
+            const key = item.id || item.date
+            if (!map.has(key)) {
+              map.set(key, item)
+              // Sync local-only item to Supabase in background
+              sb.from('speaking_logs').insert(item).then(() => {}).catch(() => {})
+            }
+          })
+
+          const merged = Array.from(map.values()).sort((a, b) => 
+            new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
+          )
+
+          setHistory(merged)
+          localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(merged))
+        } else if (localLogs.length > 0) {
+          setHistory(localLogs)
         }
       } catch (err) {
         console.warn('Fallback loading speaking logs', err)
+        const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+        if (localRaw) setHistory(JSON.parse(localRaw))
       } finally {
         setLoading(false)
       }
@@ -171,13 +192,18 @@ export default function SpeakingPracticePage() {
 
   // Submit Practice Session
   const handleSubmitSession = async (e) => {
-    e.preventDefault()
+    if (e && e.preventDefault) e.preventDefault()
     if (!user || !selectedTopic) return
     setSubmitting(true)
 
     const sb = createClient()
     const prepDurationMinutes = Math.round((600 - timerSeconds) / 60)
     const currentDayNumber = history.length + 1
+
+    let formattedLink = driveLink.trim()
+    if (formattedLink && !formattedLink.startsWith('http://') && !formattedLink.startsWith('https://')) {
+      formattedLink = `https://${formattedLink}`
+    }
 
     const newLog = {
       user_id: user.id,
@@ -186,11 +212,18 @@ export default function SpeakingPracticePage() {
       category: selectedTopic.category || 'General',
       day_number: currentDayNumber,
       prep_duration_minutes: prepDurationMinutes > 0 ? prepDurationMinutes : 10,
-      drive_link: driveLink.trim(),
+      drive_link: formattedLink,
       notes: notes.trim(),
       rating: parseInt(rating) || 5,
       created_at: new Date().toISOString()
     }
+
+    // Save to local storage first for 100% phone persistence & 0ms responsiveness
+    const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+    const localLogs = localRaw ? JSON.parse(localRaw) : []
+    const updatedLocal = [newLog, ...localLogs.filter(l => l.date !== todayStr || l.topic !== newLog.topic)]
+    localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updatedLocal))
+    setHistory(updatedLocal)
 
     try {
       const { data, error } = await sb
@@ -200,34 +233,32 @@ export default function SpeakingPracticePage() {
         .single()
 
       if (!error && data) {
-        setHistory(prev => [data, ...prev])
-      } else {
-        // Fallback local persistence
-        const updated = [newLog, ...history]
-        setHistory(updated)
-        localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updated))
+        setHistory(prev => {
+          const finalLogs = [data, ...prev.filter(p => p.id !== data.id && p.date !== data.date)]
+          localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(finalLogs))
+          return finalLogs
+        })
       }
-
-      // Award +25 XP with daily deduplication
-      try {
-        if (awardXP) {
-          await awardXP(25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
-        } else {
-          await robustAwardXP(user.id, 25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
-        }
-      } catch (xpErr) {
-        console.warn('Failed to award speaking XP:', xpErr)
-      }
-
-      setSubmitSuccess(true)
-      setDriveLink('')
-      setNotes('')
-      setTimeout(() => setSubmitSuccess(false), 4000)
     } catch (err) {
-      console.error('Failed to log speaking session', err)
-    } finally {
-      setSubmitting(false)
+      console.warn('Backend sync warning for speaking log:', err)
     }
+
+    // Award +25 XP with daily deduplication
+    try {
+      if (awardXP) {
+        await awardXP(25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
+      } else {
+        await robustAwardXP(user.id, 25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
+      }
+    } catch (xpErr) {
+      console.warn('Failed to award speaking XP:', xpErr)
+    }
+
+    setSubmitSuccess(true)
+    setDriveLink('')
+    setNotes('')
+    setSubmitting(false)
+    setTimeout(() => setSubmitSuccess(false), 4000)
   }
 
   // Calculate stats
@@ -496,11 +527,10 @@ export default function SpeakingPracticePage() {
                 </div>
 
                 <div>
-                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">VIDEO URL *</label>
+                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">VIDEO URL (OPTIONAL)</label>
                   <div className="relative">
                     <input
-                      type="url"
-                      required
+                      type="text"
                       placeholder="https://drive.google.com/file/d/..."
                       value={driveLink}
                       onChange={e => setDriveLink(e.target.value)}
