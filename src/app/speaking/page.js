@@ -116,16 +116,18 @@ export default function SpeakingPracticePage() {
         const speakingData = speakingRes.data || []
         const workData = workRes.data || []
 
-        const map = new Map()
+        // Build a date-keyed map (date is the canonical dedup key — UUIDs differ per device)
+        const mapByDate = new Map()
 
-        // 1. Add speaking_logs
-        speakingData.forEach(item => map.set(item.id || item.date, item))
+        // 1. Add speaking_logs (indexed by date)
+        speakingData.forEach(item => {
+          if (item.date) mapByDate.set(item.date, item)
+        })
 
-        // 2. Add speaking entries from work_logs
+        // 2. Add speaking entries from work_logs (only if date not already in map)
         workData.forEach(w => {
-          const key = w.id || w.date
-          if (!map.has(key) && !map.has(w.date)) {
-            const converted = {
+          if (w.date && !mapByDate.has(w.date)) {
+            mapByDate.set(w.date, {
               id: w.id,
               user_id: w.user_id,
               date: w.date,
@@ -137,17 +139,21 @@ export default function SpeakingPracticePage() {
               notes: w.description || '',
               rating: 5,
               created_at: w.created_at || new Date().toISOString()
-            }
-            map.set(key, converted)
+            })
           }
         })
 
-        // 3. Add localLogs & push missing items to speaking_logs DB
+        // 3. For each local log: only push to DB if that DATE is not already in the cloud
+        // This prevents duplicate inserts on every refresh
+        const cloudDates = new Set(speakingData.map(s => s.date).filter(Boolean))
         for (const item of localLogs) {
-          const key = item.id || item.date
-          if (!map.has(key)) {
-            map.set(key, item)
-            // Push orphaned local log to speaking_logs (the authoritative table)
+          if (!item.date) continue
+          if (cloudDates.has(item.date)) {
+            // Already in cloud — just merge into map if missing (prefer cloud version)
+            if (!mapByDate.has(item.date)) mapByDate.set(item.date, item)
+          } else {
+            // Genuinely missing from cloud — push once
+            mapByDate.set(item.date, item)
             const { error: pushErr } = await sb.from('speaking_logs').insert({
               user_id: userId,
               date: item.date,
@@ -160,12 +166,15 @@ export default function SpeakingPracticePage() {
               rating: item.rating || 5,
               created_at: item.created_at || new Date().toISOString()
             })
-            if (pushErr) console.error('[Speaking Sync] Failed to push local log to cloud:', pushErr, item)
-            else console.log('[Speaking Sync] ✅ Pushed local log to cloud:', item.date, item.topic)
+            if (pushErr) console.error('[Speaking Sync] Push failed:', pushErr?.message, item.date)
+            else {
+              console.log('[Speaking Sync] ✅ Pushed to cloud:', item.date, item.topic)
+              cloudDates.add(item.date) // prevent double-push if duplicate in localLogs
+            }
           }
         }
 
-        const merged = Array.from(map.values()).sort((a, b) => 
+        const merged = Array.from(mapByDate.values()).sort((a, b) =>
           new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
         )
 
