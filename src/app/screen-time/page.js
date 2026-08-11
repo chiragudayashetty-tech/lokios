@@ -11,7 +11,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Shield, Target, AlertTriangle } from 'lucide-react'
 
 export default function ScreenIntel() {
-  const { auth: { user }, xp: { awardXP }, goals: { mainQuest, updateProgress } } = useOS()
+  const { auth: { user } = {}, xp: { awardXP } = {}, goals: { mainQuest, updateProgress } = {} } = useOS() || {}
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Check, Calendar, Trash2, Edit2, RotateCcw, Repeat, X, Target, Clock, AlertTriangle, CheckCircle2, Layers, Zap, XCircle, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react'
 
 export default function Operations() {
-  const { tasks: { tasks, todayTasks, loading, error, fetchTasks, addTask, editTask, pushTaskToTomorrow, undoCompleteTask, deleteTask }, completeOperation, deleteOperation, failOperation, undoFailOperation, goals: { goals } } = useOS()
+  const { tasks: { tasks = [], todayTasks = [], loading = false, error = null, fetchTasks, addTask, editTask, pushTaskToTomorrow, undoCompleteTask, deleteTask } = {}, completeOperation, deleteOperation, failOperation, undoFailOperation, goals: { goals = [] } = {} } = useOS() || {}
 
   const [activeTab, setActiveTab] = useState('today')
   const [showDeploy, setShowDeploy] = useState(false)

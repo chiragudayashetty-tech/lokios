@@ -16,9 +16,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export default function DailyOps() {
   const {
-    habits, stoppedHabits, allHabits, monthLogs, todayLogs, loading, error,
+    habits = [], stoppedHabits = [], allHabits = [], monthLogs = [], todayLogs = [], loading = false, error = null,
     fetchHabits, cycleHabitState, addHabit, deleteHabit, stopHabit, resumeHabit, archiveHabit, reorderHabits, reorderHabitsByDrag, updateHabit
-  } = useOS().habits
+  } = (useOS() || {}).habits || {}
 
   const [draggedHabitId, setDraggedHabitId] = useState(null)
   const [dragOverHabitId, setDragOverHabitId] = useState(null)

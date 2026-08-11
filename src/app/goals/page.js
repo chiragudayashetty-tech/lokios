@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
   const { mainQuest, mainQuests, sideQuests, longTermGoals, weeklyGoals, completedGoals, failedGoals, loading, error, fetchGoals, addGoal, completeGoal, undoCompleteGoal, deleteGoal, togglePauseGoal, updateGoal, updateProgress } = useGoals()
-  const { failMission, undoFailMission, deleteMission, tasks: { tasks, completeOperation, deleteTask } } = useOS()
+  const { failMission, undoFailMission, deleteMission, tasks: { tasks = [], completeOperation, deleteTask } = {} } = useOS() || {}
   const [activeTab, setActiveTab] = useState('main')
   const [showForm, setShowForm] = useState(false)
   const [expandedGoal, setExpandedGoal] = useState(null)

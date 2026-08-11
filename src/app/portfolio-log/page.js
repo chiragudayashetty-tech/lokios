@@ -20,7 +20,7 @@ import {
 export default function ProofOfWork() {
   const { user } = useAuth()
   const { profile } = useProfile()
-  const { xp: { awardXP, deductXP } } = useOS()
+  const { xp: { awardXP, deductXP } = {} } = useOS() || {}
 
   // Active tab: 'timeline' | 'reviews' | 'books' | 'projects' | 'resume'
   const [activeTab, setActiveTab] = useState('timeline')
