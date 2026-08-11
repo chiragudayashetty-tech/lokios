@@ -34,7 +34,8 @@ const NAV_ITEMS = [
 
 export default function AppShell({ children }) {
   const pathname = usePathname()
-  const { auth, profile: { profile }, tasks: { todayTasks }, habits: { habits, todayLogs } } = useOS()
+  const os = useOS() || {}
+  const { auth = {}, profile: { profile } = {}, tasks: { todayTasks = [] } = {}, habits: { habits = [], todayLogs = [] } = {} } = os
   const { user } = auth
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)

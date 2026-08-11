@@ -49,11 +49,11 @@ const getItemIconDetails = (item) => {
 
 export default function Calendar() {
   const {
-    profile: { profile },
-    tasks: { tasks, loading: tLoading },
-    goals: { goals: allGoals, loading: gLoading },
-    calendar: { events = [], loading: cLoading, addEvent, deleteEvent } = {}
-  } = useOS()
+    profile: { profile } = {},
+    tasks: { tasks = [], loading: tLoading = false } = {},
+    goals: { goals: allGoals = [], loading: gLoading = false } = {},
+    calendar: { events = [], loading: cLoading = false, addEvent, deleteEvent } = {}
+  } = useOS() || {}
 
   const [viewMode, setViewMode] = useState('month') // 'month' | 'week' | 'day'
   const [currentDate, setCurrentDate] = useState(new Date())

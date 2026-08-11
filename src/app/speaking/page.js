@@ -52,7 +52,7 @@ const DEFAULT_30_TOPICS = [
 
 export default function SpeakingPracticePage() {
   const { user } = useAuth()
-  const { xp: { awardXP } } = useOS()
+  const { xp: { awardXP } = {} } = useOS() || {}
 
   // State Management
   const [topics] = useState(DEFAULT_30_TOPICS)

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 
 export default function WorkPage() {
-  const { auth: { user }, xp: { awardXP } } = useOS()
+  const { auth: { user } = {}, xp: { awardXP } = {} } = useOS() || {}
 
   // Primary subpage tab: 'work_log' | 'content_ops' | 'analytics'
   const [activeTab, setActiveTab] = useState('work_log')

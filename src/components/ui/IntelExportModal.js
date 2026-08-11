@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr, parseTaskNotes } from '@/lib/utils/dates'
 
 export default function IntelExportModal({ isOpen, onClose }) {
-  const { auth: { user }, profile: { profile }, goals: { goals }, tasks: { tasks }, habits: { habits, stoppedHabits, allHabits, monthLogs } } = useOS()
+  const { auth: { user } = {}, profile: { profile } = {}, goals: { goals = [] } = {}, tasks: { tasks = [] } = {}, habits: { habits = [], stoppedHabits = [], allHabits = [], monthLogs = [] } = {} } = useOS() || {}
 
   const now = new Date()
   const firstDayStr = getLocalDateStr(new Date(now.getFullYear(), now.getMonth(), 1))
