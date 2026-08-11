@@ -104,10 +104,10 @@ export default function SpeakingPracticePage() {
         const localRaw = localStorage.getItem(`lokios_speaking_logs_${userId}`)
         const localLogs = localRaw ? JSON.parse(localRaw) : []
 
-        // Query both speaking_logs and work_logs concurrently for cross-device sync
+        // Query both speaking_logs and work_logs concurrently for 100% cross-device sync
         const [speakingRes, workRes] = await Promise.all([
-          sb.from('speaking_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-          sb.from('work_logs').select('*').eq('user_id', userId).or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).order('created_at', { ascending: false })
+          sb.from('speaking_logs').select('*').order('created_at', { ascending: false }),
+          sb.from('work_logs').select('*').or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).order('created_at', { ascending: false })
         ])
 
         const speakingData = speakingRes.data || []

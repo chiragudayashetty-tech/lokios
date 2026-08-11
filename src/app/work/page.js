@@ -149,11 +149,11 @@ export default function WorkPage() {
     const fetchAllLogs = async () => {
       try {
         const sb = createClient()
-        // Query both work_logs and work_hours_logs concurrently to capture all descriptions and metrics
+        // Query work_logs, work_hours_logs, content_logs for 100% cross-device sync
         const [wRes, whRes, cRes] = await Promise.all([
-          sb.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-          sb.from('work_hours_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
-          sb.from('content_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
+          sb.from('work_logs').select('*').order('date', { ascending: false }),
+          sb.from('work_hours_logs').select('*').order('date', { ascending: false }),
+          sb.from('content_logs').select('*').order('date', { ascending: false })
         ])
 
         const wData = wRes.data || []
@@ -168,7 +168,6 @@ export default function WorkPage() {
         })
 
         whData.forEach(l => {
-          // Check if entry for this date already exists
           const existingKey = Array.from(mergedMap.keys()).find(k => {
             const item = mergedMap.get(k)
             return item && item.date === l.date
@@ -181,13 +180,13 @@ export default function WorkPage() {
               beyond_tatva_hours: existing.beyond_tatva_hours ?? l.beyond_tatva_hours,
               focused_hours: existing.focused_hours ?? l.focused_hours,
               unfocused_hours: existing.unfocused_hours ?? l.unfocused_hours,
-              total_hours_worked: existing.total_hours_worked ?? l.total_hours_worked,
+              total_hours_worked: existing.total_hours_worked ?? l.total_hours_worked ?? l.hours,
               work_type: existing.work_type || l.work_type,
               notes: existing.notes || l.notes || existing.description || l.description
             })
           } else {
             const key = l.id ? `id_${l.id}` : `date_${l.date}`
-            mergedMap.set(key, { ...l })
+            mergedMap.set(key, { ...l, total_hours_worked: l.total_hours_worked ?? l.hours ?? l.duration_hours })
           }
         })
 
@@ -195,7 +194,7 @@ export default function WorkPage() {
 
         let fetchedC = cRes.data || []
 
-        // Merge with local cache if local has entries not yet in DB
+        // Merge with local cache & auto-push local-only entries to Supabase for 100% phone/desktop sync
         if (typeof window !== 'undefined') {
           const wCached = localStorage.getItem('lokios_work_logs_cache')
           if (wCached) {
@@ -203,9 +202,22 @@ export default function WorkPage() {
             const map = new Map()
             fetchedW.forEach(l => map.set(l.date, l))
             parsedW.forEach(l => {
-              if (!map.has(l.date)) map.set(l.date, l)
+              if (!map.has(l.date)) {
+                map.set(l.date, l)
+                sb.from('work_hours_logs').insert({
+                  user_id: user?.id,
+                  date: l.date,
+                  hours: l.total_hours_worked || l.hours || 0,
+                  duration_hours: l.total_hours_worked || l.hours || 0,
+                  focused_hours: l.focused_hours || 0,
+                  beyond_tatva_hours: l.beyond_tatva_hours || 0,
+                  unfocused_hours: l.unfocused_hours || 0,
+                  notes: l.notes || l.description || '',
+                  work_type: l.work_type || 'General'
+                }).then(() => {}).catch(() => {})
+              }
             })
-            fetchedW = Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date))
+            fetchedW = Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
           }
 
           const cCached = localStorage.getItem('lokios_content_logs_cache')
