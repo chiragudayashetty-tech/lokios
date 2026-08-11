@@ -55,7 +55,7 @@ function RenderDebrief({ text }) {
 }
 
 export default function JournalPage() {
-  const { journal: { entries, loading, saveEntry, clearJournal } } = useOS()
+  const { journal: { entries = [], loading = false, saveEntry, clearJournal } = {} } = useOS() || {}
   const { user } = useAuth()
 
   useEffect(() => {

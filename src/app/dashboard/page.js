@@ -74,16 +74,16 @@ export default function MissionControl() {
   const { user } = useAuth()
 
   const {
-    profile: { profile },
-    goals:   { mainQuest, sideQuests, longTermGoals },
-    habits:  { todayLogs, habits },
-    tasks:   { tasks, addTask, completeTask, undoCompleteTask, fetchTasks },
-    journal: { entries },
+    profile: { profile } = {},
+    goals:   { mainQuest, sideQuests, longTermGoals } = {},
+    habits:  { todayLogs = [], habits = [] } = {},
+    tasks:   { tasks = [], addTask, completeTask, undoCompleteTask, fetchTasks } = {},
+    journal: { entries = [] } = {},
     calendar: { events = [] } = {},
     completeOperation,
     failOperation,
     undoFailOperation
-  } = useOS()
+  } = useOS() || {}
 
   const todayStr = getLocalDateStr()
 
@@ -99,7 +99,7 @@ export default function MissionControl() {
     return (tasks || []).filter(t => t.due_date === todayStr && t.status !== 'cancelled')
   }, [tasks, todayStr])
 
-  const weeklyGoalTasks = tasks.filter(t => t.category === 'weekly_goal' && t.status !== 'cancelled')
+  const weeklyGoalTasks = (tasks || []).filter(t => t.category === 'weekly_goal' && t.status !== 'cancelled')
 
   const [currentTime, setCurrentTime] = useState(new Date())
   const [xpToday, setXpToday]         = useState(0)
