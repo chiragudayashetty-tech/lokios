@@ -618,10 +618,21 @@ export default function MissionControl() {
     const updatedLocal = [payload, ...parsed.filter(p => p.date !== todayStr)]
     localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updatedLocal))
 
-    // Background DB sync
+    // Background DB sync to dual tables (speaking_logs AND work_logs for 100% cross-device sync)
     const sb = createClient()
     try {
-      await sb.from('speaking_logs').insert(payload)
+      await Promise.all([
+        sb.from('speaking_logs').insert(payload),
+        sb.from('work_logs').insert({
+          user_id: user.id,
+          date: todayStr,
+          title: `Speaking Practice: ${topicName}`,
+          description: eodSpeakingForm.notes.trim() || topicName,
+          type: 'speaking_practice',
+          media_urls: formattedLink ? [formattedLink] : [],
+          created_at: new Date().toISOString()
+        })
+      ])
     } catch (err) {
       console.warn('Background sync speaking log error:', err)
     }

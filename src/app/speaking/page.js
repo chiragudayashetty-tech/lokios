@@ -96,41 +96,71 @@ export default function SpeakingPracticePage() {
       const sb = createClient()
 
       try {
-        // Run 3:00 AM Cutoff Evaluator
         await evaluateProtocolAutoFail(user.id)
 
-        // Read local storage cache first for instant mobile responsiveness
+        // Read local storage cache first
         const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
         const localLogs = localRaw ? JSON.parse(localRaw) : []
 
-        const { data, error } = await sb
-          .from('speaking_logs')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
+        // Query both speaking_logs and work_logs concurrently for cross-device sync
+        const [speakingRes, workRes] = await Promise.all([
+          sb.from('speaking_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+          sb.from('work_logs').select('*').eq('user_id', user.id).or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).order('created_at', { ascending: false })
+        ])
 
-        if (!error && data) {
-          // Merge remote and local logs by date & id so local offline logs are preserved
-          const map = new Map()
-          data.forEach(item => map.set(item.id || item.date, item))
-          localLogs.forEach(item => {
-            const key = item.id || item.date
-            if (!map.has(key)) {
-              map.set(key, item)
-              // Sync local-only item to Supabase in background
-              sb.from('speaking_logs').insert(item).then(() => {}).catch(() => {})
+        const speakingData = speakingRes.data || []
+        const workData = workRes.data || []
+
+        const map = new Map()
+
+        // 1. Add speaking_logs
+        speakingData.forEach(item => map.set(item.id || item.date, item))
+
+        // 2. Add speaking entries from work_logs
+        workData.forEach(w => {
+          const key = w.id || w.date
+          if (!map.has(key) && !map.has(w.date)) {
+            const converted = {
+              id: w.id,
+              user_id: w.user_id,
+              date: w.date,
+              topic: w.title ? w.title.replace(/^Speaking Practice:\s*/i, '') : 'Speaking Practice',
+              category: 'General',
+              day_number: 1,
+              prep_duration_minutes: 10,
+              drive_link: (w.media_urls && w.media_urls[0]) || '',
+              notes: w.description || '',
+              rating: 5,
+              created_at: w.created_at || new Date().toISOString()
             }
-          })
+            map.set(key, converted)
+          }
+        })
 
-          const merged = Array.from(map.values()).sort((a, b) => 
-            new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
-          )
+        // 3. Add localLogs & push missing items to DB
+        localLogs.forEach(item => {
+          const key = item.id || item.date
+          if (!map.has(key)) {
+            map.set(key, item)
+            sb.from('speaking_logs').insert(item).then(() => {}).catch(() => {})
+            sb.from('work_logs').insert({
+              user_id: user.id,
+              date: item.date,
+              title: `Speaking Practice: ${item.topic}`,
+              description: item.notes || item.topic,
+              type: 'speaking_practice',
+              media_urls: item.drive_link ? [item.drive_link] : [],
+              created_at: item.created_at || new Date().toISOString()
+            }).then(() => {}).catch(() => {})
+          }
+        })
 
-          setHistory(merged)
-          localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(merged))
-        } else if (localLogs.length > 0) {
-          setHistory(localLogs)
-        }
+        const merged = Array.from(map.values()).sort((a, b) => 
+          new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
+        )
+
+        setHistory(merged)
+        localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(merged))
       } catch (err) {
         console.warn('Fallback loading speaking logs', err)
         const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
@@ -139,7 +169,23 @@ export default function SpeakingPracticePage() {
         setLoading(false)
       }
     }
+
     loadData()
+
+    // Real-Time Listener & Window Focus Listener for 100% Cross-Device Phone/Desktop Sync
+    const sb = createClient()
+    const channel = sb.channel(`speaking_sync_hub_${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'speaking_logs', filter: `user_id=eq.${user.id}` }, () => loadData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `user_id=eq.${user.id}` }, () => loadData())
+      .subscribe()
+
+    const handleFocus = () => loadData()
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      sb.removeChannel(channel)
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [user])
 
   // Timer Effect
@@ -218,29 +264,29 @@ export default function SpeakingPracticePage() {
       created_at: new Date().toISOString()
     }
 
-    // Save to local storage first for 100% phone persistence & 0ms responsiveness
+    // 1. Optimistic Local Storage Save
     const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
     const localLogs = localRaw ? JSON.parse(localRaw) : []
     const updatedLocal = [newLog, ...localLogs.filter(l => l.date !== todayStr || l.topic !== newLog.topic)]
     localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updatedLocal))
     setHistory(updatedLocal)
 
+    // 2. Dual-Table DB Write (speaking_logs AND work_logs for 100% cross-device sync)
     try {
-      const { data, error } = await sb
-        .from('speaking_logs')
-        .insert(newLog)
-        .select()
-        .single()
-
-      if (!error && data) {
-        setHistory(prev => {
-          const finalLogs = [data, ...prev.filter(p => p.id !== data.id && p.date !== data.date)]
-          localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(finalLogs))
-          return finalLogs
+      await Promise.all([
+        sb.from('speaking_logs').insert(newLog),
+        sb.from('work_logs').insert({
+          user_id: user.id,
+          date: todayStr,
+          title: `Speaking Practice: ${selectedTopic.topic}`,
+          description: notes.trim() || selectedTopic.topic,
+          type: 'speaking_practice',
+          media_urls: formattedLink ? [formattedLink] : [],
+          created_at: new Date().toISOString()
         })
-      }
+      ])
     } catch (err) {
-      console.warn('Backend sync warning for speaking log:', err)
+      console.warn('Dual table sync warning:', err)
     }
 
     // Award +25 XP with daily deduplication
