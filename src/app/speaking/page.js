@@ -104,11 +104,14 @@ export default function SpeakingPracticePage() {
         const localRaw = localStorage.getItem(`lokios_speaking_logs_${userId}`)
         const localLogs = localRaw ? JSON.parse(localRaw) : []
 
-        // Query both speaking_logs and work_logs concurrently for 100% cross-device sync
+        // Query speaking_logs + work_logs (user_id filter required by RLS)
         const [speakingRes, workRes] = await Promise.all([
-          sb.from('speaking_logs').select('*').order('created_at', { ascending: false }),
-          sb.from('work_logs').select('*').or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).order('created_at', { ascending: false })
+          sb.from('speaking_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+          sb.from('work_logs').select('*').eq('user_id', userId).or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).order('created_at', { ascending: false })
         ])
+
+        if (speakingRes.error) console.error('[Speaking Sync] speaking_logs fetch error:', speakingRes.error)
+        if (workRes.error) console.error('[Speaking Sync] work_logs fetch error:', workRes.error)
 
         const speakingData = speakingRes.data || []
         const workData = workRes.data || []
@@ -139,23 +142,28 @@ export default function SpeakingPracticePage() {
           }
         })
 
-        // 3. Add localLogs & push missing items to DB
-        localLogs.forEach(item => {
+        // 3. Add localLogs & push missing items to speaking_logs DB
+        for (const item of localLogs) {
           const key = item.id || item.date
           if (!map.has(key)) {
             map.set(key, item)
-            sb.from('speaking_logs').insert(item).then(() => {}).catch(() => {})
-            sb.from('work_logs').insert({
+            // Push orphaned local log to speaking_logs (the authoritative table)
+            const { error: pushErr } = await sb.from('speaking_logs').insert({
               user_id: userId,
               date: item.date,
-              title: `Speaking Practice: ${item.topic}`,
-              description: item.notes || item.topic,
-              type: 'speaking_practice',
-              media_urls: item.drive_link ? [item.drive_link] : [],
+              topic: item.topic || 'Speaking Practice',
+              category: item.category || 'General',
+              day_number: item.day_number || 1,
+              prep_duration_minutes: item.prep_duration_minutes || 10,
+              drive_link: item.drive_link || '',
+              notes: item.notes || '',
+              rating: item.rating || 5,
               created_at: item.created_at || new Date().toISOString()
-            }).then(() => {}).catch(() => {})
+            })
+            if (pushErr) console.error('[Speaking Sync] Failed to push local log to cloud:', pushErr, item)
+            else console.log('[Speaking Sync] ✅ Pushed local log to cloud:', item.date, item.topic)
           }
-        })
+        }
 
         const merged = Array.from(map.values()).sort((a, b) => 
           new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
@@ -273,26 +281,13 @@ export default function SpeakingPracticePage() {
     localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updatedLocal))
     setHistory(updatedLocal)
 
-    // 2. Dual-Table DB Write (speaking_logs AND work_logs for 100% cross-device sync)
+    // 2. Save to speaking_logs (authoritative table)
     try {
-      await sb.from('speaking_logs').insert(newLog)
-    } catch (spErr) {
-      console.warn('speaking_logs insert error:', spErr)
-    }
-
-    try {
-      await sb.from('work_logs').insert({
-        user_id: user.id,
-        date: todayStr,
-        title: `Speaking Practice: ${selectedTopic.topic}`,
-        description: notes.trim() || selectedTopic.topic,
-        type: 'speaking_practice',
-        media_urls: formattedLink ? [formattedLink] : [],
-        duration_hours: 0.25,
-        created_at: new Date().toISOString()
-      })
-    } catch (wlErr) {
-      console.warn('work_logs insert error:', wlErr)
+      const { error: spErr } = await sb.from('speaking_logs').insert(newLog)
+      if (spErr) console.error('[Speaking Submit] speaking_logs insert FAILED:', spErr, newLog)
+      else console.log('[Speaking Submit] ✅ speaking_logs saved successfully:', newLog.date, newLog.topic)
+    } catch (spEx) {
+      console.error('[Speaking Submit] speaking_logs exception:', spEx)
     }
 
     // Award +25 XP with daily deduplication

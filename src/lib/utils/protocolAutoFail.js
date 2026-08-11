@@ -37,11 +37,11 @@ export async function evaluateProtocolAutoFail(userId) {
       return true
     }
 
-    // 2. Query ALL completed logs across speaking_logs, work_logs, and journal_entries WITHOUT strict user_id filter
+    // 2. Query ALL completed logs across speaking_logs, work_logs, and journal_entries
     const [journalRes, speakingRes, workSpeakingRes, xpHistoryRes] = await Promise.all([
-      supabase.from('journal_entries').select('date').gte('date', startDateStr).lte('date', cutoffDateStr),
-      supabase.from('speaking_logs').select('date').gte('date', startDateStr).lte('date', cutoffDateStr),
-      supabase.from('work_logs').select('date, type, title').or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).gte('date', startDateStr).lte('date', cutoffDateStr),
+      supabase.from('journal_entries').select('date').eq('user_id', userId).gte('date', startDateStr).lte('date', cutoffDateStr),
+      supabase.from('speaking_logs').select('date').eq('user_id', userId).gte('date', startDateStr).lte('date', cutoffDateStr),
+      supabase.from('work_logs').select('date, type, title').eq('user_id', userId).or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).gte('date', startDateStr).lte('date', cutoffDateStr),
       supabase.from('xp_history').select('id, amount, source_type, source_id, description, user_id').eq('user_id', userId)
     ])
 

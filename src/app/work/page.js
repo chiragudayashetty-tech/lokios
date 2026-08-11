@@ -149,12 +149,15 @@ export default function WorkPage() {
     const fetchAllLogs = async () => {
       try {
         const sb = createClient()
-        // Query work_logs, work_hours_logs, content_logs for 100% cross-device sync
+        // Query work_logs, work_hours_logs, content_logs (user_id filter required by RLS)
         const [wRes, whRes, cRes] = await Promise.all([
-          sb.from('work_logs').select('*').order('date', { ascending: false }),
-          sb.from('work_hours_logs').select('*').order('date', { ascending: false }),
-          sb.from('content_logs').select('*').order('date', { ascending: false })
+          sb.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+          sb.from('work_hours_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+          sb.from('content_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
         ])
+
+        if (wRes.error) console.error('[Work Sync] work_logs fetch error:', wRes.error)
+        if (whRes.error) console.error('[Work Sync] work_hours_logs fetch error:', whRes.error)
 
         const wData = wRes.data || []
         const whData = whRes.data || []
