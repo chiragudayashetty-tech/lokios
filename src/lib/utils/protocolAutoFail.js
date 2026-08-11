@@ -45,13 +45,21 @@ export async function evaluateProtocolAutoFail(userId) {
       supabase.from('xp_history').select('id, amount, source_type, source_id, description, user_id').eq('user_id', userId)
     ])
 
+    // ⚠️ SAFETY: If speaking_logs table doesn't exist or query errors, DO NOT issue any
+    // speaking penalties - we can't verify completion. Better to skip than falsely penalize.
+    const speakingQueryFailed = !!speakingRes.error
+    if (speakingQueryFailed) {
+      console.warn('[AutoFail] speaking_logs query failed - skipping speaking penalty evaluation:', speakingRes.error?.message)
+    }
+
     const loggedJournalDates = new Set((journalRes.data || []).map(j => j.date))
     const loggedSpeakingDates = new Set()
 
-    (speakingRes.data || []).forEach(s => { if (s.date) loggedSpeakingDates.add(s.date) })
-    (workSpeakingRes.data || []).forEach(w => { if (w.date) loggedSpeakingDates.add(w.date) })
+    ;(speakingRes.data || []).forEach(s => { if (s.date) loggedSpeakingDates.add(s.date) })
+    ;(workSpeakingRes.data || []).forEach(w => { if (w.date) loggedSpeakingDates.add(w.date) })
 
-    // Local Storage cache fallbacks for mobile offline logs
+    // LOCAL STORAGE IS AUTHORITATIVE: Always include localStorage speaking logs
+    // This covers phone-logged sessions not yet synced to Supabase
     if (typeof window !== 'undefined') {
       const keys = Object.keys(localStorage)
       keys.forEach(k => {
@@ -193,33 +201,36 @@ export async function evaluateProtocolAutoFail(userId) {
           activePenaltyKeys.add(journalKey)
         }
 
-        // B. Speaking Practice Check (Saturday Rest Day default, -25 XP if non-rest day unlogged past 3:00 AM)
-        const speakingRest = isSpeakingRestDay(dateStr)
-        const speakingKey = `speaking_missed_${dateStr}`
-        const restKey = `speaking_rest_day_${dateStr}`
+        // B. Speaking Practice Check — SKIP entirely if speaking_logs table is missing/errored
+        // Better to issue NO penalty than to falsely penalize a completed session
+        if (!speakingQueryFailed) {
+          const speakingRest = isSpeakingRestDay(dateStr)
+          const speakingKey = `speaking_missed_${dateStr}`
+          const restKey = `speaking_rest_day_${dateStr}`
 
-        if (speakingRest) {
-          if (!activePenaltyKeys.has(restKey) && !loggedSpeakingDates.has(dateStr)) {
+          if (speakingRest) {
+            if (!activePenaltyKeys.has(restKey) && !loggedSpeakingDates.has(dateStr)) {
+              await robustAwardXP(
+                userId,
+                0,
+                'speaking_rest_day',
+                `speaking_rest_day_${dateStr}`,
+                `☕ REST DAY: Speaking practice off-day (${dateStr})`,
+                'discipline'
+              )
+              activePenaltyKeys.add(restKey)
+            }
+          } else if (!loggedSpeakingDates.has(dateStr) && !activePenaltyKeys.has(speakingKey)) {
             await robustAwardXP(
               userId,
-              0,
-              'speaking_rest_day',
-              `speaking_rest_day_${dateStr}`,
-              `☕ REST DAY: Speaking practice off-day (${dateStr})`,
+              -25,
+              'speaking_missed',
+              `speaking_missed_${dateStr}`,
+              `🚨 MISSED SPEAKING DEADLINE (3 AM Cutoff): Unlogged practice for ${dateStr}`,
               'discipline'
             )
-            activePenaltyKeys.add(restKey)
+            activePenaltyKeys.add(speakingKey)
           }
-        } else if (!loggedSpeakingDates.has(dateStr) && !activePenaltyKeys.has(speakingKey)) {
-          await robustAwardXP(
-            userId,
-            -25,
-            'speaking_missed',
-            `speaking_missed_${dateStr}`,
-            `🚨 MISSED SPEAKING DEADLINE (3 AM Cutoff): Unlogged practice for ${dateStr}`,
-            'discipline'
-          )
-          activePenaltyKeys.add(speakingKey)
         }
       }
 
