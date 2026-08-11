@@ -53,9 +53,10 @@ export function OSProvider({ children }) {
 
   // Cross-device sync: Supabase Realtime + window focus/visibility
   useEffect(() => {
-    if (!auth.user) return
+    if (!auth?.user?.id) return
     const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
+    const userId = auth.user.id
     
     let syncTimeout = null
     const debouncedSync = () => {
@@ -75,17 +76,17 @@ export function OSProvider({ children }) {
       }, 300)
     }
 
-    const channel = supabase.channel(`os_sync_${auth.user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'speaking_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_hours_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'habits', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'habit_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${auth.user.id}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs', filter: `user_id=eq.${auth.user.id}` }, debouncedSync)
+    const channel = supabase.channel(`os_sync_${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'speaking_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_hours_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'habits', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'habit_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
       .subscribe()
 
     const handleVisibility = () => {
@@ -100,7 +101,7 @@ export function OSProvider({ children }) {
       window.removeEventListener('focus', debouncedSync)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [auth.user])
+  }, [auth?.user?.id])
 
   const osState = {
     auth,

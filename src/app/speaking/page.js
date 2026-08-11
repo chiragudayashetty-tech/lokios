@@ -90,22 +90,24 @@ export default function SpeakingPracticePage() {
 
   // Fetch History from Supabase & Run 3:00 AM Cutoff Auto-Fail Evaluator
   useEffect(() => {
+    if (!user || !user.id) return
+    const userId = user.id
+
     async function loadData() {
-      if (!user) return
       setLoading(true)
       const sb = createClient()
 
       try {
-        await evaluateProtocolAutoFail(user.id)
+        await evaluateProtocolAutoFail(userId)
 
         // Read local storage cache first
-        const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+        const localRaw = localStorage.getItem(`lokios_speaking_logs_${userId}`)
         const localLogs = localRaw ? JSON.parse(localRaw) : []
 
         // Query both speaking_logs and work_logs concurrently for cross-device sync
         const [speakingRes, workRes] = await Promise.all([
-          sb.from('speaking_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-          sb.from('work_logs').select('*').eq('user_id', user.id).or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).order('created_at', { ascending: false })
+          sb.from('speaking_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+          sb.from('work_logs').select('*').eq('user_id', userId).or(`type.eq.speaking_practice,title.ilike.Speaking Practice%`).order('created_at', { ascending: false })
         ])
 
         const speakingData = speakingRes.data || []
@@ -144,7 +146,7 @@ export default function SpeakingPracticePage() {
             map.set(key, item)
             sb.from('speaking_logs').insert(item).then(() => {}).catch(() => {})
             sb.from('work_logs').insert({
-              user_id: user.id,
+              user_id: userId,
               date: item.date,
               title: `Speaking Practice: ${item.topic}`,
               description: item.notes || item.topic,
@@ -160,10 +162,10 @@ export default function SpeakingPracticePage() {
         )
 
         setHistory(merged)
-        localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(merged))
+        localStorage.setItem(`lokios_speaking_logs_${userId}`, JSON.stringify(merged))
       } catch (err) {
         console.warn('Fallback loading speaking logs', err)
-        const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+        const localRaw = localStorage.getItem(`lokios_speaking_logs_${userId}`)
         if (localRaw) setHistory(JSON.parse(localRaw))
       } finally {
         setLoading(false)
@@ -174,9 +176,9 @@ export default function SpeakingPracticePage() {
 
     // Real-Time Listener & Window Focus Listener for 100% Cross-Device Phone/Desktop Sync
     const sb = createClient()
-    const channel = sb.channel(`speaking_sync_hub_${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'speaking_logs', filter: `user_id=eq.${user.id}` }, () => loadData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `user_id=eq.${user.id}` }, () => loadData())
+    const channel = sb.channel(`speaking_sync_hub_${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'speaking_logs', filter: `user_id=eq.${userId}` }, () => loadData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `user_id=eq.${userId}` }, () => loadData())
       .subscribe()
 
     const handleFocus = () => loadData()
@@ -186,7 +188,7 @@ export default function SpeakingPracticePage() {
       sb.removeChannel(channel)
       window.removeEventListener('focus', handleFocus)
     }
-  }, [user])
+  }, [user?.id])
 
   // Timer Effect
   useEffect(() => {
