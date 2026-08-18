@@ -202,21 +202,21 @@ export default function XPDashboard() {
   return (
     <AppShell>
       <div className="page-container" style={{ maxWidth: '1400px' }}>
-        <header className="page-header mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="page-title flex items-center gap-3"><Trophy className="text-amber" /> EXPERIENCE METRICS</h1>
-            <p className="page-subtitle font-mono uppercase text-xs">Visualize your character progression, minute-to-minute XP activity timeline, and stat distribution.</p>
+        <header className="page-header mb-8 flex flex-col items-center justify-center text-center space-y-3">
+          <div className="flex flex-col items-center justify-center text-center">
+            <h1 className="page-title flex items-center justify-center gap-3"><Trophy className="text-amber" /> EXPERIENCE METRICS</h1>
+            <p className="page-subtitle font-mono uppercase text-xs text-center max-w-xl mx-auto mt-1">Visualize your character progression, minute-to-minute XP activity timeline, and stat distribution.</p>
           </div>
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
             <button 
               onClick={handleFixDuplicates}
-              className="flex-1 sm:flex-none px-3 py-1.5 border border-info text-info text-xs font-mono uppercase tracking-widest hover:bg-info/10 rounded flex items-center justify-center gap-2 transition-colors"
+              className="px-3.5 py-1.5 border border-info text-info text-xs font-mono uppercase tracking-widest hover:bg-info/10 rounded flex items-center justify-center gap-2 transition-colors"
             >
               <Activity size={14} /> PURGE & SYNC
             </button>
             <button 
               onClick={handleResetXP}
-              className="flex-1 sm:flex-none px-3 py-1.5 border border-danger text-danger text-xs font-mono uppercase tracking-widest hover:bg-danger/10 rounded flex items-center justify-center gap-2 transition-colors"
+              className="px-3.5 py-1.5 border border-danger text-danger text-xs font-mono uppercase tracking-widest hover:bg-danger/10 rounded flex items-center justify-center gap-2 transition-colors"
             >
               <RotateCcw size={14} /> Full Reset
             </button>
