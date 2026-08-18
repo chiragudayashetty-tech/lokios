@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
-import { XP_REWARDS } from '@/lib/constants'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
+
 
 export function useJournalInternal(user) {
   const [entries, setEntries] = useState([])
@@ -75,16 +74,6 @@ export function useJournalInternal(user) {
           content: newEntry.content || newEntry.what_did_i_do || newEntry.reflection || newEntry.description || data.content || ''
         }
         setEntries((prev) => [normalizedNew, ...prev])
-
-        // Award XP only for new entries
-        const isFull = data.content && data.content.length >= 100 && data.mood
-        const xpAmount = isFull ? XP_REWARDS.journal_full : XP_REWARDS.journal_partial
-
-        try {
-          await robustAwardXP(user.id, xpAmount, 'journal_entry', result.id, `Journal entry for ${entryDate}`, 'discipline')
-        } catch (xpErr) {
-          console.error("XP Award Failed for journal:", xpErr)
-      }
 
       return result
     } catch (error) {

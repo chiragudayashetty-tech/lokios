@@ -504,7 +504,6 @@ export default function MissionControl() {
     const sb = createClient()
     const { data } = await sb.from('screen_time_logs').insert(payload).select().single()
     if (data) setTodayScreenTime(data)
-    await robustAwardXP(user.id, 50, 'Daily Screen Intel Logged')
   }
 
   const submitEodJournal = async (e) => {
@@ -523,7 +522,6 @@ export default function MissionControl() {
     // Background DB sync
     const sb = createClient()
     await sb.from('journal_entries').insert(payload)
-    await robustAwardXP(user.id, 10, 'Daily Journal Entry Written')
   }
 
   const submitEodWork = async (e) => {
@@ -548,7 +546,6 @@ export default function MissionControl() {
     if (error) {
       await sb.from('work_logs').insert({ user_id: user.id, title: 'Work Session', description: eodWorkForm.notes, duration_hours: hrs })
     }
-    await robustAwardXP(user.id, 50, 'Daily Work Hours Logged')
   }
 
   const submitEodWellness = async (e) => {
@@ -575,7 +572,6 @@ export default function MissionControl() {
         status: 'healthy'
       }
       await sb.from('sleep_logs').insert(payload)
-      await robustAwardXP(user.id, 50, 'Daily Sleep Logged')
     } else {
       const payload = {
         user_id: user.id,
@@ -583,7 +579,6 @@ export default function MissionControl() {
         weight_kg: parseFloat(eodWellnessForm.weight_kg) || 75
       }
       await sb.from('weight_logs').insert(payload)
-      await robustAwardXP(user.id, 2, 'weight', todayStr, 'Daily Weight Logged')
     }
   }
 
@@ -640,7 +635,6 @@ export default function MissionControl() {
     } catch (wlErr) {
       console.warn('work_logs insert error:', wlErr)
     }
-    await robustAwardXP(user.id, 25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
   }
 
   // ── Derived values ────────────────────────────────────────────────────────

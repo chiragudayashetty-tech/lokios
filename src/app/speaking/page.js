@@ -6,7 +6,6 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useOS } from '@/lib/context/OSContext'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { getSpeakingRestDays, setSpeakingRestDays, isSpeakingRestDay } from '@/lib/utils/restDays'
 import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -53,6 +52,7 @@ const DEFAULT_30_TOPICS = [
 export default function SpeakingPracticePage() {
   const { user } = useAuth()
   const { xp: { awardXP } = {} } = useOS() || {}
+
 
   // State Management
   const [topics] = useState(DEFAULT_30_TOPICS)
@@ -297,17 +297,6 @@ export default function SpeakingPracticePage() {
       else console.log('[Speaking Submit] ✅ speaking_logs saved successfully:', newLog.date, newLog.topic)
     } catch (spEx) {
       console.error('[Speaking Submit] speaking_logs exception:', spEx)
-    }
-
-    // Award +25 XP with daily deduplication
-    try {
-      if (awardXP) {
-        await awardXP(25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
-      } else {
-        await robustAwardXP(user.id, 25, 'speaking_practice', todayStr, 'Daily Speaking Practice Completed (+25 XP)', 'discipline')
-      }
-    } catch (xpErr) {
-      console.warn('Failed to award speaking XP:', xpErr)
     }
 
     setSubmitSuccess(true)

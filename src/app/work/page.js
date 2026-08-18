@@ -488,7 +488,7 @@ export default function WorkPage() {
       }
 
       await robustAwardXP(user.id, 2, 'task', selectedDate, 'Work Logged', 'creation')
-      setXpToast('+2 XP: Work Log Recorded')
+      setXpToast('Work Log Recorded')
       setTimeout(() => setXpToast(null), 3000)
     } catch (err) {
       console.error('Save work log exception:', err)
@@ -528,8 +528,7 @@ export default function WorkPage() {
       }
     } catch (err) {}
 
-    awardXP(2, 'Logged Video Shoot')
-    setXpToast('+2 XP: Shoot Log Recorded')
+    setXpToast('Shoot Log Recorded')
     setTimeout(() => setXpToast(null), 3000)
     setSavingShoot(false)
   }
@@ -565,8 +564,7 @@ export default function WorkPage() {
       }
     } catch (err) {}
 
-    awardXP(2, 'Logged Video Edit')
-    setXpToast('+2 XP: Edit Log Recorded')
+    setXpToast('Edit Log Recorded')
     setTimeout(() => setXpToast(null), 3000)
     setSavingEdit(false)
   }

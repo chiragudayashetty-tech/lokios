@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr } from '@/lib/utils/dates'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
+
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scale, TrendingDown, TrendingUp, Trophy, Lock, Check, Target, Flame,
@@ -28,7 +28,7 @@ export default function WellnessPage() {
   const [saving, setSaving] = useState(false)
   const [loggedToday, setLoggedToday] = useState(false)
   const [todayWeight, setTodayWeight] = useState('')
-  const [xpToast, setXpToast] = useState(null)
+  const [logToast, setLogToast] = useState(null)
   const [setupStarting, setSetupStarting] = useState('')
   const [setupTarget, setSetupTarget] = useState('')
   const [showNewTarget, setShowNewTarget] = useState(false)
@@ -138,36 +138,21 @@ export default function WellnessPage() {
     const { error: err1 } = await supabase.from('weight_logs').insert({ user_id: user.id, date: todayStr, weight_kg: weight })
     if (err1) await supabase.from('weight_logs').update({ weight_kg: weight }).eq('user_id', user.id).eq('date', todayStr)
 
-    let totalXpEarned = 0
-    const { data: existingXp } = await supabase.from('xp_history').select('id').eq('user_id', user.id).eq('source_type', 'weight_log').eq('source_id', todayStr).maybeSingle()
-    if (!existingXp) {
-      await robustAwardXP(user.id, 2, 'weight_log', todayStr, 'Daily weight log', 'discipline')
-      totalXpEarned += 2
-    }
+    let totalLogged = true
     if (config) {
       const kgLost = Math.floor(config.starting_weight - weight)
       const alreadyAwarded = config.milestones_awarded || 0
       if (kgLost > alreadyAwarded && kgLost > 0) {
         const newMilestones = kgLost - alreadyAwarded
-        for (let i = 0; i < newMilestones; i++) {
-          await robustAwardXP(user.id, 30, 'weight_milestone', `kg_${alreadyAwarded + i + 1}`, `Weight milestone: -${alreadyAwarded + i + 1} kg`, 'discipline')
-        }
-        totalXpEarned += newMilestones * 30
         await supabase.from('weight_config').update({ milestones_awarded: kgLost }).eq('id', config.id)
       }
       if (weight <= config.target_weight && !config.target_hit_at) {
-        await robustAwardXP(user.id, 100, 'weight_target', 'target_hit', `Target weight ${config.target_weight} kg reached!`, 'discipline')
-        totalXpEarned += 100
         await supabase.from('weight_config').update({ target_hit_at: todayStr }).eq('id', config.id)
-      }
-      if (config.target_hit_at && weight <= config.target_weight) {
-        await robustAwardXP(user.id, 5, 'weight_maintain', todayStr, 'Weight maintenance bonus', 'discipline')
-        totalXpEarned += 5
       }
     }
     setLoggedToday(true)
-    setXpToast(totalXpEarned)
-    setTimeout(() => setXpToast(null), 3000)
+    setLogToast('✓ WEIGHT LOGGED')
+    setTimeout(() => setLogToast(null), 3000)
     await fetchBodyData()
     setSaving(false)
   }
@@ -269,13 +254,13 @@ export default function WellnessPage() {
     <AppShell>
       <div className="page-container max-w-[1200px] pb-10">
 
-        {/* XP Toast */}
+        {/* Log Toast */}
         <AnimatePresence>
-          {xpToast && (
+          {logToast && (
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-              className="fixed top-4 right-4 z-[999] px-5 py-3 font-display font-bold text-lg tracking-tight"
+              className="fixed top-4 right-4 z-[999] px-5 py-3 font-display font-bold text-base tracking-tight"
               style={{ background: 'var(--success)', color: '#0a0a0a', boxShadow: '0 4px 20px rgba(34,197,94,0.4)' }}>
-              +{xpToast} XP
+              {logToast}
             </motion.div>
           )}
         </AnimatePresence>
@@ -345,7 +330,7 @@ export default function WellnessPage() {
                     </div>
                     <div className="flex items-center gap-2 font-mono text-[9px] text-muted">
                       <Flame size={10} color="var(--accent-primary)" />
-                      <span>+2 XP per daily log · +30 XP per kg lost · +100 XP at target</span>
+                      <span>Daily logging · Milestone tracking · Progress visualization</span>
                     </div>
                     <button onClick={handleSetup} disabled={!setupStarting || !setupTarget || saving}
                       className="w-full p-4 font-display font-bold uppercase tracking-widest text-sm transition-all"
@@ -480,7 +465,7 @@ export default function WellnessPage() {
                                 </span>
                                 {m.hit && m.date && <span className="ml-2 font-mono text-[8px] text-muted">{new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
                               </div>
-                              <span className="font-mono text-[9px] font-bold shrink-0" style={{ color: m.hit ? 'var(--success)' : 'var(--text-muted)' }}>{m.isTarget ? '+100 XP' : '+30 XP'}</span>
+                              <span className="font-mono text-[9px] font-bold shrink-0" style={{ color: m.hit ? 'var(--success)' : 'var(--text-muted)' }}>{m.isTarget ? '🎯 TARGET' : `✓ -${m.kg} kg`}</span>
                             </div>
                           </div>
                         ))}

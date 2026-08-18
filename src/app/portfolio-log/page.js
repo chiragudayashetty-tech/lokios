@@ -363,8 +363,7 @@ export default function ProofOfWork() {
       await supabase.from('books_completed').insert([payload])
     } catch (err) {}
 
-    awardXP(10, `Completed Book: ${payload.title}`)
-    setXpToast(`+10 XP: Completed "${payload.title}"`)
+    setXpToast(`\u2713 Book Logged: "${payload.title}"`)
     setTimeout(() => setXpToast(null), 3500)
 
     setShowAddBook(false)

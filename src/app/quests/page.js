@@ -241,10 +241,8 @@ export default function DailyOps() {
     })
 
     if (!wErr) {
-      // sourceId = todayStr so robustAwardXP can deduplicate per day
-      await robustAwardXP(user.id, 2, 'weight', todayStr, 'Daily Weight Logged')
       setWeightLoggedToday(true)
-      setWeightMsg({ success: true, title: 'BODY WEIGHT LOGGED', subtitle: `${w} kg recorded for today`, xp: 2 })
+      setWeightMsg({ success: true, title: 'BODY WEIGHT LOGGED', subtitle: `${w} kg recorded for today` })
     }
     setWeightSaving(false)
   }
@@ -274,18 +272,15 @@ export default function DailyOps() {
     const isOptimal = isOptimalBedtime && isOptimalWake && isOptimalDuration
     const isAcceptable = isAcceptableBedtime && isAcceptableWake && isAcceptableDuration
 
-    let xpAmount = -15
     let statusStr = 'deprived'
-    let titleText = '🚨 POOR SLEEP SCHEDULE (-15 XP)'
+    let titleText = '🚨 POOR SLEEP SCHEDULE'
 
     if (isOptimal) {
-      xpAmount = 30
       statusStr = 'healthy'
-      titleText = '✓ OPTIMAL SLEEP TARGET (+30 XP)'
+      titleText = '✓ OPTIMAL SLEEP LOGGED'
     } else if (isAcceptable) {
-      xpAmount = 10
       statusStr = 'healthy'
-      titleText = 'ACCEPTABLE SLEEP SCHEDULE (+10 XP)'
+      titleText = '✓ SLEEP LOGGED'
     }
 
     let failReasons = []
@@ -296,12 +291,11 @@ export default function DailyOps() {
 
     // 1. Optimistic UI update
     setSleepMsg({
-      success: xpAmount > 0,
+      success: statusStr === 'healthy',
       title: titleText,
       subtitle: statusStr === 'healthy' 
         ? `Bedtime: ${bedtime} · Wake: ${wakeTime} · Duration: ${liveSleepDuration.totalHours}h` 
         : `Logged: ${liveSleepDuration.totalHours}h (${failReasons.join(' · ') || 'Irregular schedule'})`,
-      xp: xpAmount
     })
     setSleepSaving(false)
 
@@ -335,12 +329,6 @@ export default function DailyOps() {
       if (!verifyData) {
         console.error('CRITICAL: Sleep log was NOT persisted for date:', sleepTargetDate)
       }
-
-      // Award or deduct XP (robustAwardXP handles dedup by deleting old XP for this date)
-      const xpLogReason = xpAmount < 0 
-        ? `🚨 Poor Sleep Schedule (${bedtime} → ${wakeTime}, ${liveSleepDuration.totalHours}h)`
-        : `Sleep Logged (${liveSleepDuration.totalHours}h)`
-      await robustAwardXP(user.id, xpAmount, 'sleep', sleepTargetDate, xpLogReason)
 
       // Notify other components
       if (typeof window !== 'undefined') {

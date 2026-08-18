@@ -6,6 +6,23 @@ import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
 
+// Map quest/task category IDs to canonical stat_category keys used by XP page
+const TASK_CATEGORY_TO_STAT = {
+  beyond_tatva: 'founder',
+  founder: 'founder',
+  personal_mission: 'discipline',
+  discipline: 'discipline',
+  learning: 'learning',
+  communication: 'communication',
+  creation: 'creation',
+  other: 'creation',
+  personal_care: 'creation',
+  fitness: 'strength',
+  strength: 'strength',
+  weekly_goal: 'discipline',
+}
+const toStatCat = (cat) => TASK_CATEGORY_TO_STAT[(cat || '').toLowerCase()] || 'discipline'
+
 export function useTasksInternal(user) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -161,7 +178,7 @@ export function useTasksInternal(user) {
         'task_complete',
         id,
         `Completed task: ${task?.title || 'Unknown'}`,
-        task?.category || 'discipline'
+        toStatCat(task?.category)
       )
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
@@ -301,7 +318,7 @@ export function useTasksInternal(user) {
           'task_failed',
           id,
           `Failed task: ${task?.title || 'Unknown'}`,
-          task?.category || 'discipline'
+          toStatCat(task?.category)
         )
       }
 
@@ -418,7 +435,7 @@ export function useTasksInternal(user) {
           'task_pushed',
           id,
           `Procrastination: Pushed ${task.title} to tomorrow`,
-          task.category || 'discipline'
+          toStatCat(task.category)
         )
       }
 
