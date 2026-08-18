@@ -6,6 +6,23 @@ import { XP_REWARDS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
 
+// Map goal/mission category IDs to canonical stat_category keys for XP radar and charts
+const GOAL_CATEGORY_TO_STAT = {
+  beyond_tatva: 'founder',
+  founder: 'founder',
+  personal_mission: 'discipline',
+  discipline: 'discipline',
+  learning: 'learning',
+  communication: 'communication',
+  creation: 'creation',
+  other: 'creation',
+  personal_care: 'creation',
+  fitness: 'strength',
+  strength: 'strength',
+  weekly_goal: 'discipline',
+}
+const toStatCat = (cat) => GOAL_CATEGORY_TO_STAT[(cat || '').toLowerCase()] || 'discipline'
+
 export function useGoalsInternal(user) {
   const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(true)
@@ -188,7 +205,7 @@ export function useGoalsInternal(user) {
           'goal_complete',
           id,
           `Completed ${goal.type}: ${goal.title}`,
-          goal.category || 'discipline'
+          toStatCat(goal.category)
         )
       }
 
@@ -273,7 +290,7 @@ export function useGoalsInternal(user) {
         'goal_failed',
         id,
         `Failed ${goal.type}: ${goal.title}`,
-        goal.category || 'discipline'
+        toStatCat(goal.category)
       )
 
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))

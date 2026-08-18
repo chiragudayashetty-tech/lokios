@@ -187,48 +187,17 @@ export async function evaluateProtocolAutoFail(userId) {
       const dateStr = getLocalDateStr(curr)
 
       if (dateStr >= PROTOCOL_START_DATE) {
-        // A. Journal Entry Check (-25 XP if unlogged past 3:00 AM)
+        // A. Journal Entry Check (No XP penalty since Journal has no XP award)
         const journalKey = `journal_missed_${dateStr}`
         if (!loggedJournalDates.has(dateStr) && !activePenaltyKeys.has(journalKey)) {
-          await robustAwardXP(
-            userId,
-            -25,
-            'journal_missed',
-            `journal_missed_${dateStr}`,
-            `🚨 MISSED JOURNAL DEADLINE (3 AM Cutoff): Unlogged entry for ${dateStr}`,
-            'discipline'
-          )
+          // Log missed status if needed without XP penalty
           activePenaltyKeys.add(journalKey)
         }
 
-        // B. Speaking Practice Check — SKIP entirely if speaking_logs table is missing/errored
-        // Better to issue NO penalty than to falsely penalize a completed session
+        // B. Speaking Practice Check (No XP penalty since Speaking has no XP award)
         if (!speakingQueryFailed) {
-          const speakingRest = isSpeakingRestDay(dateStr)
           const speakingKey = `speaking_missed_${dateStr}`
-          const restKey = `speaking_rest_day_${dateStr}`
-
-          if (speakingRest) {
-            if (!activePenaltyKeys.has(restKey) && !loggedSpeakingDates.has(dateStr)) {
-              await robustAwardXP(
-                userId,
-                0,
-                'speaking_rest_day',
-                `speaking_rest_day_${dateStr}`,
-                `☕ REST DAY: Speaking practice off-day (${dateStr})`,
-                'discipline'
-              )
-              activePenaltyKeys.add(restKey)
-            }
-          } else if (!loggedSpeakingDates.has(dateStr) && !activePenaltyKeys.has(speakingKey)) {
-            await robustAwardXP(
-              userId,
-              -25,
-              'speaking_missed',
-              `speaking_missed_${dateStr}`,
-              `🚨 MISSED SPEAKING DEADLINE (3 AM Cutoff): Unlogged practice for ${dateStr}`,
-              'discipline'
-            )
+          if (!loggedSpeakingDates.has(dateStr) && !activePenaltyKeys.has(speakingKey)) {
             activePenaltyKeys.add(speakingKey)
           }
         }

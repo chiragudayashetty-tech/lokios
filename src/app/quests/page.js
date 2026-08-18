@@ -1388,7 +1388,7 @@ export default function DailyOps() {
                         {h.title} {isBlocked && <span className="text-[10px] ml-2 text-success opacity-90 tracking-widest">REST</span>}
                       </span>
                       {isComplete && <span className="font-mono text-[10px] text-success">+{isBlocked ? 0 : (h.xp_per_completion || 25)} XP</span>}
-                      {isFailed && <span className="font-mono text-[10px] text-danger">{isBlocked ? 0 : -15} XP</span>}
+                      {isFailed && <span className="font-mono text-[10px] text-danger">-{isBlocked ? 0 : Math.max(5, Math.round((h.xp_per_completion || 25) * 0.5))} XP</span>}
                       {!isComplete && !isFailed && <span className={`font-mono text-[10px] font-bold ${isBlocked ? 'text-muted' : 'text-info'}`}>+{isBlocked ? 0 : (h.xp_per_completion || 25)} XP</span>}
                     </div>
                   )

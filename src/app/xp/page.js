@@ -202,21 +202,21 @@ export default function XPDashboard() {
   return (
     <AppShell>
       <div className="page-container" style={{ maxWidth: '1400px' }}>
-        <header className="page-header mb-8 flex items-start justify-between">
+        <header className="page-header mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="page-title flex items-center gap-3"><Trophy className="text-amber" /> EXPERIENCE METRICS</h1>
             <p className="page-subtitle font-mono uppercase text-xs">Visualize your character progression, minute-to-minute XP activity timeline, and stat distribution.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <button 
               onClick={handleFixDuplicates}
-              className="px-3 py-1.5 border border-info text-info text-xs font-mono uppercase tracking-widest hover:bg-info/10 rounded flex items-center gap-2 transition-colors mt-1"
+              className="flex-1 sm:flex-none px-3 py-1.5 border border-info text-info text-xs font-mono uppercase tracking-widest hover:bg-info/10 rounded flex items-center justify-center gap-2 transition-colors"
             >
-              <Activity size={14} /> FIX DUPLICATES
+              <Activity size={14} /> PURGE & SYNC
             </button>
             <button 
               onClick={handleResetXP}
-              className="px-3 py-1.5 border border-danger text-danger text-xs font-mono uppercase tracking-widest hover:bg-danger/10 rounded flex items-center gap-2 transition-colors mt-1"
+              className="flex-1 sm:flex-none px-3 py-1.5 border border-danger text-danger text-xs font-mono uppercase tracking-widest hover:bg-danger/10 rounded flex items-center justify-center gap-2 transition-colors"
             >
               <RotateCcw size={14} /> Full Reset
             </button>

@@ -253,14 +253,17 @@ export function useHabitsInternal(user) {
           const isBlocked = !freqDays.includes(targetDayOfWeek)
           
           if (nextStatus === 'completed') {
-            await robustAwardXP(user.id, isBlocked ? 0 : (habit?.xp_per_completion || 25), 'habit_complete', newLog.id, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
+            const baseXP = habit?.xp_per_completion ? Math.max(5, parseInt(habit.xp_per_completion, 10)) : 25
+            await robustAwardXP(user.id, isBlocked ? 0 : baseXP, 'habit_complete', newLog.id, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
           } else if (nextStatus === 'failed') {
+            const baseXP = habit?.xp_per_completion ? Math.max(5, parseInt(habit.xp_per_completion, 10)) : 25
             const priorMisses = getConsecutiveMisses(habitId, targetDate, monthLogs, habit)
             const isDoublePenalty = priorMisses >= 1
-            const penaltyXP = isBlocked ? 0 : (isDoublePenalty ? -30 : -15)
+            const penaltyMagnitude = isDoublePenalty ? baseXP : Math.max(5, Math.round(baseXP * 0.5))
+            const penaltyXP = isBlocked ? 0 : -penaltyMagnitude
             const reason = isDoublePenalty 
-              ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${habit?.title || 'Unknown'}` 
-              : `Failed routine: ${habit?.title || 'Unknown'}`
+              ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP)` 
+              : `Failed routine: ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP)`
             await robustAwardXP(user.id, penaltyXP, 'habit_failed', newLog.id, reason, habit?.stat_category || 'discipline')
           }
         }
@@ -574,12 +577,14 @@ export function useHabitsInternal(user) {
             if (!processingRef.current.has(procKey)) {
               processingRef.current.add(procKey)
               
+              const baseXP = h.xp_per_completion ? Math.max(5, parseInt(h.xp_per_completion, 10)) : 25
               const priorMisses = getConsecutiveMisses(h.id, dateStr, recentLogs, h)
               const isDoublePenalty = priorMisses >= 1
-              const penaltyXP = isDoublePenalty ? -30 : -15
+              const penaltyMagnitude = isDoublePenalty ? baseXP : Math.max(5, Math.round(baseXP * 0.5))
+              const penaltyXP = -penaltyMagnitude
               const reason = isDoublePenalty 
-                ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${h.title}` 
-                : `Missed routine: ${h.title}`
+                ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${h.title} (-${penaltyMagnitude} XP)` 
+                : `Missed routine: ${h.title} (-${penaltyMagnitude} XP)`
               await robustAwardXP(user.id, penaltyXP, 'habit_failed', h.id, reason, h.stat_category || 'discipline')
               
               const failId = `virtual_fail_${h.id}_auto_${Date.now()}_${Math.random()}`

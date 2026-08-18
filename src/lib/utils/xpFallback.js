@@ -109,29 +109,29 @@ export async function cleanupAllDuplicateXP(userId) {
     const srcType = (entry.source_type || '').toLowerCase()
     const srcId = (entry.source_id || '').toLowerCase()
 
-    // 1. Purge any retroactive protocol penalties logged for dates prior to PROTOCOL_START_DATE
-    const isProtocolEntry =
-      desc.includes('3 am cutoff') ||
-      desc.includes('speaking practice off-day') ||
-      srcType.includes('journal_missed') ||
-      srcType.includes('speaking_missed') ||
-      srcType.includes('speaking_rest_day') ||
-      srcId.includes('journal_missed') ||
-      srcId.includes('speaking_missed') ||
-      srcId.includes('speaking_rest_day')
+    // 1. Purge deprecated non-XP sources (speaking, journal, weight, sleep)
+    const isDeprecatedSource =
+      srcType === 'speaking_practice' ||
+      srcType === 'journal_entry' ||
+      srcType === 'journal_missed' ||
+      srcType === 'speaking_missed' ||
+      srcType === 'speaking_rest_day' ||
+      srcType === 'weight_log' ||
+      srcType === 'weight' ||
+      srcType === 'weight_milestone' ||
+      srcType === 'weight_target' ||
+      srcType === 'weight_maintain' ||
+      srcType === 'sleep' ||
+      srcType === 'weekly_review' ||
+      desc.includes('speaking practice') ||
+      desc.includes('journal entry') ||
+      desc.includes('daily sleep') ||
+      desc.includes('daily weight') ||
+      desc.includes('weekly review')
 
-    if (isProtocolEntry) {
-      const textToSearch = `${entry.description || ''} ${entry.source_id || ''}`
-      const dateMatch = textToSearch.match(/202\d-\d{2}-\d{2}/)
-      if (dateMatch && dateMatch[0]) {
-        if (dateMatch[0] < PROTOCOL_START_DATE) {
-          toDeleteIds.push(entry.id)
-          continue
-        }
-      } else {
-        toDeleteIds.push(entry.id)
-        continue
-      }
+    if (isDeprecatedSource) {
+      toDeleteIds.push(entry.id)
+      continue
     }
 
     let key = null
