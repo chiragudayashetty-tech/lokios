@@ -1313,7 +1313,7 @@ export default function MissionControl() {
                   isDebriefDoneThisWeek ? 'text-success' : new Date().getDay() === 0 ? 'text-warning' : 'text-muted'
                 }`}
               >
-                {isDebriefDoneThisWeek ? 'DONE (+5 XP)' : new Date().getDay() === 0 ? 'DUE TODAY (+5 XP)' : 'DUE SUN (+5 XP)'}
+                {isDebriefDoneThisWeek ? 'DONE' : new Date().getDay() === 0 ? 'DUE TODAY' : 'DUE SUN'}
               </div>
             </div>
           </Link>

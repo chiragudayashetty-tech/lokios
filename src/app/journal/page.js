@@ -430,7 +430,7 @@ export default function JournalPage() {
                       <div className="flex items-center gap-2">
                         <Zap size={16} className="text-amber" />
                         <span className="font-mono text-xs text-muted">
-                          REWARD: <span className="text-amber font-bold">+10 XP</span>
+                          ARCHIVE: <span className="text-primary font-bold">DAILY REFLECTION</span>
                         </span>
                       </div>
                       <button type="submit" disabled={saving} className="btn btn-primary btn-lg flex items-center gap-2">
@@ -604,7 +604,7 @@ export default function JournalPage() {
                     <div className="flex-between border-t border-border-color pt-4">
                       <div className="flex items-center gap-2">
                         <Zap size={16} className="text-amber" />
-                        <span className="font-mono text-xs text-muted">REWARD: <span className="text-amber font-bold">+5 XP on completion</span></span>
+                        <span className="font-mono text-xs text-muted">PROTOCOL: <span className="text-primary font-bold">WEEKLY RETROSPECTIVE</span></span>
                       </div>
                       <button type="submit" disabled={savingDebrief} className="btn btn-primary btn-lg flex items-center gap-2">
                         <Save size={18} />{savingDebrief ? 'SAVING...' : (editingDebriefLog ? 'UPDATE DEBRIEF' : 'SEAL DEBRIEF')}

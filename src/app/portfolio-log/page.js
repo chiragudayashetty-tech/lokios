@@ -425,8 +425,7 @@ export default function ProofOfWork() {
         }
       } catch (err) {}
 
-      deductXP(10, 'book', bookId, `Removed Book: ${title}`)
-      setXpToast(`-10 XP: Removed "${title}"`)
+      setXpToast(`Book Removed: "${title}"`)
       setTimeout(() => setXpToast(null), 3500)
     }
   }
@@ -727,8 +726,8 @@ export default function ProofOfWork() {
 
               <HudPanel className="p-4 flex items-center justify-between">
                 <div>
-                  <span className="font-mono text-[10px] text-muted uppercase block">XP REWARDS</span>
-                  <span className="font-display text-2xl text-success font-bold">+{books.length * 10} XP</span>
+                  <span className="font-mono text-[10px] text-muted uppercase block">KNOWLEDGE ARCHIVE</span>
+                  <span className="font-display text-2xl text-success font-bold">{books.length} READ</span>
                 </div>
                 <Sparkles size={24} className="text-success opacity-60" />
               </HudPanel>
@@ -778,7 +777,7 @@ export default function ProofOfWork() {
             <AnimatePresence>
               {showAddBook && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                  <HudPanel label="LOG COMPLETED BOOK (+10 XP)" className="border-amber p-5 space-y-4">
+                  <HudPanel label="LOG COMPLETED BOOK" className="border-amber p-5 space-y-4">
                     <form onSubmit={handleCreateBook} className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
@@ -890,7 +889,7 @@ export default function ProofOfWork() {
                           className="px-5 py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2"
                         >
                           <Save size={15} />
-                          <span>Save Book (+10 XP)</span>
+                          <span>Save Book</span>
                         </button>
                       </div>
                     </form>

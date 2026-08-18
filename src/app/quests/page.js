@@ -181,17 +181,14 @@ export default function DailyOps() {
           const isOpt = isOptBed && isOptWake && isOptDur
           const isAcc = isAccBed && isAccWake && isAccDur
 
-          let logXp = -15
-          let logTitle = '🚨 POOR SLEEP SCHEDULE (-15 XP)'
+          let logTitle = '🚨 POOR SLEEP SCHEDULE'
           let logSuccess = false
 
           if (isOpt) {
-            logXp = 30
-            logTitle = '✓ OPTIMAL SLEEP TARGET (+30 XP)'
+            logTitle = '✓ OPTIMAL SLEEP LOGGED'
             logSuccess = true
           } else if (isAcc) {
-            logXp = 10
-            logTitle = 'ACCEPTABLE SLEEP SCHEDULE (+10 XP)'
+            logTitle = '✓ SLEEP LOGGED'
             logSuccess = true
           }
 
