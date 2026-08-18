@@ -625,7 +625,7 @@ export default function SpeakingPracticePage() {
                   className="w-full font-mono text-xs font-bold py-3 flex items-center justify-center gap-2 rounded-xl bg-amber hover:bg-amber-hover text-black shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Award size={16} />
-                  <span>{submitting ? 'RECORDING...' : 'LOG PRACTICE SESSION (+25 XP)'}</span>
+                  <span>{submitting ? 'RECORDING...' : 'LOG PRACTICE SESSION'}</span>
                 </button>
               </form>
             </div>

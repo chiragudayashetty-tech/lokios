@@ -718,7 +718,7 @@ export default function DailyOps() {
                 <span className="font-display text-xs uppercase tracking-widest font-bold">BODY WEIGHT LOGGING</span>
               </div>
               <span className="font-mono text-[9px] text-amber bg-amber-subtle px-2 py-0.5 border border-amber-subtle rounded-sm">
-                {weightLoggedToday ? '✓ LOGGED TODAY (+2 XP)' : '+2 XP'}
+                {weightLoggedToday ? '✓ LOGGED TODAY' : 'DAILY LOG'}
               </span>
             </div>
 

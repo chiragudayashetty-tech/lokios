@@ -946,7 +946,6 @@ export default function WorkPage() {
                 >
                   <Save size={15} />
                   <span>{savingWork ? 'SAVING...' : 'SAVE WORK LOG'}</span>
-                  <span className="ml-1 px-2 py-0.5 rounded bg-black/20 text-black font-mono text-[9px] font-bold">+2 XP</span>
                 </button>
 
               </form>
