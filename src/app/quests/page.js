@@ -9,7 +9,6 @@ import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriang
 import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'

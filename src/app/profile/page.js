@@ -9,7 +9,6 @@ import { useHabits } from '@/lib/hooks/useHabits'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, Search, Calendar, Flame, Lock, Unlock, Play, Pause, AlertTriangle, ChevronRight, ChevronDown, ChevronUp, X, Edit2, Trash2, Plus, Smartphone, Settings, BarChart2, Briefcase, Heart, BookOpen, User as UserIcon, LogOut, Sun, Moon, Cpu, Coffee, Activity, ArrowRight, ShieldAlert, Navigation, Layers, Link as LinkIcon, Database, ArrowUpCircle, Eye, Skull, Rocket, Sparkles, Dumbbell, Swords } from 'lucide-react'
 import { QUEST_CATEGORIES } from '@/lib/constants'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { syncWarRoomDailyEvaluator } from '@/lib/utils/warRoomSync'
 import NotificationControl from '@/components/ui/NotificationControl'
@@ -175,7 +174,6 @@ export default function OperatorDashboard() {
       .update({ battles: updated })
       .eq('user_id', user.id)
 
-    await robustAwardXP(user.id, xpAward, `War Room Strike Back: ${target.name}`)
   }
 
   const handleSave = async () => {

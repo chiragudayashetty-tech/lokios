@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 
 export default function WorkPage() {
-  const { auth: { user } = {}, xp: { awardXP } = {} } = useOS() || {}
+  const { auth: { user } = {} } = useOS() || {}
 
   // Primary subpage tab: 'work_log' | 'content_ops' | 'analytics'
   const [activeTab, setActiveTab] = useState('work_log')
@@ -487,7 +487,6 @@ export default function WorkPage() {
         console.warn('work_logs sync warning:', wlErr)
       }
 
-      await robustAwardXP(user.id, 2, 'task', selectedDate, 'Work Logged', 'creation')
       setXpToast('Work Log Recorded')
       setTimeout(() => setXpToast(null), 3000)
     } catch (err) {

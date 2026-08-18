@@ -8,7 +8,6 @@ import { useOS } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr, formatDate, getStartOfWeek, getEndOfWeek } from '@/lib/utils/dates'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
 import {
   BookOpen, Smile, Frown, Meh, Save, Zap, Flame, ShieldAlert,
@@ -309,9 +308,6 @@ export default function JournalPage() {
         }])
       }
 
-      if (!editingDebriefLog) {
-        await robustAwardXP(user.id, 5, 'weekly_review', todayStr, 'Weekly Review Completed', 'discipline')
-      }
 
       setWins(''); setFails(''); setNextGoal1(''); setNextGoal2(''); setNextGoal3('')
       setEditingDebriefLog(null)
