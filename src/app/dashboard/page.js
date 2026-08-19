@@ -7,7 +7,7 @@ import {
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
   Activity, Clock, Terminal, ArrowUpRight, BarChart2,
   Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale, X, RotateCcw,
-  Calendar as CalendarIcon, MapPin, Plus, ExternalLink, Briefcase, Sun, FileText, CheckCircle2, Mic
+  Calendar as CalendarIcon, MapPin, Plus, ExternalLink, Briefcase, Sun, FileText, CheckCircle2, Mic, Sparkles
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
@@ -713,9 +713,53 @@ export default function MissionControl() {
   const { current: xpInLevel, required: xpForNextLevel, percentage: levelPct } = xpToNextLevel(totalXp)
   const xpNeeded     = Math.max(0, xpForNextLevel - xpInLevel)
   const currentRank  = getRankForXp(totalXp)
-  const arcColor     = RANK_CONFIG[currentRank.code]?.color || '#9CA3AF'
+  const currentRankConfig = RANK_CONFIG[currentRank.code] || RANK_CONFIG['I']
+  const arcColor     = currentRankConfig?.color || '#9CA3AF'
+  const sagaAccentColor = currentRankConfig?.color || '#f97316'
   const momentumStateColor = dailyMomentum?.color || 'var(--warning)'
   const currentArc   = ARC_CONFIG.find(a => a.rank === currentRank.code) || ARC_CONFIG[0]
+  const currentArcIndex = ARC_CONFIG.findIndex(a => a.rank === currentRank.code)
+  const nextArc      = ARC_CONFIG[currentArcIndex + 1] || null
+
+  const minSagaXp = currentRankConfig.minXp || 0
+  const maxSagaXp = currentRankConfig.maxXp || 4999
+  const currentXpInSaga = Math.max(0, totalXp - minSagaXp)
+  const totalXpInSaga = Math.max(1, maxSagaXp - minSagaXp + 1)
+  const sagaProgressPct = Math.min(100, Math.max(0, Math.round((currentXpInSaga / totalXpInSaga) * 100)))
+
+  const currentSagaImage = SAGA_IMAGES[currentRank.code] || SAGA_IMAGES['I'] || '/sagas/awakening.png'
+
+  const splitTitle = useMemo(() => {
+    const rawName = currentArc?.name || 'The Spark'
+    if (rawName === 'The Discipline Rebuild') return { primary: 'THE DISCIPLINE', secondary: 'REBUILD' }
+    const parts = rawName.split(' ')
+    if (parts.length === 1) return { primary: 'SAGA', secondary: parts[0].toUpperCase() }
+    return { primary: parts.slice(0, -1).join(' ').toUpperCase(), secondary: parts[parts.length - 1].toUpperCase() }
+  }, [currentArc?.name])
+
+  const SAGA_DISCIPLINE_QUOTES = useMemo(() => [
+    currentArc?.flavor || "I rebuilt my mind, habits, and identity one day at a time.",
+    "Discipline is choosing between what you want now and what you want most.",
+    "Small actions compounded daily become unstoppable momentum.",
+    "Stop chasing motivation. Build ironclad routines and relentless consistency.",
+    "You do not rise to the level of your goals. You fall to the level of your systems.",
+    "The pain of discipline is far less than the pain of regret.",
+    "Master self-command before seeking command over anything else.",
+    "Every day you don't execute is a day you concede ground."
+  ], [currentArc?.flavor])
+
+  const [quoteIndex, setQuoteIndex] = useState(0)
+
+  useEffect(() => {
+    const quoteInterval = setInterval(() => {
+      setQuoteIndex(prev => (prev + 1) % SAGA_DISCIPLINE_QUOTES.length)
+    }, 10000)
+    return () => clearInterval(quoteInterval)
+  }, [SAGA_DISCIPLINE_QUOTES.length])
+
+  const handleNextQuote = () => {
+    setQuoteIndex(prev => (prev + 1) % SAGA_DISCIPLINE_QUOTES.length)
+  }
 
   const hoursLeft = +(24 - currentTime.getHours() - currentTime.getMinutes() / 60).toFixed(1)
   const dayPct    = Math.round(((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100)
@@ -916,67 +960,176 @@ export default function MissionControl() {
 
 
         {/* ══════════════════════════════════════════════════════════════════
-            DEDICATED SAGA SHOWCASE SECTION (BETWEEN HUD & TODAY'S OPERATIONS)
+            COMMAND CENTER SAGA HERO CARD (2-COLUMN REFERENCE DESIGN)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="mb-5 rounded-2xl border border-indigo-500/25 bg-[#0a0d1a]/95 backdrop-blur-2xl shadow-[0_12px_35px_rgba(0,0,0,0.65)] overflow-hidden transition-all">
+        <div className="mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden transition-all">
           
-          {/* Main Saga Bar (Clickable) */}
-          <div 
-            onClick={() => setSagaRosterOpen(prev => !prev)}
-            className="p-3.5 sm:p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-white/[0.02] transition-colors select-none"
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              {/* 1:1 Square Saga Artwork */}
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/40 shadow-[0_0_20px_rgba(129,140,248,0.35)] shrink-0 aspect-square group relative">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 lg:p-8 items-center">
+            
+            {/* ── LEFT COLUMN: 1:1 SQUARE ARTWORK WITH OVERLAY (Span 5) ── */}
+            <div className="lg:col-span-5 flex justify-center">
+              <div className="w-full max-w-[360px] sm:max-w-[400px] aspect-square rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_30px_rgba(0,0,0,0.8)] group flex flex-col justify-end">
+                
+                {/* Background 1:1 Artwork Image */}
                 <img 
-                  src={SAGA_IMAGES[currentRank.code] || '/sagas/the-spark.png'} 
+                  src={currentSagaImage} 
                   alt={currentArc.name} 
-                  className="w-full h-full object-cover aspect-square transition-transform duration-300 group-hover:scale-105"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  className="absolute inset-0 w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
+                  onError={(e) => { e.currentTarget.src = '/sagas/the-spark.png' }}
                 />
-                <div className="absolute inset-0 ring-1 ring-inset ring-white/15 rounded-2xl pointer-events-none" />
-              </div>
 
-              {/* SAGA Info */}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-400/30 text-indigo-300 font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider">
-                    SAGA {currentRank.code}
-                  </span>
-                  <span className="font-mono text-[10px] text-slate-400 font-bold hidden sm:inline">
-                    LV.{currentLevel}
-                  </span>
+                {/* Subtle Radial & Gradient Overlays for readable text */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
+
+                {/* Bottom Overlay Label */}
+                <div className="relative z-10 p-5 text-center flex flex-col items-center select-none">
+                  <div className="font-display font-black text-sm sm:text-base text-white tracking-[0.35em] uppercase drop-shadow-md">
+                    {splitTitle.primary}
+                  </div>
+                  <div 
+                    className="font-display font-black text-xs sm:text-sm tracking-[0.4em] uppercase drop-shadow-[0_0_10px_rgba(249,115,22,0.6)] mt-0.5"
+                    style={{ color: sagaAccentColor }}
+                  >
+                    {splitTitle.secondary}
+                  </div>
+                  <div className="mt-2 flex items-center justify-center">
+                    <div 
+                      className="w-5 h-5 rounded-full border flex items-center justify-center"
+                      style={{ borderColor: `${sagaAccentColor}60`, color: sagaAccentColor }}
+                    >
+                      <ChevronUp size={12} />
+                    </div>
+                  </div>
                 </div>
-                <h2 className="font-display font-black text-base sm:text-lg text-white uppercase tracking-wider truncate">
-                  {currentArc.name}
-                </h2>
-                <p className="font-mono text-[10px] sm:text-xs text-slate-400 truncate max-w-md sm:max-w-xl">
-                  {currentArc.flavor || 'Every action shapes your legacy.'}
-                </p>
+
               </div>
             </div>
 
-            {/* Right Action / Toggle Indicator */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="font-mono text-[10px] uppercase font-bold text-indigo-400 hidden sm:inline">
-                {sagaRosterOpen ? 'HIDE ROSTER' : 'VIEW ALL SAGAS'}
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 flex items-center justify-center transition-transform duration-200">
-                {sagaRosterOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {/* ── RIGHT COLUMN: INTELLIGENCE & PROGRESSION (Span 7) ── */}
+            <div className="lg:col-span-7 flex flex-col justify-between space-y-4 sm:space-y-5">
+              
+              {/* Header: SAGA Title */}
+              <div>
+                <span className="font-mono text-xs uppercase tracking-[0.25em] font-bold text-indigo-400 block mb-1">
+                  SAGA {currentRank.code}
+                </span>
+                <h1 className="font-display font-black text-2xl sm:text-4xl text-white tracking-[0.15em] uppercase leading-tight">
+                  {splitTitle.primary}
+                </h1>
+                <h2 
+                  className="font-display font-black text-xl sm:text-3xl tracking-[0.2em] uppercase leading-none mt-1"
+                  style={{ color: sagaAccentColor }}
+                >
+                  {splitTitle.secondary}
+                </h2>
               </div>
+
+              {/* Dynamic Rotating Motivational Quote Inset Pod */}
+              <div 
+                onClick={handleNextQuote}
+                title="Click to cycle next mindset quote"
+                className="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 flex items-center gap-4 hover:border-white/20 transition-all cursor-pointer group"
+              >
+                <div 
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105"
+                  style={{ 
+                    backgroundColor: `${sagaAccentColor}15`, 
+                    borderColor: `${sagaAccentColor}40`, 
+                    color: sagaAccentColor,
+                    boxShadow: `0 0 16px ${sagaAccentColor}25`
+                  }}
+                >
+                  <Sparkles size={22} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-xs sm:text-sm text-slate-200 leading-relaxed italic">
+                    "{SAGA_DISCIPLINE_QUOTES[quoteIndex % SAGA_DISCIPLINE_QUOTES.length]}"
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress to Next Saga Pod */}
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-widest font-bold">
+                  <span>PROGRESS TO NEXT SAGA</span>
+                  <span>{sagaProgressPct}%</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  {/* Left: Huge Percentage & Bar */}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-baseline justify-between">
+                      <span 
+                        className="font-display font-black text-3xl sm:text-4xl leading-none"
+                        style={{ color: sagaAccentColor }}
+                      >
+                        {sagaProgressPct}%
+                      </span>
+                      <span className="font-mono text-xs font-bold text-slate-400">
+                        {currentXpInSaga.toLocaleString()} / {totalXpInSaga.toLocaleString()} XP
+                      </span>
+                    </div>
+
+                    {/* Glowing Progress Track */}
+                    <div className="w-full h-3 rounded-full bg-slate-950 border border-white/10 p-[1.5px] relative overflow-hidden">
+                      <motion.div 
+                        className="h-full rounded-full transition-all duration-500 shadow-lg"
+                        style={{ 
+                          width: `${Math.max(4, Math.min(100, sagaProgressPct))}%`,
+                          backgroundColor: sagaAccentColor,
+                          boxShadow: `0 0 12px ${sagaAccentColor}`
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right: Next Saga Inset Capsule */}
+                  {nextArc && (
+                    <div className="p-3 rounded-xl border border-white/10 bg-black/50 flex items-center gap-3 shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
+                        <Target size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-mono text-[9px] uppercase tracking-wider text-purple-400 font-bold block">
+                          NEXT SAGA
+                        </span>
+                        <span className="font-display font-bold text-xs text-white uppercase truncate block">
+                          SAGA {nextArc.rank} • {nextArc.name}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom Footer Subtitle & Roster Toggle */}
+              <div className="flex items-center justify-between pt-1 text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                <span className="truncate">KEEP BUILDING. YOUR NEXT BREAKTHROUGH IS CLOSER THAN YOU THINK.</span>
+                <button
+                  type="button"
+                  onClick={() => setSagaRosterOpen(prev => !prev)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white transition-all shrink-0 ml-3"
+                >
+                  <span>{sagaRosterOpen ? 'HIDE ROSTER' : 'VIEW ALL SAGAS'}</span>
+                  {sagaRosterOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                </button>
+              </div>
+
             </div>
+
           </div>
 
-          {/* Interactive Saga Roster Grid (When Expanded) */}
+          {/* ── EXPANDABLE 8-SAGA LOCKED/UNLOCKED ROSTER ── */}
           <AnimatePresence>
             {sagaRosterOpen && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="border-t border-white/10 p-4 sm:p-5 bg-black/40"
+                className="border-t border-white/10 p-4 sm:p-6 bg-black/60"
               >
-                <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
                     <h3 className="font-mono text-xs font-bold text-white uppercase tracking-wider">
@@ -1005,9 +1158,9 @@ export default function MissionControl() {
                     return (
                       <div 
                         key={saga.rank}
-                        className={`rounded-2xl border p-2 flex flex-col items-center text-center transition-all ${
+                        className={`rounded-2xl border p-2.5 flex flex-col items-center text-center transition-all ${
                           isCurrent
-                            ? 'bg-indigo-950/40 border-indigo-400/80 shadow-[0_0_18px_rgba(129,140,248,0.3)] ring-1 ring-indigo-400/40'
+                            ? 'bg-indigo-950/40 border-indigo-400/80 shadow-[0_0_18px_rgba(129,140,248,0.35)] ring-1 ring-indigo-400/40'
                             : isUnlocked
                             ? 'bg-black/40 border-white/10 hover:border-white/20'
                             : 'bg-black/60 border-white/5 opacity-50'
@@ -1021,7 +1174,7 @@ export default function MissionControl() {
                             className={`w-full h-full object-cover aspect-square transition-all ${
                               !isUnlocked ? 'grayscale contrast-125 brightness-50' : ''
                             }`}
-                            onError={(e) => { e.currentTarget.style.display = 'none' }}
+                            onError={(e) => { e.currentTarget.src = '/sagas/the-spark.png' }}
                           />
 
                           {/* Lock / Active Badges */}
