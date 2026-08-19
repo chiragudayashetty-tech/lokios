@@ -53,7 +53,8 @@ export default function AppShell({ children }) {
 
   // NOTIFICATION MANAGER & BACKGROUND SCHEDULER
   useEffect(() => {
-    initBackgroundReminders()
+    const cleanup = initBackgroundReminders()
+    return cleanup
   }, [])
 
   // PWA INSTALL BANNER LOGIC

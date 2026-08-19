@@ -137,6 +137,10 @@ export default function NotificationControl() {
             </div>
           )}
 
+          <div className="p-3 bg-warning/10 border border-warning/30 rounded font-mono text-[10px] leading-relaxed text-warning">
+            <strong>BACKGROUND DELIVERY NOTE:</strong> iPhone pauses page timers when the Home Screen app is closed. The test button proves permission and service-worker display only; reliable scheduled delivery while closed requires a Web Push subscription plus a server-side sender.
+          </div>
+
           {/* Dynamic Real-Time Toggles */}
           <div className="pt-2 border-t border-border-color flex flex-col gap-2.5 font-mono text-xs">
             <div className="text-muted text-[10px] uppercase tracking-widest mb-1 font-bold">DYNAMIC REAL-TIME REMINDERS</div>

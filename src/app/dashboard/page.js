@@ -1095,9 +1095,9 @@ export default function MissionControl() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            DAILY PROTOCOL STATUS // COMPACT SQUARE 3x2 GRID
+            DAILY PROTOCOL STATUS // SINGLE HORIZONTAL LINE OF 6 CARDS
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-5">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-2.5 md:gap-3 mb-5 w-full">
           {eodItems.map((item) => {
             const ItemIcon = item.icon
             const displayLabel = item.key === 'wellness' ? 'WELLNESS' : item.key === 'work' ? 'WORK' : item.key === 'journal' ? 'JOURNAL' : item.key === 'screen' ? 'SCREEN INTEL' : item.key === 'speaking' ? 'SPEAKING' : item.label.toUpperCase()
@@ -1108,22 +1108,22 @@ export default function MissionControl() {
                 className="block group"
               >
                 <div 
-                  className={`p-2.5 sm:p-3 aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative ${
+                  className={`py-2.5 px-1.5 sm:py-3 sm:px-2 min-h-[76px] sm:min-h-[82px] text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative ${
                     item.isDone 
                       ? 'bg-bg-tertiary border-border-color hover:border-primary hover:bg-bg-secondary' 
                       : 'bg-bg-tertiary border-border-color hover:border-amber hover:bg-bg-secondary'
                   }`}
                 >
                   <ItemIcon 
-                    size={18} 
-                    className="mb-1.5 transition-transform group-hover:scale-110" 
+                    size={16} 
+                    className="mb-1 transition-transform group-hover:scale-110" 
                     style={{ color: item.isDone ? 'var(--success)' : 'var(--text-muted)' }} 
                   />
-                  <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
+                  <div className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
                     {displayLabel}
                   </div>
                   <div 
-                    className="font-mono text-[9px] sm:text-[10px] mt-1 font-bold flex items-center justify-center gap-1"
+                    className="font-mono text-[8px] sm:text-[9px] mt-0.5 font-bold flex items-center justify-center gap-1 whitespace-nowrap"
                     style={{ color: item.isDone ? 'var(--success)' : 'var(--warning)' }}
                   >
                     {item.isDone ? '✓ LOGGED' : '→ OPEN'}
@@ -1133,10 +1133,10 @@ export default function MissionControl() {
             )
           })}
 
-          {/* DEBRIEF BOX */}
+          {/* DEBRIEF BOX (EXTREME RIGHT) */}
           <Link href="/journal?tab=weekly" className="block group">
             <div 
-              className={`p-2.5 sm:p-3 aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border ${
+              className={`py-2.5 px-1.5 sm:py-3 sm:px-2 min-h-[76px] sm:min-h-[82px] text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border ${
                 isDebriefDoneThisWeek
                   ? 'bg-success/15 border-success text-success shadow-lg'
                   : new Date().getDay() === 0 
@@ -1145,19 +1145,19 @@ export default function MissionControl() {
               }`}
             >
               {isDebriefDoneThisWeek ? (
-                <CheckCircle2 size={18} className="mb-1.5 text-success transition-transform group-hover:scale-110" />
+                <CheckCircle2 size={16} className="mb-1 text-success transition-transform group-hover:scale-110" />
               ) : (
                 <ClipboardList 
-                  size={18} 
-                  className="mb-1.5 transition-transform group-hover:scale-110" 
+                  size={16} 
+                  className="mb-1 transition-transform group-hover:scale-110" 
                   style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }} 
                 />
               )}
-              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
+              <div className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
                 DEBRIEF
               </div>
               <div 
-                className={`font-mono text-[9px] sm:text-[10px] mt-1 font-bold ${
+                className={`font-mono text-[8px] sm:text-[9px] mt-0.5 font-bold whitespace-nowrap ${
                   isDebriefDoneThisWeek ? 'text-success' : new Date().getDay() === 0 ? 'text-warning' : 'text-muted'
                 }`}
               >

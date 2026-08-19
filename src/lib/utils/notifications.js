@@ -1,6 +1,7 @@
 // ── Loki OS Phone & Web Notification Engine (iPhone iOS & Web Push Compatible) ───────────────────
 
 import { createClient } from '@/lib/supabase/client'
+import { getLocalDateStr } from '@/lib/utils/dates'
 
 const STORAGE_KEY = 'lokios_notification_prefs'
 
@@ -48,7 +49,8 @@ export function getNotificationPermission() {
 export async function registerServiceWorker() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null
   try {
-    const reg = await navigator.serviceWorker.register('/sw.js')
+    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    await reg.update().catch(() => {})
     return reg
   } catch (e) {
     console.error('Service worker registration error:', e)
@@ -76,7 +78,7 @@ export async function requestNotificationPermission() {
 
     // Trigger confirmation notification
     await sendLocalNotification('LOKI OS // NOTIFICATIONS ENABLED 🛡️', {
-      body: 'iPhone & Web Push active. Reminders live for pending operations, routines, & calendar events.',
+      body: 'Notification permission granted. Scheduled alerts will recover while the app is open; background delivery requires server Web Push.',
       tag: 'lokios-system',
       url: '/dashboard'
     })
@@ -152,7 +154,7 @@ async function checkDynamicReminders(prefs, now) {
     if (!session?.user) return
     const userId = session.user.id
 
-    const todayStr = now.toISOString().split('T')[0]
+    const todayStr = getLocalDateStr(now)
     const currentMs = now.getTime()
     const hours = now.getHours()
     const mins = now.getMinutes()
@@ -259,85 +261,80 @@ export function initBackgroundReminders() {
     if (!prefs.enabled || getNotificationPermission() !== 'granted') return
 
     const now = new Date()
-    const hours = now.getHours()
-    const mins = now.getMinutes()
     const day = now.getDay() // 0 = Sun
-    const timeKey = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
 
-    const lastFired = localStorage.getItem('lokios_last_notif_fired')
-    const todayStr = now.toISOString().split('T')[0]
-    const fireId = `${todayStr}_${timeKey}`
+    const todayStr = getLocalDateStr(now)
 
     // ── FIXED SCHEDULE TIME ALERTS ──
-    if (lastFired !== fireId) {
+    {
       // 1. Morning Protocol Alert (07:30 AM)
-      if (prefs.morningAlert && timeKey === '07:30') {
+      if (prefs.morningAlert && isReminderDue(now, '07:30', 'morning', todayStr)) {
         sendLocalNotification('🌅 MORNING PROTOCOL // RECON READY', {
           body: 'Initialize daily routines & review today\'s top operational priorities.',
           tag: 'lokios-morning',
           url: '/quests'
         })
-        localStorage.setItem('lokios_last_notif_fired', fireId)
+        markReminderSent('morning', todayStr)
       }
 
       // 2. Mid-Day Focus Sprint Alert (13:00 / 1:00 PM)
-      if (prefs.middayAlert && timeKey === '13:00') {
+      if (prefs.middayAlert && isReminderDue(now, '13:00', 'midday', todayStr)) {
         sendLocalNotification('⚡ MID-DAY PROTOCOL // FOCUS SPRINT', {
           body: 'Audit active tasks and complete high-impact mission items.',
           tag: 'lokios-midday',
           url: '/tasks'
         })
-        localStorage.setItem('lokios_last_notif_fired', fireId)
+        markReminderSent('midday', todayStr)
       }
 
       // 3. Hydration & Mobility Check Alert (16:00 / 4:00 PM)
-      if (prefs.hydrationAlert && timeKey === '16:00') {
+      if (prefs.hydrationAlert && isReminderDue(now, '16:00', 'hydration', todayStr)) {
         sendLocalNotification('💧 HYDRATION & RECON // MOBILITY CHECK', {
           body: 'Hydrate and take a 5-minute movement break for optimal focus.',
           tag: 'lokios-hydration',
           url: '/weight'
         })
-        localStorage.setItem('lokios_last_notif_fired', fireId)
+        markReminderSent('hydration', todayStr)
       }
 
       // 4. Digital Addiction Check (19:00 / 7:00 PM)
-      if (prefs.screenTimeAlert && timeKey === '19:00') {
+      if (prefs.screenTimeAlert && isReminderDue(now, '19:00', 'screen-time', todayStr)) {
         sendLocalNotification('📱 DIGITAL ADDICTION // SCREEN CHECK', {
           body: 'Audit today\'s screen time & doomscroll minutes. Target ≤ 4h.',
           tag: 'lokios-screentime',
           url: '/screen-time'
         })
-        localStorage.setItem('lokios_last_notif_fired', fireId)
+        markReminderSent('screen-time', todayStr)
       }
 
       // 5. Daily Ops Audit (21:00 / 9:00 PM)
-      if (prefs.dailyOpsAlert && timeKey === '21:00') {
+      if (prefs.dailyOpsAlert && isReminderDue(now, '21:00', 'daily-ops', todayStr)) {
         sendLocalNotification('⚔️ DAILY OPS // AUDIT TIME', {
           body: 'Complete today\'s habit matrix & body weight entry before the day closes.',
           tag: 'lokios-dailyops',
           url: '/quests'
         })
-        localStorage.setItem('lokios_last_notif_fired', fireId)
+        markReminderSent('daily-ops', todayStr)
       }
 
       // 6. Bedtime Sentinel Alert (23:15 / 11:15 PM)
-      if (prefs.bedtimeAlert && timeKey === '23:15') {
+      if (prefs.bedtimeAlert && isReminderDue(now, '23:15', 'bedtime', todayStr)) {
         sendLocalNotification('🌙 SLEEP SENTINEL // WIND-DOWN', {
           body: 'Target bedtime in 45m (12 AM limit). Disconnect devices and log sleep.',
           tag: 'lokios-bedtime',
           url: '/quests'
         })
-        localStorage.setItem('lokios_last_notif_fired', fireId)
+        markReminderSent('bedtime', todayStr)
       }
 
       // 7. Sunday Debrief (Sun 18:00 / 6:00 PM)
-      if (prefs.debriefAlert && day === 0 && timeKey === '18:00') {
+      if (prefs.debriefAlert && day === 0 && isReminderDue(now, '18:00', 'debrief', todayStr)) {
         sendLocalNotification('📋 WEEKLY DEBRIEF // SUNDAY AUDIT', {
           body: 'Initialize weekly debrief for +40 XP & plan priorities for next week.',
           tag: 'lokios-debrief',
           url: '/weekly-review'
         })
-        localStorage.setItem('lokios_last_notif_fired', fireId)
+        markReminderSent('debrief', todayStr)
       }
     }
 
@@ -345,7 +342,31 @@ export function initBackgroundReminders() {
     checkDynamicReminders(prefs, now)
   }
 
-  // Check every 30 seconds
+  // Timers only run while the app is alive. Resume/focus checks recover reminders
+  // after the iPhone wakes the PWA, but cannot wake a suspended PWA by themselves.
   intervalId = setInterval(checkReminders, 30000)
   checkReminders() // Initial check
+  window.addEventListener('focus', checkReminders)
+  window.addEventListener('pageshow', checkReminders)
+  document.addEventListener('visibilitychange', checkReminders)
+
+  return () => {
+    clearInterval(intervalId)
+    intervalId = null
+    window.removeEventListener('focus', checkReminders)
+    window.removeEventListener('pageshow', checkReminders)
+    document.removeEventListener('visibilitychange', checkReminders)
+  }
+}
+
+function isReminderDue(now, targetTime, reminderId, dateKey) {
+  const [targetHour, targetMinute] = targetTime.split(':').map(Number)
+  const targetMinutes = targetHour * 60 + targetMinute
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const elapsed = currentMinutes - targetMinutes
+  return elapsed >= 0 && elapsed < 60 && !localStorage.getItem(`lokios_notif_${reminderId}_${dateKey}`)
+}
+
+function markReminderSent(reminderId, dateKey) {
+  localStorage.setItem(`lokios_notif_${reminderId}_${dateKey}`, 'true')
 }
