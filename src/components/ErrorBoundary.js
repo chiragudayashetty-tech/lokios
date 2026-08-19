@@ -14,13 +14,24 @@ export class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('OS Error Boundary caught an exception:', error, errorInfo)
+    
+    // Auto-recover from Next.js ChunkLoadErrors after deployment
+    const errMsg = error?.toString() || ''
+    if (errMsg.includes('ChunkLoadError') || errMsg.includes('Loading chunk') || errMsg.includes('Failed to load chunk')) {
+      const lastReload = sessionStorage.getItem('lokios_last_chunk_reload')
+      const now = Date.now()
+      if (!lastReload || now - parseInt(lastReload) > 10000) {
+        sessionStorage.setItem('lokios_last_chunk_reload', now.toString())
+        window.location.reload()
+      }
+    }
   }
 
   render() {
     if (this.state.hasError) {
       return (
         <div className="fixed inset-0 bg-bg-primary flex flex-col justify-center items-center p-6 z-[9999] font-mono text-primary">
-          <div className="max-w-2xl w-full border-l-4 border-danger bg-bg-secondary p-8 shadow-2xl">
+          <div className="max-w-2xl w-full border-l-4 border-danger bg-bg-secondary p-8 shadow-2xl rounded-xl">
             <h1 className="text-3xl font-display text-danger mb-4 tracking-tighter uppercase flex items-center gap-3">
               <div className="w-4 h-4 bg-danger animate-pulse" />
               SYSTEM MALFUNCTION
@@ -34,7 +45,7 @@ export class ErrorBoundary extends React.Component {
             <div className="flex gap-4">
               <button 
                 className="btn btn-primary bg-danger border-danger hover:bg-danger-hover"
-                onClick={() => window.location.href = '/'}
+                onClick={() => window.location.reload()}
               >
                 REBOOT OS
               </button>
