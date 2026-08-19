@@ -142,7 +142,80 @@ export default function WorkPage() {
     })
   }
 
-  // FETCH ALL WORK & CONTENT LOGS
+  // Dedicated helper to sync work logs to Supabase with dual-table support (work_hours_logs + work_logs)
+  const syncLogToSupabase = async (sb, userId, item) => {
+    if (!sb || !userId || !item?.date) return
+
+    const totalWorked = Number(item.total_hours_worked || item.hours || item.duration_hours || 0)
+    const beyondTatva = Number(item.beyond_tatva_hours || 0)
+    const focused = Number(item.focused_hours || 0)
+    const unfocused = Number(item.unfocused_hours || 0)
+    const deepExec = Number(item.deep_execution_hours || unfocused || 0)
+    const cleanNotes = item.notes || item.description || ''
+    const cleanTitle = item.title || `Work Session: ${totalWorked}h`
+
+    // 1. Sync to work_hours_logs
+    try {
+      const hoursPayload = {
+        user_id: userId,
+        date: item.date,
+        total_hours_worked: totalWorked,
+        beyond_tatva_hours: beyondTatva,
+        focused_hours: focused,
+        unfocused_hours: unfocused,
+        deep_execution_hours: deepExec,
+        notes: cleanNotes
+      }
+
+      const { data: existingHours } = await sb
+        .from('work_hours_logs')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('date', item.date)
+        .limit(1)
+
+      if (existingHours && existingHours.length > 0) {
+        await sb.from('work_hours_logs').update(hoursPayload).eq('id', existingHours[0].id)
+      } else {
+        await sb.from('work_hours_logs').insert(hoursPayload)
+      }
+    } catch (whErr) {
+      console.warn('[Work Sync] work_hours_logs error:', whErr)
+    }
+
+    // 2. Sync to work_logs
+    try {
+      const workLogPayload = {
+        user_id: userId,
+        date: item.date,
+        total_hours_worked: totalWorked,
+        beyond_tatva_hours: beyondTatva,
+        focused_hours: focused,
+        unfocused_hours: unfocused,
+        deep_execution_hours: deepExec,
+        notes: cleanNotes,
+        description: cleanNotes || `Logged ${totalWorked}h work.`,
+        title: cleanTitle
+      }
+
+      const { data: existingWl } = await sb
+        .from('work_logs')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('date', item.date)
+        .limit(1)
+
+      if (existingWl && existingWl.length > 0) {
+        await sb.from('work_logs').update(workLogPayload).eq('id', existingWl[0].id)
+      } else {
+        await sb.from('work_logs').insert(workLogPayload)
+      }
+    } catch (wlErr) {
+      console.warn('[Work Sync] work_logs error:', wlErr)
+    }
+  }
+
+  // FETCH ALL WORK & CONTENT LOGS WITH REAL-TIME AND AUTO-MIGRATION
   useEffect(() => {
     if (!user) return
 
@@ -156,82 +229,78 @@ export default function WorkPage() {
           sb.from('content_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
         ])
 
-        if (wRes.error) console.error('[Work Sync] work_logs fetch error:', wRes.error)
-        if (whRes.error) console.error('[Work Sync] work_hours_logs fetch error:', whRes.error)
-
         const wData = wRes.data || []
         const whData = whRes.data || []
 
-        // Merge work_logs and work_hours_logs by date / id so no descriptions or metrics are lost
+        // Merge work_logs and work_hours_logs by date / id
         const mergedMap = new Map()
 
         wData.forEach(l => {
-          const key = l.id ? `id_${l.id}` : `date_${l.date}`
-          mergedMap.set(key, { ...l })
+          if (!l.date) return
+          mergedMap.set(l.date, { 
+            ...l,
+            total_hours_worked: l.total_hours_worked ?? l.duration_hours ?? l.hours ?? 0,
+            notes: l.notes || l.description || ''
+          })
         })
 
         whData.forEach(l => {
-          const existingKey = Array.from(mergedMap.keys()).find(k => {
-            const item = mergedMap.get(k)
-            return item && item.date === l.date
+          if (!l.date) return
+          const existing = mergedMap.get(l.date) || {}
+          mergedMap.set(l.date, {
+            ...existing,
+            ...l,
+            total_hours_worked: l.total_hours_worked ?? existing.total_hours_worked ?? l.hours ?? l.duration_hours ?? 0,
+            beyond_tatva_hours: l.beyond_tatva_hours ?? existing.beyond_tatva_hours ?? 0,
+            focused_hours: l.focused_hours ?? existing.focused_hours ?? 0,
+            unfocused_hours: l.unfocused_hours ?? existing.unfocused_hours ?? 0,
+            notes: l.notes || existing.notes || l.description || existing.description || ''
           })
-
-          if (existingKey) {
-            const existing = mergedMap.get(existingKey)
-            mergedMap.set(existingKey, {
-              ...existing,
-              beyond_tatva_hours: existing.beyond_tatva_hours ?? l.beyond_tatva_hours,
-              focused_hours: existing.focused_hours ?? l.focused_hours,
-              unfocused_hours: existing.unfocused_hours ?? l.unfocused_hours,
-              total_hours_worked: existing.total_hours_worked ?? l.total_hours_worked ?? l.hours,
-              work_type: existing.work_type || l.work_type,
-              notes: existing.notes || l.notes || existing.description || l.description
-            })
-          } else {
-            const key = l.id ? `id_${l.id}` : `date_${l.date}`
-            mergedMap.set(key, { ...l, total_hours_worked: l.total_hours_worked ?? l.hours ?? l.duration_hours })
-          }
         })
 
-        fetchedW = Array.from(mergedMap.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-
+        let fetchedW = Array.from(mergedMap.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
         let fetchedC = cRes.data || []
 
-        // Merge with local cache & auto-push local-only entries to Supabase for 100% phone/desktop sync
+        // Merge with local cache & auto-push any local-only entries to Supabase
         if (typeof window !== 'undefined') {
           const wCached = localStorage.getItem('lokios_work_logs_cache')
           if (wCached) {
-            const parsedW = JSON.parse(wCached)
-            const map = new Map()
-            fetchedW.forEach(l => map.set(l.date, l))
-            parsedW.forEach(l => {
-              if (!map.has(l.date)) {
-                map.set(l.date, l)
-                sb.from('work_hours_logs').insert({
-                  user_id: user?.id,
-                  date: l.date,
-                  hours: l.total_hours_worked || l.hours || 0,
-                  duration_hours: l.total_hours_worked || l.hours || 0,
-                  focused_hours: l.focused_hours || 0,
-                  beyond_tatva_hours: l.beyond_tatva_hours || 0,
-                  unfocused_hours: l.unfocused_hours || 0,
-                  notes: l.notes || l.description || '',
-                  work_type: l.work_type || 'General'
-                }).then(() => {}).catch(() => {})
+            try {
+              const parsedW = JSON.parse(wCached)
+              if (Array.isArray(parsedW)) {
+                for (const l of parsedW) {
+                  if (l && l.date) {
+                    const serverLog = mergedMap.get(l.date)
+                    // If not on server or server has 0 hours while cache has hours, sync to Supabase
+                    if (!serverLog || (Number(serverLog.total_hours_worked || 0) === 0 && Number(l.total_hours_worked || l.hours || 0) > 0)) {
+                      mergedMap.set(l.date, { ...(serverLog || {}), ...l })
+                      syncLogToSupabase(sb, user.id, l)
+                    }
+                  }
+                }
+                fetchedW = Array.from(mergedMap.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
               }
-            })
-            fetchedW = Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+            } catch (cacheErr) {
+              console.warn('[Work Sync] Cache parse warning:', cacheErr)
+            }
           }
 
           const cCached = localStorage.getItem('lokios_content_logs_cache')
           if (cCached) {
-            const parsedC = JSON.parse(cCached)
-            const map = new Map()
-            fetchedC.forEach(l => map.set(l.date, l))
-            parsedC.forEach(l => {
-              if (!map.has(l.date)) map.set(l.date, l)
-            })
-            fetchedC = Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date))
+            try {
+              const parsedC = JSON.parse(cCached)
+              const cMap = new Map()
+              fetchedC.forEach(l => cMap.set(l.date, l))
+              if (Array.isArray(parsedC)) {
+                parsedC.forEach(l => {
+                  if (!cMap.has(l.date)) {
+                    cMap.set(l.date, l)
+                    sb.from('content_logs').insert(l).then(() => {}).catch(() => {})
+                  }
+                })
+                fetchedC = Array.from(cMap.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+              }
+            } catch (err) {}
           }
         }
 
@@ -243,6 +312,7 @@ export default function WorkPage() {
           localStorage.setItem('lokios_content_logs_cache', JSON.stringify(fetchedC))
         }
       } catch (err) {
+        console.error('[Work Sync] Global fetch error:', err)
         if (typeof window !== 'undefined') {
           const wCached = localStorage.getItem('lokios_work_logs_cache')
           if (wCached) setWorkLogs(JSON.parse(wCached))
@@ -253,7 +323,23 @@ export default function WorkPage() {
     }
 
     fetchAllLogs()
-  }, [user])
+
+    // Real-Time Listener & Window Focus Listener for 100% Phone & Desktop Sync
+    const sb = createClient()
+    const channel = sb.channel(`work_sync_hub_${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_hours_logs', filter: `user_id=eq.${user.id}` }, () => fetchAllLogs())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `user_id=eq.${user.id}` }, () => fetchAllLogs())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'content_logs', filter: `user_id=eq.${user.id}` }, () => fetchAllLogs())
+      .subscribe()
+
+    const handleFocus = () => fetchAllLogs()
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      sb.removeChannel(channel)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [user?.id])
 
   // Helper to convert stored Hours value to input field value based on selected unit
   const toInputValue = (hoursVal, unit) => {
@@ -428,66 +514,9 @@ export default function WorkPage() {
     // Sync to Supabase in both work_hours_logs and work_logs with clean column payloads
     try {
       const sb = createClient()
-      
-      const cleanWorkHoursData = {
-        user_id: user.id,
-        date: selectedDate,
-        hours: payload.total_hours_worked || 0,
-        duration_hours: payload.total_hours_worked || 0,
-        focused_hours: payload.focused_hours || 0,
-        beyond_tatva_hours: payload.beyond_tatva_hours || 0,
-        unfocused_hours: payload.unfocused_hours || 0,
-        notes: payload.notes || '',
-        work_type: payload.work_type || 'General'
-      }
+      await syncLogToSupabase(sb, user.id, payload)
 
-      const cleanWorkLogData = {
-        user_id: user.id,
-        date: selectedDate,
-        title: `Work Session (${payload.work_type || 'General'}: ${payload.total_hours_worked || 0}h)`,
-        description: payload.notes || `Logged ${payload.total_hours_worked || 0}h focused work.`,
-        type: 'project_work',
-        duration_hours: payload.total_hours_worked || 0,
-        notes: payload.notes || ''
-      }
-
-      // 1. Upsert work_hours_logs
-      try {
-        const { data: existingHours } = await sb
-          .from('work_hours_logs')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('date', selectedDate)
-          .limit(1)
-
-        if (existingHours && existingHours.length > 0) {
-          await sb.from('work_hours_logs').update(cleanWorkHoursData).eq('id', existingHours[0].id)
-        } else {
-          await sb.from('work_hours_logs').insert(cleanWorkHoursData)
-        }
-      } catch (whErr) {
-        console.warn('work_hours_logs sync warning:', whErr)
-      }
-
-      // 2. Upsert work_logs
-      try {
-        const { data: existingWorkLog } = await sb
-          .from('work_logs')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('date', selectedDate)
-          .limit(1)
-
-        if (existingWorkLog && existingWorkLog.length > 0) {
-          await sb.from('work_logs').update(cleanWorkLogData).eq('id', existingWorkLog[0].id)
-        } else {
-          await sb.from('work_logs').insert(cleanWorkLogData)
-        }
-      } catch (wlErr) {
-        console.warn('work_logs sync warning:', wlErr)
-      }
-
-      setXpToast('Work Log Recorded')
+      setXpToast('Work Log Recorded & Synced')
       setTimeout(() => setXpToast(null), 3000)
     } catch (err) {
       console.error('Save work log exception:', err)
