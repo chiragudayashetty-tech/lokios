@@ -185,26 +185,35 @@ export function useGoalsInternal(user) {
         }
         let xpAmount = xpMap[goal.type] || XP_REWARDS.goal_complete_side
 
-        // Check if overdue: -5 XP per calendar day past deadline (target_date or due_date)
-        const deadline = goal.target_date || goal.due_date
+        // Check if overdue: -5 XP per calendar day past deadline (target_date or due_date or deadline)
+        const deadline = goal.target_date || goal.due_date || goal.deadline
+        let overdueDays = 0
+        let penaltyDeduction = 0
+
         if (deadline) {
           const todayStr = getLocalDateStr()
-          const deadlineStr = getLocalDateStr(new Date(deadline))
-          if (deadlineStr < todayStr) {
-            const deadlineMs = new Date(deadlineStr).getTime()
-            const todayMs = new Date(todayStr).getTime()
-            const daysOverdue = Math.max(1, Math.floor((todayMs - deadlineMs) / (1000 * 60 * 60 * 24)))
-            const penaltyDeduction = daysOverdue * 5
+          const cleanDeadline = deadline.substring(0, 10)
+          if (cleanDeadline < todayStr) {
+            const [tY, tM, tD] = todayStr.split('-').map(Number)
+            const [dY, dM, dD] = cleanDeadline.split('-').map(Number)
+            const todayUtc = Date.UTC(tY, tM - 1, tD)
+            const dueUtc = Date.UTC(dY, dM - 1, dD)
+            overdueDays = Math.max(1, Math.round((todayUtc - dueUtc) / (1000 * 60 * 60 * 24)))
+            penaltyDeduction = overdueDays * 5
             xpAmount = Math.max(0, xpAmount - penaltyDeduction)
           }
         }
+
+        const descText = overdueDays > 0 
+          ? `Completed ${goal.type}: ${goal.title} (+${xpAmount} XP, -${penaltyDeduction} Overdue Penalty)`
+          : `Completed ${goal.type}: ${goal.title}`
 
         await robustAwardXP(
           user.id,
           xpAmount,
           'goal_complete',
           id,
-          `Completed ${goal.type}: ${goal.title}`,
+          descText,
           toStatCat(goal.category)
         )
       }

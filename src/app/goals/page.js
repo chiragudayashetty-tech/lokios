@@ -308,6 +308,31 @@ export default function Missions() {
       )
     }
 
+    const deadline = goal.target_date || goal.due_date || goal.deadline
+    const cleanDeadline = deadline ? deadline.substring(0, 10) : null
+    const todayStr = getLocalDateStr()
+    const isOverdue = !isCompleted && !isFailed && !isPaused && cleanDeadline && cleanDeadline < todayStr
+    let daysOverdue = 0
+    let penaltyDeduction = 0
+    
+    // XP math
+    const xpMap = {
+      main_quest: 100,
+      side_quest: 50,
+      weekly: 30,
+      long_term: 200
+    }
+    const baseXP = xpMap[goal.type] || 50
+    let netXP = baseXP
+
+    if (isOverdue && cleanDeadline) {
+      const [tY, tM, tD] = todayStr.split('-').map(Number)
+      const [dY, dM, dD] = cleanDeadline.split('-').map(Number)
+      daysOverdue = Math.max(1, Math.round((Date.UTC(tY, tM - 1, tD) - Date.UTC(dY, dM - 1, dD)) / (1000 * 60 * 60 * 24)))
+      penaltyDeduction = daysOverdue * 5
+      netXP = Math.max(0, baseXP - penaltyDeduction)
+    }
+
     // ── CLEAN CARD LAYOUT FOR ACTIVE MISSIONS ──
     return (
       <motion.div
@@ -333,6 +358,12 @@ export default function Missions() {
                     style={{ color: DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color, borderColor: `${DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color}40`, background: `${DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].color}10` }}>
                 {DIFFICULTY_CONFIG[goal.difficulty || 'HARD'].label}
               </span>
+
+              {isOverdue && (
+                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-danger/15 text-danger border border-danger/40 flex items-center gap-1 shrink-0 animate-pulse">
+                  <AlertTriangle size={10} /> {daysOverdue}D OVERDUE (-{penaltyDeduction} XP)
+                </span>
+              )}
 
               {goal.category && (
                 <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase text-muted bg-bg-primary border border-border-color">
@@ -510,11 +541,21 @@ export default function Missions() {
                   <Clock size={12} /> DEPLOYED: {new Date(goal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </span>
               )}
-              {goal.deadline && (
-                <span className="font-mono text-xs text-muted flex items-center gap-1">
-                  <Clock size={12} /> DEADLINE: {new Date(goal.deadline).toLocaleDateString()}
+              {cleanDeadline && (
+                <span className={`font-mono text-xs flex items-center gap-1 ${isOverdue ? 'text-danger font-bold' : 'text-muted'}`}>
+                  <Clock size={12} /> DEADLINE: {cleanDeadline}
                 </span>
               )}
+              <div className="font-mono text-[10px] mt-0.5">
+                {isOverdue ? (
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <span className="text-muted line-through">+{baseXP} XP</span>
+                    <span className="text-danger">+{netXP} XP (NET)</span>
+                  </span>
+                ) : (
+                  <span className="text-success font-semibold">+{baseXP} XP</span>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -714,6 +755,31 @@ export default function Missions() {
                     <div>
                       <span className="font-mono text-[10px] text-muted uppercase block">MISSION TITLE</span>
                       <p className="font-mono text-base font-bold text-primary">{proofModal.goal.title}</p>
+                      
+                      {(() => {
+                        const deadline = proofModal.goal.target_date || proofModal.goal.due_date || proofModal.goal.deadline
+                        const cleanDeadline = deadline ? deadline.substring(0, 10) : null
+                        const todayStr = getLocalDateStr()
+                        const isGoalOverdue = cleanDeadline && cleanDeadline < todayStr
+                        if (!isGoalOverdue) return null
+
+                        const [tY, tM, tD] = todayStr.split('-').map(Number)
+                        const [dY, dM, dD] = cleanDeadline.split('-').map(Number)
+                        const daysOverdue = Math.max(1, Math.round((Date.UTC(tY, tM - 1, tD) - Date.UTC(dY, dM - 1, dD)) / (1000 * 60 * 60 * 24)))
+                        const xpMap = { main_quest: 100, side_quest: 50, weekly: 30, long_term: 200 }
+                        const baseXP = xpMap[proofModal.goal.type] || 50
+                        const penalty = daysOverdue * 5
+                        const netXP = Math.max(0, baseXP - penalty)
+
+                        return (
+                          <div className="mt-2 p-2.5 rounded-lg bg-danger/10 border border-danger/30 font-mono text-xs flex items-center justify-between text-danger">
+                            <span className="flex items-center gap-1.5 font-bold">
+                              <AlertTriangle size={13} /> {daysOverdue}D OVERDUE PENALTY
+                            </span>
+                            <span>-{penalty} XP (Net: +{netXP} XP)</span>
+                          </div>
+                        )
+                      })()}
                     </div>
 
                     <div>
