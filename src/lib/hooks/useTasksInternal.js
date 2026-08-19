@@ -419,9 +419,10 @@ export function useTasksInternal(user) {
     if (!task) return null
 
     try {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const nextDueStr = tomorrow.toISOString().split('T')[0]
+      const todayStr = getLocalDateStr()
+      const [tY, tM, tD] = todayStr.split('-').map(Number)
+      const tomorrowDate = new Date(Date.UTC(tY, tM - 1, tD + 1))
+      const nextDueStr = tomorrowDate.toISOString().split('T')[0]
 
       const { data: updated, error } = await supabase
         .from('tasks')
@@ -433,24 +434,24 @@ export function useTasksInternal(user) {
 
       if (error) throw error
 
-      // Procrastination XP penalty
+      // Procrastination XP penalty: -penalty deducted when pushed past scheduled date
       const diffKey = (task.difficulty || 'MEDIUM').toUpperCase()
       const difficultyData = DIFFICULTY_LEVELS[diffKey] || DIFFICULTY_LEVELS.MEDIUM
-      if (difficultyData.id !== 'NONE' && difficultyData.penalty > 0) {
-        await robustAwardXP(
-          user.id,
-          -difficultyData.penalty,
-          'task_pushed',
-          id,
-          `Procrastination: Pushed ${task.title} to tomorrow`,
-          toStatCat(task.category)
-        )
-      }
+      const penaltyAmount = difficultyData.penalty || (diffKey === 'EASY' ? 5 : diffKey === 'MEDIUM' ? 10 : diffKey === 'HARD' ? 25 : 50)
+
+      await robustAwardXP(
+        user.id,
+        -penaltyAmount,
+        'task_pushed',
+        id,
+        `Procrastination: Pushed ${task.title} to tomorrow (-${penaltyAmount} XP)`,
+        toStatCat(task.category)
+      )
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       return updated
     } catch (error) {
-      console.error('Error pushing task:', error)
+      console.error('Error pushing task to tomorrow:', error)
       return null
     }
   }, [user, tasks])
