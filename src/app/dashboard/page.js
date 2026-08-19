@@ -960,14 +960,33 @@ export default function MissionControl() {
 
 
         {/* ══════════════════════════════════════════════════════════════════
-            COMMAND CENTER SAGA HERO CARD (TEXT AT LEFT, 1:1 IMAGE AT RIGHT)
+            COMMAND CENTER SAGA HERO CARD (MOBILE: TOP IMAGE / DESKTOP: RIGHT IMAGE)
         ══════════════════════════════════════════════════════════════════ */}
         <div className="mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden transition-all">
           
-          <div className="flex flex-col-reverse lg:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
             
-            {/* ── LEFT SIDE (DESKTOP): INTELLIGENCE & PROGRESSION (TEXT AT LEFT) ── */}
-            <div className="flex-1 w-full min-w-0 flex flex-col justify-between space-y-4 sm:space-y-5">
+            {/* ── 1:1 SQUARE ARTWORK: ON MOBILE -> TOP (order-1), ON DESKTOP -> RIGHT (lg:order-2) ── */}
+            <div className="w-full sm:w-[320px] md:w-[360px] lg:w-[380px] shrink-0 flex justify-center order-1 lg:order-2">
+              <div 
+                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group w-full max-w-[280px] sm:max-w-[340px] lg:max-w-[380px] aspect-square"
+                style={{ aspectRatio: '1 / 1' }}
+              >
+                {/* Background 1:1 Artwork Image */}
+                <img 
+                  src={currentSagaImage} 
+                  alt={currentArc.name} 
+                  className="w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
+                  onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
+                />
+
+                {/* Cyber subtle border ring */}
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
+              </div>
+            </div>
+
+            {/* ── INTELLIGENCE & PROGRESSION: ON MOBILE -> BELOW (order-2), ON DESKTOP -> LEFT (lg:order-1) ── */}
+            <div className="flex-1 w-full min-w-0 flex flex-col justify-between space-y-4 sm:space-y-5 order-2 lg:order-1">
               
               {/* Header: SAGA Title */}
               <div>
@@ -1076,25 +1095,6 @@ export default function MissionControl() {
                 </button>
               </div>
 
-            </div>
-
-            {/* ── RIGHT SIDE (DESKTOP): 1:1 SQUARE ARTWORK (IMAGE AT RIGHT) ── */}
-            <div className="w-full sm:w-[320px] md:w-[360px] lg:w-[380px] shrink-0 flex justify-center">
-              <div 
-                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group"
-                style={{ width: '100%', maxWidth: '380px', aspectRatio: '1 / 1' }}
-              >
-                {/* Background 1:1 Artwork Image */}
-                <img 
-                  src={currentSagaImage} 
-                  alt={currentArc.name} 
-                  className="w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
-                  onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
-                />
-
-                {/* Cyber subtle border ring */}
-                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
-              </div>
             </div>
 
           </div>
