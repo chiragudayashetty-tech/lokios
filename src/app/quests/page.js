@@ -708,70 +708,79 @@ export default function DailyOps() {
             <Plus size={16} /> ADD ROUTINE
           </button>
         </header>
-        {/* TOP WIDGETS: BODY WEIGHT & DYNAMIC SLEEP TRACKER */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          
+        {/* TOP WIDGETS: BODY WEIGHT & DYNAMIC SLEEP TRACKER SIDE-BY-SIDE */}
+        <div 
+          className="mb-5 w-full"
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', 
+            gap: '14px', 
+            width: '100%' 
+          }}
+        >
           {/* WIDGET 1: BODY WEIGHT ENTRY */}
-          <HudPanel glow className="p-3 border-amber">
-            <div className="flex items-center justify-between border-b border-border-color pb-2 mb-2.5">
-              <div className="flex items-center gap-2 text-amber">
-                <Scale size={15} />
-                <span className="font-display text-xs uppercase tracking-widest font-bold">BODY WEIGHT LOGGING</span>
-              </div>
-              <span className="font-mono text-[9px] text-amber bg-amber-subtle px-2 py-0.5 border border-amber-subtle rounded-sm">
-                {weightLoggedToday ? '✓ LOGGED TODAY' : 'DAILY LOG'}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center bg-bg-primary border border-border-color rounded h-8 px-2.5 max-w-[180px] flex-1">
-                <input 
-                  type="number" 
-                  step="0.1" 
-                  placeholder="e.g. 74.5"
-                  value={weightKg} 
-                  onChange={e => setWeightKg(e.target.value)}
-                  className="bg-transparent border-none outline-none font-mono text-xs text-primary w-full pr-1"
-                />
-                <span className="font-mono text-[10px] text-muted select-none shrink-0">kg</span>
+          <HudPanel glow className="p-3 border-amber flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-border-color pb-1.5 mb-2">
+                <div className="flex items-center gap-1.5 text-amber">
+                  <Scale size={14} />
+                  <span className="font-display text-[11px] uppercase tracking-widest font-bold">BODY WEIGHT LOGGING</span>
+                </div>
+                <span className="font-mono text-[8px] text-amber bg-amber-subtle px-1.5 py-0.5 border border-amber-subtle rounded-sm font-bold">
+                  {weightLoggedToday ? '✓ LOGGED TODAY' : 'DAILY LOG'}
+                </span>
               </div>
 
-              <button 
-                type="button" 
-                onClick={handleSaveWeight}
-                disabled={weightSaving || !weightKg}
-                className="h-8 px-4 font-mono text-xs font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1.5 shrink-0"
-                style={{
-                  background: weightLoggedToday ? 'transparent' : 'linear-gradient(135deg, #f59e0b, #d97706)',
-                  border: '1px solid #f59e0b',
-                  color: weightLoggedToday ? '#f59e0b' : '#000',
-                  opacity: weightSaving || !weightKg ? 0.5 : 1,
-                  cursor: weightSaving || !weightKg ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {weightSaving ? (
-                  <><span style={{ display: 'inline-block', width: 10, height: 10, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} /> SAVING</>  
-                ) : weightLoggedToday ? (
-                  <>↑ UPDATE</>
-                ) : (
-                  <>+ LOG WEIGHT</>
-                )}
-              </button>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center bg-bg-primary border border-border-color rounded h-7 px-2 flex-1">
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    placeholder="e.g. 74.5"
+                    value={weightKg} 
+                    onChange={e => setWeightKg(e.target.value)}
+                    className="bg-transparent border-none outline-none font-mono text-xs text-primary w-full pr-1"
+                  />
+                  <span className="font-mono text-[9px] text-muted select-none shrink-0">kg</span>
+                </div>
+
+                <button 
+                  type="button" 
+                  onClick={handleSaveWeight}
+                  disabled={weightSaving || !weightKg}
+                  className="h-7 px-3 font-mono text-[10px] font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1 shrink-0"
+                  style={{
+                    background: weightLoggedToday ? 'transparent' : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    border: '1px solid #f59e0b',
+                    color: weightLoggedToday ? '#f59e0b' : '#000',
+                    opacity: weightSaving || !weightKg ? 0.5 : 1,
+                    cursor: weightSaving || !weightKg ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {weightSaving ? (
+                    <><span style={{ display: 'inline-block', width: 9, height: 9, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} /> SAVING</>  
+                  ) : weightLoggedToday ? (
+                    <>↑ UPDATE</>
+                  ) : (
+                    <>+ LOG WEIGHT</>
+                  )}
+                </button>
+              </div>
             </div>
 
             {weightMsg && (
               <motion.div
-                initial={{ opacity: 0, y: -4 }}
+                initial={{ opacity: 0, y: -2 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-2 mt-2 rounded border bg-amber-subtle flex items-center justify-between gap-2 font-mono text-[10px]"
+                className="p-1.5 mt-2 rounded border bg-amber-subtle flex items-center justify-between gap-1.5 font-mono text-[9px]"
                 style={{ borderColor: 'rgba(245, 158, 11, 0.4)' }}
               >
-                <div className="flex items-center gap-2 text-amber">
-                  <CheckCircle2 size={14} />
-                  <span>{weightMsg.title} — {weightMsg.subtitle}</span>
+                <div className="flex items-center gap-1.5 text-amber truncate">
+                  <CheckCircle2 size={12} className="shrink-0" />
+                  <span className="truncate">{weightMsg.title} — {weightMsg.subtitle}</span>
                 </div>
                 {weightMsg.xp > 0 && (
-                  <span className="px-2 py-0.5 rounded-full font-bold bg-amber text-bg-primary text-[9px] shrink-0">
+                  <span className="px-1.5 py-0.2 rounded font-bold bg-amber text-bg-primary text-[8px] shrink-0">
                     ⚡ +{weightMsg.xp} XP
                   </span>
                 )}
@@ -780,106 +789,108 @@ export default function DailyOps() {
           </HudPanel>
 
           {/* WIDGET 2: DYNAMIC SLEEP TRACKER */}
-          <HudPanel glow className="p-3 border-info">
-            <div className="flex items-center justify-between border-b border-border-color pb-2 mb-2.5">
-              <div className="flex items-center gap-2 text-info">
-                <Moon size={15} />
-                <span className="font-display text-xs uppercase tracking-widest font-bold">DYNAMIC SLEEP TRACKER</span>
-              </div>
-              <button 
-                type="button"
-                onClick={handleDropStaticSleepHabits}
-                className="font-mono text-[8px] text-muted hover:text-danger flex items-center gap-1 uppercase shrink-0"
-              >
-                <Trash2 size={9} /> Drop Static Habits
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2 font-mono text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div>
-                  <label className="text-[8px] text-muted block mb-0.5 uppercase">SLEEP PERIOD</label>
-                  <select 
-                    value={sleepTargetDate} 
-                    onChange={e => handleSetSleepTargetDate(e.target.value)}
-                    className="select font-mono text-xs py-1 px-2 h-8 w-full bg-bg-primary border border-border-color rounded"
-                  >
-                    <option value={yesterdayStr}>Last Night ({yesterdayStr})</option>
-                    <option value={todayStr}>Tonight ({todayStr})</option>
-                  </select>
+          <HudPanel glow className="p-3 border-info flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-border-color pb-1.5 mb-2">
+                <div className="flex items-center gap-1.5 text-info">
+                  <Moon size={14} />
+                  <span className="font-display text-[11px] uppercase tracking-widest font-bold">DYNAMIC SLEEP TRACKER</span>
                 </div>
-
-                <div>
-                  <label className="text-[8px] text-muted block mb-0.5 uppercase">BEDTIME</label>
-                  <input 
-                    type="time" 
-                    value={bedtime} 
-                    onChange={e => handleSetBedtime(e.target.value)}
-                    className="input font-mono text-xs py-1 px-2 h-8 w-full bg-bg-primary border border-border-color rounded"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[8px] text-muted block mb-0.5 uppercase">WAKE TIME</label>
-                  <input 
-                    type="time" 
-                    value={wakeTime} 
-                    onChange={e => handleSetWakeTime(e.target.value)}
-                    className="input font-mono text-xs py-1 px-2 h-8 w-full bg-bg-primary border border-border-color rounded"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-1 border-t border-border-subtle flex-wrap gap-2">
-                <div className="flex items-center gap-1.5 text-[11px]">
-                  <Clock size={12} className="text-info" />
-                  <span className="text-muted">TOTAL SLEEP: <strong className="text-primary font-bold">{liveSleepDuration ? `${liveSleepDuration.hrs}h ${liveSleepDuration.mins}m` : '--'}</strong></span>
-                </div>
-
                 <button 
-                  type="button" 
-                  onClick={handleSaveSleep}
-                  disabled={sleepSaving || !liveSleepDuration}
-                  className="h-8 px-4 font-mono text-xs font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1.5 shrink-0"
-                  style={{
-                    background: liveSleepDuration ? 'linear-gradient(135deg, var(--info), #0ea5e9)' : 'var(--bg-secondary)',
-                    border: '1px solid var(--info)',
-                    color: liveSleepDuration ? '#000' : 'var(--text-muted)',
-                    opacity: sleepSaving || !liveSleepDuration ? 0.5 : 1,
-                    cursor: sleepSaving || !liveSleepDuration ? 'not-allowed' : 'pointer'
-                  }}
+                  type="button"
+                  onClick={handleDropStaticSleepHabits}
+                  className="font-mono text-[8px] text-muted hover:text-danger flex items-center gap-1 uppercase shrink-0"
                 >
-                  {sleepSaving ? (
-                    <><span style={{ display: 'inline-block', width: 10, height: 10, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} /> SAVING</>
-                  ) : (
-                    <>🌙 LOG SLEEP</>
-                  )}
+                  <Trash2 size={8} /> Drop Static Habits
                 </button>
               </div>
 
-              {sleepMsg && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-2 mt-1 rounded border flex items-center justify-between gap-2 font-mono text-[10px]"
-                  style={{
-                    background: sleepMsg.success ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                    borderColor: sleepMsg.success ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)',
-                    color: sleepMsg.success ? 'var(--success)' : 'var(--danger)'
-                  }}
-                >
-                  <div className="flex items-center gap-1.5">
-                    {sleepMsg.success ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
-                    <span>{sleepMsg.title}: {sleepMsg.subtitle}</span>
+              <div className="flex flex-col gap-1.5 font-mono text-xs">
+                <div className="grid grid-cols-3 gap-1.5">
+                  <div>
+                    <label className="text-[7px] text-muted block mb-0.5 uppercase font-semibold">PERIOD</label>
+                    <select 
+                      value={sleepTargetDate} 
+                      onChange={e => handleSetSleepTargetDate(e.target.value)}
+                      className="select font-mono text-[10px] py-0.5 px-1.5 h-7 w-full bg-bg-primary border border-border-color rounded"
+                    >
+                      <option value={yesterdayStr}>Last Night ({yesterdayStr})</option>
+                      <option value={todayStr}>Tonight ({todayStr})</option>
+                    </select>
                   </div>
-                  {sleepMsg.xp !== 0 && (
-                    <span className="px-2 py-0.5 rounded-full font-bold text-[9px] shrink-0" style={{ background: sleepMsg.success ? 'var(--success)' : 'var(--danger)', color: '#000' }}>
-                      {sleepMsg.xp > 0 ? `+${sleepMsg.xp} XP` : `${sleepMsg.xp} XP`}
-                    </span>
-                  )}
-                </motion.div>
-              )}
+
+                  <div>
+                    <label className="text-[7px] text-muted block mb-0.5 uppercase font-semibold">BEDTIME</label>
+                    <input 
+                      type="time" 
+                      value={bedtime} 
+                      onChange={e => handleSetBedtime(e.target.value)}
+                      className="input font-mono text-[10px] py-0.5 px-1.5 h-7 w-full bg-bg-primary border border-border-color rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[7px] text-muted block mb-0.5 uppercase font-semibold">WAKE TIME</label>
+                    <input 
+                      type="time" 
+                      value={wakeTime} 
+                      onChange={e => handleSetWakeTime(e.target.value)}
+                      className="input font-mono text-[10px] py-0.5 px-1.5 h-7 w-full bg-bg-primary border border-border-color rounded"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-border-subtle gap-2">
+                  <div className="flex items-center gap-1 text-[10px]">
+                    <Clock size={11} className="text-info" />
+                    <span className="text-muted">SLEEP: <strong className="text-primary font-bold">{liveSleepDuration ? `${liveSleepDuration.hrs}h ${liveSleepDuration.mins}m` : '--'}</strong></span>
+                  </div>
+
+                  <button 
+                    type="button" 
+                    onClick={handleSaveSleep}
+                    disabled={sleepSaving || !liveSleepDuration}
+                    className="h-7 px-3 font-mono text-[10px] font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1 shrink-0"
+                    style={{
+                      background: liveSleepDuration ? 'linear-gradient(135deg, var(--info), #0ea5e9)' : 'var(--bg-secondary)',
+                      border: '1px solid var(--info)',
+                      color: liveSleepDuration ? '#000' : 'var(--text-muted)',
+                      opacity: sleepSaving || !liveSleepDuration ? 0.5 : 1,
+                      cursor: sleepSaving || !liveSleepDuration ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {sleepSaving ? (
+                      <><span style={{ display: 'inline-block', width: 9, height: 9, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} /> SAVING</>
+                    ) : (
+                      <>🌙 LOG SLEEP</>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {sleepMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -2 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-1.5 mt-1.5 rounded border flex items-center justify-between gap-1.5 font-mono text-[9px]"
+                style={{
+                  background: sleepMsg.success ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  borderColor: sleepMsg.success ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)',
+                  color: sleepMsg.success ? 'var(--success)' : 'var(--danger)'
+                }}
+              >
+                <div className="flex items-center gap-1 truncate">
+                  {sleepMsg.success ? <CheckCircle2 size={11} className="shrink-0" /> : <AlertTriangle size={11} className="shrink-0" />}
+                  <span className="truncate">{sleepMsg.title}: {sleepMsg.subtitle}</span>
+                </div>
+                {sleepMsg.xp !== 0 && (
+                  <span className="px-1.5 py-0.2 rounded font-bold text-[8px] shrink-0" style={{ background: sleepMsg.success ? 'var(--success)' : 'var(--danger)', color: '#000' }}>
+                    {sleepMsg.xp > 0 ? `+${sleepMsg.xp} XP` : `${sleepMsg.xp} XP`}
+                  </span>
+                )}
+              </motion.div>
+            )}
           </HudPanel>
 
         </div>
