@@ -339,25 +339,24 @@ export default function XPDashboard() {
 
           <div className="flex flex-col items-center justify-center gap-3 relative z-10 max-w-xl mx-auto">
             
-            {/* Centered Small 5cm x 5cm (180px x 180px) 1:1 Square Saga Artwork Box */}
+            {/* Centered 10cm x 10cm (360px x 360px) 1:1 Square Saga Artwork Box */}
             <div 
-              className="relative flex items-center justify-center shrink-0 mb-3 mx-auto"
-              style={{ width: '180px', height: '180px', minWidth: '180px', minHeight: '180px', maxWidth: '180px', maxHeight: '180px' }}
+              className="relative flex items-center justify-center shrink-0 mb-4 mx-auto w-[280px] h-[280px] sm:w-[360px] sm:h-[360px]"
+              style={{ maxWidth: '360px', maxHeight: '360px', aspectRatio: '1 / 1' }}
             >
-              <div className="absolute -inset-2 rounded-2xl border border-indigo-500/30 animate-[spin_18s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
-              <div className="absolute -inset-1 rounded-xl border border-dashed border-purple-400/25 animate-[spin_24s_linear_infinite_reverse]" />
-              <div className="absolute -top-1 left-2 w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
-              <div className="absolute -bottom-1 right-2 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
+              <div className="absolute -inset-2.5 rounded-3xl border border-indigo-500/30 animate-[spin_24s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
+              <div className="absolute -inset-1 rounded-2xl border border-dashed border-purple-400/25 animate-[spin_30s_linear_infinite_reverse]" />
+              <div className="absolute -top-1.5 left-3 w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_10px_#818cf8]" />
+              <div className="absolute -bottom-1.5 right-3 w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_10px_#c084fc]" />
               
-              {/* 1:1 Square Artwork Container Locked to 180px x 180px (5cm x 5cm) */}
+              {/* 1:1 Square Artwork Container Locked to 10cm x 10cm */}
               <div 
-                className="rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/50 shadow-[0_0_24px_rgba(129,140,248,0.5)] flex items-center justify-center relative aspect-square"
-                style={{ width: '180px', height: '180px' }}
+                className="w-full h-full rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/50 shadow-[0_0_30px_rgba(129,140,248,0.5)] flex items-center justify-center relative aspect-square"
               >
                 <img 
                   src={SAGA_IMAGES[currentRank.code] || '/sagas/Awakening.png'} 
                   alt={rankTitle}
-                  style={{ width: '180px', height: '180px', objectFit: 'cover' }}
+                  className="w-full h-full object-cover aspect-square"
                   onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
                 />
                 <div className="absolute inset-0 ring-1 ring-inset ring-white/15 rounded-2xl pointer-events-none" />
