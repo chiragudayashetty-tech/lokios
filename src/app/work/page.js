@@ -905,22 +905,30 @@ export default function WorkPage() {
                   </div>
                 </div>
 
-                {/* FOCUS STATE / ENERGY LEVEL PICKER */}
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2.5">
+                {/* FOCUS STATE / ENERGY LEVEL PICKER // SINGLE THIN RECTANGLE SIDEWAYS */}
+                <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="font-mono text-[11px] text-slate-300 uppercase font-bold tracking-wider flex items-center gap-1.5">
+                    <label className="font-mono text-[10px] sm:text-[11px] text-slate-300 uppercase font-bold tracking-wider flex items-center gap-1.5">
                       <Zap size={13} className="text-amber-400" />
                       <span>FOCUS STATE & ENERGY</span>
                     </label>
                     <span 
-                      className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase"
+                      className="font-mono text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md uppercase"
                       style={{ color: FOCUS_LEVEL_OPTIONS.find(f => f.level === focusLevel)?.color, background: `${FOCUS_LEVEL_OPTIONS.find(f => f.level === focusLevel)?.color}18` }}
                     >
                       {FOCUS_LEVEL_OPTIONS.find(f => f.level === focusLevel)?.label}
                     </span>
                   </div>
                   
-                  <div className="grid grid-cols-5 gap-2">
+                  {/* Single Thin Rectangle Bar with 5 Buttons Sideways */}
+                  <div 
+                    style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', 
+                      gap: '6px', 
+                      width: '100%' 
+                    }}
+                  >
                     {FOCUS_LEVEL_OPTIONS.map((opt) => {
                       const isSelected = focusLevel === opt.level
                       return (
@@ -928,15 +936,15 @@ export default function WorkPage() {
                           key={opt.level}
                           type="button"
                           onClick={() => setFocusLevel(opt.level)}
-                          className={`p-2 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all active:scale-95 ${
+                          className={`h-9 sm:h-10 px-1 rounded-lg flex items-center justify-center gap-1 sm:gap-1.5 border transition-all active:scale-95 ${
                             isSelected 
-                              ? 'bg-white/10 shadow-lg scale-[1.02]' 
+                              ? 'bg-white/10 shadow-md' 
                               : 'bg-black/30 border-white/5 opacity-60 hover:opacity-100 hover:border-white/15'
                           }`}
-                          style={isSelected ? { borderColor: opt.color, boxShadow: `0 0 14px ${opt.color}35` } : {}}
+                          style={isSelected ? { borderColor: opt.color, boxShadow: `0 0 12px ${opt.color}30` } : {}}
                         >
-                          <span className="text-xl sm:text-2xl">{opt.emoji}</span>
-                          <span className="font-mono text-[9px] sm:text-[10px] font-bold uppercase truncate max-w-full text-slate-300">
+                          <span className="text-base sm:text-lg">{opt.emoji}</span>
+                          <span className="font-mono text-[8px] sm:text-[9px] font-bold uppercase truncate max-w-full text-slate-300 hidden md:inline">
                             {opt.label}
                           </span>
                         </button>
