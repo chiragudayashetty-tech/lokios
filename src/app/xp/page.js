@@ -468,63 +468,73 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 3: MOMENTUM METER DETAILED SPECTRUM BANNER
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-5 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center justify-between gap-6">
+        <div className="relative mb-6 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-6 sm:p-7 shadow-[0_12px_36px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center justify-between gap-6">
           
           {/* Left Info */}
           <div className="flex items-center gap-4 w-full lg:w-auto">
-            <div className="w-12 h-12 rounded-2xl border border-purple-500/40 bg-purple-950/40 flex items-center justify-center text-purple-400 shadow-[0_0_16px_rgba(168,85,247,0.3)] shrink-0">
+            <div className="w-12 h-12 rounded-2xl border border-purple-500/40 bg-purple-950/40 flex items-center justify-center text-purple-400 shadow-[0_0_16px_rgba(168,85,247,0.35)] shrink-0">
               <Activity size={22} className="text-purple-400" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-sm uppercase tracking-widest text-indigo-300">
-                MOMENTUM METER
-              </h3>
-              <p className="font-mono text-[11px] text-slate-400 mt-0.5 max-w-md">
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-bold text-sm uppercase tracking-widest text-indigo-300">
+                  MOMENTUM METER
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-500/40 text-purple-300 font-mono text-[10px] font-bold">
+                  {momentumScore}% CONSISTENCY
+                </span>
+              </div>
+              <p className="font-mono text-[11px] text-slate-400 mt-1 max-w-md">
                 Measures your execution quality over the past 7 days. Stay consistent. Protect your momentum.
               </p>
             </div>
           </div>
 
-          {/* Right Spectrum Spectrum Bar with Floating Indicator Pin */}
-          <div className="w-full lg:w-[480px] xl:w-[540px] flex flex-col gap-2 relative pt-4">
+          {/* Right Spectrum Bar with Floating Glowing Needle Pin */}
+          <div className="w-full lg:w-[480px] xl:w-[540px] flex flex-col gap-3 relative pt-7">
             
-            {/* Spectrum Bar */}
-            <div className="w-full h-3 rounded-full overflow-hidden flex items-center bg-slate-950 border border-white/10 p-[1px]">
-              <div className="h-full w-[25%] bg-gradient-to-r from-rose-600 to-rose-500" />
-              <div className="h-full w-[25%] bg-gradient-to-r from-orange-500 to-amber-500" />
-              <div className="h-full w-[25%] bg-gradient-to-r from-blue-500 to-indigo-500" />
-              <div className="h-full w-[25%] bg-gradient-to-r from-purple-500 to-fuchsia-400" />
-            </div>
-
-            {/* Floating Neon Lightning Bolt Pin */}
+            {/* Floating Marker Pin (Above the Bar) */}
             <div 
-              className="absolute top-0 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-500"
-              style={{ left: `${Math.max(4, Math.min(96, momentumScore))}%` }}
+              className="absolute top-0 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-700 z-20"
+              style={{ left: `${Math.max(6, Math.min(94, momentumScore))}%` }}
             >
-              <div className="w-5 h-5 rounded-full bg-purple-500 border border-white flex items-center justify-center shadow-[0_0_12px_#c084fc]">
-                <Activity size={10} className="text-white fill-white" />
+              <div className="px-2 py-0.5 rounded-md bg-purple-600 border border-white text-white font-mono text-[10px] font-black tracking-wider flex items-center gap-1 shadow-[0_0_16px_rgba(168,85,247,0.9)] whitespace-nowrap">
+                <span>⚡</span>
+                <span>{momentumScore}%</span>
               </div>
+              <div className="w-0.5 h-2.5 bg-white shadow-[0_0_8px_#ffffff]" />
             </div>
 
-            {/* Scale Labels */}
-            <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-wider font-bold">
-              <div className="text-left">
+            {/* Continuous Glow Spectrum Track */}
+            <div className="relative w-full h-4 rounded-full p-[2px] bg-slate-950 border border-white/15 overflow-hidden shadow-inner">
+              <div 
+                className="w-full h-full rounded-full"
+                style={{
+                  background: 'linear-gradient(90deg, #e11d48 0%, #ea580c 25%, #2563eb 50%, #9333ea 75%, #c084fc 100%)',
+                  boxShadow: '0 0 12px rgba(147, 51, 234, 0.4)'
+                }}
+              />
+            </div>
+
+            {/* Scale Labels & Active Zone Highlight */}
+            <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-wider font-bold pt-0.5">
+              <div className={`text-left transition-all ${momentumScore < 25 ? 'scale-110 font-black' : 'opacity-70'}`}>
                 <span className="text-slate-500 block">0%</span>
-                <span className="text-rose-500">CRITICAL</span>
+                <span className="text-rose-400">CRITICAL</span>
               </div>
-              <div className="text-center">
+              <div className={`text-center transition-all ${momentumScore >= 25 && momentumScore < 50 ? 'scale-110 font-black' : 'opacity-70'}`}>
                 <span className="text-slate-500 block">25%</span>
                 <span className="text-orange-400">AT RISK</span>
               </div>
-              <div className="text-center">
+              <div className={`text-center transition-all ${momentumScore >= 50 && momentumScore < 75 ? 'scale-110 font-black' : 'opacity-70'}`}>
                 <span className="text-slate-500 block">50%</span>
                 <span className="text-blue-400">STEADY</span>
               </div>
-              <div className="text-center">
+              <div className={`text-center transition-all ${momentumScore >= 75 && momentumScore < 90 ? 'scale-110 font-black text-purple-300 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]' : 'opacity-70'}`}>
                 <span className="text-slate-500 block">75%</span>
                 <span className="text-purple-400">STRONG</span>
               </div>
-              <div className="text-right">
+              <div className={`text-right transition-all ${momentumScore >= 90 ? 'scale-110 font-black text-indigo-300 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'opacity-70'}`}>
                 <span className="text-slate-500 block">100%</span>
                 <span className="text-indigo-300">UNSTOPPABLE</span>
               </div>
