@@ -1095,82 +1095,85 @@ export default function MissionControl() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            DAILY PROTOCOL STATUS // 6 SQUARES IN A SINGLE RECTANGLE
+            DAILY PROTOCOL STATUS // ICON-ONLY SQUARES (NO OVERLAPPING TEXT)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-5 rounded-2xl border border-white/10 bg-[#090d1a]/95 backdrop-blur-2xl p-3 sm:p-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+        <div className="relative mb-5 rounded-2xl border border-white/10 bg-[#090d1a]/95 backdrop-blur-2xl p-2.5 sm:p-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
           <div 
             style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', 
-              gap: '10px', 
+              gap: '8px', 
               width: '100%' 
             }}
           >
             {eodItems.map((item) => {
               const ItemIcon = item.icon
-              const displayLabel = item.key === 'wellness' ? 'WELLNESS' : item.key === 'work' ? 'WORK' : item.key === 'journal' ? 'JOURNAL' : item.key === 'screen' ? 'SCREEN INTEL' : item.key === 'speaking' ? 'SPEAKING' : item.label.toUpperCase()
+              const displayLabel = item.key === 'wellness' ? 'Wellness' : item.key === 'work' ? 'Work' : item.key === 'journal' ? 'Journal' : item.key === 'screen' ? 'Screen Intel' : item.key === 'speaking' ? 'Speaking' : item.label
               return (
                 <Link 
                   key={item.key} 
                   href={item.path}
+                  title={`${displayLabel}: ${item.isDone ? '✓ Logged' : 'Open'}`}
                   className="block group"
                 >
                   <div 
-                    className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border p-2 relative ${
+                    className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative group-hover:scale-[1.03] ${
                       item.isDone 
-                        ? 'bg-bg-tertiary border-border-color hover:border-primary hover:bg-bg-secondary' 
-                        : 'bg-bg-tertiary border-border-color hover:border-amber hover:bg-bg-secondary'
+                        ? 'bg-emerald-950/25 border-emerald-500/40 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.12)]' 
+                        : 'bg-white/[0.03] border-white/10 text-slate-400 hover:border-amber-500/40 hover:text-amber-400 hover:bg-white/[0.06]'
                     }`}
                   >
-                    <ItemIcon 
-                      size={18} 
-                      className="mb-1 transition-transform group-hover:scale-110" 
-                      style={{ color: item.isDone ? 'var(--success)' : 'var(--text-muted)' }} 
-                    />
-                    <div className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
-                      {displayLabel}
-                    </div>
+                    {/* Status Pip Dot */}
                     <div 
-                      className="font-mono text-[8px] sm:text-[9px] mt-0.5 font-bold flex items-center justify-center gap-1 whitespace-nowrap"
-                      style={{ color: item.isDone ? 'var(--success)' : 'var(--warning)' }}
-                    >
-                      {item.isDone ? '✓ LOGGED' : '→ OPEN'}
-                    </div>
+                      className={`absolute top-1.5 right-1.5 rounded-full ${
+                        item.isDone 
+                          ? 'w-2 h-2 bg-emerald-400 shadow-[0_0_6px_#34d399]' 
+                          : 'w-1.5 h-1.5 bg-amber-500/40'
+                      }`}
+                    />
+
+                    {/* Logo / Icon Only */}
+                    <ItemIcon 
+                      size={22} 
+                      className="transition-transform group-hover:scale-110" 
+                    />
                   </div>
                 </Link>
               )
             })}
 
-            {/* DEBRIEF BOX (EXTREME RIGHT) */}
-            <Link href="/journal?tab=weekly" className="block group">
+            {/* DEBRIEF BOX (EXTREME RIGHT - ICON ONLY) */}
+            <Link 
+              href="/journal?tab=weekly" 
+              title={`Debrief: ${isDebriefDoneThisWeek ? '✓ Done' : new Date().getDay() === 0 ? 'Due Today' : 'Due Sunday'}`}
+              className="block group"
+            >
               <div 
-                className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border p-2 ${
+                className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative group-hover:scale-[1.03] ${
                   isDebriefDoneThisWeek
-                    ? 'bg-success/15 border-success text-success shadow-lg'
+                    ? 'bg-emerald-950/25 border-emerald-500/40 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.12)]'
                     : new Date().getDay() === 0 
-                    ? 'bg-warning/15 border-warning hover:border-amber text-warning' 
-                    : 'bg-bg-tertiary border-border-color hover:border-primary hover:bg-bg-secondary'
+                    ? 'bg-amber-950/25 border-amber-500/50 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.12)]' 
+                    : 'bg-white/[0.03] border-white/10 text-slate-400 hover:border-white/20'
                 }`}
               >
-                {isDebriefDoneThisWeek ? (
-                  <CheckCircle2 size={18} className="mb-1 text-success transition-transform group-hover:scale-110" />
-                ) : (
-                  <ClipboardList 
-                    size={18} 
-                    className="mb-1 transition-transform group-hover:scale-110" 
-                    style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }} 
-                  />
-                )}
-                <div className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
-                  DEBRIEF
-                </div>
+                {/* Status Pip Dot */}
                 <div 
-                  className={`font-mono text-[8px] sm:text-[9px] mt-0.5 font-bold whitespace-nowrap ${
-                    isDebriefDoneThisWeek ? 'text-success' : new Date().getDay() === 0 ? 'text-warning' : 'text-muted'
+                  className={`absolute top-1.5 right-1.5 rounded-full ${
+                    isDebriefDoneThisWeek 
+                      ? 'w-2 h-2 bg-emerald-400 shadow-[0_0_6px_#34d399]' 
+                      : new Date().getDay() === 0 
+                      ? 'w-2 h-2 bg-amber-400 shadow-[0_0_6px_#fbbf24] animate-pulse'
+                      : 'w-1.5 h-1.5 bg-slate-600'
                   }`}
-                >
-                  {isDebriefDoneThisWeek ? 'DONE' : new Date().getDay() === 0 ? 'DUE TODAY' : 'DUE SUN'}
-                </div>
+                />
+
+                {/* Logo / Icon Only */}
+                {isDebriefDoneThisWeek ? (
+                  <CheckCircle2 size={22} className="transition-transform group-hover:scale-110" />
+                ) : (
+                  <ClipboardList size={22} className="transition-transform group-hover:scale-110" />
+                )}
               </div>
             </Link>
           </div>
