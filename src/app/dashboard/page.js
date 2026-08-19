@@ -22,14 +22,14 @@ import { getLocalDateStr, getEndOfWeek, getStartOfWeek } from '@/lib/utils/dates
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
-  { rank: 'I',       name: 'The Awakening',          flavor: 'The moment I stopped drifting and chose the life I wanted to build.' },
-  { rank: 'II',      name: 'The Discipline Rebuild', flavor: 'I rebuilt my mind, habits, and identity one day at a time.' },
-  { rank: 'III',     name: 'The Spark',              flavor: 'Small actions became unstoppable momentum.' },
-  { rank: 'IV',      name: 'The Architect',          flavor: 'I stopped chasing success and started designing systems, businesses, and a better future.' },
-  { rank: 'V',       name: 'The King',               flavor: 'I learned to lead myself first, then earned the trust to lead others.' },
-  { rank: 'VI',      name: 'The Empire',             flavor: 'My work grew beyond me into companies, teams, and communities that create lasting value.' },
-  { rank: 'VII',     name: 'The Legacy',             flavor: 'My greatest achievement became the people I inspired and the lives I changed.' },
-  { rank: 'VIII',    name: 'Beyond',                 flavor: 'There is no finish line. Every summit reveals a higher mountain.' },
+  { rank: 'I',       name: 'The Awakening',          flavor: 'The moment I stopped drifting and chose the life I wanted to build.', minLvl: 1, maxLvl: 10 },
+  { rank: 'II',      name: 'The Discipline Rebuild', flavor: 'I rebuilt my mind, habits, and identity one day at a time.', minLvl: 11, maxLvl: 17 },
+  { rank: 'III',     name: 'The Spark',              flavor: 'Small actions became unstoppable momentum.', minLvl: 18, maxLvl: 26 },
+  { rank: 'IV',      name: 'The Architect',          flavor: 'I stopped chasing success and started designing systems, businesses, and a better future.', minLvl: 27, maxLvl: 38 },
+  { rank: 'V',       name: 'The King',               flavor: 'I learned to lead myself first, then earned the trust to lead others.', minLvl: 39, maxLvl: 54 },
+  { rank: 'VI',      name: 'The Empire',             flavor: 'My work grew beyond me into companies, teams, and communities that create lasting value.', minLvl: 55, maxLvl: 77 },
+  { rank: 'VII',     name: 'The Legacy',             flavor: 'My greatest achievement became the people I inspired and the lives I changed.', minLvl: 78, maxLvl: 99 },
+  { rank: 'VIII',    name: 'Beyond',                 flavor: 'There is no finish line. Every summit reveals a higher mountain.', minLvl: 100, maxLvl: 999 },
 ]
 
 const BATTLE_ICONS = {
@@ -107,6 +107,7 @@ export default function MissionControl() {
   const [xpThisWeek, setXpThisWeek]   = useState(0)
   const [weeklyWinRate, setWeeklyWinRate] = useState(0)
   const [arcExpanded, setArcExpanded] = useState(false)
+  const [sagaRosterOpen, setSagaRosterOpen] = useState(false)
   const [momentumExpanded, setMomentumExpanded] = useState(false)
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
   const [completedEventIds, setCompletedEventIds] = useState(new Set())
@@ -915,36 +916,167 @@ export default function MissionControl() {
 
 
         {/* ══════════════════════════════════════════════════════════════════
+            DEDICATED SAGA SHOWCASE SECTION (BETWEEN HUD & TODAY'S OPERATIONS)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="mb-5 rounded-2xl border border-indigo-500/25 bg-[#0a0d1a]/95 backdrop-blur-2xl shadow-[0_12px_35px_rgba(0,0,0,0.65)] overflow-hidden transition-all">
+          
+          {/* Main Saga Bar (Clickable) */}
+          <div 
+            onClick={() => setSagaRosterOpen(prev => !prev)}
+            className="p-3.5 sm:p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-white/[0.02] transition-colors select-none"
+          >
+            <div className="flex items-center gap-3.5 min-w-0">
+              {/* 1:1 Square Saga Artwork */}
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/40 shadow-[0_0_20px_rgba(129,140,248,0.35)] shrink-0 aspect-square group relative">
+                <img 
+                  src={SAGA_IMAGES[currentRank.code] || '/sagas/the-spark.png'} 
+                  alt={currentArc.name} 
+                  className="w-full h-full object-cover aspect-square transition-transform duration-300 group-hover:scale-105"
+                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                />
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/15 rounded-2xl pointer-events-none" />
+              </div>
+
+              {/* SAGA Info */}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-400/30 text-indigo-300 font-mono text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider">
+                    SAGA {currentRank.code}
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-400 font-bold hidden sm:inline">
+                    LV.{currentLevel}
+                  </span>
+                </div>
+                <h2 className="font-display font-black text-base sm:text-lg text-white uppercase tracking-wider truncate">
+                  {currentArc.name}
+                </h2>
+                <p className="font-mono text-[10px] sm:text-xs text-slate-400 truncate max-w-md sm:max-w-xl">
+                  {currentArc.flavor || 'Every action shapes your legacy.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Right Action / Toggle Indicator */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="font-mono text-[10px] uppercase font-bold text-indigo-400 hidden sm:inline">
+                {sagaRosterOpen ? 'HIDE ROSTER' : 'VIEW ALL SAGAS'}
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 flex items-center justify-center transition-transform duration-200">
+                {sagaRosterOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Saga Roster Grid (When Expanded) */}
+          <AnimatePresence>
+            {sagaRosterOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="border-t border-white/10 p-4 sm:p-5 bg-black/40"
+              >
+                <div className="flex items-center justify-between mb-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
+                    <h3 className="font-mono text-xs font-bold text-white uppercase tracking-wider">
+                      SAGA PROGRESSION ROSTER
+                    </h3>
+                  </div>
+                  <span className="font-mono text-[10px] text-slate-400 uppercase font-bold">
+                    CURRENT LEVEL: LV.{currentLevel}
+                  </span>
+                </div>
+
+                <div 
+                  style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', 
+                    gap: '12px', 
+                    width: '100%' 
+                  }}
+                >
+                  {ARC_CONFIG.map((saga) => {
+                    const isCurrent = saga.rank === currentRank.code
+                    const isUnlocked = currentLevel >= saga.minLvl
+                    const isCompleted = currentLevel > saga.maxLvl
+                    const sagaImg = SAGA_IMAGES[saga.rank] || '/sagas/the-spark.png'
+
+                    return (
+                      <div 
+                        key={saga.rank}
+                        className={`rounded-2xl border p-2 flex flex-col items-center text-center transition-all ${
+                          isCurrent
+                            ? 'bg-indigo-950/40 border-indigo-400/80 shadow-[0_0_18px_rgba(129,140,248,0.3)] ring-1 ring-indigo-400/40'
+                            : isUnlocked
+                            ? 'bg-black/40 border-white/10 hover:border-white/20'
+                            : 'bg-black/60 border-white/5 opacity-50'
+                        }`}
+                      >
+                        {/* 1:1 Square Thumbnail */}
+                        <div className="w-full aspect-square rounded-xl overflow-hidden relative mb-2 bg-slate-950 border border-white/10">
+                          <img 
+                            src={sagaImg} 
+                            alt={saga.name} 
+                            className={`w-full h-full object-cover aspect-square transition-all ${
+                              !isUnlocked ? 'grayscale contrast-125 brightness-50' : ''
+                            }`}
+                            onError={(e) => { e.currentTarget.style.display = 'none' }}
+                          />
+
+                          {/* Lock / Active Badges */}
+                          {isCurrent ? (
+                            <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-indigo-500 text-black font-mono text-[8px] font-black uppercase shadow-md">
+                              ACTIVE
+                            </div>
+                          ) : !isUnlocked ? (
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center text-slate-300">
+                              <Lock size={16} className="text-slate-400 mb-0.5" />
+                              <span className="font-mono text-[8px] font-bold text-slate-300">LV.{saga.minLvl}+</span>
+                            </div>
+                          ) : isCompleted ? (
+                            <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-emerald-500/90 text-black font-mono text-[8px] font-black uppercase shadow-md">
+                              ✓ DONE
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {/* Title & Level Range */}
+                        <div className="w-full min-w-0">
+                          <div className="font-mono text-[8px] uppercase tracking-wider text-slate-400 font-bold">
+                            SAGA {saga.rank}
+                          </div>
+                          <div className="font-display font-bold text-[11px] text-white uppercase tracking-tight truncate">
+                            {saga.name}
+                          </div>
+                          <div className="font-mono text-[9px] text-slate-400 mt-0.5">
+                            LV.{saga.minLvl} - {saga.maxLvl === 999 ? '∞' : saga.maxLvl}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
             TOP STRIP — TODAY'S OPERATIONS & SCHEDULE
         ══════════════════════════════════════════════════════════════════ */}
         <div className="mb-5 p-3.5 sm:p-4 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 pb-3 border-b border-white/10">
-            <div className="flex items-center gap-3 min-w-0">
-              <Link href="/xp" title={`Current Saga: ${currentArc.name}`} className="group shrink-0">
-                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-950 border border-amber/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] flex items-center justify-center aspect-square group-hover:scale-105 transition-transform">
-                  <img 
-                    src={SAGA_IMAGES[currentRank.code] || '/sagas/the-spark.png'} 
-                    alt={currentArc.name} 
-                    className="w-full h-full object-cover aspect-square"
-                    onError={(e) => { e.currentTarget.style.display = 'none' }}
-                  />
-                </div>
-              </Link>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-amber animate-pulse shrink-0" style={{ boxShadow: '0 0 10px var(--amber)' }} />
-                  <span className="font-mono text-xs uppercase tracking-widest text-amber font-bold truncate">
-                    TODAY'S OPERATIONS & SCHEDULE
-                  </span>
-                  <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-amber/15 border border-amber/40 text-amber font-bold shrink-0">
-                    {todayTasksScheduled.filter(t => t.status === 'completed').length + Array.from(completedEventIds).length} / {todayCalendarEvents.length + todayTasksScheduled.length} DONE
-                  </span>
-                </div>
-                <div className="font-mono text-[9px] text-muted tracking-wider uppercase mt-0.5">
-                  OPERATOR SAGA: <span className="text-white font-bold">{currentArc.name}</span> · LV.{currentLevel}
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <div className="w-2.5 h-2.5 rounded-full bg-amber animate-pulse shrink-0" style={{ boxShadow: '0 0 10px var(--amber)' }} />
+              <span className="font-mono text-xs uppercase tracking-widest text-amber font-bold truncate">
+                TODAY'S OPERATIONS & SCHEDULE
+              </span>
+              <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-amber/15 border border-amber/40 text-amber font-bold shrink-0">
+                {todayTasksScheduled.filter(t => t.status === 'completed').length + Array.from(completedEventIds).length} / {todayCalendarEvents.length + todayTasksScheduled.length} DONE
+              </span>
             </div>
 
             <div className="flex items-center gap-2.5 font-mono text-[10px] uppercase font-bold shrink-0">
