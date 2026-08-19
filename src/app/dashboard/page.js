@@ -434,13 +434,11 @@ export default function MissionControl() {
         .eq('date', todayStr)
         .maybeSingle()
 
-      const habitCompletedToday = (todayLogs || []).some(l => l.date === todayStr && l.status === 'completed')
-
-      const wellnessLogged = !!todaySleepLog || !!todayWeightLog || habitCompletedToday
+      const wellnessLogged = !!todaySleepLog || !!todayWeightLog
       let wellnessDetail = ''
-      if (todaySleepLog) wellnessDetail = `Sleep: ${todaySleepLog.duration_hours || 8}h`
+      if (todaySleepLog && todayWeightLog) wellnessDetail = `Sleep ${todaySleepLog.duration_hours || 8}h · ${todayWeightLog.weight_kg}kg`
+      else if (todaySleepLog) wellnessDetail = `Sleep: ${todaySleepLog.duration_hours || 8}h`
       else if (todayWeightLog) wellnessDetail = `Weight: ${todayWeightLog.weight_kg}kg`
-      else if (habitCompletedToday) wellnessDetail = `Routine Logged`
 
       setEodWellnessData({ logged: wellnessLogged, detail: wellnessDetail })
 
