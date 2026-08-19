@@ -339,28 +339,22 @@ export default function XPDashboard() {
 
           <div className="flex flex-col items-center justify-center gap-3 relative z-10 max-w-xl mx-auto">
             
-            {/* Centered Compact 48px Square Saga Artwork Emblem */}
-            <div 
-              className="relative flex items-center justify-center shrink-0"
-              style={{ width: '48px', height: '48px', minWidth: '48px', minHeight: '48px', maxWidth: '48px', maxHeight: '48px' }}
-            >
-              <div className="absolute -inset-1.5 rounded-xl border border-indigo-500/30 animate-[spin_18s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
-              <div className="absolute -inset-0.5 rounded-lg border border-dashed border-purple-400/25 animate-[spin_24s_linear_infinite_reverse]" />
-              <div className="absolute -top-1 left-1 w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
-              <div className="absolute -bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
+            {/* Centered Balanced 1:1 Square Saga Artwork Emblem (80px-96px) */}
+            <div className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 shrink-0 mb-2">
+              <div className="absolute -inset-2 rounded-2xl border border-indigo-500/30 animate-[spin_18s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
+              <div className="absolute -inset-1 rounded-xl border border-dashed border-purple-400/25 animate-[spin_24s_linear_infinite_reverse]" />
+              <div className="absolute -top-1 left-2 w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
+              <div className="absolute -bottom-1 right-2 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
               
               {/* 1:1 Square Artwork Container */}
-              <div 
-                className="rounded-xl overflow-hidden bg-slate-950 border border-indigo-400/50 shadow-[0_0_12px_rgba(129,140,248,0.4)] flex items-center justify-center relative aspect-square"
-                style={{ width: '48px', height: '48px' }}
-              >
+              <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/50 shadow-[0_0_20px_rgba(129,140,248,0.5)] flex items-center justify-center relative aspect-square">
                 <img 
                   src={SAGA_IMAGES[currentRank.code] || '/sagas/Awakening.png'} 
                   alt={rankTitle}
-                  style={{ width: '48px', height: '48px', objectFit: 'cover' }}
+                  className="w-full h-full object-cover aspect-square"
                   onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
                 />
-                <div className="absolute inset-0 ring-1 ring-inset ring-white/15 rounded-xl pointer-events-none" />
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/15 rounded-2xl pointer-events-none" />
               </div>
             </div>
 
