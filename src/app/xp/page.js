@@ -339,19 +339,25 @@ export default function XPDashboard() {
 
           <div className="flex flex-col items-center justify-center gap-3 relative z-10 max-w-xl mx-auto">
             
-            {/* Centered Balanced 1:1 Square Saga Artwork Emblem (80px-96px) */}
-            <div className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 shrink-0 mb-2">
+            {/* Centered Small 5cm x 5cm (180px x 180px) 1:1 Square Saga Artwork Box */}
+            <div 
+              className="relative flex items-center justify-center shrink-0 mb-3 mx-auto"
+              style={{ width: '180px', height: '180px', minWidth: '180px', minHeight: '180px', maxWidth: '180px', maxHeight: '180px' }}
+            >
               <div className="absolute -inset-2 rounded-2xl border border-indigo-500/30 animate-[spin_18s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
               <div className="absolute -inset-1 rounded-xl border border-dashed border-purple-400/25 animate-[spin_24s_linear_infinite_reverse]" />
               <div className="absolute -top-1 left-2 w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
               <div className="absolute -bottom-1 right-2 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
               
-              {/* 1:1 Square Artwork Container */}
-              <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/50 shadow-[0_0_20px_rgba(129,140,248,0.5)] flex items-center justify-center relative aspect-square">
+              {/* 1:1 Square Artwork Container Locked to 180px x 180px (5cm x 5cm) */}
+              <div 
+                className="rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/50 shadow-[0_0_24px_rgba(129,140,248,0.5)] flex items-center justify-center relative aspect-square"
+                style={{ width: '180px', height: '180px' }}
+              >
                 <img 
                   src={SAGA_IMAGES[currentRank.code] || '/sagas/Awakening.png'} 
                   alt={rankTitle}
-                  className="w-full h-full object-cover aspect-square"
+                  style={{ width: '180px', height: '180px', objectFit: 'cover' }}
                   onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
                 />
                 <div className="absolute inset-0 ring-1 ring-inset ring-white/15 rounded-2xl pointer-events-none" />
