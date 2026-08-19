@@ -1095,7 +1095,7 @@ export default function MissionControl() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            DAILY PROTOCOL STATUS // ICON-ONLY SQUARES (NO OVERLAPPING TEXT)
+            DAILY PROTOCOL STATUS // ICON-ONLY SQUARES (GREY WHEN NOT COMPLETED)
         ══════════════════════════════════════════════════════════════════ */}
         <div className="relative mb-5 rounded-2xl border border-white/10 bg-[#090d1a]/95 backdrop-blur-2xl p-2.5 sm:p-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
           <div 
@@ -1119,8 +1119,8 @@ export default function MissionControl() {
                   <div 
                     className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative group-hover:scale-[1.03] ${
                       item.isDone 
-                        ? 'bg-emerald-950/25 border-emerald-500/40 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.12)]' 
-                        : 'bg-white/[0.03] border-white/10 text-slate-400 hover:border-amber-500/40 hover:text-amber-400 hover:bg-white/[0.06]'
+                        ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.18)]' 
+                        : 'bg-white/[0.02] border-white/5 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 hover:bg-white/[0.05]'
                     }`}
                   >
                     {/* Status Pip Dot */}
@@ -1128,14 +1128,16 @@ export default function MissionControl() {
                       className={`absolute top-1.5 right-1.5 rounded-full ${
                         item.isDone 
                           ? 'w-2 h-2 bg-emerald-400 shadow-[0_0_6px_#34d399]' 
-                          : 'w-1.5 h-1.5 bg-amber-500/40'
+                          : 'w-1.5 h-1.5 bg-zinc-700'
                       }`}
                     />
 
-                    {/* Logo / Icon Only */}
+                    {/* Logo / Icon Only (Grey when not completed, Emerald when completed) */}
                     <ItemIcon 
                       size={22} 
-                      className="transition-transform group-hover:scale-110" 
+                      className={`transition-transform group-hover:scale-110 ${
+                        item.isDone ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-zinc-300'
+                      }`}
                     />
                   </div>
                 </Link>
@@ -1151,10 +1153,10 @@ export default function MissionControl() {
               <div 
                 className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative group-hover:scale-[1.03] ${
                   isDebriefDoneThisWeek
-                    ? 'bg-emerald-950/25 border-emerald-500/40 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.12)]'
+                    ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.18)]'
                     : new Date().getDay() === 0 
                     ? 'bg-amber-950/25 border-amber-500/50 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.12)]' 
-                    : 'bg-white/[0.03] border-white/10 text-slate-400 hover:border-white/20'
+                    : 'bg-white/[0.02] border-white/5 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 hover:bg-white/[0.05]'
                 }`}
               >
                 {/* Status Pip Dot */}
@@ -1164,15 +1166,15 @@ export default function MissionControl() {
                       ? 'w-2 h-2 bg-emerald-400 shadow-[0_0_6px_#34d399]' 
                       : new Date().getDay() === 0 
                       ? 'w-2 h-2 bg-amber-400 shadow-[0_0_6px_#fbbf24] animate-pulse'
-                      : 'w-1.5 h-1.5 bg-slate-600'
+                      : 'w-1.5 h-1.5 bg-zinc-700'
                   }`}
                 />
 
                 {/* Logo / Icon Only */}
                 {isDebriefDoneThisWeek ? (
-                  <CheckCircle2 size={22} className="transition-transform group-hover:scale-110" />
+                  <CheckCircle2 size={22} className="text-emerald-400 transition-transform group-hover:scale-110" />
                 ) : (
-                  <ClipboardList size={22} className="transition-transform group-hover:scale-110" />
+                  <ClipboardList size={22} className={`transition-transform group-hover:scale-110 ${new Date().getDay() === 0 ? 'text-amber-400' : 'text-zinc-500 group-hover:text-zinc-300'}`} />
                 )}
               </div>
             </Link>
