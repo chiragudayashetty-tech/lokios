@@ -1240,36 +1240,36 @@ tbody tr:hover { background: rgba(244, 201, 107, 0.045); }
   top: 0;
   z-index: 80;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: 'rank net trend' 'rank secondary secondary';
+  grid-template-columns: minmax(170px, 1.15fr) minmax(170px, 1fr) minmax(170px, 1fr) minmax(180px, 1.1fr);
   align-items: center;
-  gap: 18px;
-  min-height: 58px;
-  margin: -10px 0 18px;
-  padding: 10px 14px;
-  border: 1px solid color-mix(in srgb, var(--hud-accent) 35%, var(--border-color));
+  min-height: 76px;
+  margin: -12px 0 26px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--hud-accent) 42%, var(--border-color));
   border-left: 3px solid var(--hud-accent);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--hud-accent) 8%, var(--bg-tertiary)), var(--bg-tertiary));
-  box-shadow: 0 0 calc(24px * var(--saga-glow, .25)) var(--ambient-saga-glow, transparent);
+  background: linear-gradient(105deg, color-mix(in srgb, var(--hud-accent) 12%, var(--bg-tertiary)), color-mix(in srgb, var(--hud-accent) 3%, var(--bg-primary)) 52%, var(--bg-tertiary));
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .28), 0 0 calc(34px * var(--saga-glow, .25)) var(--ambient-saga-glow, transparent);
   backdrop-filter: blur(14px);
 }
-.loki-hud-rank { grid-area: rank; }
-.loki-hud-net { grid-area: net; }
-.loki-hud-trend { grid-area: trend; }
-.loki-hud-secondary { grid-area: secondary; }
-.loki-hud-rank, .loki-hud-net, .loki-hud-trend, .loki-hud-secondary { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.loki-hud-rank { color: var(--hud-accent); min-width: 92px; }
-.loki-hud-icon { font-size: 22px; line-height: 1; }
-.loki-hud-level, .loki-hud-value, .loki-hud-trend, .loki-hud-secondary { font-family: var(--font-mono, monospace); white-space: nowrap; }
-.loki-hud-level { font-size: 12px; font-weight: 700; letter-spacing: .08em; }
-.loki-hud-net { flex-direction: column; align-items: flex-start; gap: 1px; }
-.loki-hud-label, .loki-hud-secondary, .loki-hud-trend small { font-size: 8px; letter-spacing: .12em; color: var(--text-muted); }
-.loki-hud-value { color: var(--success); font-size: 18px; font-weight: 700; line-height: 1; }
+.loki-hud-rank, .loki-hud-net, .loki-hud-trend, .loki-hud-secondary { min-width: 0; height: 100%; padding: 15px 22px; font-family: var(--font-mono, monospace); }
+.loki-hud-rank { display: flex; align-items: center; gap: 12px; color: var(--hud-accent); }
+.loki-hud-icon { display: grid; place-items: center; width: 42px; height: 42px; font-size: 25px; line-height: 1; border: 1px solid color-mix(in srgb, var(--hud-accent) 60%, transparent); background: color-mix(in srgb, var(--hud-accent) 10%, transparent); box-shadow: inset 0 0 18px color-mix(in srgb, var(--hud-accent) 12%, transparent); }
+.loki-hud-rank-copy, .loki-hud-net, .loki-hud-trend, .loki-hud-secondary { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; }
+.loki-hud-rank-copy { gap: 4px; }
+.loki-hud-kicker, .loki-hud-label, .loki-hud-caption { font-size: 8px; letter-spacing: .16em; color: var(--text-muted); white-space: nowrap; }
+.loki-hud-kicker { color: color-mix(in srgb, var(--hud-accent) 75%, var(--text-primary)); }
+.loki-hud-level { font-size: 19px; font-weight: 700; letter-spacing: .08em; line-height: 1; white-space: nowrap; }
+.loki-hud-value, .loki-hud-trend-value, .loki-hud-lifetime { font-size: 20px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+.loki-hud-value { color: var(--success); }
 .loki-hud-net.is-negative .loki-hud-value, .loki-hud-trend.is-negative { color: var(--danger); }
-.loki-hud-trend { flex-direction: column; align-items: flex-end; gap: 1px; color: var(--success); font-size: 11px; font-weight: 700; }
-.loki-hud-trend small { display: block; font-weight: 400; }
-.loki-hud-secondary { justify-content: space-between; margin-left: 0; gap: 12px; }
-.loki-hud-secondary span:last-child { color: var(--hud-accent); font-weight: 700; }
+.loki-hud-net, .loki-hud-trend, .loki-hud-secondary { border-left: 1px solid color-mix(in srgb, var(--hud-accent) 18%, var(--border-color)); }
+.loki-hud-trend { color: var(--success); }
+.loki-hud-caption { opacity: .72; }
+.loki-hud-secondary { flex-direction: row; align-items: center; justify-content: space-between; gap: 14px; }
+.loki-hud-secondary > div { display: flex; flex-direction: column; gap: 4px; }
+.loki-hud-lifetime { color: var(--text-primary); }
+.loki-hud-state { padding: 5px 8px; border: 1px solid currentColor; font-size: 9px; font-weight: 700; letter-spacing: .14em; white-space: nowrap; }
 .xp-toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; width: min(340px, calc(100vw - 36px)); pointer-events: none; }
 .xp-toast { pointer-events: auto; padding: 11px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-left: 3px solid var(--success); box-shadow: 0 10px 30px rgba(0,0,0,.35); font: 11px var(--font-mono, monospace); color: var(--text-primary); }
 .xp-toast-negative { border-left-color: var(--danger); }
@@ -1290,16 +1290,13 @@ body {
 }
 .sidebar { border-right-color: var(--border-color); }
 @media (max-width: 640px) {
-  .loki-persistent-hud { grid-template-columns: auto minmax(0, 1fr) auto; gap: 7px 10px; margin-top: -4px; padding: 9px 10px; }
-  .loki-hud-rank { min-width: auto; }
-  .loki-hud-icon { font-size: 18px; }
-  .loki-hud-value { font-size: 15px; }
-  .loki-hud-secondary { font-size: 8px; }
+  .loki-persistent-hud { display: none; }
   .xp-toast-stack { right: 12px; bottom: calc(70px + env(safe-area-inset-bottom)); width: min(320px, calc(100vw - 24px)); }
 }
 @media (max-width: 380px) {
-  .loki-persistent-hud { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'rank net' 'rank trend' 'secondary secondary'; }
-  .loki-hud-trend { flex-direction: row; justify-content: flex-start; align-items: baseline; gap: 5px; }
-  .loki-hud-secondary { padding-top: 2px; }
+  .loki-persistent-hud { display: none; }
+}
+@media (min-width: 641px) and (max-width: 1023px) {
+  .loki-persistent-hud { display: none; }
 }
 

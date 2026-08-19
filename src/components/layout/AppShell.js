@@ -257,19 +257,27 @@ export default function AppShell({ children }) {
         <div className="loki-persistent-hud" style={{ '--hud-accent': rank.color }}>
           <div className="loki-hud-rank" aria-label={`${rank.name}, level ${calculateLevel(totalXp)}`}>
             <span className="loki-hud-icon">{rank.icon}</span>
-            <span className="loki-hud-level">LV.{calculateLevel(totalXp)}</span>
+            <div className="loki-hud-rank-copy">
+              <span className="loki-hud-kicker">{rank.name.toUpperCase()}</span>
+              <span className="loki-hud-level">LV.{calculateLevel(totalXp)}</span>
+            </div>
           </div>
           <div className={`loki-hud-net ${todayNet < 0 ? 'is-negative' : ''}`}>
-            <span className="loki-hud-label">TODAY NET</span>
+            <span className="loki-hud-label">DAILY MOMENTUM</span>
             <span className="loki-hud-value">{todayNet >= 0 ? '+' : ''}{todayNet} XP</span>
+            <span className="loki-hud-caption">NET TODAY</span>
           </div>
           <div className={`loki-hud-trend ${trend3Day < 0 ? 'is-negative' : ''}`}>
-            <span>{trend3Day >= 0 ? '▲' : '▼'} {trend3Day >= 0 ? '+' : ''}{trend3Day} XP</span>
-            <small>3-DAY</small>
+            <span className="loki-hud-label">3-DAY TREND</span>
+            <span className="loki-hud-trend-value">{trend3Day >= 0 ? '▲' : '▼'} {trend3Day >= 0 ? '+' : ''}{trend3Day} XP</span>
+            <span className="loki-hud-caption">ROLLING NET</span>
           </div>
           <div className="loki-hud-secondary">
-            <span>{totalXp.toLocaleString()} LIFETIME XP</span>
-            <span style={{ color: dailyMomentum?.color || 'var(--text-muted)' }}>{dailyMomentum?.state || 'STEADY'}</span>
+            <div>
+              <span className="loki-hud-label">LIFETIME XP</span>
+              <span className="loki-hud-lifetime">{totalXp.toLocaleString()}</span>
+            </div>
+            <span className="loki-hud-state" style={{ color: dailyMomentum?.color || 'var(--text-muted)' }}>{dailyMomentum?.state || 'STEADY'}</span>
           </div>
         </div>
         {children}
