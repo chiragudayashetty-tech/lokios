@@ -17,7 +17,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
-import { RANK_CONFIG } from '@/lib/constants'
+import { RANK_CONFIG, SAGA_IMAGES, SAGA_TITLES } from '@/lib/constants'
 import { getLocalDateStr, getEndOfWeek, getStartOfWeek } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
@@ -920,14 +920,31 @@ export default function MissionControl() {
         <div className="mb-5 p-3.5 sm:p-4 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 pb-3 border-b border-white/10">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber animate-pulse shrink-0" style={{ boxShadow: '0 0 10px var(--amber)' }} />
-              <span className="font-mono text-xs uppercase tracking-widest text-amber font-bold truncate">
-                TODAY'S OPERATIONS & SCHEDULE
-              </span>
-              <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-amber/15 border border-amber/40 text-amber font-bold shrink-0">
-                {todayTasksScheduled.filter(t => t.status === 'completed').length + Array.from(completedEventIds).length} / {todayCalendarEvents.length + todayTasksScheduled.length} DONE
-              </span>
+            <div className="flex items-center gap-3 min-w-0">
+              <Link href="/xp" title={`Current Saga: ${currentArc.name}`} className="group shrink-0">
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-950 border border-amber/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] flex items-center justify-center aspect-square group-hover:scale-105 transition-transform">
+                  <img 
+                    src={SAGA_IMAGES[currentRank.code] || '/sagas/the-spark.png'} 
+                    alt={currentArc.name} 
+                    className="w-full h-full object-cover aspect-square"
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  />
+                </div>
+              </Link>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-amber animate-pulse shrink-0" style={{ boxShadow: '0 0 10px var(--amber)' }} />
+                  <span className="font-mono text-xs uppercase tracking-widest text-amber font-bold truncate">
+                    TODAY'S OPERATIONS & SCHEDULE
+                  </span>
+                  <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-amber/15 border border-amber/40 text-amber font-bold shrink-0">
+                    {todayTasksScheduled.filter(t => t.status === 'completed').length + Array.from(completedEventIds).length} / {todayCalendarEvents.length + todayTasksScheduled.length} DONE
+                  </span>
+                </div>
+                <div className="font-mono text-[9px] text-muted tracking-wider uppercase mt-0.5">
+                  OPERATOR SAGA: <span className="text-white font-bold">{currentArc.name}</span> · LV.{currentLevel}
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2.5 font-mono text-[10px] uppercase font-bold shrink-0">

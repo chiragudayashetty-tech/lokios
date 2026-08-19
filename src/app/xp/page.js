@@ -11,7 +11,7 @@ import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, BarChart, Bar, Cell, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { Activity, RefreshCw, RotateCcw, TrendingUp, TrendingDown, Calendar, Target, Trophy } from 'lucide-react'
-import { RANK_CONFIG, SAGA_TITLES } from '@/lib/constants'
+import { RANK_CONFIG, SAGA_TITLES, SAGA_IMAGES } from '@/lib/constants'
 import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
 
 // Custom Area Sparkline Component with Rigid Constrained Dimensions
@@ -339,32 +339,22 @@ export default function XPDashboard() {
 
           <div className="flex flex-col items-center justify-center gap-5 relative z-10 max-w-3xl mx-auto">
             
-            {/* Centered 3D Orbital Gem Emblem (Large) */}
+            {/* Centered 1:1 Square Saga Artwork Emblem (Large) */}
             <div className="relative flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32 shrink-0">
-              <div className="absolute inset-0 rounded-full border border-indigo-500/30 animate-[spin_14s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
-              <div className="absolute inset-2 rounded-full border border-dashed border-purple-400/25 animate-[spin_20s_linear_infinite_reverse]" />
-              <div className="absolute top-1 left-4 w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
-              <div className="absolute bottom-2 right-4 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
+              <div className="absolute -inset-2 rounded-2xl border border-indigo-500/30 animate-[spin_18s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
+              <div className="absolute -inset-1 rounded-2xl border border-dashed border-purple-400/25 animate-[spin_24s_linear_infinite_reverse]" />
+              <div className="absolute -top-1 left-2 w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
+              <div className="absolute -bottom-1 right-2 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
               
-              {/* Core Faceted Diamond */}
-              <div className="absolute inset-4 rounded-full bg-gradient-to-br from-indigo-950/90 via-purple-950/80 to-slate-950 border border-indigo-400/40 shadow-[0_0_30px_rgba(129,140,248,0.6)] flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-pulse" />
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-[0_0_16px_rgba(168,85,247,0.9)]">
-                  <path d="M12 2L3 9.5L12 22L21 9.5L12 2Z" fill="url(#heroGemGrad1)" stroke="#c084fc" strokeWidth="1.1" strokeLinejoin="round" />
-                  <path d="M12 2L8 9.5L12 22L16 9.5L12 2Z" fill="url(#heroGemGrad2)" fillOpacity="0.9" />
-                  <path d="M3 9.5H21" stroke="#e9d5ff" strokeWidth="0.8" strokeLinecap="round" />
-                  <defs>
-                    <linearGradient id="heroGemGrad1" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#a855f7" />
-                      <stop offset="1" stopColor="#3730a3" />
-                    </linearGradient>
-                    <linearGradient id="heroGemGrad2" x1="8" y1="2" x2="16" y2="22" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#f5d0fe" />
-                      <stop offset="0.4" stopColor="#c084fc" />
-                      <stop offset="1" stopColor="#6366f1" />
-                    </linearGradient>
-                  </defs>
-                </svg>
+              {/* 1:1 Square Artwork Container */}
+              <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/50 shadow-[0_0_30px_rgba(129,140,248,0.6)] flex items-center justify-center relative aspect-square">
+                <img 
+                  src={SAGA_IMAGES[currentRank.code] || '/sagas/the-spark.png'} 
+                  alt={rankTitle}
+                  className="w-full h-full object-cover aspect-square"
+                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                />
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/15 rounded-2xl pointer-events-none" />
               </div>
             </div>
 

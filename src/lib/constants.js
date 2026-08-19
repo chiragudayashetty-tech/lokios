@@ -42,6 +42,18 @@ export const SAGA_TITLES = {
   VIII: 'Beyond',
 };
 
+export const SAGA_IMAGES = {
+  Fallen: '/sagas/discipline-rebuild.png',
+  I: '/sagas/discipline-rebuild.png',
+  II: '/sagas/discipline-rebuild.png',
+  III: '/sagas/the-spark.png',
+  IV: '/sagas/the-architect.png',
+  V: '/sagas/the-king.png',
+  VI: '/sagas/the-empire.png',
+  VII: '/sagas/the-legacy.png',
+  VIII: '/sagas/beyond.png',
+};
+
 export const ARC_CONFIG = [
   { rank: 'I',       name: 'The Awakening',          title: 'The Awakening',          flavor: 'The moment I stopped drifting and chose the life I wanted to build.', minLvl: 1, maxLvl: 10 },
   { rank: 'II',      name: 'The Discipline Rebuild', title: 'The Discipline Rebuild', flavor: 'I rebuilt my mind, habits, and identity one day at a time.', minLvl: 11, maxLvl: 17 },

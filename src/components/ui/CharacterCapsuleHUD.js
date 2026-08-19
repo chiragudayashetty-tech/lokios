@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Shield, ShieldAlert, Flame, Box, User } from 'lucide-react'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
-import { SAGA_TITLES } from '@/lib/constants'
+import { SAGA_TITLES, SAGA_IMAGES } from '@/lib/constants'
 
 export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
   const totalXp = profile?.total_xp || 0
@@ -13,6 +13,7 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
   const xpProgress = xpToNextLevel(totalXp)
   const rank = getRankForXp(totalXp)
   const rankTitle = SAGA_TITLES[rank.code] || rank.name || 'The Spark'
+  const sagaImage = SAGA_IMAGES[rank.code] || '/sagas/the-spark.png'
 
   const todayNet = dailyMomentum?.todayNet || 0
   const trend3Day = dailyMomentum?.threeDayNet || 0
@@ -38,25 +39,15 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
         
         {/* ── 1. SAGA & LEVEL (Leftmost) ── */}
         <Link href="/xp" className="flex items-center gap-3.5 shrink-0 group select-none hover:opacity-90 transition-opacity">
-          {/* Glowing Faceted Crystal Gem Icon */}
-          <div className="relative flex items-center justify-center w-11 h-11 rounded-full bg-gradient-to-br from-indigo-950/90 via-purple-950/80 to-slate-950 border border-indigo-400/40 shadow-[0_0_18px_rgba(129,140,248,0.45)] shrink-0 group-hover:scale-105 transition-transform">
-            <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-pulse" />
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.85)]">
-              <path d="M12 2L2 9L12 22L22 9L12 2Z" fill="url(#hudGemGrad1)" stroke="#c084fc" strokeWidth="1.2" strokeLinejoin="round" />
-              <path d="M12 2L7 9L12 22L17 9L12 2Z" fill="url(#hudGemGrad2)" fillOpacity="0.9" />
-              <path d="M2 9H22" stroke="#e9d5ff" strokeWidth="0.8" strokeLinecap="round" />
-              <defs>
-                <linearGradient id="hudGemGrad1" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#a855f7" />
-                  <stop offset="1" stopColor="#4338ca" />
-                </linearGradient>
-                <linearGradient id="hudGemGrad2" x1="7" y1="2" x2="17" y2="22" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#f5d0fe" />
-                  <stop offset="0.4" stopColor="#c084fc" />
-                  <stop offset="1" stopColor="#6366f1" />
-                </linearGradient>
-              </defs>
-            </svg>
+          {/* 1:1 Square Saga Character Avatar Image */}
+          <div className="relative flex items-center justify-center w-11 h-11 rounded-xl overflow-hidden bg-slate-950 border border-indigo-400/40 shadow-[0_0_16px_rgba(129,140,248,0.4)] shrink-0 group-hover:scale-105 transition-transform aspect-square">
+            <img 
+              src={sagaImage} 
+              alt={rankTitle} 
+              className="w-full h-full object-cover aspect-square"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+            <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-xl pointer-events-none" />
           </div>
 
           <div className="flex flex-col justify-center min-w-0">
