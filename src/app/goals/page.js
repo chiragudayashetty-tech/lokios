@@ -185,6 +185,8 @@ export default function Missions() {
   }
 
   const renderGoalCard = (goal, i) => {
+    const isCompleted = goal.status === 'completed'
+    const isFailed = goal.status === 'failed'
     const isPaused = goal.status === 'paused'
     const isEditing = editingId === goal.id
     const isExpanded = expandedGoal === goal.id
@@ -196,8 +198,7 @@ export default function Missions() {
       : (goal.progress || 0)
 
     // ── THIN STRIP LAYOUT FOR COMPLETED & FAILED MISSIONS ──
-    if (goal.status === 'completed' || goal.status === 'failed') {
-      const isCompleted = goal.status === 'completed'
+    if (isCompleted || isFailed) {
       const dateStr = goal.completed_at 
         ? new Date(goal.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) 
         : (goal.updated_at ? new Date(goal.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null)
