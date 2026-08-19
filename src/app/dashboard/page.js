@@ -1095,76 +1095,85 @@ export default function MissionControl() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            DAILY PROTOCOL STATUS // SINGLE HORIZONTAL LINE OF 6 CARDS
+            DAILY PROTOCOL STATUS // 6 SQUARES IN A SINGLE RECTANGLE
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-2.5 md:gap-3 mb-5 w-full">
-          {eodItems.map((item) => {
-            const ItemIcon = item.icon
-            const displayLabel = item.key === 'wellness' ? 'WELLNESS' : item.key === 'work' ? 'WORK' : item.key === 'journal' ? 'JOURNAL' : item.key === 'screen' ? 'SCREEN INTEL' : item.key === 'speaking' ? 'SPEAKING' : item.label.toUpperCase()
-            return (
-              <Link 
-                key={item.key} 
-                href={item.path}
-                className="block group"
-              >
-                <div 
-                  className={`py-2.5 px-1.5 sm:py-3 sm:px-2 min-h-[76px] sm:min-h-[82px] text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative ${
-                    item.isDone 
-                      ? 'bg-bg-tertiary border-border-color hover:border-primary hover:bg-bg-secondary' 
-                      : 'bg-bg-tertiary border-border-color hover:border-amber hover:bg-bg-secondary'
-                  }`}
+        <div className="relative mb-5 rounded-2xl border border-white/10 bg-[#090d1a]/95 backdrop-blur-2xl p-3 sm:p-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+          <div 
+            style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', 
+              gap: '10px', 
+              width: '100%' 
+            }}
+          >
+            {eodItems.map((item) => {
+              const ItemIcon = item.icon
+              const displayLabel = item.key === 'wellness' ? 'WELLNESS' : item.key === 'work' ? 'WORK' : item.key === 'journal' ? 'JOURNAL' : item.key === 'screen' ? 'SCREEN INTEL' : item.key === 'speaking' ? 'SPEAKING' : item.label.toUpperCase()
+              return (
+                <Link 
+                  key={item.key} 
+                  href={item.path}
+                  className="block group"
                 >
-                  <ItemIcon 
-                    size={16} 
-                    className="mb-1 transition-transform group-hover:scale-110" 
-                    style={{ color: item.isDone ? 'var(--success)' : 'var(--text-muted)' }} 
-                  />
-                  <div className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
-                    {displayLabel}
-                  </div>
                   <div 
-                    className="font-mono text-[8px] sm:text-[9px] mt-0.5 font-bold flex items-center justify-center gap-1 whitespace-nowrap"
-                    style={{ color: item.isDone ? 'var(--success)' : 'var(--warning)' }}
+                    className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border p-2 relative ${
+                      item.isDone 
+                        ? 'bg-bg-tertiary border-border-color hover:border-primary hover:bg-bg-secondary' 
+                        : 'bg-bg-tertiary border-border-color hover:border-amber hover:bg-bg-secondary'
+                    }`}
                   >
-                    {item.isDone ? '✓ LOGGED' : '→ OPEN'}
+                    <ItemIcon 
+                      size={18} 
+                      className="mb-1 transition-transform group-hover:scale-110" 
+                      style={{ color: item.isDone ? 'var(--success)' : 'var(--text-muted)' }} 
+                    />
+                    <div className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
+                      {displayLabel}
+                    </div>
+                    <div 
+                      className="font-mono text-[8px] sm:text-[9px] mt-0.5 font-bold flex items-center justify-center gap-1 whitespace-nowrap"
+                      style={{ color: item.isDone ? 'var(--success)' : 'var(--warning)' }}
+                    >
+                      {item.isDone ? '✓ LOGGED' : '→ OPEN'}
+                    </div>
                   </div>
-                </div>
-              </Link>
-            )
-          })}
+                </Link>
+              )
+            })}
 
-          {/* DEBRIEF BOX (EXTREME RIGHT) */}
-          <Link href="/journal?tab=weekly" className="block group">
-            <div 
-              className={`py-2.5 px-1.5 sm:py-3 sm:px-2 min-h-[76px] sm:min-h-[82px] text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border ${
-                isDebriefDoneThisWeek
-                  ? 'bg-success/15 border-success text-success shadow-lg'
-                  : new Date().getDay() === 0 
-                  ? 'bg-warning/15 border-warning hover:border-amber text-warning' 
-                  : 'bg-bg-tertiary border-border-color hover:border-primary hover:bg-bg-secondary'
-              }`}
-            >
-              {isDebriefDoneThisWeek ? (
-                <CheckCircle2 size={16} className="mb-1 text-success transition-transform group-hover:scale-110" />
-              ) : (
-                <ClipboardList 
-                  size={16} 
-                  className="mb-1 transition-transform group-hover:scale-110" 
-                  style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }} 
-                />
-              )}
-              <div className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
-                DEBRIEF
-              </div>
+            {/* DEBRIEF BOX (EXTREME RIGHT) */}
+            <Link href="/journal?tab=weekly" className="block group">
               <div 
-                className={`font-mono text-[8px] sm:text-[9px] mt-0.5 font-bold whitespace-nowrap ${
-                  isDebriefDoneThisWeek ? 'text-success' : new Date().getDay() === 0 ? 'text-warning' : 'text-muted'
+                className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border p-2 ${
+                  isDebriefDoneThisWeek
+                    ? 'bg-success/15 border-success text-success shadow-lg'
+                    : new Date().getDay() === 0 
+                    ? 'bg-warning/15 border-warning hover:border-amber text-warning' 
+                    : 'bg-bg-tertiary border-border-color hover:border-primary hover:bg-bg-secondary'
                 }`}
               >
-                {isDebriefDoneThisWeek ? 'DONE' : new Date().getDay() === 0 ? 'DUE TODAY' : 'DUE SUN'}
+                {isDebriefDoneThisWeek ? (
+                  <CheckCircle2 size={18} className="mb-1 text-success transition-transform group-hover:scale-110" />
+                ) : (
+                  <ClipboardList 
+                    size={18} 
+                    className="mb-1 transition-transform group-hover:scale-110" 
+                    style={{ color: new Date().getDay() === 0 ? 'var(--warning)' : 'var(--text-muted)' }} 
+                  />
+                )}
+                <div className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-muted group-hover:text-primary font-bold truncate max-w-full">
+                  DEBRIEF
+                </div>
+                <div 
+                  className={`font-mono text-[8px] sm:text-[9px] mt-0.5 font-bold whitespace-nowrap ${
+                    isDebriefDoneThisWeek ? 'text-success' : new Date().getDay() === 0 ? 'text-warning' : 'text-muted'
+                  }`}
+                >
+                  {isDebriefDoneThisWeek ? 'DONE' : new Date().getDay() === 0 ? 'DUE TODAY' : 'DUE SUN'}
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+          </div>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════

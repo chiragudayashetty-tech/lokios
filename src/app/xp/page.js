@@ -408,61 +408,68 @@ export default function XPDashboard() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            CARD 2: 3 METRIC CARDS SIDE BY SIDE (LEFT, MIDDLE, RIGHT)
+            CARD 2: 3 SQUARE METRICS IN A SINGLE RECTANGLE (LEFT, CENTER, RIGHT)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mb-6 w-full">
-          
-          {/* LEFT: POSITIVE ACTIONS (ADDITIONS) */}
-          <div className="rounded-2xl border border-white/10 bg-[#090d1a]/95 hover:border-emerald-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_28px_rgba(0,0,0,0.5)]">
-            <div className="w-11 h-11 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center mb-2 shadow-[0_0_12px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
-              <TrendingUp size={18} className="text-emerald-400" />
+        <div className="relative mb-6 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-4 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
+          <div 
+            style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', 
+              gap: '16px', 
+              width: '100%' 
+            }}
+          >
+            {/* LEFT: POSITIVE ACTIONS (ADDITIONS) */}
+            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-emerald-500/40 p-4 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
+              <div className="w-10 h-10 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
+                <TrendingUp size={18} className="text-emerald-400" />
+              </div>
+              <div className="font-display font-black text-2xl sm:text-4xl text-emerald-400 tracking-tight leading-tight">
+                {positiveCount}
+              </div>
+              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold">
+                POSITIVE ACTIONS
+              </div>
+              <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" height={36} width={160} />
+              <div className="font-mono text-[9px] sm:text-[11px] text-emerald-400 font-semibold tracking-wider">
+                ↑ 12% vs last 7 days
+              </div>
             </div>
-            <div className="font-display font-black text-3xl sm:text-4xl text-emerald-400 tracking-tight leading-tight">
-              {positiveCount}
+
+            {/* CENTER: SUBTRACTIONS & PENALTIES */}
+            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-rose-500/40 p-4 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
+              <div className="w-10 h-10 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
+                <TrendingDown size={18} className="text-rose-400" />
+              </div>
+              <div className="font-display font-black text-2xl sm:text-4xl text-rose-400 tracking-tight leading-tight">
+                {deductionCount}
+              </div>
+              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold">
+                SUBTRACTIONS & PENALTIES
+              </div>
+              <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" height={36} width={160} />
+              <div className="font-mono text-[9px] sm:text-[11px] text-rose-400 font-semibold tracking-wider">
+                ↓ 8% vs last 7 days
+              </div>
             </div>
-            <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
-              POSITIVE ACTIONS
-            </div>
-            <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" height={40} width={180} />
-            <div className="font-mono text-[10px] sm:text-[11px] text-emerald-400 font-semibold tracking-wider mt-1">
-              ↑ 12% vs last 7 days
+
+            {/* RIGHT: DAYS TRACKED */}
+            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-blue-500/40 p-4 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
+              <div className="w-10 h-10 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
+                <Calendar size={18} className="text-blue-400" />
+              </div>
+              <div className="font-display font-black text-2xl sm:text-4xl text-blue-400 tracking-tight leading-tight">
+                {daysTracked}
+              </div>
+              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold">
+                DAYS TRACKED
+              </div>
+              <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" height={36} width={160} />
+              <div className="font-mono text-[9px] sm:text-[11px] text-blue-400 font-semibold tracking-wider">
+                Longest streak: {longestStreak} days
+              </div>
             </div>
           </div>
-
-          {/* MIDDLE: SUBTRACTIONS & PENALTIES */}
-          <div className="rounded-2xl border border-white/10 bg-[#090d1a]/95 hover:border-rose-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_28px_rgba(0,0,0,0.5)]">
-            <div className="w-11 h-11 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center mb-2 shadow-[0_0_12px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
-              <TrendingDown size={18} className="text-rose-400" />
-            </div>
-            <div className="font-display font-black text-3xl sm:text-4xl text-rose-400 tracking-tight leading-tight">
-              {deductionCount}
-            </div>
-            <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
-              SUBTRACTIONS & PENALTIES
-            </div>
-            <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" height={40} width={180} />
-            <div className="font-mono text-[10px] sm:text-[11px] text-rose-400 font-semibold tracking-wider mt-1">
-              ↓ 8% vs last 7 days
-            </div>
-          </div>
-
-          {/* RIGHT: DAYS TRACKED */}
-          <div className="rounded-2xl border border-white/10 bg-[#090d1a]/95 hover:border-blue-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_28px_rgba(0,0,0,0.5)]">
-            <div className="w-11 h-11 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center mb-2 shadow-[0_0_12px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
-              <Calendar size={18} className="text-blue-400" />
-            </div>
-            <div className="font-display font-black text-3xl sm:text-4xl text-blue-400 tracking-tight leading-tight">
-              {daysTracked}
-            </div>
-            <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
-              DAYS TRACKED
-            </div>
-            <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" height={40} width={180} />
-            <div className="font-mono text-[10px] sm:text-[11px] text-blue-400 font-semibold tracking-wider mt-1">
-              Longest streak: {longestStreak} days
-            </div>
-          </div>
-
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
