@@ -803,80 +803,151 @@ export default function WorkPage() {
                   <span className="font-mono text-[10px] text-muted uppercase font-bold">DATE: {selectedDate}</span>
                 </div>
 
-                {/* 4 METRIC HOUR INPUTS GRID */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  {/* 1. TOTAL WORKED */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-black/50 border border-white/15">
-                    <div className="flex items-center justify-between font-mono text-[10px] font-bold text-white uppercase tracking-wider">
-                      <span>TOTAL WORKED</span>
+                {/* 4 METRIC HOUR INPUTS GRID (VIBRANT CYBER-TACTICAL CARDS) */}
+                <div 
+                  style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+                    gap: '14px', 
+                    width: '100%' 
+                  }}
+                >
+                  {/* 1. TOTAL WORKED (GOLD / AMBER) */}
+                  <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 hover:border-amber-500/60 transition-all shadow-[0_4px_20px_rgba(245,158,11,0.08)] flex flex-col justify-between group">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5 text-amber-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                        <Clock size={13} className="text-amber-400 group-hover:scale-110 transition-transform" />
+                        <span>TOTAL WORKED</span>
+                      </div>
                       <FieldUnitToggle unit={unitTotalWorked} setUnit={setUnitTotalWorked} />
                     </div>
-                    <input 
-                      type="number"
-                      step={unitTotalWorked === 'm' ? '1' : '0.1'}
-                      min="0"
-                      placeholder="0"
-                      value={valTotalWorked}
-                      onChange={e => setValTotalWorked(e.target.value)}
-                      className="w-full bg-transparent font-mono text-base font-bold text-white outline-none"
-                    />
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <input 
+                        type="number"
+                        step={unitTotalWorked === 'm' ? '1' : '0.1'}
+                        min="0"
+                        placeholder="0"
+                        value={valTotalWorked}
+                        onChange={e => setValTotalWorked(e.target.value)}
+                        className="w-full bg-transparent font-display font-black text-3xl text-amber-400 outline-none tracking-tight placeholder:text-amber-500/30"
+                      />
+                      <span className="font-mono text-xs font-bold text-amber-400/60 uppercase select-none">{unitTotalWorked}</span>
+                    </div>
                   </div>
 
-                  {/* 2. BEYOND TATVA */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-black/50 border border-[#00F0FF]/30">
-                    <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#00F0FF] uppercase tracking-wider">
-                      <span>BEYOND TATVA</span>
+                  {/* 2. BEYOND TATVA (NEON CYAN) */}
+                  <div className="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 hover:border-cyan-500/60 transition-all shadow-[0_4px_20px_rgba(6,182,212,0.08)] flex flex-col justify-between group">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5 text-cyan-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                        <Sparkles size={13} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                        <span>BEYOND TATVA</span>
+                      </div>
                       <FieldUnitToggle unit={unitBeyondTatva} setUnit={setUnitBeyondTatva} />
                     </div>
-                    <input 
-                      type="number"
-                      step={unitBeyondTatva === 'm' ? '1' : '0.1'}
-                      min="0"
-                      placeholder="0"
-                      value={valBeyondTatva}
-                      onChange={e => setValBeyondTatva(e.target.value)}
-                      className="w-full bg-transparent font-mono text-base font-bold text-[#00F0FF] outline-none"
-                    />
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <input 
+                        type="number"
+                        step={unitBeyondTatva === 'm' ? '1' : '0.1'}
+                        min="0"
+                        placeholder="0"
+                        value={valBeyondTatva}
+                        onChange={e => setValBeyondTatva(e.target.value)}
+                        className="w-full bg-transparent font-display font-black text-3xl text-cyan-400 outline-none tracking-tight placeholder:text-cyan-500/30"
+                      />
+                      <span className="font-mono text-xs font-bold text-cyan-400/60 uppercase select-none">{unitBeyondTatva}</span>
+                    </div>
                   </div>
 
-                  {/* 3. FOCUSED */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-black/50 border border-[#22c55e]/30">
-                    <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#22c55e] uppercase tracking-wider">
-                      <span>FOCUSED</span>
+                  {/* 3. FOCUSED (NEON EMERALD) */}
+                  <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 hover:border-emerald-500/60 transition-all shadow-[0_4px_20px_rgba(16,185,129,0.08)] flex flex-col justify-between group">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                        <Target size={13} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                        <span>FOCUSED</span>
+                      </div>
                       <FieldUnitToggle unit={unitFocused} setUnit={setUnitFocused} />
                     </div>
-                    <input 
-                      type="number"
-                      step={unitFocused === 'm' ? '1' : '0.1'}
-                      min="0"
-                      placeholder="0"
-                      value={valFocused}
-                      onChange={e => setValFocused(e.target.value)}
-                      className="w-full bg-transparent font-mono text-base font-bold text-[#22c55e] outline-none"
-                    />
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <input 
+                        type="number"
+                        step={unitFocused === 'm' ? '1' : '0.1'}
+                        min="0"
+                        placeholder="0"
+                        value={valFocused}
+                        onChange={e => setValFocused(e.target.value)}
+                        className="w-full bg-transparent font-display font-black text-3xl text-emerald-400 outline-none tracking-tight placeholder:text-emerald-500/30"
+                      />
+                      <span className="font-mono text-xs font-bold text-emerald-400/60 uppercase select-none">{unitFocused}</span>
+                    </div>
                   </div>
 
-                  {/* 4. UNFOCUSED */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-black/50 border border-[#ef4444]/30">
-                    <div className="flex items-center justify-between font-mono text-[10px] font-bold text-[#ef4444] uppercase tracking-wider">
-                      <span>UNFOCUSED</span>
+                  {/* 4. UNFOCUSED (NEON ROSE / CRIMSON) */}
+                  <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/30 hover:border-rose-500/60 transition-all shadow-[0_4px_20px_rgba(244,63,94,0.08)] flex flex-col justify-between group">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5 text-rose-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                        <AlertTriangle size={13} className="text-rose-400 group-hover:scale-110 transition-transform" />
+                        <span>UNFOCUSED</span>
+                      </div>
                       <FieldUnitToggle unit={unitUnfocused} setUnit={setUnitUnfocused} />
                     </div>
-                    <input 
-                      type="number"
-                      step={unitUnfocused === 'm' ? '1' : '0.1'}
-                      min="0"
-                      placeholder="0"
-                      value={valUnfocused}
-                      onChange={e => setValUnfocused(e.target.value)}
-                      className="w-full bg-transparent font-mono text-base font-bold text-[#ef4444] outline-none"
-                    />
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <input 
+                        type="number"
+                        step={unitUnfocused === 'm' ? '1' : '0.1'}
+                        min="0"
+                        placeholder="0"
+                        value={valUnfocused}
+                        onChange={e => setValUnfocused(e.target.value)}
+                        className="w-full bg-transparent font-display font-black text-3xl text-rose-400 outline-none tracking-tight placeholder:text-rose-500/30"
+                      />
+                      <span className="font-mono text-xs font-bold text-rose-400/60 uppercase select-none">{unitUnfocused}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* FOCUS STATE / ENERGY LEVEL PICKER */}
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-mono text-[11px] text-slate-300 uppercase font-bold tracking-wider flex items-center gap-1.5">
+                      <Zap size={13} className="text-amber-400" />
+                      <span>FOCUS STATE & ENERGY</span>
+                    </label>
+                    <span 
+                      className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase"
+                      style={{ color: FOCUS_LEVEL_OPTIONS.find(f => f.level === focusLevel)?.color, background: `${FOCUS_LEVEL_OPTIONS.find(f => f.level === focusLevel)?.color}18` }}
+                    >
+                      {FOCUS_LEVEL_OPTIONS.find(f => f.level === focusLevel)?.label}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-5 gap-2">
+                    {FOCUS_LEVEL_OPTIONS.map((opt) => {
+                      const isSelected = focusLevel === opt.level
+                      return (
+                        <button
+                          key={opt.level}
+                          type="button"
+                          onClick={() => setFocusLevel(opt.level)}
+                          className={`p-2 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all active:scale-95 ${
+                            isSelected 
+                              ? 'bg-white/10 shadow-lg scale-[1.02]' 
+                              : 'bg-black/30 border-white/5 opacity-60 hover:opacity-100 hover:border-white/15'
+                          }`}
+                          style={isSelected ? { borderColor: opt.color, boxShadow: `0 0 14px ${opt.color}35` } : {}}
+                        >
+                          <span className="text-xl sm:text-2xl">{opt.emoji}</span>
+                          <span className="font-mono text-[9px] sm:text-[10px] font-bold uppercase truncate max-w-full text-slate-300">
+                            {opt.label}
+                          </span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
                 {/* TYPE OF WORK TAG PILLS */}
-                <div className="space-y-2">
-                  <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2.5">
+                  <label className="font-mono text-[11px] text-slate-300 uppercase font-bold tracking-wider block">
                     TYPE OF WORK
                   </label>
                   <div className="flex flex-wrap gap-2 items-center">
@@ -891,13 +962,13 @@ export default function WorkPage() {
                               ? prev.filter(t => t !== opt.label)
                               : [...prev, opt.label]
                           )}
-                          className={`px-3 py-1 rounded-full font-mono text-[11px] font-bold tracking-wider border transition-all ${
+                          className={`px-3 py-1.5 rounded-full font-mono text-[11px] font-bold tracking-wider border transition-all active:scale-95 ${
                             active 
-                              ? 'bg-black text-white shadow-md' 
-                              : 'bg-black/40 text-muted hover:text-primary border-white/10'
+                              ? 'bg-black text-white shadow-lg' 
+                              : 'bg-black/40 text-slate-400 hover:text-white border-white/10 hover:border-white/20'
                           }`}
                           style={active
-                            ? { borderColor: opt.color, color: opt.color, boxShadow: `0 0 10px ${opt.color}30` }
+                            ? { borderColor: opt.color, color: opt.color, backgroundColor: `${opt.color}15`, boxShadow: `0 0 12px ${opt.color}35` }
                             : {}
                           }
                         >
@@ -908,7 +979,7 @@ export default function WorkPage() {
 
                     <input 
                       type="text"
-                      placeholder="Custom type... (press Enter)"
+                      placeholder="+ Custom type..."
                       value={customWorkType}
                       onChange={e => setCustomWorkType(e.target.value)}
                       onKeyDown={e => {
@@ -919,22 +990,22 @@ export default function WorkPage() {
                           setCustomWorkType('')
                         }
                       }}
-                      className="px-3 py-1 rounded-full font-mono text-[11px] bg-black/60 border border-white/15 text-white placeholder:text-muted/60 focus:outline-none focus:border-[#D4AF37]"
+                      className="px-3 py-1.5 rounded-full font-mono text-[11px] bg-black/60 border border-white/15 text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400"
                     />
                   </div>
                 </div>
 
                 {/* WORK SESSION NOTES */}
-                <div className="space-y-1.5">
-                  <label className="font-mono text-[11px] text-muted uppercase font-bold tracking-wider block">
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2">
+                  <label className="font-mono text-[11px] text-slate-300 uppercase font-bold tracking-wider block">
                     WORK SESSION NOTES
                   </label>
                   <textarea
                     rows={3}
-                    placeholder="Describe what you worked on, wins, learnings, or challenges..."
+                    placeholder="Describe what you worked on, key wins, learnings, or challenges..."
                     value={workNotes}
                     onChange={(e) => setWorkNotes(e.target.value)}
-                    className="w-full bg-black/60 border border-white/15 rounded-xl p-3 font-mono text-xs text-white focus:outline-none focus:border-[#D4AF37] transition-colors leading-relaxed"
+                    className="w-full bg-black/60 border border-white/15 rounded-xl p-3 font-mono text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition-colors leading-relaxed"
                   />
                 </div>
 
@@ -942,10 +1013,10 @@ export default function WorkPage() {
                 <button
                   type="submit"
                   disabled={savingWork}
-                  className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-[#D4AF37] via-[#FBBF24] to-[#B8860B] hover:opacity-95 text-black font-mono text-xs font-extrabold uppercase rounded-xl shadow-xl transition-all active:scale-95 disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:opacity-95 text-black font-mono text-xs font-black uppercase tracking-wider rounded-2xl shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all active:scale-98 disabled:opacity-50"
                 >
-                  <Save size={15} />
-                  <span>{savingWork ? 'SAVING...' : 'SAVE WORK LOG'}</span>
+                  <Save size={16} />
+                  <span>{savingWork ? 'RECORDING INTEL...' : 'SAVE WORK LOG'}</span>
                 </button>
 
               </form>
