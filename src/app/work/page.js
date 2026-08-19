@@ -180,10 +180,10 @@ export default function WorkPage() {
             const existing = mergedMap.get(existingKey)
             mergedMap.set(existingKey, {
               ...existing,
-              beyond_tatva_hours: existing.beyond_tatva_hours ?? l.beyond_tatva_hours,
-              focused_hours: existing.focused_hours ?? l.focused_hours,
-              unfocused_hours: existing.unfocused_hours ?? l.unfocused_hours,
-              total_hours_worked: existing.total_hours_worked ?? l.total_hours_worked ?? l.hours,
+              beyond_tatva_hours: Number(existing.beyond_tatva_hours) || Number(l.beyond_tatva_hours) || 0,
+              focused_hours: Number(existing.focused_hours) || Number(l.focused_hours) || 0,
+              unfocused_hours: Number(existing.unfocused_hours) || Number(l.unfocused_hours) || 0,
+              total_hours_worked: Number(existing.total_hours_worked) || Number(l.total_hours_worked) || Number(l.hours) || Number(l.duration_hours) || 0,
               work_type: existing.work_type || l.work_type,
               notes: existing.notes || l.notes || existing.description || l.description
             })
@@ -207,17 +207,16 @@ export default function WorkPage() {
             parsedW.forEach(l => {
               if (!map.has(l.date)) {
                 map.set(l.date, l)
-                sb.from('work_hours_logs').insert({
+                sb.from('work_hours_logs').upsert({
                   user_id: user?.id,
                   date: l.date,
-                  hours: l.total_hours_worked || l.hours || 0,
-                  duration_hours: l.total_hours_worked || l.hours || 0,
+                  total_hours_worked: l.total_hours_worked ?? l.hours ?? l.duration_hours ?? 0,
+                  deep_execution_hours: l.deep_execution_hours || 0,
                   focused_hours: l.focused_hours || 0,
                   beyond_tatva_hours: l.beyond_tatva_hours || 0,
                   unfocused_hours: l.unfocused_hours || 0,
                   notes: l.notes || l.description || '',
-                  work_type: l.work_type || 'General'
-                }).then(() => {}).catch(() => {})
+                }, { onConflict: 'user_id,date' }).then(() => {}).catch(() => {})
               }
             })
             fetchedW = Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
@@ -253,6 +252,26 @@ export default function WorkPage() {
     }
 
     fetchAllLogs()
+
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`work_sync_${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `user_id=eq.${user.id}` }, fetchAllLogs)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_hours_logs', filter: `user_id=eq.${user.id}` }, fetchAllLogs)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'content_logs', filter: `user_id=eq.${user.id}` }, fetchAllLogs)
+      .subscribe()
+
+    const handleResume = () => {
+      if (document.visibilityState === 'visible') fetchAllLogs()
+    }
+    window.addEventListener('focus', handleResume)
+    document.addEventListener('visibilitychange', handleResume)
+
+    return () => {
+      supabase.removeChannel(channel)
+      window.removeEventListener('focus', handleResume)
+      document.removeEventListener('visibilitychange', handleResume)
+    }
   }, [user])
 
   // Helper to convert stored Hours value to input field value based on selected unit
@@ -432,23 +451,25 @@ export default function WorkPage() {
       const cleanWorkHoursData = {
         user_id: user.id,
         date: selectedDate,
-        hours: payload.total_hours_worked || 0,
-        duration_hours: payload.total_hours_worked || 0,
+        total_hours_worked: payload.total_hours_worked || 0,
         focused_hours: payload.focused_hours || 0,
         beyond_tatva_hours: payload.beyond_tatva_hours || 0,
         unfocused_hours: payload.unfocused_hours || 0,
+        deep_execution_hours: payload.deep_execution_hours || 0,
         notes: payload.notes || '',
-        work_type: payload.work_type || 'General'
+        updated_at: new Date().toISOString()
       }
 
       const cleanWorkLogData = {
         user_id: user.id,
         date: selectedDate,
-        title: `Work Session (${payload.work_type || 'General'}: ${payload.total_hours_worked || 0}h)`,
-        description: payload.notes || `Logged ${payload.total_hours_worked || 0}h focused work.`,
-        type: 'project_work',
-        duration_hours: payload.total_hours_worked || 0,
-        notes: payload.notes || ''
+        total_hours_worked: payload.total_hours_worked || 0,
+        beyond_tatva_hours: payload.beyond_tatva_hours || 0,
+        focused_hours: payload.focused_hours || 0,
+        unfocused_hours: payload.unfocused_hours || 0,
+        deep_execution_hours: payload.deep_execution_hours || 0,
+        notes: payload.notes || '',
+        updated_at: new Date().toISOString()
       }
 
       // 1. Upsert work_hours_logs
@@ -461,9 +482,11 @@ export default function WorkPage() {
           .limit(1)
 
         if (existingHours && existingHours.length > 0) {
-          await sb.from('work_hours_logs').update(cleanWorkHoursData).eq('id', existingHours[0].id)
+          const { error } = await sb.from('work_hours_logs').update(cleanWorkHoursData).eq('id', existingHours[0].id)
+          if (error) throw error
         } else {
-          await sb.from('work_hours_logs').insert(cleanWorkHoursData)
+          const { error } = await sb.from('work_hours_logs').insert(cleanWorkHoursData)
+          if (error) throw error
         }
       } catch (whErr) {
         console.warn('work_hours_logs sync warning:', whErr)
@@ -479,9 +502,11 @@ export default function WorkPage() {
           .limit(1)
 
         if (existingWorkLog && existingWorkLog.length > 0) {
-          await sb.from('work_logs').update(cleanWorkLogData).eq('id', existingWorkLog[0].id)
+          const { error } = await sb.from('work_logs').update(cleanWorkLogData).eq('id', existingWorkLog[0].id)
+          if (error) throw error
         } else {
-          await sb.from('work_logs').insert(cleanWorkLogData)
+          const { error } = await sb.from('work_logs').insert(cleanWorkLogData)
+          if (error) throw error
         }
       } catch (wlErr) {
         console.warn('work_logs sync warning:', wlErr)
