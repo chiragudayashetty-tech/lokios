@@ -960,25 +960,25 @@ export default function MissionControl() {
 
 
         {/* ══════════════════════════════════════════════════════════════════
-            COMMAND CENTER SAGA HERO CARD (TEXT LEFT / IMAGE RIGHT ON DESKTOP)
+            COMMAND CENTER SAGA HERO CARD (TEXT AT LEFT, 1:1 IMAGE AT RIGHT)
         ══════════════════════════════════════════════════════════════════ */}
         <div className="mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden transition-all">
           
-          <div className="flex flex-col md:flex-row items-center justify-between">
+          <div className="flex flex-col-reverse lg:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
             
-            {/* ── INTELLIGENCE & PROGRESSION: ON PHONE -> BELOW (order-2), ON DESKTOP -> LEFT (md:order-1) ── */}
-            <div className="w-full md:flex-1 flex flex-col justify-between p-5 sm:p-7 lg:p-8 space-y-4 sm:space-y-5 order-2 md:order-1">
+            {/* ── LEFT SIDE (DESKTOP): INTELLIGENCE & PROGRESSION (TEXT AT LEFT) ── */}
+            <div className="flex-1 w-full min-w-0 flex flex-col justify-between space-y-4 sm:space-y-5">
               
               {/* Header: SAGA Title */}
               <div>
-                <span className="font-mono text-xs uppercase tracking-[0.25em] font-bold text-purple-400 block mb-1">
+                <span className="font-mono text-xs uppercase tracking-[0.25em] font-bold text-indigo-400 block mb-1">
                   SAGA {currentRank.code}
                 </span>
-                <h1 className="font-display font-black text-2xl sm:text-3xl lg:text-4xl text-white tracking-[0.2em] uppercase leading-tight">
+                <h1 className="font-display font-black text-2xl sm:text-4xl text-white tracking-[0.15em] uppercase leading-tight">
                   {splitTitle.primary}
                 </h1>
                 <h2 
-                  className="font-display font-black text-xl sm:text-2xl lg:text-3xl tracking-[0.25em] uppercase leading-none mt-1"
+                  className="font-display font-black text-xl sm:text-3xl tracking-[0.2em] uppercase leading-none mt-1"
                   style={{ color: sagaAccentColor }}
                 >
                   {splitTitle.secondary}
@@ -1009,15 +1009,16 @@ export default function MissionControl() {
                 </div>
               </div>
 
-              {/* Progress to Next Saga Pod (Side-by-Side) */}
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* Left: Progress Header, Percentage & Bar */}
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-widest font-bold">
-                      <span>PROGRESS TO NEXT SAGA</span>
-                    </div>
+              {/* Progress to Next Saga Pod */}
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-widest font-bold">
+                  <span>PROGRESS TO NEXT SAGA</span>
+                  <span>{sagaProgressPct}%</span>
+                </div>
 
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  {/* Left: Huge Percentage & Bar */}
+                  <div className="flex-1 space-y-2">
                     <div className="flex items-baseline justify-between">
                       <span 
                         className="font-display font-black text-3xl sm:text-4xl leading-none"
@@ -1030,10 +1031,10 @@ export default function MissionControl() {
                       </span>
                     </div>
 
-                    {/* Glowing Progress Track with glowing knob */}
+                    {/* Glowing Progress Track */}
                     <div className="w-full h-3 rounded-full bg-slate-950 border border-white/10 p-[1.5px] relative overflow-hidden">
                       <motion.div 
-                        className="h-full rounded-full transition-all duration-500 shadow-lg relative"
+                        className="h-full rounded-full transition-all duration-500 shadow-lg"
                         style={{ 
                           width: `${Math.max(4, Math.min(100, sagaProgressPct))}%`,
                           backgroundColor: sagaAccentColor,
@@ -1045,22 +1046,17 @@ export default function MissionControl() {
 
                   {/* Right: Next Saga Inset Capsule */}
                   {nextArc && (
-                    <div className="sm:border-l sm:border-white/10 sm:pl-4 flex flex-col justify-center shrink-0">
-                      <span className="font-mono text-[9px] uppercase tracking-wider text-purple-400 font-bold block mb-1">
-                        NEXT SAGA
-                      </span>
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-purple-950/80 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0 shadow-[0_0_10px_rgba(168,85,247,0.3)]">
-                          <Target size={14} />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="font-mono text-[10px] text-slate-400 font-bold uppercase block">
-                            SAGA {nextArc.rank}
-                          </span>
-                          <span className="font-display font-bold text-xs text-white uppercase truncate block">
-                            {nextArc.name}
-                          </span>
-                        </div>
+                    <div className="p-3 rounded-xl border border-white/10 bg-black/50 flex items-center gap-3 shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
+                        <Target size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-mono text-[9px] uppercase tracking-wider text-purple-400 font-bold block">
+                          NEXT SAGA
+                        </span>
+                        <span className="font-display font-bold text-xs text-white uppercase truncate block">
+                          SAGA {nextArc.rank} • {nextArc.name}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -1068,27 +1064,27 @@ export default function MissionControl() {
               </div>
 
               {/* Bottom Footer Subtitle & Roster Toggle */}
-              <div className="flex flex-col items-center justify-center pt-1 text-slate-500 font-mono text-[9px] sm:text-[10px] uppercase font-bold tracking-widest gap-2">
-                <span>KEEP BUILDING. YOUR NEXT BREAKTHROUGH IS CLOSER THAN YOU THINK.</span>
+              <div className="flex items-center justify-between pt-1 text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                <span className="truncate">KEEP BUILDING. YOUR NEXT BREAKTHROUGH IS CLOSER THAN YOU THINK.</span>
                 <button
                   type="button"
                   onClick={() => setSagaRosterOpen(prev => !prev)}
-                  title="Toggle Saga Roster"
-                  className="w-6 h-6 rounded-full border border-white/15 bg-white/5 hover:bg-white/15 flex items-center justify-center text-slate-300 transition-all active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white transition-all shrink-0 ml-3"
                 >
-                  {sagaRosterOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  <span>{sagaRosterOpen ? 'HIDE ROSTER' : 'VIEW ALL SAGAS'}</span>
+                  {sagaRosterOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                 </button>
               </div>
 
             </div>
 
-            {/* ── 1:1 SQUARE ARTWORK (NO TEXT OVERLAY): ON PHONE -> TOP (order-1), ON DESKTOP -> RIGHT (md:order-2) ── */}
-            <div className="w-full md:w-[380px] lg:w-[420px] shrink-0 flex items-center justify-center p-4 sm:p-6 lg:p-8 md:border-l md:border-white/10 order-1 md:order-2">
+            {/* ── RIGHT SIDE (DESKTOP): 1:1 SQUARE ARTWORK (IMAGE AT RIGHT) ── */}
+            <div className="w-full sm:w-[320px] md:w-[360px] lg:w-[380px] shrink-0 flex justify-center">
               <div 
-                className="rounded-2xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group w-full max-w-[340px] sm:max-w-[380px] aspect-square"
-                style={{ aspectRatio: '1 / 1' }}
+                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group"
+                style={{ width: '100%', maxWidth: '380px', aspectRatio: '1 / 1' }}
               >
-                {/* 100% Clean Artwork Image Without Any Overlapping Text */}
+                {/* Background 1:1 Artwork Image */}
                 <img 
                   src={currentSagaImage} 
                   alt={currentArc.name} 
@@ -1097,7 +1093,7 @@ export default function MissionControl() {
                 />
 
                 {/* Cyber subtle border ring */}
-                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
               </div>
             </div>
 

@@ -329,51 +329,46 @@ export default function XPDashboard() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            CARD 1: SAGA & LEVEL HERO CARD (COMPACT EMBLEM — ZERO SCROLLING)
+            CARD 1: SAGA & LEVEL HERO CARD (FULLY CENTERED & ENLARGED)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-5 rounded-2xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-4 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.7)] overflow-hidden text-center">
+        <div className="relative mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden text-center">
           
           {/* Subtle Ambient Glows */}
-          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-indigo-500/10 blur-[80px] pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-purple-500/10 blur-[80px] pointer-events-none" />
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/10 blur-[90px] pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-purple-500/10 blur-[90px] pointer-events-none" />
 
-          <div className="flex flex-col items-center justify-center gap-3 relative z-10 max-w-xl mx-auto">
+          <div className="flex flex-col items-center justify-center gap-5 relative z-10 max-w-3xl mx-auto">
             
-            {/* Centered 10cm x 10cm (360px x 360px) 1:1 Square Saga Artwork Box */}
-            <div 
-              className="relative flex items-center justify-center shrink-0 mb-4 mx-auto w-[280px] h-[280px] sm:w-[360px] sm:h-[360px]"
-              style={{ maxWidth: '360px', maxHeight: '360px', aspectRatio: '1 / 1' }}
-            >
-              <div className="absolute -inset-2.5 rounded-3xl border border-indigo-500/30 animate-[spin_24s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
-              <div className="absolute -inset-1 rounded-2xl border border-dashed border-purple-400/25 animate-[spin_30s_linear_infinite_reverse]" />
-              <div className="absolute -top-1.5 left-3 w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_10px_#818cf8]" />
-              <div className="absolute -bottom-1.5 right-3 w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_10px_#c084fc]" />
+            {/* Centered 1:1 Square Saga Artwork Emblem (Large) */}
+            <div className="relative flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32 shrink-0">
+              <div className="absolute -inset-2 rounded-2xl border border-indigo-500/30 animate-[spin_18s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
+              <div className="absolute -inset-1 rounded-2xl border border-dashed border-purple-400/25 animate-[spin_24s_linear_infinite_reverse]" />
+              <div className="absolute -top-1 left-2 w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
+              <div className="absolute -bottom-1 right-2 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
               
-              {/* 1:1 Square Artwork Container Locked to 10cm x 10cm */}
-              <div 
-                className="w-full h-full rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/50 shadow-[0_0_30px_rgba(129,140,248,0.5)] flex items-center justify-center relative aspect-square"
-              >
+              {/* 1:1 Square Artwork Container */}
+              <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-950 border-2 border-indigo-400/50 shadow-[0_0_30px_rgba(129,140,248,0.6)] flex items-center justify-center relative aspect-square">
                 <img 
-                  src={SAGA_IMAGES[currentRank.code] || '/sagas/Awakening.png'} 
+                  src={SAGA_IMAGES[currentRank.code] || '/sagas/the-spark.png'} 
                   alt={rankTitle}
                   className="w-full h-full object-cover aspect-square"
-                  onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
+                  onError={(e) => { e.currentTarget.style.display = 'none' }}
                 />
                 <div className="absolute inset-0 ring-1 ring-inset ring-white/15 rounded-2xl pointer-events-none" />
               </div>
             </div>
 
-            {/* Centered Saga Title */}
-            <div className="font-mono text-xs sm:text-sm uppercase tracking-[0.25em] font-bold text-slate-300">
+            {/* Centered Saga Title (Enlarged) */}
+            <div className="font-mono text-xs sm:text-sm md:text-base uppercase tracking-[0.3em] font-bold text-slate-300">
               SAGA {currentRank.code} <span className="text-slate-600 mx-1.5">•</span> <span className="text-indigo-400">{rankTitle.toUpperCase()}</span>
             </div>
 
-            {/* Centered Level & XP */}
-            <div className="space-y-0.5">
-              <div className="font-display font-black text-3xl sm:text-4xl md:text-5xl text-white tracking-tight leading-none">
+            {/* Centered Huge Level & XP */}
+            <div className="space-y-1">
+              <div className="font-display font-black text-4xl sm:text-5xl md:text-6xl text-white tracking-tight leading-none">
                 LEVEL <span className="text-indigo-400">{currentLevel}</span>
               </div>
-              <div className="font-display font-black text-xl sm:text-2xl md:text-3xl text-indigo-400 tracking-tight">
+              <div className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-indigo-400 tracking-tight">
                 {totalXp.toLocaleString()} <span className="font-mono text-xs sm:text-sm font-bold text-slate-400">XP</span>
               </div>
             </div>
