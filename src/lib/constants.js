@@ -51,7 +51,8 @@ export const SAGA_IMAGES = {
   V: '/sagas/the-king.png',
   VI: '/sagas/the-empire.png',
   VII: '/sagas/the-legacy.png',
-  VIII: '/sagas/beyond.png',
+  VIII: '/sagas/Beyond.png',
+  Beyond: '/sagas/Beyond.png',
 };
 
 export const ARC_CONFIG = [
