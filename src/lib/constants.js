@@ -20,37 +20,37 @@ export const STAT_CATEGORIES = [
 
 export const RANK_CONFIG = {
   Fallen: { code: 'Fallen', name: 'The Fallen', minXp: -999999, maxXp: -1, icon: '💀', color: '#EF4444' },
-  I:      { code: 'I',      name: 'Saga I',     minXp: 0,       maxXp: 999,      icon: '🛡️', color: '#9CA3AF' },
-  II:     { code: 'II',     name: 'Saga II',    minXp: 1000,    maxXp: 4999,     icon: '🗡️', color: '#60A5FA' },
-  III:    { code: 'III',    name: 'Saga III',   minXp: 5000,    maxXp: 14999,    icon: '◆', color: '#818CF8' },
-  IV:     { code: 'IV',     name: 'Saga IV',    minXp: 15000,   maxXp: 34999,    icon: '⬡', color: '#A78BFA' },
-  V:      { code: 'V',      name: 'Saga V',     minXp: 35000,   maxXp: 74999,    icon: '✦', color: '#C084FC' },
-  VI:     { code: 'VI',     name: 'Saga VI',    minXp: 75000,   maxXp: 149999,   icon: '★', color: '#E879F9' },
-  VII:    { code: 'VII',    name: 'Saga VII',   minXp: 150000,  maxXp: 299999,   icon: '♛', color: '#F59E0B' },
-  VIII:   { code: 'VIII',   name: 'Saga VIII',  minXp: 300000,  maxXp: 9999999,  icon: '∞', color: '#FCD34D' }
+  I:      { code: 'I',      name: 'The Awakening', minXp: 0, maxXp: 999, icon: '🛡️', color: '#9CA3AF' },
+  II:     { code: 'II',     name: 'The Discipline Rebuild', minXp: 1000, maxXp: 4999, icon: '🗡️', color: '#60A5FA' },
+  III:    { code: 'III',    name: 'The Spark', minXp: 5000, maxXp: 14999, icon: '◆', color: '#818CF8' },
+  IV:     { code: 'IV',     name: 'The Architect', minXp: 15000, maxXp: 34999, icon: '⬡', color: '#A78BFA' },
+  V:      { code: 'V',      name: 'The King', minXp: 35000, maxXp: 74999, icon: '✦', color: '#C084FC' },
+  VI:     { code: 'VI',     name: 'The Empire', minXp: 75000, maxXp: 149999, icon: '★', color: '#E879F9' },
+  VII:    { code: 'VII',    name: 'The Legacy', minXp: 15000, maxXp: 299999, icon: '♛', color: '#F59E0B' },
+  VIII:   { code: 'VIII',   name: 'Beyond', minXp: 300000, maxXp: 9999999, icon: '∞', color: '#FCD34D' }
 };
 
 export const SAGA_TITLES = {
   Fallen: 'The Fallen',
-  I: 'Initiate',
-  II: 'Operator',
-  III: 'Vanguard',
-  IV: 'Commander',
-  V: 'Warlord',
-  VI: 'Sovereign',
-  VII: 'Ascendant',
-  VIII: 'Immortal',
+  I: 'The Awakening',
+  II: 'The Discipline Rebuild',
+  III: 'The Spark',
+  IV: 'The Architect',
+  V: 'The King',
+  VI: 'The Empire',
+  VII: 'The Legacy',
+  VIII: 'Beyond',
 };
 
 export const ARC_CONFIG = [
-  { rank: 'I',       name: 'The Awakening',          title: 'Initiate',   flavor: 'The moment I stopped drifting and chose the life I wanted to build.' },
-  { rank: 'II',      name: 'The Discipline Rebuild', title: 'Operator',   flavor: 'I rebuilt my mind, habits, and identity one day at a time.' },
-  { rank: 'III',     name: 'The Spark',              title: 'Vanguard',   flavor: 'Small actions became unstoppable momentum.' },
-  { rank: 'IV',      name: 'The Architect',          title: 'Commander',  flavor: 'I stopped chasing success and started designing systems, businesses, and a better future.' },
-  { rank: 'V',       name: 'The King',               title: 'Warlord',    flavor: 'I learned to lead myself first, then earned the trust to lead others.' },
-  { rank: 'VI',      name: 'The Empire',             title: 'Sovereign',  flavor: 'My work grew beyond me into companies, teams, and communities that create lasting value.' },
-  { rank: 'VII',     name: 'The Legacy',             title: 'Ascendant',  flavor: 'My greatest achievement became the people I inspired and the lives I changed.' },
-  { rank: 'VIII',    name: 'Beyond',                 title: 'Immortal',   flavor: 'There is no finish line. Every summit reveals a higher mountain.' },
+  { rank: 'I',       name: 'The Awakening',          title: 'The Awakening',          flavor: 'The moment I stopped drifting and chose the life I wanted to build.' },
+  { rank: 'II',      name: 'The Discipline Rebuild', title: 'The Discipline Rebuild', flavor: 'I rebuilt my mind, habits, and identity one day at a time.' },
+  { rank: 'III',     name: 'The Spark',              title: 'The Spark',              flavor: 'Small actions became unstoppable momentum.' },
+  { rank: 'IV',      name: 'The Architect',          title: 'The Architect',          flavor: 'I stopped chasing success and started designing systems, businesses, and a better future.' },
+  { rank: 'V',       name: 'The King',               title: 'The King',               flavor: 'I learned to lead myself first, then earned the trust to lead others.' },
+  { rank: 'VI',      name: 'The Empire',             title: 'The Empire',             flavor: 'My work grew beyond me into companies, teams, and communities that create lasting value.' },
+  { rank: 'VII',     name: 'The Legacy',             title: 'The Legacy',             flavor: 'My greatest achievement became the people I inspired and the lives I changed.' },
+  { rank: 'VIII',    name: 'Beyond',                 title: 'Beyond',                 flavor: 'There is no finish line. Every summit reveals a higher mountain.' },
 ];
 
 export const XP_REWARDS = {

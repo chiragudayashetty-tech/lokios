@@ -158,7 +158,7 @@ export default function XPDashboard() {
   const xpToGo = Math.max(0, required - current)
 
   const currentRank = getRankForXp(totalXp)
-  const rankTitle = SAGA_TITLES[currentRank.code] || currentRank.name || 'VANGUARD'
+  const rankTitle = SAGA_TITLES[currentRank.code] || currentRank.name || 'The Spark'
 
   // Timeline Area Chart Data (aggregate by day)
   const timelineMap = {}

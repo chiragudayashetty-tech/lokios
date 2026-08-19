@@ -12,7 +12,7 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
   const level = calculateLevel(totalXp)
   const xpProgress = xpToNextLevel(totalXp)
   const rank = getRankForXp(totalXp)
-  const rankTitle = SAGA_TITLES[rank.code] || rank.name || 'Vanguard'
+  const rankTitle = SAGA_TITLES[rank.code] || rank.name || 'The Spark'
 
   const todayNet = dailyMomentum?.todayNet || 0
   const trend3Day = dailyMomentum?.threeDayNet || 0
