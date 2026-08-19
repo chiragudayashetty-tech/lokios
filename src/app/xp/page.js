@@ -14,15 +14,15 @@ import { Activity, RefreshCw, RotateCcw, TrendingUp, TrendingDown, Calendar, Tar
 import { RANK_CONFIG, SAGA_TITLES } from '@/lib/constants'
 import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
 
-// Custom Area Sparkline Component with Area Gradient Fill & Smooth Curves
-function MetricCardSparkline({ points = [], strokeColor = '#30d6a0', fillColor = 'rgba(48,214,160,0.18)', height = 48, width = 220 }) {
+// Custom Area Sparkline Component with Rigid Constrained Dimensions
+function MetricCardSparkline({ points = [], strokeColor = '#30d6a0', height = 32, width = 130 }) {
   const pts = points.length >= 6 ? points : [12, 18, 14, 26, 20, 30, 24, 34, 28, 38, 30, 36]
   const min = Math.min(...pts)
   const max = Math.max(...pts, min + 1)
   
   const stepX = width / (pts.length - 1)
   const coords = pts.map((val, idx) => {
-    const normY = height - 8 - ((val - min) / (max - min)) * (height - 16)
+    const normY = height - 4 - ((val - min) / (max - min)) * (height - 8)
     return { x: idx * stepX, y: normY }
   })
 
@@ -38,11 +38,11 @@ function MetricCardSparkline({ points = [], strokeColor = '#30d6a0', fillColor =
   const gradId = `sparkGrad-${strokeColor.replace(/[^a-zA-Z0-9]/g, '')}`
 
   return (
-    <div className="w-full h-12 flex items-center justify-center overflow-hidden my-1">
-      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="overflow-visible w-full max-w-[240px]">
+    <div className="w-full flex items-center justify-center my-1" style={{ height: `${height}px`, maxHeight: `${height}px`, overflow: 'hidden' }}>
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ width: `${width}px`, height: `${height}px`, display: 'block' }}>
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.38" />
+            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.32" />
             <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
           </linearGradient>
         </defs>
@@ -51,22 +51,22 @@ function MetricCardSparkline({ points = [], strokeColor = '#30d6a0', fillColor =
           d={lineD}
           fill="none"
           stroke={strokeColor}
-          strokeWidth="2.2"
+          strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{ filter: `drop-shadow(0 0 6px ${strokeColor})` }}
+          style={{ filter: `drop-shadow(0 0 4px ${strokeColor})` }}
         />
       </svg>
     </div>
   )
 }
 
-// 10-Segment LED Meter for Momentum Card
+// 10-Segment LED Meter for Momentum Card (Compact)
 function SegmentedMomentumBar({ percentage = 78 }) {
   const activeSegments = Math.round((Math.max(0, Math.min(100, percentage)) / 100) * 10)
 
   return (
-    <div className="w-full max-w-[220px] flex items-center justify-between gap-1.5 h-6 my-2 px-1">
+    <div className="w-full max-w-[150px] flex items-center justify-between gap-1 h-4 my-1.5 px-0.5">
       {Array.from({ length: 10 }, (_, i) => {
         const isActive = i < activeSegments
         const pctPos = (i / 9) * 100
@@ -80,10 +80,10 @@ function SegmentedMomentumBar({ percentage = 78 }) {
         return (
           <div
             key={i}
-            className="flex-1 h-3.5 rounded-sm transition-all duration-300"
+            className="flex-1 h-2.5 rounded-[2px] transition-all duration-300"
             style={{
               backgroundColor: isActive ? color : 'rgba(255,255,255,0.06)',
-              boxShadow: isActive ? `0 0 8px ${color}` : 'none',
+              boxShadow: isActive ? `0 0 6px ${color}` : 'none',
               border: isActive ? `1px solid ${color}` : '1px solid rgba(255,255,255,0.05)'
             }}
           />
@@ -301,38 +301,29 @@ export default function XPDashboard() {
       <div className="page-container" style={{ maxWidth: '1400px' }}>
         
         {/* ══════════════════════════════════════════════════════════════════
-            PAGE HEADER (Clean waveform title & action buttons)
+            PAGE HEADER (Centered & Cleaned — Full Reset Removed)
         ══════════════════════════════════════════════════════════════════ */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-2">
-          <div className="flex items-start gap-3.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-[0_0_14px_rgba(168,85,247,0.4)] shrink-0 mt-0.5">
-              <Activity size={20} className="text-purple-400" />
+        <header className="flex flex-col items-center justify-center text-center gap-3 mb-6 pb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-[0_0_14px_rgba(168,85,247,0.4)] shrink-0">
+              <Activity size={18} className="text-purple-400" />
             </div>
-            <div>
-              <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-[0.2em] uppercase">
-                EXPERIENCE METRICS
-              </h1>
-              <p className="font-mono text-xs text-slate-400 mt-1">
-                Track your journey. Every action shapes your legacy.
-              </p>
-            </div>
+            <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-[0.2em] uppercase">
+              EXPERIENCE METRICS
+            </h1>
           </div>
+          <p className="font-mono text-xs text-slate-400">
+            Track your journey. Every action shapes your legacy.
+          </p>
 
-          {/* Action Button Strip */}
-          <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+          {/* Action Button: Purge Duplicates & Sync Only */}
+          <div className="mt-1">
             <button 
               onClick={handleFixDuplicates}
-              className="px-4 py-2 rounded-xl border border-cyan-500/40 bg-cyan-950/20 hover:bg-cyan-900/40 text-cyan-400 font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95"
+              className="px-4 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/50 text-cyan-400 font-mono text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95"
             >
-              <RefreshCw size={13} className="text-cyan-400" />
-              <span>PURGE & SYNC</span>
-            </button>
-            <button 
-              onClick={handleResetXP}
-              className="px-4 py-2 rounded-xl border border-rose-500/40 bg-rose-950/20 hover:bg-rose-900/40 text-rose-400 font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-[0_0_12px_rgba(244,63,94,0.15)] active:scale-95"
-            >
-              <RotateCcw size={13} className="text-rose-400" />
-              <span>FULL RESET</span>
+              <RefreshCw size={12} className="text-cyan-400" />
+              <span>PURGE & SYNC (REMOVE DUPLICATES)</span>
             </button>
           </div>
         </header>
@@ -340,7 +331,7 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 1: TOP HERO ROW (SAGA / LEVEL / PROGRESS)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-5 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-6 sm:p-7 shadow-[0_20px_50px_rgba(0,0,0,0.65)] overflow-hidden">
+        <div className="relative mb-5 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.65)] overflow-hidden">
           
           {/* Subtle Ambient Glows */}
           <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/10 blur-[90px] pointer-events-none" />
@@ -352,16 +343,16 @@ export default function XPDashboard() {
             <div className="flex items-center gap-5 sm:gap-7 w-full md:w-auto">
               
               {/* Orbital Gem Emblem */}
-              <div className="relative flex items-center justify-center w-24 h-24 sm:w-28 sm:h-28 shrink-0">
+              <div className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 shrink-0">
                 <div className="absolute inset-0 rounded-full border border-indigo-500/30 animate-[spin_14s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
                 <div className="absolute inset-2 rounded-full border border-dashed border-purple-400/25 animate-[spin_20s_linear_infinite_reverse]" />
                 <div className="absolute top-1 left-4 w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_#818cf8]" />
                 <div className="absolute bottom-2 right-4 w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#c084fc]" />
                 
                 {/* Core Faceted Diamond */}
-                <div className="absolute inset-3.5 rounded-full bg-gradient-to-br from-indigo-950/90 via-purple-950/80 to-slate-950 border border-indigo-400/40 shadow-[0_0_24px_rgba(129,140,248,0.5)] flex items-center justify-center">
+                <div className="absolute inset-3 rounded-full bg-gradient-to-br from-indigo-950/90 via-purple-950/80 to-slate-950 border border-indigo-400/40 shadow-[0_0_24px_rgba(129,140,248,0.5)] flex items-center justify-center">
                   <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-pulse" />
-                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]">
                     <path d="M12 2L3 9.5L12 22L21 9.5L12 2Z" fill="url(#heroGemGrad1)" stroke="#c084fc" strokeWidth="1.1" strokeLinejoin="round" />
                     <path d="M12 2L8 9.5L12 22L16 9.5L12 2Z" fill="url(#heroGemGrad2)" fillOpacity="0.9" />
                     <path d="M3 9.5H21" stroke="#e9d5ff" strokeWidth="0.8" strokeLinecap="round" />
@@ -382,26 +373,26 @@ export default function XPDashboard() {
 
               {/* Text Info */}
               <div className="flex flex-col justify-center min-w-0">
-                <div className="font-mono text-xs uppercase tracking-[0.2em] font-semibold text-slate-400">
+                <div className="font-mono text-[11px] uppercase tracking-[0.2em] font-semibold text-slate-400">
                   SAGA {currentRank.code} <span className="text-slate-600">•</span> <span className="text-indigo-400 font-bold">{rankTitle.toUpperCase()}</span>
                 </div>
-                <div className="font-display font-black text-3xl sm:text-4xl text-white tracking-tight leading-tight mt-1">
+                <div className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight leading-tight mt-0.5">
                   LEVEL <span className="text-indigo-400">{currentLevel}</span>
                 </div>
-                <div className="font-display font-black text-2xl sm:text-3xl text-indigo-400 tracking-tight leading-tight mt-1">
-                  {totalXp.toLocaleString()} <span className="font-mono text-xs sm:text-sm font-bold text-slate-400">XP</span>
+                <div className="font-display font-black text-xl sm:text-2xl text-indigo-400 tracking-tight leading-tight mt-0.5">
+                  {totalXp.toLocaleString()} <span className="font-mono text-xs font-bold text-slate-400">XP</span>
                 </div>
               </div>
 
             </div>
 
             {/* Right: Next Level Progress Box */}
-            <div className="w-full md:w-[360px] lg:w-[400px] flex flex-col justify-center gap-2">
+            <div className="w-full md:w-[340px] lg:w-[380px] flex flex-col justify-center gap-1.5">
               <div className="flex items-center justify-between font-mono text-xs uppercase tracking-widest text-slate-400 font-semibold">
                 <span>NEXT LEVEL <span className="text-indigo-400 font-bold">{currentLevel + 1}</span></span>
               </div>
               
-              <div className="font-display font-black text-xl sm:text-2xl text-slate-100 tracking-tight">
+              <div className="font-display font-black text-lg sm:text-xl text-slate-100 tracking-tight">
                 {xpToGo.toLocaleString()} <span className="font-mono text-xs font-bold text-slate-400">XP TO GO</span>
               </div>
 
@@ -415,7 +406,7 @@ export default function XPDashboard() {
                 />
               </div>
 
-              <div className="font-mono text-xs text-slate-400">
+              <div className="font-mono text-[11px] text-slate-400">
                 {current.toLocaleString()} / {required.toLocaleString()} XP
               </div>
             </div>
@@ -424,74 +415,74 @@ export default function XPDashboard() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            CARD 2: 4 METRIC CARDS (STRICTLY SIDE-BY-SIDE 4-COLUMN GRID)
+            CARD 2: 4 METRIC CARDS (COMPACT BOXES PLACED SIDE-BY-SIDE)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
           
           {/* Card 1: POSITIVE ACTIONS */}
-          <div className="rounded-2xl border border-white/5 bg-[#090d1a]/90 hover:border-emerald-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
-            <div className="w-12 h-12 rounded-full border border-emerald-500/40 bg-emerald-950/30 flex items-center justify-center mb-2.5 shadow-[0_0_14px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
-              <TrendingUp size={20} className="text-emerald-400" />
+          <div className="rounded-xl border border-white/10 bg-[#090d1a]/95 hover:border-emerald-500/40 p-4 flex flex-col items-center justify-between text-center transition-all group shadow-[0_8px_20px_rgba(0,0,0,0.5)]">
+            <div className="w-9 h-9 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
+              <TrendingUp size={16} className="text-emerald-400" />
             </div>
-            <div className="font-display font-black text-3xl sm:text-4xl text-emerald-400 tracking-tight leading-tight">
+            <div className="font-display font-black text-2xl sm:text-3xl text-emerald-400 tracking-tight leading-tight">
               {positiveCount}
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
+            <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-0.5">
               POSITIVE ACTIONS
             </div>
-            <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" />
-            <div className="font-mono text-[10px] text-emerald-400 font-semibold tracking-wider mt-1">
+            <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" height={32} width={130} />
+            <div className="font-mono text-[9px] sm:text-[10px] text-emerald-400 font-semibold tracking-wider">
               ↑ 12% vs last 7 days
             </div>
           </div>
 
           {/* Card 2: SUBTRACTIONS & PENALTIES */}
-          <div className="rounded-2xl border border-white/5 bg-[#090d1a]/90 hover:border-rose-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
-            <div className="w-12 h-12 rounded-full border border-rose-500/40 bg-rose-950/30 flex items-center justify-center mb-2.5 shadow-[0_0_14px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
-              <TrendingDown size={20} className="text-rose-400" />
+          <div className="rounded-xl border border-white/10 bg-[#090d1a]/95 hover:border-rose-500/40 p-4 flex flex-col items-center justify-between text-center transition-all group shadow-[0_8px_20px_rgba(0,0,0,0.5)]">
+            <div className="w-9 h-9 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
+              <TrendingDown size={16} className="text-rose-400" />
             </div>
-            <div className="font-display font-black text-3xl sm:text-4xl text-rose-400 tracking-tight leading-tight">
+            <div className="font-display font-black text-2xl sm:text-3xl text-rose-400 tracking-tight leading-tight">
               {deductionCount}
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
+            <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-0.5">
               SUBTRACTIONS & PENALTIES
             </div>
-            <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" />
-            <div className="font-mono text-[10px] text-rose-400 font-semibold tracking-wider mt-1">
+            <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" height={32} width={130} />
+            <div className="font-mono text-[9px] sm:text-[10px] text-rose-400 font-semibold tracking-wider">
               ↓ 8% vs last 7 days
             </div>
           </div>
 
           {/* Card 3: DAYS TRACKED */}
-          <div className="rounded-2xl border border-white/5 bg-[#090d1a]/90 hover:border-blue-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
-            <div className="w-12 h-12 rounded-full border border-blue-500/40 bg-blue-950/30 flex items-center justify-center mb-2.5 shadow-[0_0_14px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
-              <Calendar size={20} className="text-blue-400" />
+          <div className="rounded-xl border border-white/10 bg-[#090d1a]/95 hover:border-blue-500/40 p-4 flex flex-col items-center justify-between text-center transition-all group shadow-[0_8px_20px_rgba(0,0,0,0.5)]">
+            <div className="w-9 h-9 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
+              <Calendar size={16} className="text-blue-400" />
             </div>
-            <div className="font-display font-black text-3xl sm:text-4xl text-blue-400 tracking-tight leading-tight">
+            <div className="font-display font-black text-2xl sm:text-3xl text-blue-400 tracking-tight leading-tight">
               {daysTracked}
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
+            <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-0.5">
               DAYS TRACKED
             </div>
-            <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" />
-            <div className="font-mono text-[10px] text-blue-400 font-semibold tracking-wider mt-1">
+            <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" height={32} width={130} />
+            <div className="font-mono text-[9px] sm:text-[10px] text-blue-400 font-semibold tracking-wider">
               Longest streak: {longestStreak} days
             </div>
           </div>
 
           {/* Card 4: MOMENTUM METER */}
-          <div className="rounded-2xl border border-white/5 bg-[#090d1a]/90 hover:border-purple-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_30px_rgba(0,0,0,0.5)]">
-            <div className="w-12 h-12 rounded-full border border-purple-500/40 bg-purple-950/30 flex items-center justify-center mb-2.5 shadow-[0_0_14px_rgba(168,85,247,0.2)] group-hover:scale-105 transition-transform">
-              <Target size={20} className="text-purple-400" />
+          <div className="rounded-xl border border-white/10 bg-[#090d1a]/95 hover:border-purple-500/40 p-4 flex flex-col items-center justify-between text-center transition-all group shadow-[0_8px_20px_rgba(0,0,0,0.5)]">
+            <div className="w-9 h-9 rounded-full border border-purple-500/40 bg-purple-950/40 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(168,85,247,0.2)] group-hover:scale-105 transition-transform">
+              <Target size={16} className="text-purple-400" />
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-semibold mb-0.5">
+            <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
               MOMENTUM METER
             </div>
-            <div className="font-display font-black text-3xl sm:text-4xl text-purple-400 tracking-tight leading-tight">
+            <div className="font-display font-black text-2xl sm:text-3xl text-purple-400 tracking-tight leading-tight">
               {momentumScore}%
             </div>
             <SegmentedMomentumBar percentage={momentumScore} />
-            <div className="font-mono text-[10px] text-purple-300 font-semibold tracking-wider mt-1">
+            <div className="font-mono text-[9px] sm:text-[10px] text-purple-300 font-semibold tracking-wider">
               {momentumScore >= 75 ? 'Strong momentum' : momentumScore >= 50 ? 'Steady momentum' : 'At risk'}
             </div>
           </div>
