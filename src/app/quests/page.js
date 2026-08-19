@@ -183,6 +183,7 @@ export default function DailyOps() {
 
           let logTitle = '🚨 POOR SLEEP SCHEDULE'
           let logSuccess = false
+          const logXp = isOpt ? 40 : isAcc ? 20 : -30
 
           if (isOpt) {
             logTitle = '✓ OPTIMAL SLEEP LOGGED'

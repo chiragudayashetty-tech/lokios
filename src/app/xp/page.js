@@ -597,8 +597,8 @@ export default function XPDashboard() {
           </div>
 
           {/* Spline Area Chart with Baseline & Zero-Axis Separation */}
-          <div className="p-2 sm:p-4" style={{ height: '320px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="p-2 sm:p-4" style={{ height: '320px', width: '100%', minHeight: '320px' }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
               <AreaChart data={areaData} margin={{ top: 15, right: 15, left: -10, bottom: 5 }}>
                 <defs>
                   <linearGradient id="splitGainGrad" x1="0" y1="0" x2="0" y2="1">
