@@ -303,8 +303,8 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             PAGE HEADER (Centered & Cleaned — Full Reset Removed)
         ══════════════════════════════════════════════════════════════════ */}
-        <header className="flex flex-col items-center justify-center text-center gap-3 mb-6 pb-2">
-          <div className="flex items-center gap-3">
+        <div className="w-full flex flex-col items-center justify-center text-center gap-2 mb-6 pb-2 mx-auto">
+          <div className="flex items-center justify-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-[0_0_14px_rgba(168,85,247,0.4)] shrink-0">
               <Activity size={18} className="text-purple-400" />
             </div>
@@ -317,7 +317,7 @@ export default function XPDashboard() {
           </p>
 
           {/* Action Button: Purge Duplicates & Sync Only */}
-          <div className="mt-1">
+          <div className="mt-1 flex justify-center">
             <button 
               onClick={handleFixDuplicates}
               className="px-4 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/50 text-cyan-400 font-mono text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95"
@@ -326,7 +326,7 @@ export default function XPDashboard() {
               <span>PURGE & SYNC (REMOVE DUPLICATES)</span>
             </button>
           </div>
-        </header>
+        </div>
 
         {/* ══════════════════════════════════════════════════════════════════
             CARD 1: TOP HERO ROW (SAGA / LEVEL / PROGRESS)
@@ -417,7 +417,7 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 2: 4 METRIC CARDS (COMPACT BOXES PLACED SIDE-BY-SIDE)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5 w-full">
           
           {/* Card 1: POSITIVE ACTIONS */}
           <div className="rounded-xl border border-white/10 bg-[#090d1a]/95 hover:border-emerald-500/40 p-4 flex flex-col items-center justify-between text-center transition-all group shadow-[0_8px_20px_rgba(0,0,0,0.5)]">
