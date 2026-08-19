@@ -331,7 +331,7 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 1: SAGA & LEVEL HERO CARD (FULLY CENTERED & ENLARGED)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-6 rounded-3xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.65)] overflow-hidden text-center">
+        <div className="relative mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden text-center">
           
           {/* Subtle Ambient Glows */}
           <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/10 blur-[90px] pointer-events-none" />
@@ -410,7 +410,7 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 2: 3 SQUARE METRICS IN A SINGLE RECTANGLE (LEFT, CENTER, RIGHT)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-6 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-3 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
+        <div className="relative mb-6 rounded-2xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-3 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.7)]">
           <div 
             style={{ 
               display: 'grid', 
@@ -420,7 +420,7 @@ export default function XPDashboard() {
             }}
           >
             {/* LEFT: POSITIVE ACTIONS (ADDITIONS) */}
-            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-emerald-500/40 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
+            <div className="rounded-xl border border-emerald-500/25 bg-[#0f1422] hover:border-emerald-500/50 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
                 <TrendingUp size={15} className="text-emerald-400 sm:w-[18px] sm:h-[18px]" />
               </div>
@@ -438,7 +438,7 @@ export default function XPDashboard() {
             </div>
 
             {/* CENTER: SUBTRACTIONS & PENALTIES */}
-            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-rose-500/40 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
+            <div className="rounded-xl border border-rose-500/25 bg-[#0f1422] hover:border-rose-500/50 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
                 <TrendingDown size={15} className="text-rose-400 sm:w-[18px] sm:h-[18px]" />
               </div>
@@ -456,7 +456,7 @@ export default function XPDashboard() {
             </div>
 
             {/* RIGHT: DAYS TRACKED */}
-            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-blue-500/40 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
+            <div className="rounded-xl border border-blue-500/25 bg-[#0f1422] hover:border-blue-500/50 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
                 <Calendar size={15} className="text-blue-400 sm:w-[18px] sm:h-[18px]" />
               </div>
@@ -478,7 +478,7 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 3: MOMENTUM METER DETAILED SPECTRUM BANNER
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-6 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-4 sm:p-7 shadow-[0_12px_36px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center justify-between gap-4 sm:gap-6">
+        <div className="relative mb-6 rounded-2xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-4 sm:p-7 shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col lg:flex-row items-center justify-between gap-4 sm:gap-6">
           
           {/* Left Info */}
           <div className="flex items-center gap-3 sm:gap-4 w-full lg:w-auto">
@@ -557,7 +557,7 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 4: XP ACTIVITY TIMELINE CHART
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-5 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_12px_36px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="relative mb-5 rounded-2xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-5 sm:p-6 shadow-[0_16px_40px_rgba(0,0,0,0.7)] overflow-hidden">
           
           {/* Timeline Header */}
           <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
@@ -663,7 +663,7 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 5: TACTICAL QUOTE FOOTER BAR
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="mb-8 p-4 rounded-xl border border-white/5 bg-[#090d1a]/90 flex items-center justify-between relative z-10 shadow-[0_8px_24px_rgba(0,0,0,0.4)]">
+        <div className="mb-8 p-4 rounded-xl border border-white/10 bg-[#0c0f18] flex items-center justify-between relative z-10 shadow-[0_16px_40px_rgba(0,0,0,0.7)]">
           <div className="flex items-center gap-3">
             <span className="font-serif text-xl text-purple-400 font-bold leading-none">“</span>
             <p className="font-mono text-xs text-slate-300 italic">
