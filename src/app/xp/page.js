@@ -14,15 +14,17 @@ import { Activity, RefreshCw, RotateCcw, TrendingUp, TrendingDown, Calendar, Tar
 import { RANK_CONFIG, SAGA_TITLES } from '@/lib/constants'
 import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
 
-// Custom SVG Waveform Sparkline Component
-function MiniWaveform({ points = [], strokeColor = '#34d399', height = 28, width = 160 }) {
-  const pts = points.length > 1 ? points : [10, 15, 12, 22, 18, 25, 20, 28, 24, 30]
+// Custom SVG Waveform Sparkline Component (Strictly Contained)
+function MiniWaveform({ points = [], strokeColor = '#34d399' }) {
+  const pts = points.length >= 6 ? points : [12, 16, 14, 22, 18, 26, 20, 28, 23, 30, 25, 34, 28, 32]
   const min = Math.min(...pts)
   const max = Math.max(...pts, min + 1)
   
+  const width = 180
+  const height = 36
   const stepX = width / (pts.length - 1)
   const coords = pts.map((val, idx) => {
-    const normY = height - 4 - ((val - min) / (max - min)) * (height - 8)
+    const normY = height - 6 - ((val - min) / (max - min)) * (height - 12)
     return { x: idx * stepX, y: normY }
   })
 
@@ -34,28 +36,17 @@ function MiniWaveform({ points = [], strokeColor = '#34d399', height = 28, width
     d += ` C ${cpX} ${curr.y}, ${cpX} ${next.y}, ${next.x} ${next.y}`
   }
 
-  const cleanId = strokeColor.replace(/[^a-zA-Z0-9]/g, '')
-
   return (
-    <div className="w-full flex items-center justify-center overflow-hidden pt-2">
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible w-full max-w-[170px]">
-        <defs>
-          <filter id={`glow-${cleanId}`} x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
+    <div className="w-full flex items-center justify-center pt-2 overflow-hidden">
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible" style={{ maxWidth: '100%', height: '36px' }}>
         <path
           d={d}
           fill="none"
           stroke={strokeColor}
-          strokeWidth="1.8"
+          strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          filter={`url(#glow-${cleanId})`}
+          style={{ filter: `drop-shadow(0 0 6px ${strokeColor})` }}
         />
       </svg>
     </div>
