@@ -97,53 +97,22 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
         <div className="w-[1px] h-8 bg-white/10 shrink-0" />
 
         {/* ── 3. DAILY MOMENTUM ── */}
-        <Link href="/xp" className="flex items-center gap-4 shrink-0 group select-none hover:opacity-90 transition-opacity">
-          <div className="flex flex-col justify-center">
-            <div className="flex items-center gap-1.5 font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.18em] text-slate-400 font-semibold whitespace-nowrap">
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                state === 'AT RISK'
-                  ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
-                  : state === 'RECOVERY'
-                  ? 'bg-cyan-400 shadow-[0_0_8px_#22d3ee]'
-                  : state === 'SURGING'
-                  ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
-                  : 'bg-indigo-400 shadow-[0_0_8px_#818cf8]'
-              } animate-pulse`} />
-              <span>DAILY MOMENTUM</span>
-            </div>
-            <div className={`font-display font-black text-base sm:text-lg tracking-tight leading-none mt-1 whitespace-nowrap ${
-              state === 'AT RISK'
-                ? 'text-rose-400'
-                : state === 'RECOVERY'
-                ? 'text-cyan-400'
-                : state === 'SURGING'
-                ? 'text-emerald-400'
-                : 'text-indigo-300'
-            }`}>
-              {todayNet >= 0 ? `+${todayNet}` : todayNet} <span className="font-mono text-xs font-bold text-slate-400">XP</span>
-            </div>
+        <Link href="/xp" className="flex flex-col justify-center shrink-0 group select-none hover:opacity-90 transition-opacity">
+          <div className="flex items-center gap-1.5 font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.18em] text-slate-400 font-semibold whitespace-nowrap">
+            <span 
+              className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" 
+              style={{
+                backgroundColor: state === 'AT RISK' ? '#f43f5e' : state === 'RECOVERY' ? '#22d3ee' : state === 'SURGING' ? '#34d399' : '#818cf8',
+                boxShadow: `0 0 8px ${state === 'AT RISK' ? '#f43f5e' : state === 'RECOVERY' ? '#22d3ee' : state === 'SURGING' ? '#34d399' : '#818cf8'}`
+              }}
+            />
+            <span>DAILY MOMENTUM</span>
           </div>
-
-          {/* Status Pill Badge with Clean Spacing & Dynamic Colors */}
-          <div className={`px-2.5 py-1 rounded-full border text-[9px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-            state === 'AT RISK' 
-              ? 'bg-rose-950/70 border-rose-500/60 text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.3)]' 
-              : state === 'RECOVERY'
-              ? 'bg-cyan-950/70 border-cyan-500/60 text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-              : state === 'SURGING'
-              ? 'bg-emerald-950/70 border-emerald-500/60 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
-              : 'bg-indigo-950/70 border-indigo-500/60 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.3)]'
-          }`}>
-            {state === 'AT RISK' ? (
-              <ShieldAlert size={11} className="text-rose-400 shrink-0" />
-            ) : state === 'RECOVERY' ? (
-              <Shield size={11} className="text-cyan-400 shrink-0" />
-            ) : state === 'SURGING' ? (
-              <Flame size={11} className="text-emerald-400 shrink-0" />
-            ) : (
-              <Shield size={11} className="text-indigo-400 shrink-0" />
-            )}
-            <span className="leading-none">{state}</span>
+          <div 
+            className="font-display font-black text-base sm:text-lg tracking-tight leading-none mt-1 whitespace-nowrap"
+            style={{ color: todayNet < 0 ? '#f43f5e' : todayNet > 0 ? '#34d399' : '#818cf8' }}
+          >
+            {todayNet >= 0 ? `+${todayNet}` : todayNet} <span className="font-mono text-xs font-bold text-slate-400">XP</span>
           </div>
         </Link>
 
@@ -156,7 +125,10 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
             <span className="font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.18em] text-slate-400 font-semibold whitespace-nowrap">
               3-DAY TREND
             </span>
-            <div className={`font-mono text-xs font-bold flex items-center gap-1 whitespace-nowrap mt-0.5 ${trend3Day >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+            <div 
+              className="font-mono text-xs font-bold flex items-center gap-1 whitespace-nowrap mt-0.5"
+              style={{ color: trend3Day < 0 ? '#f43f5e' : '#34d399' }}
+            >
               <span>{trend3Day >= 0 ? '↗' : '↘'}</span>
               <span>{trend3Day >= 0 ? `+${trend3Day}` : trend3Day} XP</span>
             </div>
@@ -167,12 +139,12 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
             {sparklineBars.map((bar, idx) => (
               <div 
                 key={idx}
-                className={`w-1 rounded-t-sm transition-all duration-300 ${
-                  bar.isPositive 
-                    ? 'bg-emerald-400/80 shadow-[0_0_4px_#34d399]' 
-                    : 'bg-rose-500/80 shadow-[0_0_4px_#f43f5e]'
-                }`}
-                style={{ height: `${bar.heightPct}%` }}
+                className="w-1 rounded-t-sm transition-all duration-300"
+                style={{ 
+                  height: `${bar.heightPct}%`,
+                  backgroundColor: bar.isPositive ? '#34d399' : '#f43f5e',
+                  boxShadow: `0 0 4px ${bar.isPositive ? '#34d399' : '#f43f5e'}`
+                }}
                 title={`${bar.date || `Day ${idx + 1}`}: ${bar.net >= 0 ? '+' : ''}${bar.net} XP`}
               />
             ))}
@@ -196,23 +168,38 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
         {/* Vertical Divider */}
         <div className="w-[1px] h-8 bg-white/10 shrink-0" />
 
-        {/* ── 6. DATE & OPERATOR AVATAR ── */}
-        <Link href="/profile" className="flex items-center gap-3 shrink-0 group select-none hover:opacity-90 transition-opacity">
+        {/* ── 6. RIGHTMOST: DYNAMIC STATUS PILL BADGE (Instead of Profile Logo) ── */}
+        <Link href="/xp" className="flex items-center gap-3 shrink-0 group select-none hover:opacity-90 transition-opacity">
+          {/* Date Stamp */}
           <div className="flex flex-col justify-center text-right font-mono">
             <span className="text-[10px] font-bold text-slate-200 uppercase tracking-wider leading-tight whitespace-nowrap">
               {monthDayStr}
             </span>
-            <span className="text-[9px] font-semibold text-indigo-300 uppercase tracking-widest flex items-center justify-end gap-1 leading-tight whitespace-nowrap">
-              {weekdayStr} <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] shrink-0" />
+            <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest leading-tight whitespace-nowrap">
+              {weekdayStr}
             </span>
           </div>
 
-          <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-indigo-400/50 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-950 shadow-[0_0_14px_rgba(99,102,241,0.35)] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+          {/* Standalone Status Pill Badge with Strict Vibrant Colors */}
+          <div 
+            className="px-3.5 py-1.5 rounded-full border text-[10px] sm:text-[11px] font-mono font-black uppercase tracking-widest flex items-center gap-2 shrink-0 whitespace-nowrap transition-all group-hover:scale-105"
+            style={{
+              backgroundColor: state === 'AT RISK' ? 'rgba(76, 5, 25, 0.85)' : state === 'RECOVERY' ? 'rgba(6, 40, 55, 0.85)' : state === 'SURGING' ? 'rgba(6, 44, 28, 0.85)' : 'rgba(30, 27, 75, 0.85)',
+              borderColor: state === 'AT RISK' ? '#f43f5e' : state === 'RECOVERY' ? '#22d3ee' : state === 'SURGING' ? '#34d399' : '#818cf8',
+              color: state === 'AT RISK' ? '#f43f5e' : state === 'RECOVERY' ? '#22d3ee' : state === 'SURGING' ? '#34d399' : '#818cf8',
+              boxShadow: `0 0 16px ${state === 'AT RISK' ? 'rgba(244, 63, 94, 0.45)' : state === 'RECOVERY' ? 'rgba(6, 182, 212, 0.45)' : state === 'SURGING' ? 'rgba(16, 185, 129, 0.45)' : 'rgba(99, 102, 241, 0.45)'}`
+            }}
+          >
+            {state === 'AT RISK' ? (
+              <ShieldAlert size={13} style={{ color: '#f43f5e' }} className="shrink-0" />
+            ) : state === 'RECOVERY' ? (
+              <Shield size={13} style={{ color: '#22d3ee' }} className="shrink-0" />
+            ) : state === 'SURGING' ? (
+              <Flame size={13} style={{ color: '#34d399' }} className="shrink-0" />
             ) : (
-              <User size={15} className="text-indigo-300" />
+              <Shield size={13} style={{ color: '#818cf8' }} className="shrink-0" />
             )}
+            <span className="leading-none">{state}</span>
           </div>
         </Link>
 
