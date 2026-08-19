@@ -44,8 +44,8 @@ export const SAGA_TITLES = {
 
 export const SAGA_IMAGES = {
   Fallen: '/sagas/discipline-rebuild.png',
-  I: '/sagas/awakening.png',
-  Awakening: '/sagas/awakening.png',
+  I: '/sagas/Awakening.png',
+  Awakening: '/sagas/Awakening.png',
   II: '/sagas/discipline-rebuild.png',
   III: '/sagas/the-spark.png',
   IV: '/sagas/the-architect.png',
