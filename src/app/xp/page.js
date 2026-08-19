@@ -9,10 +9,58 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AreaChart, Area, BarChart, Bar, Cell, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, CartesianGrid, ReferenceLine } from 'recharts'
-import { Flame, Star, Activity, Trophy, ArrowUp, RotateCcw } from 'lucide-react'
-import { RANK_CONFIG } from '@/lib/constants'
+import { AreaChart, Area, BarChart, Bar, Cell, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
+import { Activity, RefreshCw, RotateCcw, TrendingUp, TrendingDown, Calendar, Target, Trophy } from 'lucide-react'
+import { RANK_CONFIG, SAGA_TITLES } from '@/lib/constants'
 import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
+
+// Custom SVG Waveform Sparkline Component
+function MiniWaveform({ points = [], strokeColor = '#34d399', height = 28, width = 160 }) {
+  const pts = points.length > 1 ? points : [10, 15, 12, 22, 18, 25, 20, 28, 24, 30]
+  const min = Math.min(...pts)
+  const max = Math.max(...pts, min + 1)
+  
+  const stepX = width / (pts.length - 1)
+  const coords = pts.map((val, idx) => {
+    const normY = height - 4 - ((val - min) / (max - min)) * (height - 8)
+    return { x: idx * stepX, y: normY }
+  })
+
+  let d = `M ${coords[0].x} ${coords[0].y}`
+  for (let i = 0; i < coords.length - 1; i++) {
+    const curr = coords[i]
+    const next = coords[i + 1]
+    const cpX = (curr.x + next.x) / 2
+    d += ` C ${cpX} ${curr.y}, ${cpX} ${next.y}, ${next.x} ${next.y}`
+  }
+
+  const cleanId = strokeColor.replace(/[^a-zA-Z0-9]/g, '')
+
+  return (
+    <div className="w-full flex items-center justify-center overflow-hidden pt-2">
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible w-full max-w-[170px]">
+        <defs>
+          <filter id={`glow-${cleanId}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <path
+          d={d}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          filter={`url(#glow-${cleanId})`}
+        />
+      </svg>
+    </div>
+  )
+}
 
 // Custom Glassmorphic Tooltip for XP Timeline
 function CustomXpTooltip({ active, payload, label }) {
@@ -107,31 +155,10 @@ export default function XPDashboard() {
   const required = nextLevelXp - currentLevelXp
   const current = totalXp - currentLevelXp
   const progressPct = required > 0 ? Math.min((current / required) * 100, 100) : 100
+  const xpToGo = Math.max(0, required - current)
 
   const currentRank = getRankForXp(totalXp)
-
-  // STAT DISTRIBUTION Calculations
-  const STAT_CONFIG = [
-    { key: 'founder', label: 'FOUNDER', icon: '👑', color: '#f59e0b' },
-    { key: 'discipline', label: 'DISCIPLINE', icon: '⚡', color: '#22c55e' },
-    { key: 'communication', label: 'COMMUNICATION', icon: '💬', color: '#38bdf8' },
-    { key: 'learning', label: 'LEARNING', icon: '🧠', color: '#a855f7' },
-    { key: 'creation', label: 'CREATION', icon: '🎨', color: '#ec4899' },
-    { key: 'strength', label: 'STRENGTH', icon: '💪', color: '#ef4444' }
-  ]
-
-  const statBreakdown = STAT_CONFIG.map(cfg => {
-    const amount = timeline.filter(t => (t.stat_category || '').toLowerCase() === cfg.key && t.amount > 0).reduce((acc, curr) => acc + curr.amount, 0)
-    return { ...cfg, amount }
-  })
-
-  const maxStatXp = Math.max(...statBreakdown.map(s => s.amount), 100)
-  const dominantStat = statBreakdown.reduce((max, s) => s.amount > max.amount ? s : max, statBreakdown[0])
-
-  const radarData = STAT_CONFIG.map(cfg => {
-    const statObj = statBreakdown.find(s => s.key === cfg.key)
-    return { subject: cfg.label, A: statObj ? statObj.amount : 0, fullMark: 1000 }
-  })
+  const rankTitle = SAGA_TITLES[currentRank.code] || currentRank.name || 'VANGUARD'
 
   // Timeline Area Chart Data (aggregate by day)
   const timelineMap = {}
@@ -182,6 +209,32 @@ export default function XPDashboard() {
     daysTracked = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
   }
 
+  // Consistency Score Calculation (last 30 days)
+  const last30Days = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (29 - i))
+    return getLocalDateStr(d)
+  })
+  const daysWithActivity = last30Days.filter(d => (timelineMap[d] !== undefined && timelineMap[d] > 0)).length
+  const consistencyScore = Math.min(100, Math.max(15, Math.round((daysWithActivity / 30) * 100)))
+
+  // Sparkline data curves for the 4 metric cards
+  const positiveWave = last14Days.map(d => {
+    const entries = timeline.filter(t => getLocalDateStr(new Date(t.created_at)) === d && t.amount > 0)
+    return entries.reduce((sum, e) => sum + e.amount, 0)
+  })
+
+  const negativeWave = last14Days.map(d => {
+    const entries = timeline.filter(t => getLocalDateStr(new Date(t.created_at)) === d && t.amount < 0)
+    return Math.abs(entries.reduce((sum, e) => sum + e.amount, 0))
+  })
+
+  const daysWave = last14Days.map((d, idx) => idx * 2 + (timelineMap[d] ? 5 : 1))
+  const consistencyWave = last14Days.map(d => {
+    const net = timelineMap[d] || 0
+    return net > 0 ? 80 + (net % 20) : net === 0 ? 40 : 20
+  })
+
   // Filtered timeline logs
   const filteredTimeline = timeline.slice().reverse().filter(item => {
     if (logFilterMode === 'additions' && item.amount <= 0) return false
@@ -202,98 +255,207 @@ export default function XPDashboard() {
   return (
     <AppShell>
       <div className="page-container" style={{ maxWidth: '1400px' }}>
-        <header className="page-header mb-8 flex flex-col items-center justify-center text-center space-y-3">
-          <div className="flex flex-col items-center justify-center text-center">
-            <h1 className="page-title flex items-center justify-center gap-3"><Trophy className="text-amber" /> EXPERIENCE METRICS</h1>
-            <p className="page-subtitle font-mono uppercase text-xs text-center max-w-xl mx-auto mt-1">Visualize your character progression, minute-to-minute XP activity timeline, and stat distribution.</p>
+        
+        {/* ══════════════════════════════════════════════════════════════════
+            PAGE HEADER (Clean waveform title & action buttons)
+        ══════════════════════════════════════════════════════════════════ */}
+        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-2">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.35)] shrink-0 mt-1">
+              <Activity size={18} />
+            </div>
+            <div>
+              <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-widest uppercase">
+                EXPERIENCE METRICS
+              </h1>
+              <p className="font-mono text-xs text-slate-400 mt-0.5">
+                Track your journey. Every action shapes your legacy.
+              </p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+
+          {/* Action Button Strip */}
+          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
             <button 
               onClick={handleFixDuplicates}
-              className="px-3.5 py-1.5 border border-info text-info text-xs font-mono uppercase tracking-widest hover:bg-info/10 rounded flex items-center justify-center gap-2 transition-colors"
+              className="px-4 py-2 rounded-xl border border-cyan-500/40 bg-cyan-950/20 hover:bg-cyan-900/40 text-cyan-400 font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-[0_0_12px_rgba(6,182,212,0.15)] active:scale-95"
             >
-              <Activity size={14} /> PURGE & SYNC
+              <RefreshCw size={13} className="text-cyan-400" />
+              <span>PURGE & SYNC</span>
             </button>
             <button 
               onClick={handleResetXP}
-              className="px-3.5 py-1.5 border border-danger text-danger text-xs font-mono uppercase tracking-widest hover:bg-danger/10 rounded flex items-center justify-center gap-2 transition-colors"
+              className="px-4 py-2 rounded-xl border border-rose-500/40 bg-rose-950/20 hover:bg-rose-900/40 text-rose-400 font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-[0_0_12px_rgba(244,63,94,0.15)] active:scale-95"
             >
-              <RotateCcw size={14} /> Full Reset
+              <RotateCcw size={13} className="text-rose-400" />
+              <span>FULL RESET</span>
             </button>
           </div>
         </header>
 
-        {/* Level Up Banner / Core Stats */}
-        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-6 sm:mb-8 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-bg-tertiary to-transparent z-0" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 opacity-15 blur-[120px] pointer-events-none" style={{ background: currentRank.color }} />
+        {/* ══════════════════════════════════════════════════════════════════
+            HERO CARD CONTAINER (Ultra-Modern Glassmorphic Matrix)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="relative mb-8 rounded-3xl border border-indigo-500/20 bg-[#0c1020]/90 backdrop-blur-2xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.6),inset_0_0_30px_rgba(99,102,241,0.06)] overflow-hidden">
           
-          <HudPanel className="relative z-10 p-5 sm:p-8 flex flex-col items-center text-center space-y-6" style={{ borderColor: `${currentRank.color}50` }}>
+          {/* Subtle Ambient Background Glow */}
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/10 blur-[90px] pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-purple-500/10 blur-[90px] pointer-events-none" />
+
+          {/* ── TOP HERO ROW: SAGA / LEVEL / PROGRESS ── */}
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-12 relative z-10">
             
-            {/* Clean Top Header Card (NO CIRCLES OR SVG WAVES) */}
-            <div className="w-full max-w-2xl text-center space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/40 border border-white/10 font-mono text-[10px] sm:text-xs text-muted uppercase font-bold tracking-widest">
-                <span>SAGA {currentRank.code}</span>
-                <span>•</span>
-                <span style={{ color: currentRank.color }}>LEVEL {currentLevel}</span>
-              </div>
-
-              <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-primary uppercase">
-                {currentRank.name}
-              </h2>
-
-              {/* Main XP Counter */}
-              <div className="flex items-center justify-center gap-2.5 pt-1">
-                <span className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight" style={{ color: currentRank.color }}>
-                  {totalXp.toLocaleString()}
-                </span>
-                <span className="font-mono text-xs sm:text-sm text-muted font-bold tracking-widest uppercase">
-                  TOTAL XP
-                </span>
-              </div>
-            </div>
-
-            {/* Level Progress Card */}
-            <div className="w-full max-w-2xl bg-black/40 border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl backdrop-blur-md text-left space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0" style={{ background: `${currentRank.color}20`, border: `1px solid ${currentRank.color}40` }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2L22 12L12 22L2 12L12 2Z" fill={currentRank.color} />
-                    </svg>
-                  </div>
-                  <span className="font-display text-sm sm:text-base font-bold text-white">Level {currentLevel}</span>
+            {/* Left: 3D Orbital Gem + Level Status */}
+            <div className="flex items-center gap-5 sm:gap-7 w-full lg:w-auto">
+              
+              {/* Orbital Gem Emblem */}
+              <div className="relative flex items-center justify-center w-24 h-24 sm:w-28 sm:h-28 shrink-0">
+                {/* Outer Orbital Ring 1 */}
+                <div className="absolute inset-0 rounded-full border border-indigo-500/30 animate-[spin_14s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
+                {/* Outer Orbital Ring 2 */}
+                <div className="absolute inset-2 rounded-full border border-dashed border-purple-400/25 animate-[spin_20s_linear_infinite_reverse]" />
+                {/* Accent Orbital Dots */}
+                <div className="absolute top-1 left-4 w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_#818cf8]" />
+                <div className="absolute bottom-2 right-4 w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#c084fc]" />
+                
+                {/* Core Crystal Container */}
+                <div className="absolute inset-3.5 rounded-full bg-gradient-to-br from-indigo-950/90 via-purple-950/80 to-slate-950 border border-indigo-400/40 shadow-[0_0_24px_rgba(129,140,248,0.5)] flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-pulse" />
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]">
+                    <path d="M12 2L3 9.5L12 22L21 9.5L12 2Z" fill="url(#heroGemGrad1)" stroke="#c084fc" strokeWidth="1.1" strokeLinejoin="round" />
+                    <path d="M12 2L8 9.5L12 22L16 9.5L12 2Z" fill="url(#heroGemGrad2)" fillOpacity="0.9" />
+                    <path d="M3 9.5H21" stroke="#e9d5ff" strokeWidth="0.8" strokeLinecap="round" />
+                    <defs>
+                      <linearGradient id="heroGemGrad1" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                        <stop stopColor="#a855f7" />
+                        <stop offset="1" stopColor="#3730a3" />
+                      </linearGradient>
+                      <linearGradient id="heroGemGrad2" x1="8" y1="2" x2="16" y2="22" gradientUnits="userSpaceOnUse">
+                        <stop stopColor="#f5d0fe" />
+                        <stop offset="0.4" stopColor="#c084fc" />
+                        <stop offset="1" stopColor="#6366f1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
                 </div>
-                <span className="font-mono text-xs font-bold text-muted tracking-wider">{current} / {required} XP</span>
               </div>
 
-              <div>
-                <TacticalProgress value={progressPct} height={8} showValue={false} color={currentRank.color} />
+              {/* Text Info */}
+              <div className="flex flex-col justify-center min-w-0">
+                <div className="font-mono text-xs sm:text-sm uppercase tracking-[0.2em] font-semibold text-slate-400">
+                  SAGA {currentRank.code} <span className="text-slate-600">•</span> <span className="text-indigo-400 font-bold">{rankTitle.toUpperCase()}</span>
+                </div>
+                <div className="font-display font-black text-3xl sm:text-4xl lg:text-5xl tracking-tight text-white leading-tight mt-0.5">
+                  LEVEL <span className="text-indigo-400">{currentLevel}</span>
+                </div>
+                <div className="font-display font-black text-2xl sm:text-3xl text-indigo-400 tracking-tight leading-tight mt-0.5">
+                  {totalXp.toLocaleString()} <span className="font-mono text-xs sm:text-sm font-bold text-slate-400">XP</span>
+                </div>
               </div>
 
-              <p className="font-mono text-xs text-muted leading-relaxed">
-                {currentRank.flavor || "You are proficient in executing daily disciplines, completing missions, and maintaining high operational performance."}
-              </p>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full max-w-2xl">
-              <div className="bg-bg-tertiary border border-border-color p-3.5 sm:p-4 rounded-xl flex flex-col items-center text-center">
-                <span className="font-display text-2xl text-success font-bold">{positiveCount}</span>
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">POSITIVE ACTIONS</span>
+            {/* Right: Next Level Progress Box */}
+            <div className="w-full lg:w-[380px] xl:w-[420px] flex flex-col justify-center gap-2">
+              <div className="flex items-center justify-between font-mono text-xs uppercase tracking-widest text-slate-400 font-semibold">
+                <span>NEXT LEVEL <span className="text-indigo-400 font-bold">{currentLevel + 1}</span></span>
               </div>
-              <div className="bg-bg-tertiary border border-border-color p-3.5 sm:p-4 rounded-xl flex flex-col items-center text-center">
-                <span className="font-display text-2xl text-danger font-bold">{deductionCount}</span>
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">SUBTRACTIONS & PENALTIES</span>
+              
+              <div className="font-display font-black text-xl sm:text-2xl text-slate-100 tracking-tight">
+                {xpToGo.toLocaleString()} <span className="font-mono text-xs font-bold text-slate-400">XP TO GO</span>
               </div>
-              <div className="bg-bg-tertiary border border-border-color p-3.5 sm:p-4 rounded-xl flex flex-col items-center text-center">
-                <span className="font-display text-2xl text-info font-bold">{daysTracked}</span>
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted mt-1">DAYS TRACKED</span>
+
+              {/* Progress Capsule Bar */}
+              <div className="w-full h-2.5 rounded-full bg-slate-950/80 border border-white/10 p-[1px] overflow-hidden my-0.5">
+                <motion.div 
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.85)]"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.max(4, Math.min(100, progressPct))}%` }}
+                  transition={{ duration: 1.2, ease: 'easeOut' }}
+                />
+              </div>
+
+              <div className="font-mono text-xs text-slate-400">
+                {current.toLocaleString()} / {required.toLocaleString()} XP
               </div>
             </div>
 
-          </HudPanel>
-        </motion.div>
+          </div>
+
+          {/* ── MIDDLE ROW: 4 METRIC CARDS ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8 relative z-10">
+            
+            {/* Card 1: POSITIVE ACTIONS */}
+            <div className="rounded-2xl border border-white/5 bg-slate-950/50 hover:border-emerald-500/30 p-5 flex flex-col items-center justify-between text-center transition-all group">
+              <div className="w-12 h-12 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center mb-3 shadow-[0_0_14px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
+                <TrendingUp size={20} className="text-emerald-400" />
+              </div>
+              <div className="font-display font-black text-3xl sm:text-4xl text-emerald-400 tracking-tight leading-tight">
+                {positiveCount}
+              </div>
+              <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
+                POSITIVE ACTIONS
+              </div>
+              <MiniWaveform points={positiveWave} strokeColor="#34d399" />
+            </div>
+
+            {/* Card 2: SUBTRACTIONS & PENALTIES */}
+            <div className="rounded-2xl border border-white/5 bg-slate-950/50 hover:border-rose-500/30 p-5 flex flex-col items-center justify-between text-center transition-all group">
+              <div className="w-12 h-12 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center mb-3 shadow-[0_0_14px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
+                <TrendingDown size={20} className="text-rose-400" />
+              </div>
+              <div className="font-display font-black text-3xl sm:text-4xl text-rose-400 tracking-tight leading-tight">
+                {deductionCount}
+              </div>
+              <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
+                SUBTRACTIONS & PENALTIES
+              </div>
+              <MiniWaveform points={negativeWave} strokeColor="#f43f5e" />
+            </div>
+
+            {/* Card 3: DAYS TRACKED */}
+            <div className="rounded-2xl border border-white/5 bg-slate-950/50 hover:border-blue-500/30 p-5 flex flex-col items-center justify-between text-center transition-all group">
+              <div className="w-12 h-12 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center mb-3 shadow-[0_0_14px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
+                <Calendar size={20} className="text-blue-400" />
+              </div>
+              <div className="font-display font-black text-3xl sm:text-4xl text-blue-400 tracking-tight leading-tight">
+                {daysTracked}
+              </div>
+              <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
+                DAYS TRACKED
+              </div>
+              <MiniWaveform points={daysWave} strokeColor="#60a5fa" />
+            </div>
+
+            {/* Card 4: CONSISTENCY SCORE */}
+            <div className="rounded-2xl border border-white/5 bg-slate-950/50 hover:border-purple-500/30 p-5 flex flex-col items-center justify-between text-center transition-all group">
+              <div className="w-12 h-12 rounded-full border border-purple-500/40 bg-purple-950/40 flex items-center justify-center mb-3 shadow-[0_0_14px_rgba(168,85,247,0.2)] group-hover:scale-105 transition-transform">
+                <Target size={20} className="text-purple-400" />
+              </div>
+              <div className="font-display font-black text-3xl sm:text-4xl text-purple-400 tracking-tight leading-tight">
+                {consistencyScore}%
+              </div>
+              <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
+                CONSISTENCY SCORE
+              </div>
+              <MiniWaveform points={consistencyWave} strokeColor="#c084fc" />
+              <div className="font-mono text-[9px] text-slate-500 tracking-widest uppercase mt-1">
+                LAST 30 DAYS
+              </div>
+            </div>
+
+          </div>
+
+          {/* ── BOTTOM ROW: TACTICAL QUOTE ── */}
+          <div className="mt-6 p-3.5 sm:p-4 rounded-xl border border-white/5 bg-slate-950/40 flex items-center gap-3 relative z-10">
+            <div className="w-1 h-5 rounded-full bg-indigo-500 shrink-0" />
+            <span className="font-serif text-lg text-purple-400 font-bold shrink-0">“</span>
+            <p className="font-mono text-xs text-slate-400 italic">
+              Discipline today. Freedom tomorrow. Legacy forever.
+            </p>
+          </div>
+
+        </div>
 
         {/* XP TRAJECTORY — Sleek Tactical Chart */}
         <div className="w-full">
