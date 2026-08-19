@@ -394,8 +394,9 @@ export default function MissionControl() {
       }
 
       // ── EOD Recon Checklist Data Fetching ──
-      const { data: workLogRows } = await sb
-        .from('work_hours_logs')
+      // Check work_logs for today's date
+      const { data: directWorkLogs } = await sb
+        .from('work_logs')
         .select('*')
         .eq('user_id', user.id)
         .eq('date', todayStr)
@@ -403,19 +404,19 @@ export default function MissionControl() {
 
       let workLogged = false
       let workHours = 0
-      if (workLogRows && workLogRows.length > 0) {
+      if (directWorkLogs && directWorkLogs.length > 0) {
         workLogged = true
-        workHours = workLogRows[0].hours || workLogRows[0].duration_hours || 0
+        workHours = directWorkLogs[0].total_hours_worked || directWorkLogs[0].duration_hours || 0
       } else {
-        const { data: fallbackWork } = await sb
-          .from('work_logs')
+        const { data: workLogRows } = await sb
+          .from('work_hours_logs')
           .select('*')
           .eq('user_id', user.id)
-          .gte('created_at', todayStr)
+          .eq('date', todayStr)
           .limit(1)
-        if (fallbackWork && fallbackWork.length > 0) {
+        if (workLogRows && workLogRows.length > 0) {
           workLogged = true
-          workHours = fallbackWork[0].hours || fallbackWork[0].duration_hours || 1
+          workHours = workLogRows[0].hours || workLogRows[0].duration_hours || 0
         }
       }
       setEodWorkData({ logged: workLogged, hours: workHours })
@@ -453,11 +454,18 @@ export default function MissionControl() {
       if (todaySpeakingLog) {
         setEodSpeakingData({ logged: true, detail: `Topic: ${todaySpeakingLog.topic}` })
       } else {
-        const localData = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
+        const localData = typeof window !== 'undefined' ? localStorage.getItem(`lokios_speaking_logs_${user.id}`) : null
         if (localData) {
-          const parsed = JSON.parse(localData)
-          const found = parsed.find(p => p.date === todayStr)
-          if (found) setEodSpeakingData({ logged: true, detail: `Topic: ${found.topic}` })
+          try {
+            const parsed = JSON.parse(localData)
+            const found = parsed.find(p => p.date === todayStr)
+            if (found) setEodSpeakingData({ logged: true, detail: `Topic: ${found.topic}` })
+            else setEodSpeakingData({ logged: false, detail: '' })
+          } catch (e) {
+            setEodSpeakingData({ logged: false, detail: '' })
+          }
+        } else {
+          setEodSpeakingData({ logged: false, detail: '' })
         }
       }
 
@@ -641,7 +649,7 @@ export default function MissionControl() {
   const currentStreak = profile?.current_streak ?? profile?.streak_days ?? 0
 
   const journalLoggedToday = (entries || []).some(e => e.date === todayStr) || eodJournalLogged
-  const screenIntelLoggedToday = !!todayScreenTime
+  const screenIntelLoggedToday = !!todayScreenTime && todayScreenTime.date === todayStr
 
   const eodItems = [
     {
@@ -1135,9 +1143,8 @@ export default function MissionControl() {
                     {/* Logo / Icon Only (Grey when not completed, Emerald when completed) */}
                     <ItemIcon 
                       size={22} 
-                      className={`transition-transform group-hover:scale-110 ${
-                        item.isDone ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-zinc-300'
-                      }`}
+                      style={{ color: item.isDone ? '#34d399' : '#71717a' }}
+                      className="transition-transform group-hover:scale-110" 
                     />
                   </div>
                 </Link>
@@ -1172,9 +1179,13 @@ export default function MissionControl() {
 
                 {/* Logo / Icon Only */}
                 {isDebriefDoneThisWeek ? (
-                  <CheckCircle2 size={22} className="text-emerald-400 transition-transform group-hover:scale-110" />
+                  <CheckCircle2 size={22} style={{ color: '#34d399' }} className="transition-transform group-hover:scale-110" />
                 ) : (
-                  <ClipboardList size={22} className={`transition-transform group-hover:scale-110 ${new Date().getDay() === 0 ? 'text-amber-400' : 'text-zinc-500 group-hover:text-zinc-300'}`} />
+                  <ClipboardList 
+                    size={22} 
+                    style={{ color: new Date().getDay() === 0 ? '#f59e0b' : '#71717a' }} 
+                    className="transition-transform group-hover:scale-110" 
+                  />
                 )}
               </div>
             </Link>
