@@ -964,12 +964,12 @@ export default function MissionControl() {
         ══════════════════════════════════════════════════════════════════ */}
         <div className="mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden transition-all">
           
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
             
-            {/* ── 1:1 SQUARE ARTWORK: ON MOBILE -> TOP (order-1), ON DESKTOP -> RIGHT (lg:order-2) ── */}
-            <div className="w-full sm:w-[320px] md:w-[360px] lg:w-[380px] shrink-0 flex justify-center order-1 lg:order-2">
+            {/* ── 1:1 SQUARE ARTWORK: ON PHONE -> TOP (order-1), ON DESKTOP -> RIGHT (md:order-2) ── */}
+            <div className="w-full sm:w-[300px] md:w-[300px] lg:w-[360px] xl:w-[380px] shrink-0 flex justify-center order-1 md:order-2">
               <div 
-                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group w-full max-w-[280px] sm:max-w-[340px] lg:max-w-[380px] aspect-square"
+                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group w-full max-w-[280px] sm:max-w-[320px] md:max-w-[360px] lg:max-w-[380px] aspect-square"
                 style={{ aspectRatio: '1 / 1' }}
               >
                 {/* Background 1:1 Artwork Image */}
@@ -985,8 +985,8 @@ export default function MissionControl() {
               </div>
             </div>
 
-            {/* ── INTELLIGENCE & PROGRESSION: ON MOBILE -> BELOW (order-2), ON DESKTOP -> LEFT (lg:order-1) ── */}
-            <div className="flex-1 w-full min-w-0 flex flex-col justify-between space-y-4 sm:space-y-5 order-2 lg:order-1">
+            {/* ── INTELLIGENCE & PROGRESSION: ON PHONE -> BELOW (order-2), ON DESKTOP -> LEFT (md:order-1) ── */}
+            <div className="flex-1 w-full min-w-0 flex flex-col justify-between space-y-4 sm:space-y-5 order-2 md:order-1">
               
               {/* Header: SAGA Title */}
               <div>
