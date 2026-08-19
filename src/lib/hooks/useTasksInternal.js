@@ -157,27 +157,35 @@ export function useTasksInternal(user) {
       const isWeeklyGoal = task?.category === 'weekly_goal' || (task?.description || '').includes('[Weekly Goal]')
       const diffKey = (task?.difficulty || 'MEDIUM').toUpperCase()
       const difficultyData = DIFFICULTY_LEVELS[diffKey] || DIFFICULTY_LEVELS.MEDIUM
-      let xpAward = isWeeklyGoal ? 25 : difficultyData.xp
+      let baseXP = isWeeklyGoal ? 25 : difficultyData.xp
+      let xpAward = baseXP
+      let overdueDays = 0
 
       // Check if overdue: -5 XP per calendar day past deadline (non-weekly tasks)
       if (!isWeeklyGoal && task?.due_date) {
         const todayStr = getLocalDateStr()
-        const dueDateStr = getLocalDateStr(new Date(task.due_date))
-        if (dueDateStr < todayStr) {
-          const dueMs = new Date(dueDateStr).getTime()
-          const todayMs = new Date(todayStr).getTime()
-          const daysOverdue = Math.max(1, Math.floor((todayMs - dueMs) / (1000 * 60 * 60 * 24)))
-          const penaltyDeduction = daysOverdue * 5
-          xpAward = Math.max(0, xpAward - penaltyDeduction)
+        const cleanDueDate = task.due_date.substring(0, 10)
+        if (cleanDueDate < todayStr) {
+          const [tY, tM, tD] = todayStr.split('-').map(Number)
+          const [dY, dM, dD] = cleanDueDate.split('-').map(Number)
+          const todayUtc = Date.UTC(tY, tM - 1, tD)
+          const dueUtc = Date.UTC(dY, dM - 1, dD)
+          overdueDays = Math.max(1, Math.round((todayUtc - dueUtc) / (1000 * 60 * 60 * 24)))
+          const penaltyDeduction = overdueDays * 5
+          xpAward = Math.max(0, baseXP - penaltyDeduction)
         }
       }
+
+      const descText = overdueDays > 0 
+        ? `Completed task: ${task?.title || 'Unknown'} (+${xpAward} XP, -${overdueDays * 5} Overdue Penalty)`
+        : `Completed task: ${task?.title || 'Unknown'}`
 
       await robustAwardXP(
         user.id,
         xpAward,
         'task_complete',
         id,
-        `Completed task: ${task?.title || 'Unknown'}`,
+        descText,
         toStatCat(task?.category)
       )
 

@@ -293,15 +293,22 @@ export default function Operations() {
     const isCompleted = task.status === 'completed'
     const isFailed = task.status === 'cancelled' || task.status === 'failed'
     const isEditing = editingId === task.id
-    const isOverdue = !isCompleted && !isFailed && task.due_date && task.due_date < today
+    const cleanDueDate = task.due_date ? task.due_date.substring(0, 10) : null
+    const isOverdue = !isCompleted && !isFailed && cleanDueDate && cleanDueDate < today
     const diffKey = (task.difficulty || 'MEDIUM').toUpperCase()
     const diffConfig = DIFFICULTY_CONFIG[diffKey] || DIFFICULTY_CONFIG.MEDIUM
+    let daysOverdue = 0
+    let penaltyAmount = 0
     let dynamicXp = diffConfig.xp
-    if (isOverdue && task.due_date) {
-      const dueMs = new Date(task.due_date).getTime()
-      const todayMs = new Date(today).getTime()
-      const daysOverdue = Math.max(1, Math.floor((todayMs - dueMs) / (1000 * 60 * 60 * 24)))
-      dynamicXp = Math.max(0, diffConfig.xp - (daysOverdue * 5))
+
+    if (isOverdue && cleanDueDate) {
+      const [tY, tM, tD] = today.split('-').map(Number)
+      const [dY, dM, dD] = cleanDueDate.split('-').map(Number)
+      const todayUtc = Date.UTC(tY, tM - 1, tD)
+      const dueUtc = Date.UTC(dY, dM - 1, dD)
+      daysOverdue = Math.max(1, Math.round((todayUtc - dueUtc) / (1000 * 60 * 60 * 24)))
+      penaltyAmount = daysOverdue * 5
+      dynamicXp = Math.max(0, diffConfig.xp - penaltyAmount)
     }
     const isExpanded = expandedDescId === task.id
 
@@ -569,6 +576,11 @@ export default function Operations() {
                     style={{ color: diffConfig.color, borderColor: `${diffConfig.color}40`, background: `${diffConfig.color}10` }}>
                 {diffConfig.label}
               </span>
+              {isOverdue && (
+                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider bg-danger/15 text-danger border border-danger/40 flex items-center gap-1 shrink-0 animate-pulse">
+                  <AlertTriangle size={10} /> {daysOverdue}D OVERDUE (-{penaltyAmount} XP)
+                </span>
+              )}
               {task.recurrence_type && (
                 <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase text-info bg-info/10 border border-info/30 flex items-center gap-1 shrink-0">
                   <Repeat size={10} /> {task.recurrence_type}
@@ -603,18 +615,22 @@ export default function Operations() {
                 </span>
               )}
               {task.due_date && (
-                <span className="flex items-center gap-1">
-                  <Calendar size={10} /> DUE: {task.due_date}
+                <span className={`flex items-center gap-1 ${isOverdue ? 'text-danger font-bold' : ''}`}>
+                  <Calendar size={10} /> DUE: {cleanDueDate}
                 </span>
               )}
               {task.media_urls && task.media_urls.length > 0 && (
                 <span className="text-amber">[{task.media_urls.length} PROOF]</span>
               )}
-              <span className={isOverdue ? 'text-danger line-through' : 'text-success font-semibold'}>
-                +{diffConfig.xp} XP
-              </span>
-              {isOverdue && (
-                <span className="text-danger">-{Math.abs(dynamicXp)} XP (PENALTY)</span>
+              {isOverdue ? (
+                <span className="flex items-center gap-1.5 font-bold">
+                  <span className="text-muted line-through">+{diffConfig.xp} XP</span>
+                  <span className="text-danger font-mono">+{dynamicXp} XP (NET)</span>
+                </span>
+              ) : (
+                <span className="text-success font-semibold">
+                  +{diffConfig.xp} XP
+                </span>
               )}
             </div>
             
@@ -940,6 +956,29 @@ export default function Operations() {
                   <div className="mb-4">
                     <span className="font-mono text-[10px] text-muted uppercase block">TASK TITLE</span>
                     <p className="font-mono text-base font-bold text-primary truncate">{proofTask.title}</p>
+                    
+                    {(() => {
+                      const cleanDueDate = proofTask.due_date ? proofTask.due_date.substring(0, 10) : null
+                      const isTaskOverdue = cleanDueDate && cleanDueDate < today && proofTask.category !== 'weekly_goal'
+                      if (!isTaskOverdue) return null
+
+                      const [tY, tM, tD] = today.split('-').map(Number)
+                      const [dY, dM, dD] = cleanDueDate.split('-').map(Number)
+                      const daysOverdue = Math.max(1, Math.round((Date.UTC(tY, tM - 1, tD) - Date.UTC(dY, dM - 1, dD)) / (1000 * 60 * 60 * 24)))
+                      const diffKey = (proofTask.difficulty || 'MEDIUM').toUpperCase()
+                      const baseXP = DIFFICULTY_CONFIG[diffKey]?.xp || 30
+                      const penalty = daysOverdue * 5
+                      const netXP = Math.max(0, baseXP - penalty)
+
+                      return (
+                        <div className="mt-2 p-2.5 rounded-lg bg-danger/10 border border-danger/30 font-mono text-xs flex items-center justify-between text-danger">
+                          <span className="flex items-center gap-1.5 font-bold">
+                            <AlertTriangle size={13} /> {daysOverdue}D OVERDUE PENALTY
+                          </span>
+                          <span>-{penalty} XP (Net: +{netXP} XP)</span>
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   <div className="flex flex-col gap-4">

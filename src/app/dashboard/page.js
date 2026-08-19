@@ -1159,6 +1159,19 @@ export default function MissionControl() {
                         <div className="font-mono text-[9px] text-muted uppercase tracking-wider flex items-center gap-1.5 mt-1 flex-wrap">
                           <span className="text-amber font-semibold">{task.category ? task.category.replace('_', ' ') : 'OPERATION'}</span>
                           {task.difficulty && <span className="text-secondary">• {task.difficulty}</span>}
+                          {(() => {
+                            const cleanDueDate = task.due_date ? task.due_date.substring(0, 10) : null
+                            const isOverdue = !isDone && cleanDueDate && cleanDueDate < todayStr && task.category !== 'weekly_goal'
+                            if (!isOverdue) return null
+                            const [tY, tM, tD] = todayStr.split('-').map(Number)
+                            const [dY, dM, dD] = cleanDueDate.split('-').map(Number)
+                            const daysOverdue = Math.max(1, Math.round((Date.UTC(tY, tM - 1, tD) - Date.UTC(dY, dM - 1, dD)) / (1000 * 60 * 60 * 24)))
+                            return (
+                              <span className="text-danger font-bold bg-danger/15 px-1.5 py-0.5 rounded border border-danger/30">
+                                ⚠ {daysOverdue}d overdue (-{daysOverdue * 5} XP)
+                              </span>
+                            )
+                          })()}
                         </div>
                       </div>
                     </div>
