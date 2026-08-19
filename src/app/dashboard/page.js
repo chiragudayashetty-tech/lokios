@@ -960,54 +960,14 @@ export default function MissionControl() {
 
 
         {/* ══════════════════════════════════════════════════════════════════
-            COMMAND CENTER SAGA HERO CARD (2-COLUMN REFERENCE DESIGN)
+            COMMAND CENTER SAGA HERO CARD (TEXT AT LEFT, 1:1 IMAGE AT RIGHT)
         ══════════════════════════════════════════════════════════════════ */}
         <div className="mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden transition-all">
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 lg:p-8 items-center">
+          <div className="flex flex-col-reverse lg:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
             
-            {/* ── LEFT COLUMN: 1:1 SQUARE ARTWORK WITH OVERLAY (Span 5) ── */}
-            <div className="lg:col-span-5 flex justify-center">
-              <div className="w-full max-w-[360px] sm:max-w-[400px] aspect-square rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_30px_rgba(0,0,0,0.8)] group flex flex-col justify-end">
-                
-                {/* Background 1:1 Artwork Image */}
-                <img 
-                  src={currentSagaImage} 
-                  alt={currentArc.name} 
-                  className="absolute inset-0 w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
-                  onError={(e) => { e.currentTarget.src = '/sagas/the-spark.png' }}
-                />
-
-                {/* Subtle Radial & Gradient Overlays for readable text */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
-                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
-
-                {/* Bottom Overlay Label */}
-                <div className="relative z-10 p-5 text-center flex flex-col items-center select-none">
-                  <div className="font-display font-black text-sm sm:text-base text-white tracking-[0.35em] uppercase drop-shadow-md">
-                    {splitTitle.primary}
-                  </div>
-                  <div 
-                    className="font-display font-black text-xs sm:text-sm tracking-[0.4em] uppercase drop-shadow-[0_0_10px_rgba(249,115,22,0.6)] mt-0.5"
-                    style={{ color: sagaAccentColor }}
-                  >
-                    {splitTitle.secondary}
-                  </div>
-                  <div className="mt-2 flex items-center justify-center">
-                    <div 
-                      className="w-5 h-5 rounded-full border flex items-center justify-center"
-                      style={{ borderColor: `${sagaAccentColor}60`, color: sagaAccentColor }}
-                    >
-                      <ChevronUp size={12} />
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* ── RIGHT COLUMN: INTELLIGENCE & PROGRESSION (Span 7) ── */}
-            <div className="lg:col-span-7 flex flex-col justify-between space-y-4 sm:space-y-5">
+            {/* ── LEFT SIDE (DESKTOP): INTELLIGENCE & PROGRESSION (TEXT AT LEFT) ── */}
+            <div className="flex-1 w-full min-w-0 flex flex-col justify-between space-y-4 sm:space-y-5">
               
               {/* Header: SAGA Title */}
               <div>
@@ -1116,6 +1076,48 @@ export default function MissionControl() {
                 </button>
               </div>
 
+            </div>
+
+            {/* ── RIGHT SIDE (DESKTOP): 1:1 SQUARE ARTWORK (IMAGE AT RIGHT) ── */}
+            <div className="w-full sm:w-[320px] md:w-[360px] lg:w-[380px] shrink-0 flex justify-center">
+              <div 
+                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group flex flex-col justify-end"
+                style={{ width: '100%', maxWidth: '380px', aspectRatio: '1 / 1' }}
+              >
+                {/* Background 1:1 Artwork Image */}
+                <img 
+                  src={currentSagaImage} 
+                  alt={currentArc.name} 
+                  className="absolute inset-0 w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
+                  onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
+                />
+
+                {/* Subtle Radial & Gradient Overlays for readable text */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
+
+                {/* Bottom Overlay Label */}
+                <div className="relative z-10 p-5 text-center flex flex-col items-center select-none">
+                  <div className="font-display font-black text-sm sm:text-base text-white tracking-[0.35em] uppercase drop-shadow-md">
+                    {splitTitle.primary}
+                  </div>
+                  <div 
+                    className="font-display font-black text-xs sm:text-sm tracking-[0.4em] uppercase drop-shadow-[0_0_10px_rgba(249,115,22,0.6)] mt-0.5"
+                    style={{ color: sagaAccentColor }}
+                  >
+                    {splitTitle.secondary}
+                  </div>
+                  <div className="mt-2 flex items-center justify-center">
+                    <div 
+                      className="w-5 h-5 rounded-full border flex items-center justify-center"
+                      style={{ borderColor: `${sagaAccentColor}60`, color: sagaAccentColor }}
+                    >
+                      <ChevronUp size={12} />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
             </div>
 
           </div>
