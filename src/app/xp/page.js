@@ -439,7 +439,7 @@ export default function XPDashboard() {
             <div className="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
               POSITIVE ACTIONS
             </div>
-            <MiniWaveform points={positiveWave} strokeColor="#30d6a0" />
+            <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" />
             <div className="font-mono text-[10px] text-emerald-400 font-semibold tracking-wider mt-1">
               ↑ 12% vs last 7 days
             </div>
@@ -456,7 +456,7 @@ export default function XPDashboard() {
             <div className="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
               SUBTRACTIONS & PENALTIES
             </div>
-            <MiniWaveform points={negativeWave} strokeColor="#f43f5e" />
+            <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" />
             <div className="font-mono text-[10px] text-rose-400 font-semibold tracking-wider mt-1">
               ↓ 8% vs last 7 days
             </div>
@@ -473,7 +473,7 @@ export default function XPDashboard() {
             <div className="font-mono text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
               DAYS TRACKED
             </div>
-            <MiniWaveform points={daysWave} strokeColor="#60a5fa" />
+            <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" />
             <div className="font-mono text-[10px] text-blue-400 font-semibold tracking-wider mt-1">
               Longest streak: {longestStreak} days
             </div>
