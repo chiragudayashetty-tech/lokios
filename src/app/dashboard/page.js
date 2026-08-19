@@ -960,33 +960,56 @@ export default function MissionControl() {
 
 
         {/* ══════════════════════════════════════════════════════════════════
-            COMMAND CENTER SAGA HERO CARD (MOBILE: TOP IMAGE / DESKTOP: RIGHT IMAGE)
+            COMMAND CENTER SAGA HERO CARD (ORIGINAL 2-COLUMN SPLIT LAYOUT)
         ══════════════════════════════════════════════════════════════════ */}
         <div className="mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden transition-all">
           
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 lg:p-8 items-center">
             
-            {/* ── 1:1 SQUARE ARTWORK: ON PHONE -> TOP (order-1), ON DESKTOP -> RIGHT (md:order-2) ── */}
-            <div className="w-full sm:w-[300px] md:w-[300px] lg:w-[360px] xl:w-[380px] shrink-0 flex justify-center order-1 md:order-2">
+            {/* ── LEFT COLUMN: 1:1 SQUARE ARTWORK (lg:col-span-5) ── */}
+            <div className="lg:col-span-5 flex justify-center">
               <div 
-                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group w-full max-w-[280px] sm:max-w-[320px] md:max-w-[360px] lg:max-w-[380px] aspect-square"
+                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group flex flex-col justify-end w-full max-w-[340px] sm:max-w-[380px] aspect-square"
                 style={{ aspectRatio: '1 / 1' }}
               >
                 {/* Background 1:1 Artwork Image */}
                 <img 
                   src={currentSagaImage} 
                   alt={currentArc.name} 
-                  className="w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
+                  className="absolute inset-0 w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
                   onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
                 />
 
-                {/* Cyber subtle border ring */}
+                {/* Subtle Radial & Gradient Overlays for readable text */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
                 <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
+
+                {/* Bottom Overlay Label */}
+                <div className="relative z-10 p-5 text-center flex flex-col items-center select-none">
+                  <div className="font-display font-black text-sm sm:text-base text-white tracking-[0.35em] uppercase drop-shadow-md">
+                    {splitTitle.primary}
+                  </div>
+                  <div 
+                    className="font-display font-black text-xs sm:text-sm tracking-[0.4em] uppercase drop-shadow-[0_0_10px_rgba(249,115,22,0.6)] mt-0.5"
+                    style={{ color: sagaAccentColor }}
+                  >
+                    {splitTitle.secondary}
+                  </div>
+                  <div className="mt-2 flex items-center justify-center">
+                    <div 
+                      className="w-5 h-5 rounded-full border flex items-center justify-center"
+                      style={{ borderColor: `${sagaAccentColor}60`, color: sagaAccentColor }}
+                    >
+                      <ChevronUp size={12} />
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            {/* ── INTELLIGENCE & PROGRESSION: ON PHONE -> BELOW (order-2), ON DESKTOP -> LEFT (md:order-1) ── */}
-            <div className="flex-1 w-full min-w-0 flex flex-col justify-between space-y-4 sm:space-y-5 order-2 md:order-1">
+            {/* ── RIGHT COLUMN: INTELLIGENCE & PROGRESSION (lg:col-span-7) ── */}
+            <div className="lg:col-span-7 flex flex-col justify-between space-y-4 sm:space-y-5">
               
               {/* Header: SAGA Title */}
               <div>
