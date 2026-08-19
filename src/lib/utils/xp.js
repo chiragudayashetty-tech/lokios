@@ -40,12 +40,22 @@ export function xpToNextLevel(totalXp) {
  * Get the rank config object for a given XP total.
  */
 export function getRankForXp(totalXp) {
-  const ranks = Object.entries(RANK_CONFIG)
-  for (let i = ranks.length - 1; i >= 0; i--) {
-    const [code, config] = ranks[i]
-    if (totalXp >= config.minXp) {
-      return { code, ...config }
-    }
-  }
-  return { code: 'Fallen', ...RANK_CONFIG.Fallen }
+  if (totalXp < 0) return { code: 'Fallen', ...RANK_CONFIG.Fallen }
+  const level = calculateLevel(totalXp)
+  return getRankForLevel(level)
+}
+
+/**
+ * Get the rank config object directly for a given level.
+ */
+export function getRankForLevel(level) {
+  if (level <= 0) return { code: 'Fallen', ...RANK_CONFIG.Fallen }
+  if (level <= 10) return { code: 'I', ...RANK_CONFIG.I }
+  if (level <= 17) return { code: 'II', ...RANK_CONFIG.II }
+  if (level <= 26) return { code: 'III', ...RANK_CONFIG.III }
+  if (level <= 38) return { code: 'IV', ...RANK_CONFIG.IV }
+  if (level <= 54) return { code: 'V', ...RANK_CONFIG.V }
+  if (level <= 77) return { code: 'VI', ...RANK_CONFIG.VI }
+  if (level <= 99) return { code: 'VII', ...RANK_CONFIG.VII }
+  return { code: 'VIII', ...RANK_CONFIG.VIII }
 }
