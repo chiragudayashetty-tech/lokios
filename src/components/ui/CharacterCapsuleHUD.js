@@ -97,29 +97,53 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
         <div className="w-[1px] h-8 bg-white/10 shrink-0 hidden md:block" />
 
         {/* ── 3. DAILY MOMENTUM ── */}
-        <Link href="/xp" className="flex items-center gap-3.5 shrink-0 group select-none hover:opacity-90 transition-opacity">
+        <Link href="/xp" className="flex items-center gap-4 sm:gap-5 shrink-0 group select-none hover:opacity-90 transition-opacity">
           <div className="flex flex-col justify-center">
             <div className="flex items-center gap-1.5 font-mono text-[8px] sm:text-[9px] uppercase tracking-[0.18em] text-slate-400 font-semibold whitespace-nowrap">
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${todayNet >= 0 ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'} animate-pulse`} />
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                state === 'AT RISK'
+                  ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
+                  : state === 'RECOVERY'
+                  ? 'bg-cyan-400 shadow-[0_0_8px_#22d3ee]'
+                  : state === 'SURGING'
+                  ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
+                  : 'bg-indigo-400 shadow-[0_0_8px_#818cf8]'
+              } animate-pulse`} />
               <span>DAILY MOMENTUM</span>
             </div>
-            <div className={`font-display font-black text-lg sm:text-xl tracking-tight leading-none mt-1 whitespace-nowrap ${todayNet >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+            <div className={`font-display font-black text-lg sm:text-xl tracking-tight leading-none mt-1 whitespace-nowrap ${
+              state === 'AT RISK'
+                ? 'text-rose-400'
+                : state === 'RECOVERY'
+                ? 'text-cyan-400'
+                : state === 'SURGING'
+                ? 'text-emerald-400'
+                : 'text-indigo-300'
+            }`}>
               {todayNet >= 0 ? `+${todayNet}` : todayNet} <span className="font-mono text-xs font-bold text-slate-400">XP</span>
             </div>
           </div>
 
-          {/* Status Pill Badge */}
-          <div className={`px-2.5 py-1 rounded-full border text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+          {/* Status Pill Badge with Clean Spacing & Dynamic Colors */}
+          <div className={`px-3 py-1 rounded-full border text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-2 shrink-0 whitespace-nowrap ${
             state === 'AT RISK' 
-              ? 'bg-rose-950/60 border-rose-500/50 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.25)]' 
-              : state === 'SURGING'
-              ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+              ? 'bg-rose-950/70 border-rose-500/60 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.3)]' 
               : state === 'RECOVERY'
-              ? 'bg-cyan-950/60 border-cyan-500/50 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)]'
-              : 'bg-amber-950/60 border-amber-500/50 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+              ? 'bg-cyan-950/70 border-cyan-500/60 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+              : state === 'SURGING'
+              ? 'bg-emerald-950/70 border-emerald-500/60 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+              : 'bg-indigo-950/70 border-indigo-500/60 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.3)]'
           }`}>
-            {state === 'AT RISK' ? <ShieldAlert size={11} className="text-rose-400 shrink-0" /> : state === 'SURGING' ? <Flame size={11} className="text-emerald-400 shrink-0" /> : <Shield size={11} className="text-amber-400 shrink-0" />}
-            <span>{state}</span>
+            {state === 'AT RISK' ? (
+              <ShieldAlert size={12} className="text-rose-400 shrink-0" />
+            ) : state === 'RECOVERY' ? (
+              <Shield size={12} className="text-cyan-400 shrink-0" />
+            ) : state === 'SURGING' ? (
+              <Flame size={12} className="text-emerald-400 shrink-0" />
+            ) : (
+              <Shield size={12} className="text-indigo-400 shrink-0" />
+            )}
+            <span className="leading-none">{state}</span>
           </div>
         </Link>
 
