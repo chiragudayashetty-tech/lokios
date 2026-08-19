@@ -14,6 +14,7 @@ import { useCalendarInternal } from '@/lib/hooks/useCalendarInternal'
 import { useCharacterStatsInternal } from '@/lib/hooks/useCharacterStatsInternal'
 import { useUserConfigInternal } from '@/lib/hooks/useUserConfigInternal'
 import { useFocusInternal } from '@/lib/hooks/useFocusInternal'
+import { getThemeForXP } from '@/lib/theme/levelTheme'
 
 const OSContext = createContext(null)
 
@@ -34,6 +35,13 @@ export function OSProvider({ children }) {
   const focus = useFocusInternal(auth.user, true)
 
   const [booting, setBooting] = useState(true)
+
+  // Apply rank-derived visual tokens only. XP remains owned by existing profile/RPC flows.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const theme = getThemeForXP(profile?.profile?.total_xp || 0)
+    Object.entries(theme.cssVars).forEach(([name, value]) => document.documentElement.style.setProperty(name, value))
+  }, [profile?.profile?.total_xp])
 
   // Wait for critical systems to load before rendering the OS
   useEffect(() => {
@@ -87,7 +95,10 @@ export function OSProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'habits', filter: `user_id=eq.${userId}` }, debouncedSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'habit_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${userId}` }, debouncedXpSync)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'xp_history', filter: `user_id=eq.${userId}` }, (payload) => {
+        xpRef.current?.handleXpRealtime?.(payload)
+        debouncedXpSync()
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, debouncedSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
       .subscribe()

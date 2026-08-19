@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { calculateDailyMomentum } from '@/lib/utils/dailyMomentum'
@@ -9,6 +9,8 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 export function useXPInternal(user) {
   const supabase = createClient()
   const [dailyMomentum, setDailyMomentum] = useState(() => calculateDailyMomentum())
+  const [feedbackEvents, setFeedbackEvents] = useState([])
+  const seenEventIds = useRef(new Set())
 
   const fetchMomentum = useCallback(async () => {
     if (!user) {
@@ -35,6 +37,23 @@ export function useXPInternal(user) {
     fetchMomentum()
   }, [fetchMomentum])
 
+  const handleXpRealtime = useCallback((payload) => {
+    const row = payload?.new
+    const amount = Number(row?.amount)
+    if (typeof window === 'undefined' || !row || !Number.isFinite(amount) || amount === 0 || !row.id || seenEventIds.current.has(row.id)) return
+    seenEventIds.current.add(row.id)
+    const source = String(row.source_type || 'EXECUTION').replaceAll('_', ' ').toUpperCase()
+    const event = { id: row.id, amount, source }
+    setFeedbackEvents(previous => [...previous.slice(-2), event])
+    window.setTimeout(() => {
+      setFeedbackEvents(previous => previous.filter(item => item.id !== row.id))
+    }, 4200)
+  }, [])
+
+  const dismissFeedback = useCallback((id) => {
+    setFeedbackEvents(previous => previous.filter(item => item.id !== id))
+  }, [])
+
   const awardXP = useCallback(async (amount, sourceType, sourceId, description, statCategory = 'discipline') => {
     if (!user) return null
 
@@ -59,5 +78,5 @@ export function useXPInternal(user) {
     }
   }, [user])
 
-  return { awardXP, deductXP, dailyMomentum, fetchMomentum }
+  return { awardXP, deductXP, dailyMomentum, fetchMomentum, feedbackEvents, handleXpRealtime, dismissFeedback }
 }

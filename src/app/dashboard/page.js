@@ -73,7 +73,7 @@ const BRIEFINGS = [
 export default function MissionControl() {
   const { user } = useAuth()
 
-  const { 
+  const {
     profile: { profile } = {},
     goals:   { mainQuest, sideQuests, longTermGoals } = {},
     habits:  { todayLogs = [], habits = [] } = {},
@@ -955,7 +955,7 @@ export default function MissionControl() {
                 {arcExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
               </button>
               <p className="font-mono text-[10px] text-muted uppercase tracking-widest mb-2.5">
-                LV.{currentLevel} · <span className="text-primary font-bold">{totalXp.toLocaleString()} XP</span> · <span style={{ color: momentumStateColor }}>{dailyMomentum?.state || 'STEADY'}</span>
+                LV.{currentLevel} · <span className="text-primary font-bold">{totalXp.toLocaleString()} XP</span> · <span style={{ color: momentumStateColor }}>{dailyMomentum?.state || 'STEADY'}</span> · <span style={{ color: arcColor }}>{currentArc.flavor}</span>
               </p>
               <p className="font-mono text-[9px] text-muted uppercase tracking-widest mb-2.5">{dailyMomentum?.message || 'Positive or neutral execution. Keep moving.'}</p>
               <div>
@@ -1651,7 +1651,7 @@ export default function MissionControl() {
                   <div className="font-display font-bold tracking-tighter" style={{ fontSize: '2.8rem', color: momentumColor, lineHeight: 1 }}>
                     {momentumScore > 0 ? '+' : ''}{momentumScore}
                   </div>
-                  <div className="font-mono text-[8px] text-muted uppercase">{dailyMomentum?.todayNet >= 0 ? '+' : ''}{dailyMomentum?.todayNet ?? 0} XP TODAY</div>
+                  <div className="font-mono text-[8px] text-muted uppercase">-10 to +10</div>
                 </div>
                 
                 <div className="text-right">
@@ -1719,13 +1719,13 @@ export default function MissionControl() {
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">TO LV.{currentLevel + 1}</div>
                 </div>
                 <div>
-                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: xpToday > 0 ? 'var(--success)' : xpToday < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: (dailyMomentum?.todayNet ?? xpToday) > 0 ? 'var(--success)' : (dailyMomentum?.todayNet ?? xpToday) < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
                     {dailyMomentum?.todayNet >= 0 ? '+' : ''}{dailyMomentum?.todayNet ?? xpToday}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">TODAY</div>
                 </div>
                 <div>
-                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: xpThisWeek > 0 ? 'var(--success)' : xpThisWeek < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: (dailyMomentum?.threeDayNet ?? xpThisWeek) > 0 ? 'var(--success)' : (dailyMomentum?.threeDayNet ?? xpThisWeek) < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
                     {dailyMomentum?.threeDayNet >= 0 ? '+' : ''}{dailyMomentum?.threeDayNet ?? xpThisWeek}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">3-DAY NET</div>

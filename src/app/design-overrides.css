@@ -1234,3 +1234,48 @@ tbody tr:hover { background: rgba(244, 201, 107, 0.045); }
   .hud-panel { border: 1px solid #333 !important; background: #080a0f !important; box-shadow: none !important; }
 }
 
+/* Momentum & identity HUD: read-only feedback layer. */
+.loki-persistent-hud {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 58px;
+  margin: -10px 0 18px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--hud-accent) 35%, var(--border-color));
+  border-left: 3px solid var(--hud-accent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--hud-accent) 8%, var(--bg-tertiary)), var(--bg-tertiary));
+  box-shadow: 0 0 calc(24px * var(--saga-glow, .25)) var(--ambient-saga-glow, transparent);
+  backdrop-filter: blur(14px);
+}
+.loki-hud-rank, .loki-hud-net, .loki-hud-trend, .loki-hud-secondary { display: flex; align-items: center; gap: 8px; }
+.loki-hud-rank { color: var(--hud-accent); min-width: 92px; }
+.loki-hud-icon { font-size: 22px; line-height: 1; }
+.loki-hud-level, .loki-hud-value, .loki-hud-trend, .loki-hud-secondary { font-family: var(--font-mono, monospace); }
+.loki-hud-level { font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+.loki-hud-net { flex-direction: column; align-items: flex-start; gap: 1px; }
+.loki-hud-label, .loki-hud-secondary, .loki-hud-trend small { font-size: 8px; letter-spacing: .12em; color: var(--text-muted); }
+.loki-hud-value { color: var(--success); font-size: 18px; font-weight: 700; line-height: 1; }
+.loki-hud-net.is-negative .loki-hud-value, .loki-hud-trend.is-negative { color: var(--danger); }
+.loki-hud-trend { color: var(--success); font-size: 11px; font-weight: 700; }
+.loki-hud-trend small { display: block; font-weight: 400; }
+.loki-hud-secondary { margin-left: auto; flex-direction: column; align-items: flex-end; gap: 2px; }
+.loki-hud-secondary span:last-child { color: var(--hud-accent); font-weight: 700; }
+.xp-toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; width: min(340px, calc(100vw - 36px)); pointer-events: none; }
+.xp-toast { pointer-events: auto; padding: 11px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-left: 3px solid var(--success); box-shadow: 0 10px 30px rgba(0,0,0,.35); font: 11px var(--font-mono, monospace); color: var(--text-primary); }
+.xp-toast-negative { border-left-color: var(--danger); }
+.xp-toast-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.xp-toast-row button { display: flex; padding: 2px; color: var(--text-muted); background: transparent; border: 0; cursor: pointer; }
+.xp-toast-loss { margin-top: 5px; font-size: 8px; letter-spacing: .14em; color: var(--danger); }
+@media (max-width: 640px) {
+  .loki-persistent-hud { gap: 10px; margin-top: -4px; padding: 9px 10px; }
+  .loki-hud-rank { min-width: auto; }
+  .loki-hud-icon { font-size: 18px; }
+  .loki-hud-value { font-size: 15px; }
+  .loki-hud-secondary { display: none; }
+  .xp-toast-stack { right: 12px; bottom: calc(70px + env(safe-area-inset-bottom)); width: min(320px, calc(100vw - 24px)); }
+}
+

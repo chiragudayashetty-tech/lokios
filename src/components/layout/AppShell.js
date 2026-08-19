@@ -11,6 +11,7 @@ import {
   Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList, Scale, Download, Mic
 } from 'lucide-react'
 import IntelExportModal from '@/components/ui/IntelExportModal'
+import XPToastStack from '@/components/ui/XPToastStack'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { initBackgroundReminders } from '@/lib/utils/notifications'
 
@@ -35,7 +36,7 @@ const NAV_ITEMS = [
 export default function AppShell({ children }) {
   const pathname = usePathname()
   const os = useOS() || {}
-  const { auth = {}, profile: { profile } = {}, xp: { dailyMomentum } = {}, tasks: { todayTasks = [] } = {}, habits: { habits = [], todayLogs = [] } = {} } = os
+  const { auth = {}, profile: { profile } = {}, xp: { dailyMomentum, feedbackEvents = [], dismissFeedback } = {}, tasks: { todayTasks = [] } = {}, habits: { habits = [], todayLogs = [] } = {} } = os
   const { user } = auth
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
@@ -72,6 +73,11 @@ export default function AppShell({ children }) {
     localStorage.setItem('lokios_pwa_dismissed', 'true')
     setShowPwaInstall(false)
   }
+
+  const totalXp = profile?.total_xp || 0
+  const rank = getRankForXp(totalXp)
+  const todayNet = dailyMomentum?.todayNet || 0
+  const trend3Day = dailyMomentum?.threeDayNet || 0
 
   if (!user) return null
 
@@ -248,6 +254,24 @@ export default function AppShell({ children }) {
 
       {/* Main Content Area */}
       <main className="main-content">
+        <div className="loki-persistent-hud" style={{ '--hud-accent': rank.color }}>
+          <div className="loki-hud-rank" aria-label={`${rank.name}, level ${calculateLevel(totalXp)}`}>
+            <span className="loki-hud-icon">{rank.icon}</span>
+            <span className="loki-hud-level">LV.{calculateLevel(totalXp)}</span>
+          </div>
+          <div className={`loki-hud-net ${todayNet < 0 ? 'is-negative' : ''}`}>
+            <span className="loki-hud-label">TODAY NET</span>
+            <span className="loki-hud-value">{todayNet >= 0 ? '+' : ''}{todayNet} XP</span>
+          </div>
+          <div className={`loki-hud-trend ${trend3Day < 0 ? 'is-negative' : ''}`}>
+            <span>{trend3Day >= 0 ? '▲' : '▼'} {trend3Day >= 0 ? '+' : ''}{trend3Day} XP</span>
+            <small>3-DAY</small>
+          </div>
+          <div className="loki-hud-secondary">
+            <span>{totalXp.toLocaleString()} LIFETIME XP</span>
+            <span style={{ color: dailyMomentum?.color || 'var(--text-muted)' }}>{dailyMomentum?.state || 'STEADY'}</span>
+          </div>
+        </div>
         {children}
       </main>
 
@@ -256,6 +280,7 @@ export default function AppShell({ children }) {
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
       />
+      <XPToastStack events={feedbackEvents} onDismiss={dismissFeedback} />
 
       {/* Mobile Bottom Nav */}
       <nav className="mobile-nav" style={{ zIndex: 100 }}>
