@@ -363,11 +363,6 @@ export default function JournalPage() {
         {activeTab === 'daily' && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex justify-end gap-2 mb-4">
-              <button
-                onClick={async () => { if (window.confirm('Delete all journal entries? This cannot be undone.')) await clearJournal() }}
-                className="btn btn-ghost text-danger border border-border-color hover:bg-danger hover:text-white">
-                CLEAR ARCHIVES
-              </button>
               <button onClick={() => setShowHistory(!showHistory)} className="btn btn-ghost border border-border-color">
                 {showHistory ? 'VIEW TODAY' : 'VIEW ARCHIVES'}
               </button>

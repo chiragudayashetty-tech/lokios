@@ -274,13 +274,6 @@ export default function XPDashboard() {
               <RefreshCw size={13} className="text-cyan-400" />
               <span>PURGE & SYNC</span>
             </button>
-            <button 
-              onClick={handleResetXP}
-              className="px-4 py-2 rounded-xl border border-rose-500/40 bg-rose-950/20 hover:bg-rose-900/40 text-rose-400 font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-[0_0_12px_rgba(244,63,94,0.15)] active:scale-95"
-            >
-              <RotateCcw size={13} className="text-rose-400" />
-              <span>FULL RESET</span>
-            </button>
           </div>
         </header>
 
