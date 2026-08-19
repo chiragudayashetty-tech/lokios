@@ -410,63 +410,66 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 2: 3 SQUARE METRICS IN A SINGLE RECTANGLE (LEFT, CENTER, RIGHT)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-6 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-4 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
+        <div className="relative mb-6 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-3 sm:p-5 shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
           <div 
             style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', 
-              gap: '16px', 
+              gap: '10px', 
               width: '100%' 
             }}
           >
             {/* LEFT: POSITIVE ACTIONS (ADDITIONS) */}
-            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-emerald-500/40 p-4 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
-              <div className="w-10 h-10 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
-                <TrendingUp size={18} className="text-emerald-400" />
+            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-emerald-500/40 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
+                <TrendingUp size={15} className="text-emerald-400 sm:w-[18px] sm:h-[18px]" />
               </div>
-              <div className="font-display font-black text-2xl sm:text-4xl text-emerald-400 tracking-tight leading-tight">
+              <div className="font-display font-black text-xl sm:text-4xl text-emerald-400 tracking-tight leading-tight">
                 {positiveCount}
               </div>
-              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold">
+              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold hidden sm:block">
                 POSITIVE ACTIONS
               </div>
-              <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" height={36} width={160} />
-              <div className="font-mono text-[9px] sm:text-[11px] text-emerald-400 font-semibold tracking-wider">
-                ↑ 12% vs last 7 days
+              <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" height={32} width={120} />
+              <div className="font-mono text-[8px] sm:text-[11px] text-emerald-400 font-semibold tracking-wider">
+                <span className="sm:hidden">↑ 12%</span>
+                <span className="hidden sm:inline">↑ 12% vs last 7 days</span>
               </div>
             </div>
 
             {/* CENTER: SUBTRACTIONS & PENALTIES */}
-            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-rose-500/40 p-4 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
-              <div className="w-10 h-10 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
-                <TrendingDown size={18} className="text-rose-400" />
+            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-rose-500/40 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
+                <TrendingDown size={15} className="text-rose-400 sm:w-[18px] sm:h-[18px]" />
               </div>
-              <div className="font-display font-black text-2xl sm:text-4xl text-rose-400 tracking-tight leading-tight">
+              <div className="font-display font-black text-xl sm:text-4xl text-rose-400 tracking-tight leading-tight">
                 {deductionCount}
               </div>
-              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold">
+              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold hidden sm:block">
                 SUBTRACTIONS & PENALTIES
               </div>
-              <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" height={36} width={160} />
-              <div className="font-mono text-[9px] sm:text-[11px] text-rose-400 font-semibold tracking-wider">
-                ↓ 8% vs last 7 days
+              <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" height={32} width={120} />
+              <div className="font-mono text-[8px] sm:text-[11px] text-rose-400 font-semibold tracking-wider">
+                <span className="sm:hidden">↓ 8%</span>
+                <span className="hidden sm:inline">↓ 8% vs last 7 days</span>
               </div>
             </div>
 
             {/* RIGHT: DAYS TRACKED */}
-            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-blue-500/40 p-4 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
-              <div className="w-10 h-10 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
-                <Calendar size={18} className="text-blue-400" />
+            <div className="rounded-xl border border-white/10 bg-black/40 hover:border-blue-500/40 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
+                <Calendar size={15} className="text-blue-400 sm:w-[18px] sm:h-[18px]" />
               </div>
-              <div className="font-display font-black text-2xl sm:text-4xl text-blue-400 tracking-tight leading-tight">
+              <div className="font-display font-black text-xl sm:text-4xl text-blue-400 tracking-tight leading-tight">
                 {daysTracked}
               </div>
-              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold">
+              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold hidden sm:block">
                 DAYS TRACKED
               </div>
-              <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" height={36} width={160} />
-              <div className="font-mono text-[9px] sm:text-[11px] text-blue-400 font-semibold tracking-wider">
-                Longest streak: {longestStreak} days
+              <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" height={32} width={120} />
+              <div className="font-mono text-[8px] sm:text-[11px] text-blue-400 font-semibold tracking-wider">
+                <span className="sm:hidden">{longestStreak}d streak</span>
+                <span className="hidden sm:inline">Longest streak: {longestStreak} days</span>
               </div>
             </div>
           </div>
@@ -475,45 +478,45 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 3: MOMENTUM METER DETAILED SPECTRUM BANNER
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-6 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-6 sm:p-7 shadow-[0_12px_36px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center justify-between gap-6">
+        <div className="relative mb-6 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-4 sm:p-7 shadow-[0_12px_36px_rgba(0,0,0,0.5)] flex flex-col lg:flex-row items-center justify-between gap-4 sm:gap-6">
           
           {/* Left Info */}
-          <div className="flex items-center gap-4 w-full lg:w-auto">
-            <div className="w-12 h-12 rounded-2xl border border-purple-500/40 bg-purple-950/40 flex items-center justify-center text-purple-400 shadow-[0_0_16px_rgba(168,85,247,0.35)] shrink-0">
-              <Activity size={22} className="text-purple-400" />
+          <div className="flex items-center gap-3 sm:gap-4 w-full lg:w-auto">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl border border-purple-500/40 bg-purple-950/40 flex items-center justify-center text-purple-400 shadow-[0_0_16px_rgba(168,85,247,0.35)] shrink-0">
+              <Activity size={20} className="text-purple-400 sm:w-[22px] sm:h-[22px]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-display font-bold text-sm uppercase tracking-widest text-indigo-300">
+                <h3 className="font-display font-bold text-xs sm:text-sm uppercase tracking-widest text-indigo-300">
                   MOMENTUM METER
                 </h3>
-                <span className="px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-500/40 text-purple-300 font-mono text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-500/40 text-purple-300 font-mono text-[9px] sm:text-[10px] font-bold">
                   {momentumScore}% CONSISTENCY
                 </span>
               </div>
-              <p className="font-mono text-[11px] text-slate-400 mt-1 max-w-md">
+              <p className="font-mono text-[10px] sm:text-[11px] text-slate-400 mt-1 max-w-md hidden sm:block">
                 Measures your execution quality over the past 7 days. Stay consistent. Protect your momentum.
               </p>
             </div>
           </div>
 
           {/* Right Spectrum Bar with Floating Glowing Needle Pin */}
-          <div className="w-full lg:w-[480px] xl:w-[540px] flex flex-col gap-3 relative pt-7">
+          <div className="w-full lg:w-[480px] xl:w-[540px] flex flex-col gap-2 sm:gap-3 relative pt-6 sm:pt-7">
             
             {/* Floating Marker Pin (Above the Bar) */}
             <div 
               className="absolute top-0 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-700 z-20"
               style={{ left: `${Math.max(6, Math.min(94, momentumScore))}%` }}
             >
-              <div className="px-2 py-0.5 rounded-md bg-purple-600 border border-white text-white font-mono text-[10px] font-black tracking-wider flex items-center gap-1 shadow-[0_0_16px_rgba(168,85,247,0.9)] whitespace-nowrap">
+              <div className="px-2 py-0.5 rounded-md bg-purple-600 border border-white text-white font-mono text-[9px] sm:text-[10px] font-black tracking-wider flex items-center gap-1 shadow-[0_0_16px_rgba(168,85,247,0.9)] whitespace-nowrap">
                 <span>⚡</span>
                 <span>{momentumScore}%</span>
               </div>
-              <div className="w-0.5 h-2.5 bg-white shadow-[0_0_8px_#ffffff]" />
+              <div className="w-0.5 h-2 sm:h-2.5 bg-white shadow-[0_0_8px_#ffffff]" />
             </div>
 
             {/* Continuous Glow Spectrum Track */}
-            <div className="relative w-full h-4 rounded-full p-[2px] bg-slate-950 border border-white/15 overflow-hidden shadow-inner">
+            <div className="relative w-full h-3.5 sm:h-4 rounded-full p-[2px] bg-slate-950 border border-white/15 overflow-hidden shadow-inner">
               <div 
                 className="w-full h-full rounded-full"
                 style={{
@@ -523,8 +526,8 @@ export default function XPDashboard() {
               />
             </div>
 
-            {/* Scale Labels & Active Zone Highlight */}
-            <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-wider font-bold pt-0.5">
+            {/* Scale Labels & Active Zone Highlight (Hidden on Mobile for ultra-clean layout) */}
+            <div className="hidden sm:flex items-center justify-between font-mono text-[9px] uppercase tracking-wider font-bold pt-0.5">
               <div className={`text-left transition-all ${momentumScore < 25 ? 'scale-110 font-black' : 'opacity-70'}`}>
                 <span className="text-slate-500 block">0%</span>
                 <span className="text-rose-400">CRITICAL</span>
