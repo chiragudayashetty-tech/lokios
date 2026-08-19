@@ -19,7 +19,7 @@ export function useXPInternal(user) {
     }
 
     const start = new Date()
-    start.setDate(start.getDate() - 2)
+    start.setDate(start.getDate() - 6)
     const { data, error } = await createClient()
       .from('xp_history')
       .select('amount, created_at')

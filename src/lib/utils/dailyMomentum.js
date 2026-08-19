@@ -20,6 +20,32 @@ export function calculateDailyMomentum(history = [], now = new Date()) {
   const positiveEntriesToday = todayEntries.filter(entry => Number(entry.amount) > 0).length
   const negativeEntriesToday = todayEntries.filter(entry => Number(entry.amount) < 0).length
 
+  // Build sparkline histogram for last 6 days
+  const dailyMap = {}
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    dailyMap[localDate(d)] = 0
+  }
+
+  history.forEach(entry => {
+    const d = localDate(new Date(entry.created_at))
+    if (dailyMap[d] !== undefined) {
+      dailyMap[d] += Number(entry.amount) || 0
+    }
+  })
+
+  const sparkline = Object.entries(dailyMap).map(([date, net]) => {
+    const maxVal = 100
+    const heightPct = Math.min(100, Math.max(20, Math.round((Math.abs(net) / maxVal) * 100)))
+    return {
+      date,
+      net,
+      isPositive: net >= 0,
+      heightPct: net === 0 ? 20 : heightPct
+    }
+  })
+
   // Recovery has priority: the user is rebuilding after a meaningful recent loss.
   const isRecovery = threeDayNet <= -100 && todayNet > 0
   const isAtRisk = todayNet < 0 || threeDayNet <= -100 || negativeEntriesToday >= 2
@@ -39,6 +65,7 @@ export function calculateDailyMomentum(history = [], now = new Date()) {
     threeDayNet,
     positiveEntriesToday,
     negativeEntriesToday,
+    sparkline,
     color,
     accentIntensity: state === 'SURGING' ? 1 : state === 'RECOVERY' ? 0.8 : state === 'AT RISK' ? 0.65 : 0.5,
     message: state === 'RECOVERY'

@@ -30,6 +30,29 @@ export const RANK_CONFIG = {
   VIII:   { code: 'VIII',   name: 'Saga VIII',  minXp: 300000,  maxXp: 9999999,  icon: '∞', color: '#FCD34D' }
 };
 
+export const SAGA_TITLES = {
+  Fallen: 'The Fallen',
+  I: 'Initiate',
+  II: 'Operator',
+  III: 'Vanguard',
+  IV: 'Commander',
+  V: 'Warlord',
+  VI: 'Sovereign',
+  VII: 'Ascendant',
+  VIII: 'Immortal',
+};
+
+export const ARC_CONFIG = [
+  { rank: 'I',       name: 'The Awakening',          title: 'Initiate',   flavor: 'The moment I stopped drifting and chose the life I wanted to build.' },
+  { rank: 'II',      name: 'The Discipline Rebuild', title: 'Operator',   flavor: 'I rebuilt my mind, habits, and identity one day at a time.' },
+  { rank: 'III',     name: 'The Spark',              title: 'Vanguard',   flavor: 'Small actions became unstoppable momentum.' },
+  { rank: 'IV',      name: 'The Architect',          title: 'Commander',  flavor: 'I stopped chasing success and started designing systems, businesses, and a better future.' },
+  { rank: 'V',       name: 'The King',               title: 'Warlord',    flavor: 'I learned to lead myself first, then earned the trust to lead others.' },
+  { rank: 'VI',      name: 'The Empire',             title: 'Sovereign',  flavor: 'My work grew beyond me into companies, teams, and communities that create lasting value.' },
+  { rank: 'VII',     name: 'The Legacy',             title: 'Ascendant',  flavor: 'My greatest achievement became the people I inspired and the lives I changed.' },
+  { rank: 'VIII',    name: 'Beyond',                 title: 'Immortal',   flavor: 'There is no finish line. Every summit reveals a higher mountain.' },
+];
+
 export const XP_REWARDS = {
   task_complete: 10,
   habit_complete: 5,

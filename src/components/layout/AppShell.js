@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import IntelExportModal from '@/components/ui/IntelExportModal'
 import XPToastStack from '@/components/ui/XPToastStack'
+import CharacterCapsuleHUD from '@/components/ui/CharacterCapsuleHUD'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { initBackgroundReminders } from '@/lib/utils/notifications'
 
@@ -254,32 +255,7 @@ export default function AppShell({ children }) {
 
       {/* Main Content Area */}
       <main className="main-content">
-        <div className="loki-persistent-hud" style={{ '--hud-accent': rank.color }}>
-          <div className="loki-hud-rank" aria-label={`${rank.name}, level ${calculateLevel(totalXp)}`}>
-            <span className="loki-hud-icon">{rank.icon}</span>
-            <div className="loki-hud-rank-copy">
-              <span className="loki-hud-kicker">{rank.name.toUpperCase()}</span>
-              <span className="loki-hud-level">LV.{calculateLevel(totalXp)}</span>
-            </div>
-          </div>
-          <div className={`loki-hud-net ${todayNet < 0 ? 'is-negative' : ''}`}>
-            <span className="loki-hud-label">DAILY MOMENTUM</span>
-            <span className="loki-hud-value">{todayNet >= 0 ? '+' : ''}{todayNet} XP</span>
-            <span className="loki-hud-caption">NET TODAY</span>
-          </div>
-          <div className={`loki-hud-trend ${trend3Day < 0 ? 'is-negative' : ''}`}>
-            <span className="loki-hud-label">3-DAY TREND</span>
-            <span className="loki-hud-trend-value">{trend3Day >= 0 ? '▲' : '▼'} {trend3Day >= 0 ? '+' : ''}{trend3Day} XP</span>
-            <span className="loki-hud-caption">ROLLING NET</span>
-          </div>
-          <div className="loki-hud-secondary">
-            <div>
-              <span className="loki-hud-label">LIFETIME XP</span>
-              <span className="loki-hud-lifetime">{totalXp.toLocaleString()}</span>
-            </div>
-            <span className="loki-hud-state" style={{ color: dailyMomentum?.color || 'var(--text-muted)' }}>{dailyMomentum?.state || 'STEADY'}</span>
-          </div>
-        </div>
+        <CharacterCapsuleHUD profile={profile} dailyMomentum={dailyMomentum} />
         {children}
       </main>
 
