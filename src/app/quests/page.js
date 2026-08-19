@@ -1016,12 +1016,12 @@ export default function DailyOps() {
               </button>
             </div>
 
-            {/* Footer XP Alert Banner */}
+            {/* Footer Alert Banner (Message only, without XP) */}
             {sleepMsg && (
               <motion.div
                 initial={{ opacity: 0, y: -2 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`p-2 rounded-xl border flex items-center justify-between gap-2 font-mono text-[10px] ${
+                className={`p-2 rounded-xl border flex items-center gap-2 font-mono text-[10px] ${
                   sleepMsg.success
                     ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
                     : 'bg-rose-950/30 border-rose-500/40 text-rose-300'
@@ -1031,15 +1031,6 @@ export default function DailyOps() {
                   {sleepMsg.success ? <CheckCircle2 size={13} className="shrink-0 text-emerald-400" /> : <AlertTriangle size={13} className="shrink-0 text-rose-400" />}
                   <span className="truncate">{sleepMsg.title}: {sleepMsg.subtitle}</span>
                 </div>
-                {sleepMsg.xp !== 0 && (
-                  <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] shrink-0 ${
-                    sleepMsg.xp > 0 
-                      ? 'bg-emerald-500 text-black shadow-[0_0_8px_rgba(16,185,129,0.5)]' 
-                      : 'bg-rose-500 text-white shadow-[0_0_8px_rgba(244,63,94,0.5)]'
-                  }`}>
-                    {sleepMsg.xp > 0 ? `+${sleepMsg.xp} XP` : `${sleepMsg.xp} XP`}
-                  </span>
-                )}
               </motion.div>
             )}
 
