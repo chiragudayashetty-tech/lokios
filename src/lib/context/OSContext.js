@@ -12,7 +12,6 @@ import { useJournalInternal } from '@/lib/hooks/useJournalInternal'
 import { useProfileInternal } from '@/lib/hooks/useProfileInternal'
 import { useCalendarInternal } from '@/lib/hooks/useCalendarInternal'
 import { useCharacterStatsInternal } from '@/lib/hooks/useCharacterStatsInternal'
-import { useUserConfigInternal } from '@/lib/hooks/useUserConfigInternal'
 import { useFocusInternal } from '@/lib/hooks/useFocusInternal'
 import { getThemeForXP } from '@/lib/theme/levelTheme'
 
@@ -31,7 +30,6 @@ export function OSProvider({ children }) {
   const profile = useProfileInternal(auth.user)
   const calendar = useCalendarInternal(auth.user)
   const characterStats = useCharacterStatsInternal(auth.user)
-  const userConfig = useUserConfigInternal(auth.user)
   const focus = useFocusInternal(auth.user, true)
 
   const [booting, setBooting] = useState(true)
@@ -129,7 +127,6 @@ export function OSProvider({ children }) {
     profile,
     calendar,
     characterStats,
-    userConfig,
     
     // Cross-Domain Orchestration Methods
     completeOperation: useCallback(async (taskId, proofUrl = null, completionNote = null) => {

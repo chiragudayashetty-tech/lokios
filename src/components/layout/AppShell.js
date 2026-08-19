@@ -14,7 +14,6 @@ import IntelExportModal from '@/components/ui/IntelExportModal'
 import XPToastStack from '@/components/ui/XPToastStack'
 import CharacterCapsuleHUD from '@/components/ui/CharacterCapsuleHUD'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
-import { initBackgroundReminders } from '@/lib/utils/notifications'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Command Center' },
@@ -49,12 +48,6 @@ export default function AppShell({ children }) {
     }
     window.addEventListener('keydown', handleEsc)
     return () => window.removeEventListener('keydown', handleEsc)
-  }, [])
-
-  // NOTIFICATION MANAGER & BACKGROUND SCHEDULER
-  useEffect(() => {
-    const cleanup = initBackgroundReminders()
-    return cleanup
   }, [])
 
   // PWA INSTALL BANNER LOGIC

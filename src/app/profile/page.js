@@ -11,7 +11,6 @@ import { Shield, Brain, Zap, Target, Award, CheckCircle, Crosshair, TrendingUp, 
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { syncWarRoomDailyEvaluator } from '@/lib/utils/warRoomSync'
-import NotificationControl from '@/components/ui/NotificationControl'
 
 // ── DEFAULT BLUEPRINT DATA ──
 const DEFAULT_BLUEPRINT = {
@@ -424,8 +423,6 @@ export default function OperatorDashboard() {
 
           {/* ── COLUMN 3: INTEL & SYSTEM SENTINELS ── */}
           <div className="flex flex-col gap-6">
-            <NotificationControl />
-
             {/* Known Advantages */}
             <HudPanel className="border-success">
               <div 
