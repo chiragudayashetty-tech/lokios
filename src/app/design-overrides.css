@@ -1276,6 +1276,19 @@ tbody tr:hover { background: rgba(244, 201, 107, 0.045); }
 .xp-toast-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .xp-toast-row button { display: flex; padding: 2px; color: var(--text-muted); background: transparent; border: 0; cursor: pointer; }
 .xp-toast-loss { margin-top: 5px; font-size: 8px; letter-spacing: .14em; color: var(--danger); }
+
+/* These surfaces intentionally consume the live Saga tokens above. */
+body {
+  background:
+    radial-gradient(circle at 50% 100%, var(--ambient-saga-glow, transparent), transparent 42%),
+    linear-gradient(180deg, #040507 0%, #07090d 52%, #030406 100%);
+}
+.app-shell {
+  background:
+    radial-gradient(circle at 50% 0%, var(--ambient-saga-glow, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--saga-primary, #9CA3AF) 3%, transparent), transparent 24%);
+}
+.sidebar { border-right-color: var(--border-color); }
 @media (max-width: 640px) {
   .loki-persistent-hud { grid-template-columns: auto minmax(0, 1fr) auto; gap: 7px 10px; margin-top: -4px; padding: 9px 10px; }
   .loki-hud-rank { min-width: auto; }
