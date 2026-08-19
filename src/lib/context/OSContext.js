@@ -45,9 +45,11 @@ export function OSProvider({ children }) {
   // Stable refs so the sync callback always calls the latest functions
   // without causing the useEffect to re-run (infinite loop fix)
   const profileRef = React.useRef(profile)
+  const xpRef = React.useRef(xp)
   const habitsRef = React.useRef(habits)
   const tasksRef = React.useRef(tasks)
   profileRef.current = profile
+  xpRef.current = xp
   habitsRef.current = habits
   tasksRef.current = tasks
 
@@ -73,6 +75,7 @@ export function OSProvider({ children }) {
       if (xpSyncTimeout) clearTimeout(xpSyncTimeout)
       xpSyncTimeout = setTimeout(() => {
         profileRef.current?.fetchProfile?.()
+        xpRef.current?.fetchMomentum?.()
       }, 300)
     }
 
@@ -84,7 +87,7 @@ export function OSProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'habits', filter: `user_id=eq.${userId}` }, debouncedSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'habit_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sleep_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${userId}` }, debouncedXpSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, debouncedSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
       .subscribe()

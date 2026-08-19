@@ -35,7 +35,7 @@ const NAV_ITEMS = [
 export default function AppShell({ children }) {
   const pathname = usePathname()
   const os = useOS() || {}
-  const { auth = {}, profile: { profile } = {}, tasks: { todayTasks = [] } = {}, habits: { habits = [], todayLogs = [] } = {} } = os
+  const { auth = {}, profile: { profile } = {}, xp: { dailyMomentum } = {}, tasks: { todayTasks = [] } = {}, habits: { habits = [], todayLogs = [] } = {} } = os
   const { user } = auth
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
@@ -177,6 +177,7 @@ export default function AppShell({ children }) {
                       {profile ? `${getRankForXp(profile.total_xp || 0).code}-RANK` : 'OPERATOR'}
                     </span>
                     <span className="font-mono text-sm text-primary font-bold">LV.{profile ? calculateLevel(profile.total_xp || 0) : 1}</span>
+                    <span className="font-mono text-[9px] tracking-widest" style={{ color: dailyMomentum?.color || 'var(--text-muted)' }}>{dailyMomentum?.state || 'STEADY'}</span>
                   </div>
                 </div>
               </div>
@@ -221,6 +222,7 @@ export default function AppShell({ children }) {
                 {profile ? `${getRankForXp(profile.total_xp || 0).code}-RANK` : 'OPERATOR'}
               </span>
               <span className="font-mono text-sm text-primary font-bold">LV.{profile ? calculateLevel(profile.total_xp || 0) : 1}</span>
+              <span className="font-mono text-[9px] tracking-widest" style={{ color: dailyMomentum?.color || 'var(--text-muted)' }}>{dailyMomentum?.state || 'STEADY'}</span>
             </div>
           </div>
           <button

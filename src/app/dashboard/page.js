@@ -73,13 +73,14 @@ const BRIEFINGS = [
 export default function MissionControl() {
   const { user } = useAuth()
 
-  const {
+  const { 
     profile: { profile } = {},
     goals:   { mainQuest, sideQuests, longTermGoals } = {},
     habits:  { todayLogs = [], habits = [] } = {},
     tasks:   { tasks = [], addTask, completeTask, undoCompleteTask, fetchTasks } = {},
     journal: { entries = [] } = {},
     calendar: { events = [] } = {},
+    xp: { dailyMomentum } = {},
     completeOperation,
     failOperation,
     undoFailOperation
@@ -706,6 +707,7 @@ export default function MissionControl() {
   const xpNeeded     = Math.max(0, xpForNextLevel - xpInLevel)
   const currentRank  = getRankForXp(totalXp)
   const arcColor     = RANK_CONFIG[currentRank.code]?.color || '#9CA3AF'
+  const momentumStateColor = dailyMomentum?.color || 'var(--warning)'
   const currentArc   = ARC_CONFIG.find(a => a.rank === currentRank.code) || ARC_CONFIG[0]
 
   const hoursLeft = +(24 - currentTime.getHours() - currentTime.getMinutes() / 60).toFixed(1)
@@ -738,7 +740,7 @@ export default function MissionControl() {
 
   const rawMomentum          = habitComponent + opsComponent + missionsComponent + streakComponent + winRateComponent
   const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
-  const momentumColor        = momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)'
+  const momentumColor        = dailyMomentum?.color || (momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)')
   const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
   // Check if Weekly Debrief has been completed for the current week starting Monday
   const isDebriefDoneThisWeek = useMemo(() => {
@@ -953,8 +955,9 @@ export default function MissionControl() {
                 {arcExpanded ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
               </button>
               <p className="font-mono text-[10px] text-muted uppercase tracking-widest mb-2.5">
-                LV.{currentLevel} · <span className="text-primary font-bold">{totalXp.toLocaleString()} XP</span> · <span style={{ color: arcColor }}>{currentArc.flavor}</span>
+                LV.{currentLevel} · <span className="text-primary font-bold">{totalXp.toLocaleString()} XP</span> · <span style={{ color: momentumStateColor }}>{dailyMomentum?.state || 'STEADY'}</span>
               </p>
+              <p className="font-mono text-[9px] text-muted uppercase tracking-widest mb-2.5">{dailyMomentum?.message || 'Positive or neutral execution. Keep moving.'}</p>
               <div>
                 <div className="flex justify-between font-mono text-[8px] text-muted mb-1">
                   <span>LV.{currentLevel}</span>
@@ -963,7 +966,7 @@ export default function MissionControl() {
                 </div>
                 <div style={{ height: '2px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
                   <motion.div
-                    style={{ height: '100%', background: arcColor }}
+                    style={{ height: '100%', background: momentumStateColor, opacity: dailyMomentum?.accentIntensity || 0.5 }}
                     initial={{ width: 0 }}
                     animate={{ width: `${levelPct}%` }}
                     transition={{ duration: 1.4, ease: 'easeOut' }}
@@ -1639,7 +1642,7 @@ export default function MissionControl() {
                   <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Momentum Engine</span>
                 </div>
                 <span className="font-mono text-[8px] font-bold" style={{ color: momentumColor }}>
-                  {momentumText}
+                  {dailyMomentum?.state || momentumText}
                 </span>
               </div>
               
@@ -1648,7 +1651,7 @@ export default function MissionControl() {
                   <div className="font-display font-bold tracking-tighter" style={{ fontSize: '2.8rem', color: momentumColor, lineHeight: 1 }}>
                     {momentumScore > 0 ? '+' : ''}{momentumScore}
                   </div>
-                  <div className="font-mono text-[8px] text-muted uppercase">-10 to +10</div>
+                  <div className="font-mono text-[8px] text-muted uppercase">{dailyMomentum?.todayNet >= 0 ? '+' : ''}{dailyMomentum?.todayNet ?? 0} XP TODAY</div>
                 </div>
                 
                 <div className="text-right">
@@ -1717,15 +1720,15 @@ export default function MissionControl() {
                 </div>
                 <div>
                   <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: xpToday > 0 ? 'var(--success)' : xpToday < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
-                    {xpToday >= 0 ? '+' : ''}{xpToday}
+                    {dailyMomentum?.todayNet >= 0 ? '+' : ''}{dailyMomentum?.todayNet ?? xpToday}
                   </div>
                   <div className="font-mono text-[8px] text-muted uppercase mt-1">TODAY</div>
                 </div>
                 <div>
                   <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: xpThisWeek > 0 ? 'var(--success)' : xpThisWeek < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
-                    {xpThisWeek >= 0 ? '+' : ''}{xpThisWeek}
+                    {dailyMomentum?.threeDayNet >= 0 ? '+' : ''}{dailyMomentum?.threeDayNet ?? xpThisWeek}
                   </div>
-                  <div className="font-mono text-[8px] text-muted uppercase mt-1">THIS WEEK</div>
+                  <div className="font-mono text-[8px] text-muted uppercase mt-1">3-DAY NET</div>
                 </div>
               </div>
             </div>
