@@ -329,84 +329,77 @@ export default function XPDashboard() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            CARD 1: TOP HERO ROW (SAGA / LEVEL / PROGRESS)
+            CARD 1: SAGA & LEVEL HERO CARD (FULLY CENTERED & ENLARGED)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-5 rounded-2xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-5 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.65)] overflow-hidden">
+        <div className="relative mb-6 rounded-3xl border border-indigo-500/20 bg-[#090d1a]/95 backdrop-blur-2xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.65)] overflow-hidden text-center">
           
           {/* Subtle Ambient Glows */}
           <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/10 blur-[90px] pointer-events-none" />
           <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-purple-500/10 blur-[90px] pointer-events-none" />
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+          <div className="flex flex-col items-center justify-center gap-5 relative z-10 max-w-3xl mx-auto">
             
-            {/* Left: 3D Orbital Gem + Level Status */}
-            <div className="flex items-center gap-5 sm:gap-7 w-full md:w-auto">
+            {/* Centered 3D Orbital Gem Emblem (Large) */}
+            <div className="relative flex items-center justify-center w-28 h-28 sm:w-32 sm:h-32 shrink-0">
+              <div className="absolute inset-0 rounded-full border border-indigo-500/30 animate-[spin_14s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
+              <div className="absolute inset-2 rounded-full border border-dashed border-purple-400/25 animate-[spin_20s_linear_infinite_reverse]" />
+              <div className="absolute top-1 left-4 w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
+              <div className="absolute bottom-2 right-4 w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc]" />
               
-              {/* Orbital Gem Emblem */}
-              <div className="relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 shrink-0">
-                <div className="absolute inset-0 rounded-full border border-indigo-500/30 animate-[spin_14s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
-                <div className="absolute inset-2 rounded-full border border-dashed border-purple-400/25 animate-[spin_20s_linear_infinite_reverse]" />
-                <div className="absolute top-1 left-4 w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_6px_#818cf8]" />
-                <div className="absolute bottom-2 right-4 w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#c084fc]" />
-                
-                {/* Core Faceted Diamond */}
-                <div className="absolute inset-3 rounded-full bg-gradient-to-br from-indigo-950/90 via-purple-950/80 to-slate-950 border border-indigo-400/40 shadow-[0_0_24px_rgba(129,140,248,0.5)] flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-pulse" />
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-[0_0_12px_rgba(168,85,247,0.9)]">
-                    <path d="M12 2L3 9.5L12 22L21 9.5L12 2Z" fill="url(#heroGemGrad1)" stroke="#c084fc" strokeWidth="1.1" strokeLinejoin="round" />
-                    <path d="M12 2L8 9.5L12 22L16 9.5L12 2Z" fill="url(#heroGemGrad2)" fillOpacity="0.9" />
-                    <path d="M3 9.5H21" stroke="#e9d5ff" strokeWidth="0.8" strokeLinecap="round" />
-                    <defs>
-                      <linearGradient id="heroGemGrad1" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                        <stop stopColor="#a855f7" />
-                        <stop offset="1" stopColor="#3730a3" />
-                      </linearGradient>
-                      <linearGradient id="heroGemGrad2" x1="8" y1="2" x2="16" y2="22" gradientUnits="userSpaceOnUse">
-                        <stop stopColor="#f5d0fe" />
-                        <stop offset="0.4" stopColor="#c084fc" />
-                        <stop offset="1" stopColor="#6366f1" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </div>
+              {/* Core Faceted Diamond */}
+              <div className="absolute inset-4 rounded-full bg-gradient-to-br from-indigo-950/90 via-purple-950/80 to-slate-950 border border-indigo-400/40 shadow-[0_0_30px_rgba(129,140,248,0.6)] flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-pulse" />
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-[0_0_16px_rgba(168,85,247,0.9)]">
+                  <path d="M12 2L3 9.5L12 22L21 9.5L12 2Z" fill="url(#heroGemGrad1)" stroke="#c084fc" strokeWidth="1.1" strokeLinejoin="round" />
+                  <path d="M12 2L8 9.5L12 22L16 9.5L12 2Z" fill="url(#heroGemGrad2)" fillOpacity="0.9" />
+                  <path d="M3 9.5H21" stroke="#e9d5ff" strokeWidth="0.8" strokeLinecap="round" />
+                  <defs>
+                    <linearGradient id="heroGemGrad1" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#a855f7" />
+                      <stop offset="1" stopColor="#3730a3" />
+                    </linearGradient>
+                    <linearGradient id="heroGemGrad2" x1="8" y1="2" x2="16" y2="22" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#f5d0fe" />
+                      <stop offset="0.4" stopColor="#c084fc" />
+                      <stop offset="1" stopColor="#6366f1" />
+                    </linearGradient>
+                  </defs>
+                </svg>
               </div>
-
-              {/* Text Info */}
-              <div className="flex flex-col justify-center min-w-0">
-                <div className="font-mono text-[11px] uppercase tracking-[0.2em] font-semibold text-slate-400">
-                  SAGA {currentRank.code} <span className="text-slate-600">•</span> <span className="text-indigo-400 font-bold">{rankTitle.toUpperCase()}</span>
-                </div>
-                <div className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight leading-tight mt-0.5">
-                  LEVEL <span className="text-indigo-400">{currentLevel}</span>
-                </div>
-                <div className="font-display font-black text-xl sm:text-2xl text-indigo-400 tracking-tight leading-tight mt-0.5">
-                  {totalXp.toLocaleString()} <span className="font-mono text-xs font-bold text-slate-400">XP</span>
-                </div>
-              </div>
-
             </div>
 
-            {/* Right: Next Level Progress Box */}
-            <div className="w-full md:w-[340px] lg:w-[380px] flex flex-col justify-center gap-1.5">
-              <div className="flex items-center justify-between font-mono text-xs uppercase tracking-widest text-slate-400 font-semibold">
-                <span>NEXT LEVEL <span className="text-indigo-400 font-bold">{currentLevel + 1}</span></span>
+            {/* Centered Saga Title (Enlarged) */}
+            <div className="font-mono text-xs sm:text-sm md:text-base uppercase tracking-[0.3em] font-bold text-slate-300">
+              SAGA {currentRank.code} <span className="text-slate-600 mx-1.5">•</span> <span className="text-indigo-400">{rankTitle.toUpperCase()}</span>
+            </div>
+
+            {/* Centered Huge Level & XP */}
+            <div className="space-y-1">
+              <div className="font-display font-black text-4xl sm:text-5xl md:text-6xl text-white tracking-tight leading-none">
+                LEVEL <span className="text-indigo-400">{currentLevel}</span>
               </div>
-              
-              <div className="font-display font-black text-lg sm:text-xl text-slate-100 tracking-tight">
-                {xpToGo.toLocaleString()} <span className="font-mono text-xs font-bold text-slate-400">XP TO GO</span>
+              <div className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-indigo-400 tracking-tight">
+                {totalXp.toLocaleString()} <span className="font-mono text-xs sm:text-sm font-bold text-slate-400">XP</span>
+              </div>
+            </div>
+
+            {/* Centered Progress Capsule Bar */}
+            <div className="w-full max-w-lg mt-2 flex flex-col gap-2">
+              <div className="flex items-center justify-between font-mono text-xs uppercase tracking-widest text-slate-400 font-semibold px-1">
+                <span>NEXT LEVEL <span className="text-indigo-400 font-bold">{currentLevel + 1}</span></span>
+                <span className="font-display font-bold text-slate-200 text-sm">{xpToGo.toLocaleString()} <span className="font-mono text-[10px] font-bold text-slate-400">XP TO GO</span></span>
               </div>
 
-              {/* Progress Capsule Bar */}
-              <div className="w-full h-2.5 rounded-full bg-slate-950/80 border border-white/10 p-[1px] overflow-hidden my-0.5">
+              <div className="w-full h-3 rounded-full bg-slate-950/80 border border-white/10 p-[1px] overflow-hidden">
                 <motion.div 
-                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.85)]"
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-purple-400 shadow-[0_0_14px_rgba(168,85,247,0.9)]"
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.max(4, Math.min(100, progressPct))}%` }}
                   transition={{ duration: 1.2, ease: 'easeOut' }}
                 />
               </div>
 
-              <div className="font-mono text-[11px] text-slate-400">
+              <div className="font-mono text-xs text-slate-400 text-center">
                 {current.toLocaleString()} / {required.toLocaleString()} XP
               </div>
             </div>
@@ -415,75 +408,58 @@ export default function XPDashboard() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            CARD 2: 4 METRIC CARDS (COMPACT BOXES PLACED SIDE-BY-SIDE)
+            CARD 2: 3 METRIC CARDS SIDE BY SIDE (LEFT, MIDDLE, RIGHT)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mb-6 w-full">
           
-          {/* Card 1: POSITIVE ACTIONS */}
-          <div className="rounded-xl border border-white/10 bg-[#090d1a]/95 hover:border-emerald-500/40 p-4 flex flex-col items-center justify-between text-center transition-all group shadow-[0_8px_20px_rgba(0,0,0,0.5)]">
-            <div className="w-9 h-9 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
-              <TrendingUp size={16} className="text-emerald-400" />
+          {/* LEFT: POSITIVE ACTIONS (ADDITIONS) */}
+          <div className="rounded-2xl border border-white/10 bg-[#090d1a]/95 hover:border-emerald-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_28px_rgba(0,0,0,0.5)]">
+            <div className="w-11 h-11 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center mb-2 shadow-[0_0_12px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
+              <TrendingUp size={18} className="text-emerald-400" />
             </div>
-            <div className="font-display font-black text-2xl sm:text-3xl text-emerald-400 tracking-tight leading-tight">
+            <div className="font-display font-black text-3xl sm:text-4xl text-emerald-400 tracking-tight leading-tight">
               {positiveCount}
             </div>
-            <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-0.5">
+            <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
               POSITIVE ACTIONS
             </div>
-            <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" height={32} width={130} />
-            <div className="font-mono text-[9px] sm:text-[10px] text-emerald-400 font-semibold tracking-wider">
+            <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" height={40} width={180} />
+            <div className="font-mono text-[10px] sm:text-[11px] text-emerald-400 font-semibold tracking-wider mt-1">
               ↑ 12% vs last 7 days
             </div>
           </div>
 
-          {/* Card 2: SUBTRACTIONS & PENALTIES */}
-          <div className="rounded-xl border border-white/10 bg-[#090d1a]/95 hover:border-rose-500/40 p-4 flex flex-col items-center justify-between text-center transition-all group shadow-[0_8px_20px_rgba(0,0,0,0.5)]">
-            <div className="w-9 h-9 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
-              <TrendingDown size={16} className="text-rose-400" />
+          {/* MIDDLE: SUBTRACTIONS & PENALTIES */}
+          <div className="rounded-2xl border border-white/10 bg-[#090d1a]/95 hover:border-rose-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_28px_rgba(0,0,0,0.5)]">
+            <div className="w-11 h-11 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center mb-2 shadow-[0_0_12px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
+              <TrendingDown size={18} className="text-rose-400" />
             </div>
-            <div className="font-display font-black text-2xl sm:text-3xl text-rose-400 tracking-tight leading-tight">
+            <div className="font-display font-black text-3xl sm:text-4xl text-rose-400 tracking-tight leading-tight">
               {deductionCount}
             </div>
-            <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-0.5">
+            <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
               SUBTRACTIONS & PENALTIES
             </div>
-            <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" height={32} width={130} />
-            <div className="font-mono text-[9px] sm:text-[10px] text-rose-400 font-semibold tracking-wider">
+            <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" height={40} width={180} />
+            <div className="font-mono text-[10px] sm:text-[11px] text-rose-400 font-semibold tracking-wider mt-1">
               ↓ 8% vs last 7 days
             </div>
           </div>
 
-          {/* Card 3: DAYS TRACKED */}
-          <div className="rounded-xl border border-white/10 bg-[#090d1a]/95 hover:border-blue-500/40 p-4 flex flex-col items-center justify-between text-center transition-all group shadow-[0_8px_20px_rgba(0,0,0,0.5)]">
-            <div className="w-9 h-9 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
-              <Calendar size={16} className="text-blue-400" />
+          {/* RIGHT: DAYS TRACKED */}
+          <div className="rounded-2xl border border-white/10 bg-[#090d1a]/95 hover:border-blue-500/40 p-5 flex flex-col items-center justify-between text-center transition-all group shadow-[0_12px_28px_rgba(0,0,0,0.5)]">
+            <div className="w-11 h-11 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center mb-2 shadow-[0_0_12px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
+              <Calendar size={18} className="text-blue-400" />
             </div>
-            <div className="font-display font-black text-2xl sm:text-3xl text-blue-400 tracking-tight leading-tight">
+            <div className="font-display font-black text-3xl sm:text-4xl text-blue-400 tracking-tight leading-tight">
               {daysTracked}
             </div>
-            <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-semibold mt-0.5">
+            <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold mt-1">
               DAYS TRACKED
             </div>
-            <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" height={32} width={130} />
-            <div className="font-mono text-[9px] sm:text-[10px] text-blue-400 font-semibold tracking-wider">
+            <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" height={40} width={180} />
+            <div className="font-mono text-[10px] sm:text-[11px] text-blue-400 font-semibold tracking-wider mt-1">
               Longest streak: {longestStreak} days
-            </div>
-          </div>
-
-          {/* Card 4: MOMENTUM METER */}
-          <div className="rounded-xl border border-white/10 bg-[#090d1a]/95 hover:border-purple-500/40 p-4 flex flex-col items-center justify-between text-center transition-all group shadow-[0_8px_20px_rgba(0,0,0,0.5)]">
-            <div className="w-9 h-9 rounded-full border border-purple-500/40 bg-purple-950/40 flex items-center justify-center mb-1.5 shadow-[0_0_10px_rgba(168,85,247,0.2)] group-hover:scale-105 transition-transform">
-              <Target size={16} className="text-purple-400" />
-            </div>
-            <div className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
-              MOMENTUM METER
-            </div>
-            <div className="font-display font-black text-2xl sm:text-3xl text-purple-400 tracking-tight leading-tight">
-              {momentumScore}%
-            </div>
-            <SegmentedMomentumBar percentage={momentumScore} />
-            <div className="font-mono text-[9px] sm:text-[10px] text-purple-300 font-semibold tracking-wider">
-              {momentumScore >= 75 ? 'Strong momentum' : momentumScore >= 50 ? 'Steady momentum' : 'At risk'}
             </div>
           </div>
 
