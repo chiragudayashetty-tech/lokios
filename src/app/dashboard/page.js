@@ -394,10 +394,9 @@ export default function MissionControl() {
         setAddictionData({ avgScreen: '—', avgDoom: 0, avgStreaming: '0', daysClean: 0, addScore: 50, todaySt: null, total: 0 })
       }
 
-      // ── EOD Recon Checklist Data Fetching ──
-      // Check work_logs for today's date
-      const { data: directWorkLogs } = await sb
-        .from('work_logs')
+      // Check work_hours_logs first (primary work logging table)
+      const { data: workHoursLogRows } = await sb
+        .from('work_hours_logs')
         .select('*')
         .eq('user_id', user.id)
         .eq('date', todayStr)
@@ -405,19 +404,21 @@ export default function MissionControl() {
 
       let workLogged = false
       let workHours = 0
-      if (directWorkLogs && directWorkLogs.length > 0) {
+      if (workHoursLogRows && workHoursLogRows.length > 0) {
         workLogged = true
-        workHours = directWorkLogs[0].total_hours_worked || directWorkLogs[0].duration_hours || 0
+        workHours = workHoursLogRows[0].hours || workHoursLogRows[0].duration_hours || 0
       } else {
-        const { data: workLogRows } = await sb
-          .from('work_hours_logs')
+        // Fallback: check work_logs but EXCLUDE speaking_practice entries
+        const { data: directWorkLogs } = await sb
+          .from('work_logs')
           .select('*')
           .eq('user_id', user.id)
           .eq('date', todayStr)
+          .neq('type', 'speaking_practice')
           .limit(1)
-        if (workLogRows && workLogRows.length > 0) {
+        if (directWorkLogs && directWorkLogs.length > 0) {
           workLogged = true
-          workHours = workLogRows[0].hours || workLogRows[0].duration_hours || 0
+          workHours = directWorkLogs[0].total_hours_worked || directWorkLogs[0].duration_hours || 0
         }
       }
       setEodWorkData({ logged: workLogged, hours: workHours })
