@@ -87,7 +87,7 @@ export function useHabitsInternal(user) {
       const lastDay = new Date(y, m + 1, 0) // last day of month
       const lastDayStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`
 
-      const [habitsRes, logsRes, xpRes] = await Promise.all([
+      const [habitsRes, logsRes] = await Promise.all([
         supabase
           .from('habits')
           .select('*')
@@ -98,31 +98,17 @@ export function useHabitsInternal(user) {
           .select('*')
           .eq('user_id', user.id)
           .gte('date', firstDay)
-          .lte('date', lastDayStr),
-        supabase
-          .from('xp_history')
-          .select('source_id, created_at')
-          .eq('user_id', user.id)
-          .eq('source_type', 'habit_failed')
-          .gte('created_at', firstDay)
+          .lte('date', lastDayStr)
       ])
 
       if (habitsRes.error) throw habitsRes.error
       if (logsRes.error) throw logsRes.error
 
-      // Merge real logs with virtual failed logs from xp_history
       const realLogs = logsRes.data || []
-      const virtualFailedLogs = (xpRes.data || []).map(xp => ({
-        id: `virtual_fail_${xp.source_id}_${xp.created_at}`,
-        habit_id: xp.source_id,
-        date: getLocalDateStr(new Date(xp.created_at)),
-        status: 'failed'
-      }))
-
       const fetchedHabits = habitsRes.data || []
       fetchedHabits.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0) || new Date(a.created_at) - new Date(b.created_at))
       setAllHabits(fetchedHabits)
-      setMonthLogs([...realLogs, ...virtualFailedLogs])
+      setMonthLogs(realLogs)
     } catch (err) {
       console.error('Error fetching habits:', err)
       setError(err.message || JSON.stringify(err) || 'Failed to load data. Please refresh and try again.')
@@ -160,116 +146,85 @@ export function useHabitsInternal(user) {
     processingRef.current.add(procKey)
 
     // Optimistic UI Update
-    const optimisticId = `opt_${habitId}_${crypto.randomUUID()}`
+    const optimisticId = `opt_${habitId}_${targetDate}`
     setMonthLogs(prev => {
       const filtered = prev.filter(l => !(l.habit_id === habitId && l.date === targetDate))
-      if (nextStatus === 'completed') {
-        return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: 'completed' }]
-      } else if (nextStatus === 'failed') {
-        return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: 'failed' }]
-      } else if (nextStatus === 'rest') {
-        return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: 'rest' }]
-      } else if (nextStatus === 'blocked') {
-        return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: 'blocked' }]
+      if (nextStatus === 'completed' || nextStatus === 'failed' || nextStatus === 'rest' || nextStatus === 'blocked') {
+        return [...filtered, { id: optimisticId, habit_id: habitId, date: targetDate, status: nextStatus }]
       }
       return filtered
     })
 
     try {
-      // 1. XP Adjustments: Remove any XP given from the previous state
-      // Find all real IDs from our local state to ensure we catch the exact ones causing UI issues!
-      const localRealLogs = monthLogs.filter(l => l.habit_id === habitId && l.date === targetDate)
-      
-      for (const realLog of localRealLogs) {
-        if (realLog.id.startsWith('virtual_fail_')) {
-          const prefix = `virtual_fail_${habitId}_`
-          if (realLog.id.startsWith(prefix)) {
-            const createdAt = realLog.id.substring(prefix.length)
-            const { data: xpRow } = await supabase.from('xp_history').select('id, amount').eq('user_id', user.id).eq('source_type', 'habit_failed').eq('source_id', habitId).eq('created_at', createdAt).single()
-            if (xpRow) {
-              await supabase.from('xp_history').delete().eq('id', xpRow.id)
-              await navigator.locks.request('xp_update_lock', async () => {
-                const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', user.id).single()
-                if (prof) {
-                  await supabase.from('profiles').update({ total_xp: Math.max(0, (prof.total_xp || 0) - xpRow.amount) }).eq('id', user.id)
-                }
-              })
-            }
-          }
-        } else if (realLog.status === 'failed') {
-          await robustRemoveXP(user.id, 'habit_failed', realLog.id)
-        } else if (!realLog.status || realLog.status === 'completed') {
-          await robustRemoveXP(user.id, 'habit_complete', realLog.id)
-        }
+      const stableSourceId = `habit_${habitId}_${targetDate}`
+      const habit = habits.find((h) => h.id === habitId)
+
+      // 1. Remove previous XP for this specific habit on this target date cleanly
+      await robustRemoveXP(user.id, null, stableSourceId)
+      // Also clean up any legacy entries keyed by log ID if existingLog was from DB
+      if (existingLog && existingLog.id && !existingLog.id.startsWith('opt_') && !existingLog.id.startsWith('virtual_fail_')) {
+        await robustRemoveXP(user.id, null, existingLog.id)
       }
 
-      const dbLogsOnly = localRealLogs.filter(l => !l.id.startsWith('virtual_fail_') && !l.id.startsWith('opt_'))
-      let newLog;
-      // 2. Database Sync
+      let newLog = null;
+      // 2. Database Sync in habit_logs
       if (nextStatus === 'none') {
-        if (dbLogsOnly.length > 0) {
-          for (const oldLog of dbLogsOnly) {
-            await robustRemoveXP(user.id, 'habit_complete', oldLog.id)
-            await robustRemoveXP(user.id, 'habit_failed', oldLog.id)
-          }
-          const { error: delErr } = await supabase.from('habit_logs').delete().in('id', dbLogsOnly.map(l => l.id))
-          if (delErr) throw delErr
-        }
+        await supabase.from('habit_logs').delete().eq('user_id', user.id).eq('habit_id', habitId).eq('date', targetDate)
       } else {
-        if (dbLogsOnly.length > 0) {
-          const targetId = dbLogsOnly[0].id
-          const { data: updatedRows, error: updateErr } = await supabase.from('habit_logs')
-            .update({ status: nextStatus })
-            .eq('id', targetId)
-            .select()
-            
-          if (updateErr) throw updateErr
-          if (updatedRows && updatedRows.length > 0) newLog = updatedRows[0]
-          
-          if (dbLogsOnly.length > 1) {
-            const extraIds = dbLogsOnly.slice(1).map(l => l.id)
-            await supabase.from('habit_logs').delete().in('id', extraIds)
-          }
-        } else {
-          // If no local logs existed (possible desync on past days), safely UPSERT
-          const { data: insertedRows, error: insertErr } = await supabase.from('habit_logs')
-            .upsert({ user_id: user.id, habit_id: habitId, date: targetDate, status: nextStatus }, { onConflict: 'habit_id,date' })
-            .select()
-          if (insertErr) throw insertErr
-          newLog = insertedRows[0]
+        const { data: upsertedRows, error: upsertErr } = await supabase.from('habit_logs')
+          .upsert({ user_id: user.id, habit_id: habitId, date: targetDate, status: nextStatus }, { onConflict: 'habit_id,date' })
+          .select()
+        if (upsertErr) throw upsertErr
+        if (upsertedRows && upsertedRows.length > 0) newLog = upsertedRows[0]
+      }
+
+      // Update local state with real DB log
+      setMonthLogs(prev => {
+        const withoutOpt = prev.filter(l => l.id !== optimisticId)
+        return newLog ? [...withoutOpt, newLog] : withoutOpt
+      })
+
+      // 3. Award/Penalize New XP anchored to targetDate
+      if (nextStatus === 'completed' || nextStatus === 'failed') {
+        const targetDayOfWeek = new Date(targetDate).getDay()
+        const freqDays = habit?.frequency_days || [0, 1, 2, 3, 4, 5, 6]
+        const isBlocked = !freqDays.includes(targetDayOfWeek)
+        const baseXP = habit?.xp_per_completion ? Math.max(5, parseInt(habit.xp_per_completion, 10)) : 25
+        const createdAt = targetDate === currentTodayStr ? new Date().toISOString() : `${targetDate}T12:00:00.000Z`
+
+        if (nextStatus === 'completed') {
+          await robustAwardXP(
+            user.id,
+            isBlocked ? 0 : baseXP,
+            'habit_complete',
+            stableSourceId,
+            `Completed routine: ${habit?.title || 'Unknown'}`,
+            habit?.stat_category || 'discipline',
+            createdAt
+          )
+        } else if (nextStatus === 'failed') {
+          const priorMisses = getConsecutiveMisses(habitId, targetDate, monthLogs, habit)
+          const isDoublePenalty = priorMisses >= 1
+          const penaltyMagnitude = isDoublePenalty ? baseXP : Math.max(5, Math.round(baseXP * 0.5))
+          const penaltyXP = isBlocked ? 0 : -penaltyMagnitude
+          const reason = isDoublePenalty 
+            ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP)` 
+            : `Failed routine: ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP)`
+          await robustAwardXP(
+            user.id,
+            penaltyXP,
+            'habit_failed',
+            stableSourceId,
+            reason,
+            habit?.stat_category || 'discipline',
+            createdAt
+          )
         }
       }
-      
-        
-        // Update optimistic UI with real DB log
-        setMonthLogs(prev => prev.map(l => l.id === optimisticId ? newLog : l))
 
-        const habit = habits.find((h) => h.id === habitId)
+      // Persistently update War Room Battle HP in DB for ALL status transitions
+      await syncWarRoomHabitChange(user.id, habitId, habit?.title || 'Habit', currentStatus, nextStatus)
 
-        // Award New XP
-        if (newLog) {
-          const targetDayOfWeek = new Date(targetDate).getDay()
-          const freqDays = habit?.frequency_days || [0, 1, 2, 3, 4, 5, 6]
-          const isBlocked = !freqDays.includes(targetDayOfWeek)
-          
-          if (nextStatus === 'completed') {
-            const baseXP = habit?.xp_per_completion ? Math.max(5, parseInt(habit.xp_per_completion, 10)) : 25
-            await robustAwardXP(user.id, isBlocked ? 0 : baseXP, 'habit_complete', newLog.id, `Completed routine: ${habit?.title || 'Unknown'}`, habit?.stat_category || 'discipline')
-          } else if (nextStatus === 'failed') {
-            const baseXP = habit?.xp_per_completion ? Math.max(5, parseInt(habit.xp_per_completion, 10)) : 25
-            const priorMisses = getConsecutiveMisses(habitId, targetDate, monthLogs, habit)
-            const isDoublePenalty = priorMisses >= 1
-            const penaltyMagnitude = isDoublePenalty ? baseXP : Math.max(5, Math.round(baseXP * 0.5))
-            const penaltyXP = isBlocked ? 0 : -penaltyMagnitude
-            const reason = isDoublePenalty 
-              ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP)` 
-              : `Failed routine: ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP)`
-            await robustAwardXP(user.id, penaltyXP, 'habit_failed', newLog.id, reason, habit?.stat_category || 'discipline')
-          }
-        }
-
-        // Persistently update War Room Battle HP in DB for ALL status transitions
-        await syncWarRoomHabitChange(user.id, habitId, habit?.title || 'Habit', currentStatus, nextStatus)
       try { 
         await calculateAndUpdateStreak(user.id, habitId)
 
@@ -280,9 +235,7 @@ export function useHabitsInternal(user) {
           if (!localStorage.getItem(dailyBonusKey)) {
             // Get the latest monthLogs state to check completion
             const todayCompletedIds = new Set()
-            // Include the one we just completed
             todayCompletedIds.add(habitId)
-            // Plus existing completed logs for today
             monthLogs.forEach(l => {
               if (l.date === currentTodayStr && (!l.status || l.status === 'completed')) {
                 todayCompletedIds.add(l.habit_id)
@@ -290,7 +243,7 @@ export function useHabitsInternal(user) {
             })
             const allDone = habits.every(h => todayCompletedIds.has(h.id))
             if (allDone && habits.length > 0) {
-              await robustAwardXP(user.id, XP_REWARDS.daily_all_habits || 25, 'daily_all_complete', currentTodayStr, '🏆 100% OPERATIONAL — All daily ops completed!', 'discipline')
+              await robustAwardXP(user.id, XP_REWARDS.daily_all_habits || 25, 'daily_all_complete', `daily_all_${currentTodayStr}`, '🏆 100% OPERATIONAL — All daily ops completed!', 'discipline')
               localStorage.setItem(dailyBonusKey, 'true')
             }
           }
@@ -585,10 +538,12 @@ export function useHabitsInternal(user) {
               const reason = isDoublePenalty 
                 ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${h.title} (-${penaltyMagnitude} XP)` 
                 : `Missed routine: ${h.title} (-${penaltyMagnitude} XP)`
-              await robustAwardXP(user.id, penaltyXP, 'habit_failed', h.id, reason, h.stat_category || 'discipline')
+
+              const stableSourceId = `habit_${h.id}_${dateStr}`
+              const createdAt = `${dateStr}T12:00:00.000Z`
+              await robustAwardXP(user.id, penaltyXP, 'habit_failed', stableSourceId, reason, h.stat_category || 'discipline', createdAt)
               
-              const failId = `virtual_fail_${h.id}_auto_${Date.now()}_${Math.random()}`
-              newVirtualLogs.push({ id: failId, habit_id: h.id, date: dateStr, status: 'failed' })
+              newVirtualLogs.push({ id: stableSourceId, habit_id: h.id, date: dateStr, status: 'failed' })
               dbInsertPayloads.push({ user_id: user.id, habit_id: h.id, date: dateStr, status: 'failed' })
               createdAny = true
             }
@@ -597,13 +552,14 @@ export function useHabitsInternal(user) {
       }
       
       if (dbInsertPayloads.length > 0) {
-        await supabase.from('habit_logs').insert(dbInsertPayloads)
+        await supabase.from('habit_logs').upsert(dbInsertPayloads, { onConflict: 'habit_id,date' })
       }
       
       if (newVirtualLogs.length > 0) {
         setMonthLogs(prev => {
-          // Only add logs that belong to the currently viewed month (monthLogs might only be partial)
-          return [...prev, ...newVirtualLogs]
+          const newKeys = new Set(newVirtualLogs.map(l => `${l.habit_id}_${l.date}`))
+          const filtered = prev.filter(l => !newKeys.has(`${l.habit_id}_${l.date}`))
+          return [...filtered, ...newVirtualLogs]
         })
       }
       
