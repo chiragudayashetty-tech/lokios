@@ -794,17 +794,23 @@ export default function MissionControl() {
   const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
   const momentumColor        = dailyMomentum?.color || (momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)')
   const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
-  // Check if Weekly Debrief has been completed for the current week starting Monday
+  // Check if Weekly Debrief has been completed for the current week starting Sunday
   const isDebriefDoneThisWeek = useMemo(() => {
     if (!latestDebrief) return false
-    const startOfWeekStr = getLocalDateStr(getStartOfWeek(new Date()))
+    const now = new Date()
+    const dayOfWeek = now.getDay() // 0 = Sun, 1 = Mon, ..., 6 = Sat
+    const sunday = new Date(now)
+    sunday.setDate(now.getDate() - dayOfWeek)
+    sunday.setHours(0, 0, 0, 0)
+    const currentCycleStartStr = getLocalDateStr(sunday)
+
     const debriefDate = latestDebrief.date || (latestDebrief.created_at ? getLocalDateStr(new Date(latestDebrief.created_at)) : '')
-    return debriefDate >= startOfWeekStr
+    return debriefDate >= currentCycleStartStr
   }, [latestDebrief])
 
-  // Parse Next Week Priorities from latest Weekly Debrief log
-  const nextWeekPriorities = (function() {
-    if (!latestDebrief?.description) return null
+  // Parse Next Week Priorities ONLY if the debrief belongs to the current cycle
+  const nextWeekPriorities = useMemo(() => {
+    if (!isDebriefDoneThisWeek || !latestDebrief?.description) return null
     const text = latestDebrief.description
     const marker = '### Priorities for Next Week'
     const idx = text.indexOf(marker)
@@ -813,7 +819,7 @@ export default function MissionControl() {
     const nextHeaderIdx = section.indexOf('### ')
     if (nextHeaderIdx !== -1) section = section.substring(0, nextHeaderIdx).trim()
     return section
-  })()
+  }, [isDebriefDoneThisWeek, latestDebrief])
 
   // Split raw debrief priorities string into up to 3 separate priority tasks
   const parsedPriorities = useMemo(() => {
@@ -855,7 +861,17 @@ export default function MissionControl() {
     if (parsedPriorities && parsedPriorities.length > 0) {
       sourceList = parsedPriorities
     } else {
-      sourceList = tasks.filter(t => t.category === 'weekly_goal' && t.status !== 'cancelled').slice(0, 3)
+      const now = new Date()
+      const dayOfWeek = now.getDay()
+      const sunday = new Date(now)
+      sunday.setDate(now.getDate() - dayOfWeek)
+      const currentCycleStartStr = getLocalDateStr(sunday)
+
+      sourceList = tasks.filter(t => 
+        t.category === 'weekly_goal' && 
+        t.status !== 'cancelled' &&
+        (!t.due_date || t.due_date >= currentCycleStartStr)
+      ).slice(0, 3)
     }
 
     return sourceList.map((item, idx) => {

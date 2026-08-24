@@ -65,6 +65,15 @@ export default function JournalPage() {
 
   const [activeTab, setActiveTab] = useState('daily')
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('tab') === 'weekly') {
+        setActiveTab('weekly')
+      }
+    }
+  }, [])
+
   // ─── DAILY JOURNAL STATE ───
   const [content, setContent] = useState('')
   const [mood, setMood] = useState('')
