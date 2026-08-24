@@ -46,15 +46,20 @@ export function calculateDailyMomentum(history = [], now = new Date()) {
     }
   })
 
-  // Recovery has priority: the user is rebuilding after a meaningful recent loss.
-  const isRecovery = threeDayNet <= -100 && todayNet > 0
-  const isAtRisk = todayNet < 0 || threeDayNet <= -100 || negativeEntriesToday >= 2
-  const isSurging = todayNet >= 100 && positiveEntriesToday >= 2
+  // ─── DYNAMIC MOMENTUM STATE DETERMINATION ───
+  // 1. SURGING: Strong net positive gains today (>= +80 XP).
+  // 2. RECOVERY: Positive XP today while overcoming a prior negative 3-day trend.
+  // 3. STEADY: Stable net neutral/positive day.
+  // 4. AT RISK: Losing net XP today or inactive during severe multi-day deficit.
+  const isSurging = todayNet >= 80 && positiveEntriesToday >= 1
+  const isRecovery = !isSurging && todayNet > 0 && threeDayNet < 0
+  const isSteady = !isSurging && !isRecovery && todayNet >= 0 && threeDayNet >= 0
+  const isAtRisk = todayNet < 0 || (todayNet === 0 && (threeDayNet <= -100 || negativeEntriesToday >= 2))
 
-  const state = isRecovery ? 'RECOVERY' : isAtRisk ? 'AT RISK' : isSurging ? 'SURGING' : 'STEADY'
+  const state = isSurging ? 'SURGING' : isRecovery ? 'RECOVERY' : isSteady ? 'STEADY' : isAtRisk ? 'AT RISK' : 'STEADY'
   const color = {
     SURGING: 'var(--success)',
-    STEADY: 'var(--warning)',
+    STEADY: 'var(--accent-primary)',
     'AT RISK': 'var(--danger)',
     RECOVERY: 'var(--info)',
   }[state]
