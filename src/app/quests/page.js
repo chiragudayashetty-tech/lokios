@@ -100,8 +100,9 @@ export default function DailyOps() {
   const yesterdayStr = getLocalDateStr(yesterdayDate)
   const todayStr = getLocalDateStr(new Date())
 
-  // Body Weight Widget State
+  // Body Weight & Belly Widget State
   const [weightKg, setWeightKg] = useState('')
+  const [bellyCm, setBellyCm] = useState('')
   const [weightLoggedToday, setWeightLoggedToday] = useState(false)
   const [weightSaving, setWeightSaving] = useState(false)
   const [weightMsg, setWeightMsg] = useState(null)
@@ -197,7 +198,7 @@ export default function DailyOps() {
     if (typeof window !== 'undefined') localStorage.setItem('lokios_last_waketime', val)
   }
 
-  // Fetch recent weight logs & delta calculations
+  // Fetch recent weight & belly logs & delta calculations
   useEffect(() => {
     if (!user) return
     const sb = createClient()
@@ -207,26 +208,39 @@ export default function DailyOps() {
       .order('date', { ascending: true })
       .limit(30)
       .then(({ data }) => {
+        let localBellyMap = {}
+        if (typeof window !== 'undefined') {
+          try {
+            const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+            if (raw) localBellyMap = JSON.parse(raw)
+          } catch (e) {}
+        }
         if (data && data.length > 0) {
-          setRecentWeightLogs(data)
-          const todayEntry = data.find(d => d.date === todayStr)
+          const merged = data.map(d => ({
+            ...d,
+            belly_size_cm: d.belly_size_cm ?? d.waist_cm ?? localBellyMap[d.date] ?? null
+          }))
+          setRecentWeightLogs(merged)
+          const todayEntry = merged.find(d => d.date === todayStr)
           if (todayEntry) {
             setWeightKg(String(todayEntry.weight_kg))
+            if (todayEntry.belly_size_cm) setBellyCm(String(todayEntry.belly_size_cm))
             setWeightLoggedToday(true)
           } else {
-            const latest = data[data.length - 1]
+            const latest = merged[merged.length - 1]
             setWeightKg(String(latest.weight_kg))
+            if (latest.belly_size_cm) setBellyCm(String(latest.belly_size_cm))
             setWeightLoggedToday(false)
           }
           
-          const yesterdayEntry = data.find(d => d.date === yesterdayStr)
-          const currentW = todayEntry ? todayEntry.weight_kg : data[data.length - 1].weight_kg
+          const yesterdayEntry = merged.find(d => d.date === yesterdayStr)
+          const currentW = todayEntry ? todayEntry.weight_kg : merged[merged.length - 1].weight_kg
           if (yesterdayEntry) {
             const diff = parseFloat((currentW - yesterdayEntry.weight_kg).toFixed(1))
             setWeightDeltaYesterday(diff)
           }
-          if (data.length >= 2) {
-            const weekAgoEntry = data[Math.max(0, data.length - 7)]
+          if (merged.length >= 2) {
+            const weekAgoEntry = merged[Math.max(0, merged.length - 7)]
             const diff7 = parseFloat((currentW - weekAgoEntry.weight_kg).toFixed(1))
             setWeightDelta7Days(diff7)
           }
@@ -304,24 +318,46 @@ export default function DailyOps() {
   }, [bedtime, wakeTime])
 
   const handleSaveWeight = async () => {
-    if (!user || !weightKg) return
+    if (!user || (!weightKg && !bellyCm)) return
     const w = parseFloat(weightKg)
+    const b = bellyCm ? parseFloat(bellyCm) : null
     if (isNaN(w) || w <= 0) return
     setWeightSaving(true)
     const sb = createClient()
 
-    // Delete any existing weight log for today, then insert fresh (like habits)
+    if (b && typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+        const map = raw ? JSON.parse(raw) : {}
+        map[todayStr] = b
+        localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(map))
+      } catch (e) {}
+    }
+
+    // Delete any existing weight log for today, then insert fresh
     await sb.from('weight_logs').delete().eq('user_id', user.id).eq('date', todayStr)
     const { error: wErr } = await sb.from('weight_logs').insert({
       user_id: user.id,
       date: todayStr,
-      weight_kg: w
+      weight_kg: w,
+      belly_size_cm: b,
+      waist_cm: b
     })
 
-    if (!wErr) {
-      setWeightLoggedToday(true)
-      setWeightMsg({ success: true, title: 'BODY WEIGHT LOGGED', subtitle: `${w} kg recorded for today` })
+    if (wErr) {
+      await sb.from('weight_logs').insert({
+        user_id: user.id,
+        date: todayStr,
+        weight_kg: w
+      })
     }
+
+    setWeightLoggedToday(true)
+    setWeightMsg({
+      success: true,
+      title: 'BODY RECON LOGGED',
+      subtitle: `${w} kg${b ? ` · ${b} cm waist` : ''} recorded for today`
+    })
     setWeightSaving(false)
   }
 
@@ -831,23 +867,47 @@ export default function DailyOps() {
               </div>
             </div>
 
-            {/* Middle Zone: Big Weight Input + Sparkline */}
+            {/* Middle Zone: Big Weight Input + Belly Size Input + Sparkline */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 my-auto py-2">
               
-              {/* Big Number Display & Input */}
-              <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
-                <div className="flex items-baseline gap-1.5">
-                  <input
-                    type="number"
-                    step="0.1"
-                    placeholder="77.5"
-                    value={weightKg}
-                    onChange={e => setWeightKg(e.target.value)}
-                    className="font-display font-black text-4xl sm:text-5xl text-emerald-400 bg-transparent border-none outline-none w-32 sm:w-36 text-center sm:text-left tracking-tight focus:ring-1 focus:ring-emerald-500/50 rounded-lg"
-                  />
-                  <span className="font-mono text-base font-bold text-slate-400 select-none">kg</span>
+              {/* Inputs */}
+              <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
+                {/* Weight */}
+                <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                  <div className="flex items-baseline gap-1">
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder="77.5"
+                      value={weightKg}
+                      onChange={e => setWeightKg(e.target.value)}
+                      className="font-display font-black text-3xl sm:text-4xl text-emerald-400 bg-transparent border-none outline-none w-28 sm:w-32 text-center sm:text-left tracking-tight focus:ring-1 focus:ring-emerald-500/50 rounded-lg"
+                    />
+                    <span className="font-mono text-sm font-bold text-slate-400 select-none">kg</span>
+                  </div>
+                  <span className="font-mono text-[10px] text-slate-400 mt-0.5">Weight</span>
                 </div>
-                <span className="font-mono text-[11px] text-slate-400 mt-0.5">Current Weight</span>
+
+                {/* Divider */}
+                <div className="h-8 w-px bg-white/10 hidden sm:block" />
+
+                {/* Belly / Waist */}
+                <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+                  <div className="flex items-baseline gap-1">
+                    <input
+                      type="number"
+                      step="0.5"
+                      placeholder="88.0"
+                      value={bellyCm}
+                      onChange={e => setBellyCm(e.target.value)}
+                      className="font-display font-black text-3xl sm:text-4xl text-sky-400 bg-transparent border-none outline-none w-28 sm:w-32 text-center sm:text-left tracking-tight focus:ring-1 focus:ring-sky-500/50 rounded-lg"
+                    />
+                    <span className="font-mono text-sm font-bold text-sky-400 select-none">cm</span>
+                  </div>
+                  <span className="font-mono text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                    Belly / Waist {bellyCm && !isNaN(parseFloat(bellyCm)) && <span className="text-muted">({(parseFloat(bellyCm) / 2.54).toFixed(1)}")</span>}
+                  </span>
+                </div>
               </div>
 
               {/* Sparkline Wave with Dots */}

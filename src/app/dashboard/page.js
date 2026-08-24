@@ -141,7 +141,7 @@ export default function MissionControl() {
   const [eodScreenForm, setEodScreenForm] = useState({ total_hours: '4', doomscroll_minutes: '30', streaming_hours: '0.5' })
   const [eodJournalForm, setEodJournalForm] = useState({ mood: 'good', content: '' })
   const [eodWorkForm, setEodWorkForm] = useState({ hours: '2', work_type: 'deep_work', notes: '' })
-  const [eodWellnessForm, setEodWellnessForm] = useState({ type: 'sleep', sleep_hours: '8', bedtime: '23:00', wake_time: '07:00', weight_kg: '' })
+  const [eodWellnessForm, setEodWellnessForm] = useState({ type: 'sleep', sleep_hours: '8', bedtime: '23:00', wake_time: '07:00', weight_kg: '', belly_size_cm: '' })
   const [eodSpeakingForm, setEodSpeakingForm] = useState({ topic: '', drive_link: '', notes: '' })
 
   useEffect(() => {
@@ -277,21 +277,45 @@ export default function MissionControl() {
         setWeeklyWinRate(Math.round((uniqueDaysWithCompletion / daysElapsed) * 100))
       }
 
-      // ── Weight Tracking (Body Recon Widget) ──
+      // ── Weight & Belly Tracking (Body Recon Widget) ──
       const { data: wConfig } = await sb.from('weight_config').select('*').eq('user_id', user.id).maybeSingle()
       if (wConfig) {
-        const { data: latestLog } = await sb.from('weight_logs').select('weight_kg, date').eq('user_id', user.id).order('date', { ascending: false }).limit(1).maybeSingle()
-        const { data: todayLog } = await sb.from('weight_logs').select('id').eq('user_id', user.id).eq('date', todayStr).maybeSingle()
+        const { data: latestLog } = await sb.from('weight_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(1).maybeSingle()
+        const { data: todayLog } = await sb.from('weight_logs').select('*').eq('user_id', user.id).eq('date', todayStr).maybeSingle()
+        
+        let localBellyMap = {}
+        let localConfig = {}
+        if (typeof window !== 'undefined') {
+          try {
+            const rawBelly = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+            if (rawBelly) localBellyMap = JSON.parse(rawBelly)
+            const rawCfg = localStorage.getItem(`lokios_wellness_config_${user.id}`)
+            if (rawCfg) localConfig = JSON.parse(rawCfg)
+          } catch (e) {}
+        }
+
+        const effectiveStartWeight = wConfig.starting_weight || localConfig.starting_weight || 80
+        const effectiveTargetWeight = wConfig.target_weight || localConfig.target_weight || 70
+        const effectiveStartBelly = wConfig.starting_belly_cm || localConfig.starting_belly_cm || 92
+        const effectiveTargetBelly = wConfig.target_belly_cm || localConfig.target_belly_cm || 80
+
         if (latestLog) {
-          const lost = (wConfig.starting_weight - latestLog.weight_kg).toFixed(1)
-          const range = wConfig.starting_weight - wConfig.target_weight
+          const lost = (effectiveStartWeight - latestLog.weight_kg).toFixed(1)
+          const range = effectiveStartWeight - effectiveTargetWeight
           const pct = range > 0 ? Math.min(100, Math.max(0, Math.round((parseFloat(lost) / range) * 100))) : 0
+
+          const latestBellyVal = latestLog.belly_size_cm ?? latestLog.waist_cm ?? localBellyMap[latestLog.date] ?? (todayLog ? (todayLog.belly_size_cm ?? localBellyMap[todayStr]) : null)
+          const bellyLost = (latestBellyVal && effectiveStartBelly) ? (effectiveStartBelly - latestBellyVal).toFixed(1) : null
+
           setWeightData({
             current: parseFloat(latestLog.weight_kg),
-            target: parseFloat(wConfig.target_weight),
-            start: parseFloat(wConfig.starting_weight),
+            target: parseFloat(effectiveTargetWeight),
+            start: parseFloat(effectiveStartWeight),
             lost: parseFloat(lost),
             progressPct: pct,
+            currentBelly: latestBellyVal ? parseFloat(latestBellyVal) : null,
+            targetBelly: effectiveTargetBelly ? parseFloat(effectiveTargetBelly) : null,
+            bellyLost: bellyLost ? parseFloat(bellyLost) : null,
             loggedToday: !!todayLog
           })
         }
@@ -561,13 +585,24 @@ export default function MissionControl() {
     e.preventDefault()
     if (!user) return
     const isSleep = eodWellnessForm.type === 'sleep'
+    const bVal = eodWellnessForm.belly_size_cm ? parseFloat(eodWellnessForm.belly_size_cm) : null
     const detail = isSleep 
       ? `Sleep: ${parseFloat(eodWellnessForm.sleep_hours) || 8}h`
-      : `Weight: ${parseFloat(eodWellnessForm.weight_kg) || 75}kg`
+      : `Weight: ${parseFloat(eodWellnessForm.weight_kg) || 75}kg${bVal ? ` · ${bVal}cm` : ''}`
 
     // Optimistic UI updates (0ms delay)
     setEodWellnessData({ logged: true, detail })
     setEodQuickLogModal(null)
+
+    // Cache belly in localStorage
+    if (!isSleep && bVal && typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+        const map = raw ? JSON.parse(raw) : {}
+        map[todayStr] = bVal
+        localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(map))
+      } catch (err) {}
+    }
 
     // Background DB sync
     const sb = createClient()
@@ -585,9 +620,18 @@ export default function MissionControl() {
       const payload = {
         user_id: user.id,
         date: todayStr,
-        weight_kg: parseFloat(eodWellnessForm.weight_kg) || 75
+        weight_kg: parseFloat(eodWellnessForm.weight_kg) || 75,
+        belly_size_cm: bVal,
+        waist_cm: bVal
       }
-      await sb.from('weight_logs').insert(payload)
+      const { error: err1 } = await sb.from('weight_logs').insert(payload)
+      if (err1) {
+        await sb.from('weight_logs').insert({
+          user_id: user.id,
+          date: todayStr,
+          weight_kg: payload.weight_kg
+        })
+      }
     }
   }
 
@@ -1888,13 +1932,13 @@ export default function MissionControl() {
               </div>
             </div>
 
-            {/* BODY RECON WIDGET */}
+            {/* BODY & BELLY RECON WIDGET */}
             {weightData && (
-              <Link href="/quests">
+              <Link href="/weight">
                 <div className="dashboard-card hover:border-amber transition-colors cursor-pointer" style={{ borderLeft: '3px solid var(--accent-primary)' }}>
                   <div className="flex items-center gap-1.5 mb-3">
                     <Scale size={10} color="var(--accent-primary)" />
-                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Body Recon</span>
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Body Recon & Waist</span>
                     {weightData.loggedToday && <span className="ml-auto font-mono text-[8px] text-success">✓ LOGGED</span>}
                   </div>
                   <div className="flex items-end justify-between mb-3">
@@ -1902,15 +1946,30 @@ export default function MissionControl() {
                       <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.8rem', color: 'var(--text-primary)' }}>
                         {weightData.current}
                         <span className="font-mono text-[9px] text-muted ml-1">kg</span>
+                        {weightData.currentBelly && (
+                          <span className="font-mono text-xs text-info font-bold ml-2">
+                            · {weightData.currentBelly} <span className="text-[9px] text-muted font-normal">cm</span>
+                          </span>
+                        )}
                       </div>
                       <div className="font-mono text-[8px] text-muted uppercase mt-1">
                         {weightData.lost > 0 ? `▼ ${weightData.lost} kg lost` : 'Current'}
+                        {weightData.bellyLost !== null && (
+                          <span className="text-info ml-1.5 font-bold">
+                            {weightData.bellyLost > 0 ? `· ▼ ${weightData.bellyLost}cm waist` : weightData.bellyLost < 0 ? `· ▲ +${Math.abs(weightData.bellyLost)}cm` : ''}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="font-mono text-[10px] font-bold" style={{ color: 'var(--accent-primary)' }}>
                         → {weightData.target} kg
                       </div>
+                      {weightData.targetBelly && (
+                        <div className="font-mono text-[9px] text-info font-bold">
+                          → {weightData.targetBelly} cm
+                        </div>
+                      )}
                       <div className="font-mono text-[8px] text-muted mt-0.5">{weightData.progressPct}%</div>
                     </div>
                   </div>
@@ -2271,9 +2330,15 @@ export default function MissionControl() {
                       </div>
                     </>
                   ) : (
-                    <div>
-                      <label className="font-mono text-xs text-muted mb-1 block">BODY WEIGHT (KG)</label>
-                      <input type="number" step="0.1" required className="input w-full font-mono text-xs" value={eodWellnessForm.weight_kg} onChange={e => setEodWellnessForm({...eodWellnessForm, weight_kg: e.target.value})} placeholder="e.g. 75.0" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">WEIGHT (KG)</label>
+                        <input type="number" step="0.1" required className="input w-full font-mono text-xs" value={eodWellnessForm.weight_kg} onChange={e => setEodWellnessForm({...eodWellnessForm, weight_kg: e.target.value})} placeholder="e.g. 75.0" />
+                      </div>
+                      <div>
+                        <label className="font-mono text-xs text-info mb-1 block">BELLY / WAIST (CM)</label>
+                        <input type="number" step="0.5" className="input w-full font-mono text-xs border-info/40" value={eodWellnessForm.belly_size_cm} onChange={e => setEodWellnessForm({...eodWellnessForm, belly_size_cm: e.target.value})} placeholder="e.g. 88.0" />
+                      </div>
                     </div>
                   )}
 

@@ -599,13 +599,13 @@ export default function IntelExportModal({ isOpen, onClose }) {
           <div class="section">
             <h2 class="section-title">⚖️ WEIGHT RECON LOGS (${weightLogs.length})</h2>
             <table>
-              <thead><tr><th>Date</th><th>Weight (kg)</th><th>Body Fat %</th><th>Notes</th></tr></thead>
+              <thead><tr><th>Date</th><th>Weight (kg)</th><th>Belly / Waist</th><th>Notes</th></tr></thead>
               <tbody>
                 ${weightLogs.map(l => `
                   <tr>
                     <td>${l.date}</td>
                     <td><strong class="text-amber">${l.weight_kg ?? l.weight ?? '—'}kg</strong></td>
-                    <td>${l.body_fat_percentage ? `${l.body_fat_percentage}%` : '—'}</td>
+                    <td>${l.belly_size_cm ? `${l.belly_size_cm}cm` : l.waist_cm ? `${l.waist_cm}cm` : '—'}</td>
                     <td>${l.notes || '—'}</td>
                   </tr>
                 `).join('')}

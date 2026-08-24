@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -8,97 +8,151 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Scale, TrendingDown, TrendingUp, Trophy, Lock, Check, Target, Flame,
-  Moon, Clock, CheckCircle2, XCircle, Swords, BarChart2, Activity, ChevronDown, ChevronUp
+  Scale, TrendingDown, Trophy, Lock, Check, Target, Flame,
+  Moon, Clock, CheckCircle2, XCircle, BarChart2, Activity, ChevronDown, ChevronUp,
+  Ruler, Sparkles, Calendar, Trash2, Edit3
 } from 'lucide-react'
-import { ResponsiveContainer, AreaChart, Area, Tooltip, ReferenceLine, XAxis, YAxis, BarChart, Bar, Cell } from 'recharts'
+import {
+  ResponsiveContainer, AreaChart, Area, Tooltip, ReferenceLine, XAxis, YAxis,
+  LineChart, Line, ComposedChart
+} from 'recharts'
 
 export default function WellnessPage() {
   const { user } = useAuth()
   const supabase = createClient()
   const todayStr = getLocalDateStr(new Date())
-  const [showSleepHistory, setShowSleepHistory] = useState(false)
 
   const [activeTab, setActiveTab] = useState('body')
+  const [showSleepHistory, setShowSleepHistory] = useState(false)
+  const [showBodyHistory, setShowBodyHistory] = useState(false)
 
-  // ─── BODY RECON STATE ───
+  // ─── BODY & BELLY RECON STATE ───
   const [config, setConfig] = useState(null)
   const [logs, setLogs] = useState([])
   const [loadingBody, setLoadingBody] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loggedToday, setLoggedToday] = useState(false)
+
+  const [logDate, setLogDate] = useState(todayStr)
   const [todayWeight, setTodayWeight] = useState('')
+  const [todayBelly, setTodayBelly] = useState('')
   const [logToast, setLogToast] = useState(null)
-  const [setupStarting, setSetupStarting] = useState('')
-  const [setupTarget, setSetupTarget] = useState('')
+
+  const [setupStartingWeight, setSetupStartingWeight] = useState('')
+  const [setupTargetWeight, setSetupTargetWeight] = useState('')
+  const [setupStartingBelly, setSetupStartingBelly] = useState('')
+  const [setupTargetBelly, setSetupTargetBelly] = useState('')
+
   const [showNewTarget, setShowNewTarget] = useState(false)
   const [newTargetWeight, setNewTargetWeight] = useState('')
+  const [newTargetBelly, setNewTargetBelly] = useState('')
+
+  const [chartMetric, setChartMetric] = useState('both') 
+  const [editingLog, setEditingLog] = useState(null)
+  const [editWeight, setEditWeight] = useState('')
+  const [editBelly, setEditBelly] = useState('')
 
   // ─── SLEEP ANALYTICS STATE ───
   const [sleepLogs, setSleepLogs] = useState([])
   const [loadingSleep, setLoadingSleep] = useState(true)
-  const [warRoomHp, setWarRoomHp] = useState(null)
 
   const initializedBody = useRef(false)
   const initializedSleep = useRef(false)
 
-  // ─── FETCH BODY DATA ───
   const fetchBodyData = useCallback(async () => {
     if (!user) return
     if (!initializedBody.current) setLoadingBody(true)
-    const [configRes, logsRes] = await Promise.all([
-      supabase.from('weight_config').select('*').eq('user_id', user.id).maybeSingle(),
-      supabase.from('weight_logs').select('*').eq('user_id', user.id).order('date', { ascending: true })
-    ])
-    if (configRes.data) setConfig(configRes.data)
-    if (logsRes.data) {
-      setLogs(logsRes.data)
-      const todayLog = logsRes.data.find(l => l.date === todayStr)
-      if (todayLog) { setLoggedToday(true); setTodayWeight(String(todayLog.weight_kg)) }
+
+    try {
+      const [configRes, logsRes] = await Promise.all([
+        supabase.from('weight_config').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('weight_logs').select('*').eq('user_id', user.id).order('date', { ascending: true })
+      ])
+
+      let localConfig = {}
+      let localBellyMap = {}
+      if (typeof window !== 'undefined') {
+        try {
+          const rawCfg = localStorage.getItem(`lokios_wellness_config_${user.id}`)
+          if (rawCfg) localConfig = JSON.parse(rawCfg)
+          const rawBelly = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+          if (rawBelly) localBellyMap = JSON.parse(rawBelly)
+        } catch (e) {
+          console.warn('Failed to parse local belly data:', e)
+        }
+      }
+
+      let mergedConfig = null
+      if (configRes.data || Object.keys(localConfig).length > 0) {
+        mergedConfig = {
+          starting_weight: 80,
+          target_weight: 70,
+          starting_belly_cm: 92,
+          target_belly_cm: 80,
+          ...configRes.data,
+          ...localConfig
+        }
+        setConfig(mergedConfig)
+      } else {
+        setConfig(null)
+      }
+
+      const rawLogs = logsRes.data || []
+      const mergedLogs = rawLogs.map(l => {
+        const localBelly = localBellyMap[l.date]
+        const dbBelly = l.belly_size_cm ?? l.waist_cm ?? l.belly_cm
+        const finalBelly = (typeof dbBelly === 'number' && dbBelly > 0) ? dbBelly : (typeof localBelly === 'number' && localBelly > 0 ? localBelly : null)
+        return {
+          ...l,
+          weight_kg: parseFloat(l.weight_kg),
+          belly_size_cm: finalBelly ? parseFloat(finalBelly) : null
+        }
+      })
+
+      Object.entries(localBellyMap).forEach(([dateStr, bellyVal]) => {
+        if (!mergedLogs.some(l => l.date === dateStr) && typeof bellyVal === 'number') {
+          mergedLogs.push({
+            user_id: user.id,
+            date: dateStr,
+            weight_kg: mergedConfig?.starting_weight || 75,
+            belly_size_cm: bellyVal
+          })
+        }
+      })
+
+      mergedLogs.sort((a, b) => a.date.localeCompare(b.date))
+      setLogs(mergedLogs)
+
+      const todayLog = mergedLogs.find(l => l.date === todayStr)
+      if (todayLog) {
+        setLoggedToday(true)
+        setTodayWeight(String(todayLog.weight_kg || ''))
+        if (todayLog.belly_size_cm) setTodayBelly(String(todayLog.belly_size_cm))
+      }
+    } catch (err) {
+      console.error('Error fetching body data:', err)
+    } finally {
+      setLoadingBody(false)
+      initializedBody.current = true
     }
-    setLoadingBody(false)
-    initializedBody.current = true
   }, [user, todayStr])
 
-  // ─── FETCH SLEEP DATA ───
   const fetchSleepData = useCallback(async () => {
     if (!user) return
     if (!initializedSleep.current) setLoadingSleep(true)
 
     try {
-      // Use a fresh client per call to avoid stale auth tokens
       const sb = createClient()
-
       const { data: sleepData, error: sleepErr } = await sb
         .from('sleep_logs')
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: true })
 
-      if (sleepErr) {
-        console.error('sleep_logs SELECT error:', sleepErr)
-      }
-      
       if (sleepData && sleepData.length > 0) {
         setSleepLogs(sleepData)
       } else {
-        console.warn('sleep_logs returned empty for user:', user.id, 'error:', sleepErr)
         setSleepLogs([])
-      }
-
-      // Fetch war room data
-      const { data: bpData } = await sb
-        .from('user_blueprints')
-        .select('battles')
-        .eq('user_id', user.id)
-
-      const bp = bpData?.[0]
-      if (bp?.battles) {
-        const sleepBattle = bp.battles.find(b => {
-          const n = b.name?.toLowerCase() || ''
-          return n.includes('sleep') || n.includes('rest') || n.includes('discipline')
-        })
-        if (sleepBattle) setWarRoomHp(sleepBattle.hp ?? 100)
       }
     } catch (err) {
       console.error('fetchSleepData exception:', err)
@@ -111,85 +165,226 @@ export default function WellnessPage() {
   useEffect(() => { fetchBodyData(); fetchSleepData(); }, [fetchBodyData, fetchSleepData])
   useEffect(() => { if (activeTab === 'sleep') fetchSleepData() }, [activeTab, fetchSleepData])
 
-  // Listen for live sleep updates dispatched from quests page
   useEffect(() => {
     const handleSleepUpdate = () => { fetchSleepData() }
+    const handleWeightUpdate = () => { fetchBodyData() }
     window.addEventListener('lokios_sleep_updated', handleSleepUpdate)
-    return () => window.removeEventListener('lokios_sleep_updated', handleSleepUpdate)
-  }, [fetchSleepData])
+    window.addEventListener('lokios_weight_updated', handleWeightUpdate)
+    return () => {
+      window.removeEventListener('lokios_sleep_updated', handleSleepUpdate)
+      window.removeEventListener('lokios_weight_updated', handleWeightUpdate)
+    }
+  }, [fetchSleepData, fetchBodyData])
 
-  // ─── BODY HANDLERS ───
   const handleSetup = async () => {
-    if (!setupStarting || !setupTarget) return
+    if (!setupStartingWeight || !setupTargetWeight) return
     setSaving(true)
-    const { error } = await supabase.from('weight_config').insert({
-      user_id: user.id, starting_weight: parseFloat(setupStarting),
-      target_weight: parseFloat(setupTarget), milestones_awarded: 0
-    })
-    if (!error) await fetchBodyData()
+    const sWeight = parseFloat(setupStartingWeight)
+    const tWeight = parseFloat(setupTargetWeight)
+    const sBelly = parseFloat(setupStartingBelly) || 90
+    const tBelly = parseFloat(setupTargetBelly) || 80
+
+    if (typeof window !== 'undefined' && user?.id) {
+      const cfgObj = {
+        starting_weight: sWeight,
+        target_weight: tWeight,
+        starting_belly_cm: sBelly,
+        target_belly_cm: tBelly,
+        milestones_awarded: 0
+      }
+      localStorage.setItem(`lokios_wellness_config_${user.id}`, JSON.stringify(cfgObj))
+    }
+
+    try {
+      await supabase.from('weight_config').insert({
+        user_id: user.id,
+        starting_weight: sWeight,
+        target_weight: tWeight,
+        starting_belly_cm: sBelly,
+        target_belly_cm: tBelly,
+        milestones_awarded: 0
+      })
+    } catch (e) {
+      console.warn('DB setup error:', e)
+    }
+
+    await fetchBodyData()
     setSaving(false)
   }
 
-  const handleLogWeight = async () => {
-    if (!todayWeight || loggedToday) return
-    const weight = parseFloat(todayWeight)
-    if (isNaN(weight) || weight <= 0 || weight > 500) return
-    setSaving(true)
-    const { error: err1 } = await supabase.from('weight_logs').insert({ user_id: user.id, date: todayStr, weight_kg: weight })
-    if (err1) await supabase.from('weight_logs').update({ weight_kg: weight }).eq('user_id', user.id).eq('date', todayStr)
+  const handleLogRecon = async () => {
+    if (!user) return
+    const weightVal = parseFloat(todayWeight)
+    const bellyVal = todayBelly ? parseFloat(todayBelly) : null
+    const targetDate = logDate || todayStr
 
-    let totalLogged = true
-    if (config) {
-      const kgLost = Math.floor(config.starting_weight - weight)
-      const alreadyAwarded = config.milestones_awarded || 0
-      if (kgLost > alreadyAwarded && kgLost > 0) {
-        const newMilestones = kgLost - alreadyAwarded
-        await supabase.from('weight_config').update({ milestones_awarded: kgLost }).eq('id', config.id)
-      }
-      if (weight <= config.target_weight && !config.target_hit_at) {
-        await supabase.from('weight_config').update({ target_hit_at: todayStr }).eq('id', config.id)
-      }
+    if ((isNaN(weightVal) || weightVal <= 0 || weightVal > 400) && (!bellyVal || isNaN(bellyVal))) {
+      alert('Please enter a valid weight (kg) or belly size (cm).')
+      return
     }
-    setLoggedToday(true)
-    setLogToast('✓ WEIGHT LOGGED')
+
+    setSaving(true)
+
+    if (typeof window !== 'undefined') {
+      try {
+        const rawBelly = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+        const bellyMap = rawBelly ? JSON.parse(rawBelly) : {}
+        if (bellyVal && !isNaN(bellyVal)) {
+          bellyMap[targetDate] = bellyVal
+        }
+        localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(bellyMap))
+      } catch (e) {}
+    }
+
+    try {
+      const payload = {
+        user_id: user.id,
+        date: targetDate,
+        weight_kg: !isNaN(weightVal) && weightVal > 0 ? weightVal : (logs[logs.length - 1]?.weight_kg || 75),
+        belly_size_cm: bellyVal,
+        waist_cm: bellyVal
+      }
+
+      await supabase.from('weight_logs').delete().eq('user_id', user.id).eq('date', targetDate)
+      await supabase.from('weight_logs').insert(payload)
+
+      if (config && !isNaN(weightVal) && weightVal > 0) {
+        const kgLost = Math.floor(config.starting_weight - weightVal)
+        const alreadyAwarded = config.milestones_awarded || 0
+        if (kgLost > alreadyAwarded && kgLost > 0) {
+          await supabase.from('weight_config').update({ milestones_awarded: kgLost }).eq('id', config.id)
+        }
+        if (weightVal <= config.target_weight && !config.target_hit_at) {
+          await supabase.from('weight_config').update({ target_hit_at: targetDate }).eq('id', config.id)
+        }
+      }
+    } catch (e) {
+      console.warn('DB Log error:', e)
+    }
+
+    if (targetDate === todayStr) setLoggedToday(true)
+    setLogToast('✓ BODY RECON LOGGED')
     setTimeout(() => setLogToast(null), 3000)
+
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('lokios_weight_updated'))
     await fetchBodyData()
     setSaving(false)
   }
 
   const handleNewTarget = async () => {
-    if (!newTargetWeight) return
+    if (!newTargetWeight && !newTargetBelly) return
     setSaving(true)
-    await supabase.from('weight_config').update({
-      target_weight: parseFloat(newTargetWeight), target_hit_at: null,
-      milestones_awarded: Math.floor(config.starting_weight - logs[logs.length - 1]?.weight_kg) || 0
-    }).eq('id', config.id)
-    setShowNewTarget(false); setNewTargetWeight('')
+    const tWeight = newTargetWeight ? parseFloat(newTargetWeight) : config?.target_weight
+    const tBelly = newTargetBelly ? parseFloat(newTargetBelly) : config?.target_belly_cm
+
+    if (typeof window !== 'undefined' && user?.id) {
+      const cfgObj = { ...config, target_weight: tWeight, target_belly_cm: tBelly }
+      localStorage.setItem(`lokios_wellness_config_${user.id}`, JSON.stringify(cfgObj))
+    }
+
+    try {
+      await supabase.from('weight_config').update({
+        target_weight: tWeight,
+        target_belly_cm: tBelly,
+        target_hit_at: null
+      }).eq('id', config.id)
+    } catch (e) {}
+
+    setShowNewTarget(false)
     await fetchBodyData()
     setSaving(false)
   }
 
-  // ─── BODY DERIVED DATA ───
-  const latestWeight = logs.length > 0 ? logs[logs.length - 1].weight_kg : null
-  const totalLost = config && latestWeight ? (config.starting_weight - latestWeight).toFixed(1) : 0
-  const progressPct = config && latestWeight
-    ? Math.min(100, Math.max(0, ((config.starting_weight - latestWeight) / (config.starting_weight - config.target_weight)) * 100)) : 0
-  const isInMaintenance = config?.target_hit_at != null
+  const handleSaveEditLog = async () => {
+    if (!editingLog || !user) return
+    const wVal = parseFloat(editWeight)
+    const bVal = editBelly ? parseFloat(editBelly) : null
+
+    if (typeof window !== 'undefined') {
+      try {
+        const rawBelly = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+        const bellyMap = rawBelly ? JSON.parse(rawBelly) : {}
+        if (bVal && !isNaN(bVal)) bellyMap[editingLog.date] = bVal
+        else delete bellyMap[editingLog.date]
+        localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(bellyMap))
+      } catch (e) {}
+    }
+
+    try {
+      await supabase.from('weight_logs').update({
+        weight_kg: !isNaN(wVal) ? wVal : editingLog.weight_kg,
+        belly_size_cm: bVal,
+        waist_cm: bVal
+      }).eq('user_id', user.id).eq('date', editingLog.date)
+    } catch (e) {}
+
+    setEditingLog(null)
+    await fetchBodyData()
+  }
+
+  const handleDeleteLog = async (dateStr) => {
+    if (!confirm(`Delete body recon log for ${dateStr}?`)) return
+    if (typeof window !== 'undefined') {
+      try {
+        const rawBelly = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+        const bellyMap = rawBelly ? JSON.parse(rawBelly) : {}
+        delete bellyMap[dateStr]
+        localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(bellyMap))
+      } catch (e) {}
+    }
+    await supabase.from('weight_logs').delete().eq('user_id', user.id).eq('date', dateStr)
+    await fetchBodyData()
+  }
+
+  const latestLog = logs.length > 0 ? logs[logs.length - 1] : null
+  const latestWeight = latestLog?.weight_kg || null
+  const startWeight = config?.starting_weight || (logs[0]?.weight_kg || 80)
+  const targetWeight = config?.target_weight || 70
+  const totalWeightLost = latestWeight ? (startWeight - latestWeight).toFixed(1) : 0
+  const weightProgressPct = latestWeight && startWeight !== targetWeight
+    ? Math.min(100, Math.max(0, ((startWeight - latestWeight) / (startWeight - targetWeight)) * 100)) : 0
+  const logsWithBelly = logs.filter(l => typeof l.belly_size_cm === 'number' && l.belly_size_cm > 0)
+  const latestBelly = logsWithBelly.length > 0 ? logsWithBelly[logsWithBelly.length - 1].belly_size_cm : null
+  const startBelly = config?.starting_belly_cm || (logsWithBelly[0]?.belly_size_cm || 92)
+  const targetBelly = config?.target_belly_cm || (startBelly - 10 > 0 ? startBelly - 10 : 80)
+  const totalBellyReduced = latestBelly ? (startBelly - latestBelly).toFixed(1) : 0
+  const bellyProgressPct = latestBelly && startBelly !== targetBelly
+    ? Math.min(100, Math.max(0, ((startBelly - latestBelly) / (startBelly - targetBelly)) * 100)) : 0
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
   const weekAgoStr = getLocalDateStr(weekAgo)
   const weekAgoLog = logs.find(l => l.date <= weekAgoStr)
-  const weekChange = weekAgoLog && latestWeight ? (latestWeight - weekAgoLog.weight_kg).toFixed(1) : null
+  const weekWeightChange = weekAgoLog && latestWeight ? (latestWeight - weekAgoLog.weight_kg).toFixed(1) : null
+  const weekAgoBellyLog = [...logsWithBelly].reverse().find(l => l.date <= weekAgoStr)
+  const weekBellyChange = weekAgoBellyLog && latestBelly ? (latestBelly - weekAgoBellyLog.belly_size_cm).toFixed(1) : null
+  const waistWeightRatio = latestWeight && latestBelly ? (latestBelly / latestWeight).toFixed(2) : null
+  const isInMaintenance = config?.target_hit_at != null
   const chartData = logs.map(l => ({
     date: new Date(l.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    weight: parseFloat(l.weight_kg)
+    fullDate: l.date,
+    weight: l.weight_kg ? parseFloat(l.weight_kg) : null,
+    belly: l.belly_size_cm ? parseFloat(l.belly_size_cm) : null,
+    bellyInches: l.belly_size_cm ? parseFloat((l.belly_size_cm / 2.54).toFixed(1)) : null
   }))
-  const milestones = config ? Array.from({ length: Math.ceil(config.starting_weight - config.target_weight) }, (_, i) => {
-    const targetKg = config.starting_weight - (i + 1)
-    const hitLog = logs.find(l => parseFloat(l.weight_kg) <= targetKg)
-    return { kg: i + 1, targetKg: targetKg.toFixed(1), hit: !!hitLog, date: hitLog?.date, isTarget: targetKg <= config.target_weight }
-  }) : []
 
-  // ─── SLEEP DERIVED DATA ───
+  const bellyMilestones = useMemo(() => {
+    if (!startBelly || !targetBelly || startBelly <= targetBelly) return []
+    const totalSteps = Math.ceil((startBelly - targetBelly) / 2)
+    return Array.from({ length: totalSteps }, (_, i) => {
+      const targetCm = parseFloat((startBelly - (i + 1) * 2).toFixed(1))
+      const hitLog = logs.find(l => l.belly_size_cm && l.belly_size_cm <= targetCm)
+      return { cm: (i + 1) * 2, targetCm, inches: (targetCm / 2.54).toFixed(1), hit: !!hitLog, date: hitLog?.date, isTarget: targetCm <= targetBelly }
+    })
+  }, [startBelly, targetBelly, logs])
+
+  const weightMilestones = useMemo(() => {
+    if (!config || config.starting_weight <= config.target_weight) return []
+    return Array.from({ length: Math.ceil(config.starting_weight - config.target_weight) }, (_, i) => {
+      const targetKg = parseFloat((config.starting_weight - (i + 1)).toFixed(1))
+      const hitLog = logs.find(l => parseFloat(l.weight_kg) <= targetKg)
+      return { kg: i + 1, targetKg: targetKg.toFixed(1), hit: !!hitLog, date: hitLog?.date, isTarget: targetKg <= config.target_weight }
+    })
+  }, [config, logs])
+
   const isLogHealthy = (l) => {
     if (!l) return false
     if (l.status === 'healthy') return true
@@ -204,8 +399,7 @@ export default function WellnessPage() {
 
   const sleepChartData = sleepLogs.map(l => ({
     date: new Date(l.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    hours: parseFloat(l.duration_hours) || 0,
-    status: isLogHealthy(l) ? 'healthy' : 'deprived'
+    hours: parseFloat(l.duration_hours) || 0
   }))
   const avgSleep = sleepLogs.length > 0 ? (sleepLogs.reduce((s, l) => s + (parseFloat(l.duration_hours) || 0), 0) / sleepLogs.length).toFixed(1) : null
   const healthyNights = sleepLogs.filter(isLogHealthy).length
@@ -219,21 +413,34 @@ export default function WellnessPage() {
     return h < 10 || (h === 10 && m === 0)
   }).length / totalNights) * 100) : null
 
-  // Streak calc
   let currentStreak = 0, bestStreak = 0, streak = 0
-  const sorted = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date))
-  sorted.forEach(l => {
+  const sortedSleep = [...sleepLogs].sort((a, b) => a.date.localeCompare(b.date))
+  sortedSleep.forEach(l => {
     if (isLogHealthy(l)) { streak++; if (streak > bestStreak) bestStreak = streak }
     else streak = 0
   })
-  if (sorted.length > 0 && isLogHealthy(sorted[sorted.length - 1])) currentStreak = streak
+  if (sortedSleep.length > 0 && isLogHealthy(sortedSleep[sortedSleep.length - 1])) currentStreak = streak
 
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomReconTooltip = ({ active, payload, label }) => {
+    if (active && payload?.length) {
+      const dataPoint = payload[0]?.payload
+      return (
+        <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '4px' }}>
+          <p className="font-mono text-[9px] text-muted uppercase tracking-wider mb-1">{dataPoint?.fullDate || label}</p>
+          {dataPoint?.weight && (<div className="flex items-center gap-2 font-mono text-xs"><span className="text-amber font-bold">WEIGHT:</span><span className="text-primary font-bold">{dataPoint.weight} kg</span></div>)}
+          {dataPoint?.belly && (<div className="flex items-center gap-2 font-mono text-xs mt-0.5"><span className="text-info font-bold">BELLY:</span><span className="text-primary font-bold">{dataPoint.belly} cm</span></div>)}
+        </div>
+      )
+    }
+    return null
+  }
+
+  const CustomSleepTooltip = ({ active, payload, label }) => {
     if (active && payload?.length) {
       return (
         <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', padding: '6px 10px' }}>
           <p className="font-mono text-[9px] text-muted">{label}</p>
-          <p className="font-mono text-[11px] font-bold text-primary">{payload[0].value} {payload[0].dataKey === 'weight' ? 'kg' : 'h'}</p>
+          <p className="font-mono text-[11px] font-bold text-primary">{payload[0].value} h</p>
         </div>
       )
     }
@@ -244,7 +451,7 @@ export default function WellnessPage() {
     return (
       <AppShell>
         <div className="page-container flex items-center justify-center" style={{ minHeight: '60vh' }}>
-          <div className="font-mono text-muted text-sm animate-pulse">Loading Wellness...</div>
+          <div className="font-mono text-muted text-sm animate-pulse">Loading Wellness OS...</div>
         </div>
       </AppShell>
     )
@@ -252,43 +459,39 @@ export default function WellnessPage() {
 
   return (
     <AppShell>
-      <div className="page-container max-w-[1200px] pb-10">
-
-        {/* Log Toast */}
+      <div className="page-container max-w-[1200px] pb-12">
         <AnimatePresence>
           {logToast && (
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-              className="fixed top-4 right-4 z-[999] px-5 py-3 font-display font-bold text-base tracking-tight"
+              className="fixed top-4 right-4 z-[999] px-5 py-3 font-display font-bold text-base tracking-tight rounded shadow-2xl"
               style={{ background: 'var(--success)', color: '#0a0a0a', boxShadow: '0 4px 20px rgba(34,197,94,0.4)' }}>
               {logToast}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <Activity size={22} color="var(--accent-primary)" />
+            <Activity size={24} color="var(--accent-primary)" />
             <div>
               <h1 className="font-display font-bold text-primary tracking-tight" style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)' }}>
-                WELLNESS
+                WELLNESS & BODY RECON
               </h1>
               <p className="font-mono text-[9px] text-muted uppercase tracking-widest">
-                Body Recon · Sleep Analytics
+                Body Weight · Belly / Waist Measurement · Sleep Intelligence
               </p>
             </div>
           </div>
 
-          {/* Tab Switcher */}
-          <div className="flex border border-border-color overflow-hidden">
+          <div className="flex border border-border-color overflow-hidden rounded-md">
             {[
-              { id: 'body', icon: Scale, label: 'BODY RECON' },
+              { id: 'body', icon: Scale, label: 'BODY & BELLY RECON' },
               { id: 'sleep', icon: Moon, label: 'SLEEP ANALYTICS' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="flex items-center gap-2 px-4 py-2 font-mono text-[10px] uppercase tracking-widest transition-all"
+                className="flex items-center gap-2 px-4 py-2 font-mono text-[10px] uppercase tracking-widest transition-all cursor-pointer"
                 style={{
                   background: activeTab === tab.id ? 'var(--accent-primary)' : 'transparent',
                   color: activeTab === tab.id ? '#0a0a0a' : 'var(--text-muted)',
@@ -302,39 +505,47 @@ export default function WellnessPage() {
           </div>
         </div>
 
-        {/* ─── BODY RECON TAB ─── */}
         {activeTab === 'body' && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             {!config ? (
-              /* Setup Screen */
-              <div className="max-w-lg mx-auto pt-10">
-                <div className="text-center mb-8">
-                  <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="max-w-lg mx-auto pt-6">
+                <div className="text-center mb-6">
+                  <div className="flex items-center justify-center gap-3 mb-3">
                     <Scale size={28} color="var(--accent-primary)" />
-                    <h2 className="font-display font-bold text-primary tracking-tight text-3xl">BODY RECON</h2>
+                    <h2 className="font-display font-bold text-primary tracking-tight text-3xl">INITIALIZE BODY RECON</h2>
                   </div>
-                  <p className="font-mono text-[11px] text-muted uppercase tracking-widest">Track · Transform · Prove</p>
+                  <p className="font-mono text-[11px] text-muted uppercase tracking-widest">Weight & Waist Measurement Protocol</p>
                 </div>
-                <div className="p-7" style={{ background: 'linear-gradient(135deg,#111,#0a0a0a)', border: '1px solid var(--border-color)', borderLeft: '3px solid var(--accent-primary)' }}>
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-muted mb-6">Initialize Tracking Parameters</div>
-                  <div className="flex flex-col gap-5">
-                    <div>
-                      <label className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-2">Current Weight (kg)</label>
-                      <input type="number" step="0.1" value={setupStarting} onChange={e => setSetupStarting(e.target.value)} placeholder="e.g. 80"
-                        className="w-full p-3 font-mono text-lg text-primary border border-border-color outline-none" style={{ background: 'var(--bg-primary)' }} />
+                <div className="p-7 rounded-xl" style={{ background: 'linear-gradient(135deg,#111,#0a0a0a)', border: '1px solid var(--border-color)', borderLeft: '3px solid var(--accent-primary)' }}>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-muted mb-5">Set Starting & Target Baselines</div>
+                  <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-1.5">Starting Weight (kg)</label>
+                        <input type="number" step="0.1" value={setupStartingWeight} onChange={e => setSetupStartingWeight(e.target.value)} placeholder="e.g. 78.5"
+                          className="w-full p-2.5 font-mono text-base text-primary border border-border-color outline-none rounded bg-bg-primary" />
+                      </div>
+                      <div>
+                        <label className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-1.5">Target Weight (kg)</label>
+                        <input type="number" step="0.1" value={setupTargetWeight} onChange={e => setSetupTargetWeight(e.target.value)} placeholder="e.g. 70.0"
+                          className="w-full p-2.5 font-mono text-base text-primary border border-border-color outline-none rounded bg-bg-primary" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-2">Target Weight (kg)</label>
-                      <input type="number" step="0.1" value={setupTarget} onChange={e => setSetupTarget(e.target.value)} placeholder="e.g. 70"
-                        className="w-full p-3 font-mono text-lg text-primary border border-border-color outline-none" style={{ background: 'var(--bg-primary)' }} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-1.5">Starting Belly / Waist (cm)</label>
+                        <input type="number" step="0.5" value={setupStartingBelly} onChange={e => setSetupStartingBelly(e.target.value)} placeholder="e.g. 92.0"
+                          className="w-full p-2.5 font-mono text-base text-primary border border-border-color outline-none rounded bg-bg-primary" />
+                      </div>
+                      <div>
+                        <label className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-1.5">Target Belly / Waist (cm)</label>
+                        <input type="number" step="0.5" value={setupTargetBelly} onChange={e => setSetupTargetBelly(e.target.value)} placeholder="e.g. 80.0"
+                          className="w-full p-2.5 font-mono text-base text-primary border border-border-color outline-none rounded bg-bg-primary" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 font-mono text-[9px] text-muted">
-                      <Flame size={10} color="var(--accent-primary)" />
-                      <span>Daily logging · Milestone tracking · Progress visualization</span>
-                    </div>
-                    <button onClick={handleSetup} disabled={!setupStarting || !setupTarget || saving}
-                      className="w-full p-4 font-display font-bold uppercase tracking-widest text-sm transition-all"
-                      style={{ background: setupStarting && setupTarget ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: setupStarting && setupTarget ? '#0a0a0a' : 'var(--text-muted)', opacity: saving ? 0.5 : 1 }}>
+                    <button onClick={handleSetup} disabled={!setupStartingWeight || !setupTargetWeight || saving}
+                      className="w-full p-3.5 font-display font-bold uppercase tracking-widest text-sm transition-all rounded mt-2 cursor-pointer"
+                      style={{ background: setupStartingWeight && setupTargetWeight ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: setupStartingWeight && setupTargetWeight ? '#0a0a0a' : 'var(--text-muted)', opacity: saving ? 0.5 : 1 }}>
                       {saving ? 'Initializing...' : 'Begin Tracking'}
                     </button>
                   </div>
@@ -342,9 +553,8 @@ export default function WellnessPage() {
               </div>
             ) : (
               <>
-                {/* Maintenance Banner */}
                 {isInMaintenance && (
-                  <div className="p-4 flex items-center justify-between gap-3"
+                  <div className="p-4 flex items-center justify-between gap-3 rounded-xl"
                     style={{ background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.3)', borderLeft: '3px solid var(--success)' }}>
                     <div className="flex items-center gap-3">
                       <Trophy size={18} color="var(--success)" />
@@ -353,283 +563,55 @@ export default function WellnessPage() {
                         <div className="font-mono text-[9px] text-muted">Hit {config.target_weight} kg on {new Date(config.target_hit_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                       </div>
                     </div>
-                    <button onClick={() => setShowNewTarget(true)} className="px-4 py-2 font-mono text-[10px] uppercase tracking-widest border border-success text-success hover:bg-success hover:text-bg-primary transition-colors">
+                    <button onClick={() => setShowNewTarget(true)} className="px-4 py-2 font-mono text-[10px] uppercase tracking-widest border border-success text-success hover:bg-success hover:text-bg-primary transition-colors rounded">
                       Set New Target
                     </button>
                   </div>
                 )}
-
-                {/* New Target Modal */}
-                <AnimatePresence>
-                  {showNewTarget && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }}
-                      onClick={() => setShowNewTarget(false)}>
-                      <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-                        onClick={e => e.stopPropagation()} className="w-full max-w-sm p-6"
-                        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                        <h3 className="font-display font-bold text-primary text-lg mb-4">SET NEW TARGET</h3>
-                        <input type="number" step="0.1" value={newTargetWeight} onChange={e => setNewTargetWeight(e.target.value)}
-                          placeholder="New target weight (kg)" className="w-full p-3 font-mono text-lg text-primary border border-border-color mb-4 outline-none" style={{ background: 'var(--bg-primary)' }} />
-                        <button onClick={handleNewTarget} disabled={!newTargetWeight || saving}
-                          className="w-full p-3 font-display font-bold uppercase tracking-widest text-sm"
-                          style={{ background: 'var(--accent-primary)', color: '#0a0a0a', opacity: !newTargetWeight || saving ? 0.5 : 1 }}>
-                          {saving ? 'Saving...' : 'Update Target'}
-                        </button>
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Compact Stats Strip (Start, Current, Target) */}
-                <div className="p-3.5 rounded-xl border border-border-color bg-bg-tertiary flex items-center justify-between gap-2 font-mono text-xs shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-muted text-[10px] uppercase font-bold tracking-wider">START:</span>
-                    <span className="font-bold text-primary text-sm">{config.starting_weight}</span>
-                  </div>
-                  <div className="h-4 w-px bg-white/10" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-amber text-[10px] uppercase font-bold tracking-wider">CURRENT:</span>
-                    <span className="font-bold text-amber font-mono text-base">{latestWeight || '—'}</span>
-                  </div>
-                  <div className="h-4 w-px bg-white/10" />
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-success text-[10px] uppercase font-bold tracking-wider">TARGET:</span>
-                    <span className="font-bold text-success text-sm">{config.target_weight}</span>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="p-4 rounded-xl" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-mono text-[10px] font-bold" style={{ color: parseFloat(totalLost) > 0 ? 'var(--success)' : 'var(--danger)' }}>
-                      {parseFloat(totalLost) > 0 ? `▼ ${totalLost} kg lost` : parseFloat(totalLost) < 0 ? `▲ ${Math.abs(totalLost)} kg gained` : 'No change'}
-                    </span>
-                    <span className="font-mono text-[10px] font-bold text-primary">{Math.round(progressPct)}%</span>
-                  </div>
-                  <div style={{ height: '6px', background: 'var(--bg-primary)', overflow: 'hidden', borderRadius: '4px' }}>
-                    <motion.div style={{ height: '100%', background: progressPct >= 100 ? 'var(--success)' : 'var(--accent-primary)', borderRadius: '4px' }}
-                      initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 1, ease: 'easeOut' }} />
-                  </div>
-                  {weekChange !== null && <div className="font-mono text-[9px] text-muted mt-2">This week: {parseFloat(weekChange) <= 0 ? `▼ ${Math.abs(weekChange)} kg` : `▲ ${weekChange} kg`}</div>}
-                </div>
-
-                {/* Chart */}
-                {chartData.length >= 2 && (
-                  <div className="p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <TrendingDown size={10} color="var(--accent-primary)" />
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Weight Trajectory</span>
-                    </div>
-                    <div style={{ width: '100%', height: '200px' }}>
-                      <ResponsiveContainer>
-                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                          <YAxis domain={['dataMin - 1', 'dataMax + 1']} tick={{ fontSize: 9, fill: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }} tickLine={false} axisLine={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <ReferenceLine y={config.target_weight} stroke="var(--success)" strokeDasharray="4 4" strokeOpacity={0.6} />
-                          <Area type="monotone" dataKey="weight" stroke="var(--accent-primary)" fillOpacity={1} fill="url(#colorWeight)" strokeWidth={2} dot={false} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )}
-
-                {/* Milestones */}
-                {milestones.length > 0 && (
-                  <div className="p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Trophy size={10} color="var(--accent-primary)" />
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-muted">Milestones</span>
-                      <span className="ml-auto font-mono text-[9px] text-muted">{milestones.filter(m => m.hit).length}/{milestones.length}</span>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute left-[11px] top-0 bottom-0 w-px" style={{ background: 'var(--border-color)' }} />
-                      <div className="flex flex-col gap-3">
-                        {milestones.map((m, idx) => (
-                          <div key={idx} className="relative flex items-center gap-4 pl-8">
-                            <div className="absolute left-[4px] flex items-center justify-center"
-                              style={{ width: '16px', height: '16px', border: `2px solid ${m.hit ? 'var(--success)' : m.isTarget ? 'var(--accent-primary)' : 'var(--border-color)'}`, background: m.hit ? 'rgba(34,197,94,0.15)' : 'var(--bg-primary)' }}>
-                              {m.hit ? <Check size={8} color="var(--success)" strokeWidth={3} /> : m.isTarget ? <Target size={7} color="var(--accent-primary)" /> : <Lock size={7} color="var(--text-muted)" />}
-                            </div>
-                            <div className="flex-1 flex items-center justify-between">
-                              <div>
-                                <span className="font-display font-bold text-sm" style={{ color: m.hit ? 'var(--success)' : m.isTarget ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
-                                  {m.isTarget ? `🎯 TARGET: ${m.targetKg} kg` : `-${m.kg} kg (${m.targetKg} kg)`}
-                                </span>
-                                {m.hit && m.date && <span className="ml-2 font-mono text-[8px] text-muted">{new Date(m.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                              </div>
-                              <span className="font-mono text-[9px] font-bold shrink-0" style={{ color: m.hit ? 'var(--success)' : 'var(--text-muted)' }}>{m.isTarget ? '🎯 TARGET' : `✓ -${m.kg} kg`}</span>
-                            </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                  <div className="lg:col-span-5 p-4 rounded-xl border border-border-color bg-bg-secondary flex flex-col justify-between" style={{ borderLeft: '3px solid var(--accent-primary)' }}>
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Scale size={14} color="var(--accent-primary)" />
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">Daily Recon Logger</span>
+                        </div>
+                        {loggedToday && <span className="flex items-center gap-1 font-mono text-[9px] text-success font-bold bg-success/10 px-2 py-0.5 rounded border border-success/30"><CheckCircle2 size={10} /> LOGGED TODAY</span>}
+                      </div>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="font-mono text-[9px] uppercase tracking-wider text-muted block mb-1">Weight (kg)</label>
+                            <div className="relative"><input type="number" step="0.1" value={todayWeight} onChange={e => setTodayWeight(e.target.value)} placeholder="e.g. 77.5" className="w-full p-2 font-mono text-base text-primary border border-border-color outline-none rounded bg-bg-primary" /><span className="absolute right-2.5 top-2.5 font-mono text-[10px] text-muted">kg</span></div>
                           </div>
-                        ))}
+                          <div>
+                            <label className="font-mono text-[9px] uppercase tracking-wider text-info block mb-1">Belly Size (cm)</label>
+                            <div className="relative"><input type="number" step="0.5" value={todayBelly} onChange={e => setTodayBelly(e.target.value)} placeholder="e.g. 88.0" className="w-full p-2 font-mono text-base text-primary border border-info/40 outline-none rounded bg-bg-primary" /><span className="absolute right-2.5 top-2.5 font-mono text-[10px] text-info font-bold">cm</span></div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <div className="flex items-center gap-1.5 text-muted font-mono text-[9px]"><Calendar size={11} /><span>DATE:</span><input type="date" value={logDate} onChange={e => setLogDate(e.target.value)} className="bg-bg-primary border border-border-color rounded px-1.5 py-0.5 text-primary text-[10px] font-mono outline-none" /></div>
+                          {logDate !== todayStr && <button type="button" onClick={() => setLogDate(todayStr)} className="font-mono text-[8px] text-amber hover:underline cursor-pointer">Reset Today</button>}
+                        </div>
                       </div>
                     </div>
+                    <div className="mt-4 pt-3 border-t border-border-color/60">
+                      <button onClick={handleLogRecon} disabled={(!todayWeight && !todayBelly) || saving} className="flex-1 w-full py-2.5 px-4 font-display font-bold uppercase tracking-widest text-xs rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer" style={{ background: (todayWeight || todayBelly) ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: (todayWeight || todayBelly) ? '#0a0a0a' : 'var(--text-muted)' }}>{saving ? 'RECORDING...' : 'LOG RECON'}</button>
+                    </div>
                   </div>
-                )}
-              </>
-            )}
-          </motion.div>
-        )}
-
-        {/* ─── SLEEP ANALYTICS TAB ─── */}
-        {activeTab === 'sleep' && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            {loadingSleep ? (
-              <div className="flex items-center justify-center py-16">
-                <div className="font-mono text-muted text-sm animate-pulse">Loading Sleep Data...</div>
-              </div>
-            ) : (
-              <>
-                {/* Compact Sleep Stats Strip */}
-                <div className="p-3.5 rounded-xl border border-border-color bg-bg-tertiary flex items-center justify-between gap-2 font-mono text-xs shadow-sm overflow-x-auto">
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-info text-[9px] uppercase font-bold tracking-wider">AVG SLEEP:</span>
-                    <span className="font-bold text-info font-mono text-sm">{avgSleep ? `${avgSleep}h` : '—'}</span>
-                  </div>
-                  <div className="h-4 w-px bg-white/10 shrink-0" />
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-success text-[9px] uppercase font-bold tracking-wider">HEALTHY:</span>
-                    <span className="font-bold text-success font-mono text-sm">{totalNights > 0 ? `${healthyNights}/${totalNights}` : '—'}</span>
-                  </div>
-                  <div className="h-4 w-px bg-white/10 shrink-0" />
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-primary text-[9px] uppercase font-bold tracking-wider">BEDTIME:</span>
-                    <span className="font-bold text-primary font-mono text-sm">{bedtimeScore !== null ? `${bedtimeScore}%` : '—'}</span>
-                  </div>
-                  <div className="h-4 w-px bg-white/10 shrink-0" />
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-amber text-[9px] uppercase font-bold tracking-wider">STREAK:</span>
-                    <span className="font-bold text-amber font-mono text-sm">{bestStreak > 0 ? `${bestStreak}d` : '—'}</span>
+                  <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-3.5 rounded-xl border border-border-color bg-bg-tertiary flex flex-col justify-between">
+                      <span className="font-mono text-[9px] uppercase font-bold text-muted">Weight</span>
+                      <div className="font-display font-bold text-xl text-primary">{latestWeight ? `${latestWeight} kg` : '—'}</div>
+                      <span className="font-mono text-[9px] font-bold" style={{ color: parseFloat(totalWeightLost) > 0 ? 'var(--success)' : 'var(--text-muted)' }}>{totalWeightLost > 0 ? `▼ ${totalWeightLost} kg` : '0 kg net'}</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-info/30 bg-bg-tertiary flex flex-col justify-between">
+                      <span className="font-mono text-[9px] uppercase font-bold text-info">Belly</span>
+                      <div className="font-display font-bold text-xl text-primary">{latestBelly ? `${latestBelly} cm` : '—'}</div>
+                      <span className="font-mono text-[9px] font-bold" style={{ color: parseFloat(totalBellyReduced) > 0 ? 'var(--success)' : 'var(--text-muted)' }}>{totalBellyReduced > 0 ? `▼ ${totalBellyReduced} cm` : '0 cm net'}</span>
+                    </div>
                   </div>
                 </div>
-
-                {/* Sleep Duration Chart */}
-                {sleepChartData.length >= 1 ? (
-                  <div className="p-4" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <BarChart2 size={10} color="var(--info)" />
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-muted">30-Day Sleep Duration</span>
-                      <div className="ml-auto flex items-center gap-4">
-                        <div className="flex items-center gap-1.5"><div style={{ width: 10, height: 10, background: 'var(--success)', borderRadius: 2 }} /><span className="font-mono text-[8px] text-muted">Healthy (7–10h)</span></div>
-                        <div className="flex items-center gap-1.5"><div style={{ width: 10, height: 10, background: 'var(--danger)', borderRadius: 2 }} /><span className="font-mono text-[8px] text-muted">Missed target</span></div>
-                      </div>
-                    </div>
-                    <div style={{ width: '100%', height: '200px' }}>
-                      <ResponsiveContainer>
-                        <AreaChart data={sleepChartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="colorSleepHours" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.35} />
-                              <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                          <YAxis domain={[0, 12]} tick={{ fontSize: 9, fill: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }} tickLine={false} axisLine={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <ReferenceLine y={7} stroke="var(--success)" strokeDasharray="4 4" strokeOpacity={0.6} />
-                          <ReferenceLine y={10} stroke="var(--warning)" strokeDasharray="4 4" strokeOpacity={0.6} />
-                          <Area 
-                            type="monotone" 
-                            dataKey="hours" 
-                            stroke="#38bdf8" 
-                            strokeWidth={2.5} 
-                            fillOpacity={1} 
-                            fill="url(#colorSleepHours)" 
-                            dot={{ fill: '#38bdf8', r: 3, strokeWidth: 1, stroke: '#0a0a0a' }}
-                            activeDot={{ r: 5, fill: '#38bdf8', stroke: '#fff', strokeWidth: 2 }}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="flex items-center gap-6 mt-2 flex-wrap">
-                      <div className="font-mono text-[8px] text-muted">— Target Zone: 7–10h</div>
-                      {wakeScore !== null && <div className="font-mono text-[8px] text-muted">Wake before 9 AM: {wakeScore}% of nights</div>}
-                      {currentStreak > 0 && <div className="font-mono text-[8px] text-success">🔥 Current Streak: {currentStreak} nights</div>}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-8 text-center" style={{ border: '1px dashed var(--border-color)' }}>
-                    <Moon size={24} className="text-muted mx-auto mb-3" />
-                    <p className="font-mono text-[11px] text-muted uppercase">No sleep logs yet. Log your sleep in Daily Ops to see analytics here.</p>
-                  </div>
-                )}
-
-                {/* Sleep Log History — Dropdown Accordion */}
-                {sleepLogs.length > 0 && (
-                  <div className="border border-border-color rounded-xl overflow-hidden">
-                    {/* Accordion Toggle Header */}
-                    <button
-                      type="button"
-                      onClick={() => setShowSleepHistory(!showSleepHistory)}
-                      className="w-full flex items-center justify-between gap-3 p-4 bg-bg-tertiary hover:bg-bg-secondary transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Clock size={12} color="var(--info)" />
-                        <span className="font-mono text-[9px] uppercase tracking-widest text-muted font-bold">
-                          Sleep Log History (Last 30 Days) — {sleepLogs.length} Entries
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 font-mono text-[9px] text-muted">
-                        <span>{showSleepHistory ? 'COLLAPSE' : 'EXPAND'}</span>
-                        {showSleepHistory
-                          ? <ChevronUp size={14} className="text-muted" />
-                          : <ChevronDown size={14} className="text-muted" />}
-                      </div>
-                    </button>
-
-                    {/* Dropdown Content */}
-                    <AnimatePresence initial={false}>
-                      {showSleepHistory && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.22, ease: 'easeInOut' }}
-                          className="overflow-hidden"
-                        >
-                          <div className="overflow-x-auto">
-                            <table className="w-full font-mono text-xs">
-                              <thead>
-                                <tr className="border-b border-border-color text-muted text-[9px] uppercase tracking-widest bg-bg-primary">
-                                  <th className="text-left py-2.5 px-4">Date</th>
-                                  <th className="text-left py-2.5 px-4">Bedtime</th>
-                                  <th className="text-left py-2.5 px-4">Wake Time</th>
-                                  <th className="text-left py-2.5 px-4">Duration</th>
-                                  <th className="text-left py-2.5 px-4">Status</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {[...sleepLogs].reverse().map((log, i) => (
-                                  <tr key={i} className="border-b border-border-color hover:bg-bg-primary/60 transition-colors">
-                                    <td className="py-2.5 px-4 text-muted">{log.date}</td>
-                                    <td className="py-2.5 px-4 text-primary">{log.bedtime || '—'}</td>
-                                    <td className="py-2.5 px-4 text-primary">{log.wake_time || '—'}</td>
-                                    <td className="py-2.5 px-4 font-bold" style={{ color: log.status === 'healthy' ? 'var(--success)' : 'var(--danger)' }}>
-                                      {log.duration_hours ? `${log.duration_hours}h` : '—'}
-                                    </td>
-                                    <td className="py-2.5 px-4">
-                                      {isLogHealthy(log)
-                                        ? <span className="flex items-center gap-1 text-success"><CheckCircle2 size={10} /> Healthy</span>
-                                        : <span className="flex items-center gap-1 text-danger"><XCircle size={10} /> Missed</span>
-                                      }
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
               </>
             )}
           </motion.div>
