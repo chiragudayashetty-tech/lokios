@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Scale, Moon, Ruler, Activity, TrendingDown, TrendingUp, Trophy, Target, Flame,
   Clock, CheckCircle2, XCircle, BarChart2, Zap, Sparkles, Plus, Layers, Calendar,
-  ChevronDown, ChevronUp, Sliders, Edit3, Trash2, Check, Lock, ArrowUpRight
+  ChevronDown, ChevronUp, Sliders, Edit3, Trash2, Check, Lock, ArrowUpRight, X
 } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar,
@@ -360,15 +360,34 @@ export default function WellnessPage() {
     setSaving(false)
   }
 
-  // ─── SAVE TARGETS MODAL ───
-  const handleSaveTargets = async () => {
+  // ─── TARGETS & BASELINES HANDLERS ───
+  const openTargetModal = () => {
+    setStartWeightVal(String(config?.starting_weight || 80))
+    setTargetWeightVal(String(config?.target_weight || 70))
+    setStartBellyVal(String(config?.starting_belly_cm || 92))
+    setTargetBellyVal(String(config?.target_belly_cm || 80))
+    setShowTargetModal(true)
+  }
+
+  const handleSaveTargets = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
     if (!user) return
+    const sW = parseFloat(startWeightVal)
+    const tW = parseFloat(targetWeightVal)
+    const sB = parseFloat(startBellyVal)
+    const tB = parseFloat(targetBellyVal)
+
+    if (isNaN(sW) || isNaN(tW) || sW <= 0 || tW <= 0) {
+      alert('Please enter valid starting and target weights (kg).')
+      return
+    }
+
     setSaving(true)
     const newCfg = {
-      starting_weight: parseFloat(startWeightVal) || config.starting_weight,
-      target_weight: parseFloat(targetWeightVal) || config.target_weight,
-      starting_belly_cm: parseFloat(startBellyVal) || config.starting_belly_cm,
-      target_belly_cm: parseFloat(targetBellyVal) || config.target_belly_cm
+      starting_weight: sW,
+      target_weight: tW,
+      starting_belly_cm: !isNaN(sB) && sB > 0 ? sB : 92,
+      target_belly_cm: !isNaN(tB) && tB > 0 ? tB : 80
     }
 
     if (typeof window !== 'undefined') {
@@ -376,17 +395,27 @@ export default function WellnessPage() {
     }
 
     try {
-      if (config.id) {
+      if (config?.id) {
         await supabase.from('weight_config').update(newCfg).eq('id', config.id)
       } else {
-        await supabase.from('weight_config').insert({ user_id: user.id, ...newCfg })
+        const { data: newRow } = await supabase.from('weight_config').insert({ user_id: user.id, ...newCfg }).select().maybeSingle()
+        if (newRow) newCfg.id = newRow.id
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('DB Target save error:', e)
+    }
 
     setConfig(prev => ({ ...prev, ...newCfg }))
     setShowTargetModal(false)
-    setSaving(false)
+    setLogToast('✓ TARGETS & BASELINES UPDATED')
+    setTimeout(() => setLogToast(null), 3000)
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lokios_weight_updated'))
+    }
+
     await fetchAllData()
+    setSaving(false)
   }
 
   // ─── CUSTOM CHART TOOLTIPS ───
@@ -453,10 +482,10 @@ export default function WellnessPage() {
             {/* Target Settings Button */}
             <button
               type="button"
-              onClick={() => setShowTargetModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-color bg-bg-secondary hover:bg-bg-tertiary text-primary font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer"
+              onClick={openTargetModal}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-color bg-bg-secondary hover:bg-bg-tertiary text-primary font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-sm"
             >
-              <Sliders size={12} />
+              <Sliders size={12} color="var(--accent-primary)" />
               <span>Targets & Baselines</span>
             </button>
 
@@ -1000,81 +1029,181 @@ export default function WellnessPage() {
         {/* ─── TARGETS & BASELINES MODAL ─── */}
         <AnimatePresence>
           {showTargetModal && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }}
-              onClick={() => setShowTargetModal(false)}>
-              <motion.div initial={{ scale: 0.92 }} animate={{ scale: 1 }} exit={{ scale: 0.92 }}
-                onClick={e => e.stopPropagation()} className="w-full max-w-md p-6 rounded-2xl bg-bg-secondary border border-border-color shadow-2xl">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sliders size={16} color="var(--accent-primary)" />
-                  <h3 className="font-display font-bold text-primary text-base">CONFIGURE TARGETS & BASELINES</h3>
-                </div>
-                <p className="font-mono text-[9px] text-muted uppercase mb-4">Set reference lines for trajectory tracking</p>
-
-                <div className="space-y-3.5 mb-5">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="font-mono text-[9px] text-muted uppercase block mb-1">Starting Weight (kg)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={startWeightVal}
-                        onChange={e => setStartWeightVal(e.target.value)}
-                        className="w-full p-2.5 font-mono text-sm text-primary border border-border-color rounded-lg bg-bg-primary outline-none"
-                      />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md"
+              style={{ background: 'rgba(0,0,0,0.85)' }}
+              onClick={() => setShowTargetModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.94, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.94, opacity: 0, y: 10 }}
+                transition={{ duration: 0.2 }}
+                onClick={e => e.stopPropagation()}
+                className="w-full max-w-lg p-6 rounded-2xl bg-bg-secondary border border-border-color shadow-2xl overflow-hidden relative"
+                style={{ borderLeft: '4px solid var(--accent-primary)' }}
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-border-color">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber/15 border border-amber/30 flex items-center justify-center">
+                      <Sliders size={16} color="var(--accent-primary)" />
                     </div>
                     <div>
-                      <label className="font-mono text-[9px] text-amber uppercase block mb-1">Target Weight (kg)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={targetWeightVal}
-                        onChange={e => setTargetWeightVal(e.target.value)}
-                        className="w-full p-2.5 font-mono text-sm text-primary border border-amber/40 rounded-lg bg-bg-primary outline-none"
-                      />
+                      <h3 className="font-display font-bold text-primary text-base leading-tight">
+                        TARGETS & RECON BASELINES
+                      </h3>
+                      <p className="font-mono text-[9px] text-muted uppercase tracking-wider mt-0.5">
+                        Define Starting Points & Target Reference Lines
+                      </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="font-mono text-[9px] text-muted uppercase block mb-1">Starting Belly (cm)</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={startBellyVal}
-                        onChange={e => setStartBellyVal(e.target.value)}
-                        className="w-full p-2.5 font-mono text-sm text-primary border border-border-color rounded-lg bg-bg-primary outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-mono text-[9px] text-sky-400 uppercase block mb-1">Target Belly (cm)</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={targetBellyVal}
-                        onChange={e => setTargetBellyVal(e.target.value)}
-                        className="w-full p-2.5 font-mono text-sm text-primary border border-sky-500/40 rounded-lg bg-bg-primary outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setShowTargetModal(false)}
-                    className="flex-1 p-2.5 font-mono text-xs text-muted border border-border-color rounded-lg hover:bg-bg-tertiary cursor-pointer"
+                    className="p-1.5 text-muted hover:text-primary rounded-lg hover:bg-bg-tertiary transition-colors cursor-pointer"
+                    title="Close"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveTargets}
-                    className="flex-1 p-2.5 font-display font-bold text-xs uppercase bg-amber text-black rounded-lg hover:opacity-90 cursor-pointer shadow-md"
-                  >
-                    Save Baselines
+                    <X size={16} />
                   </button>
                 </div>
+
+                <form onSubmit={handleSaveTargets}>
+                  <div className="space-y-4 mb-5">
+                    {/* Weight Card */}
+                    <div className="p-4 rounded-xl border border-border-color bg-bg-primary/80">
+                      <div className="flex items-center justify-between mb-2.5">
+                        <span className="font-mono text-[10px] uppercase font-bold text-primary flex items-center gap-1.5">
+                          <Scale size={12} color="var(--accent-primary)" />
+                          BODY WEIGHT TARGETS (KG)
+                        </span>
+                        {startWeightVal && targetWeightVal && !isNaN(parseFloat(startWeightVal)) && !isNaN(parseFloat(targetWeightVal)) && (
+                          <span className="font-mono text-[9px] font-bold text-amber px-2 py-0.5 rounded bg-amber/10 border border-amber/30">
+                            {parseFloat(startWeightVal) > parseFloat(targetWeightVal)
+                              ? `▼ -${(parseFloat(startWeightVal) - parseFloat(targetWeightVal)).toFixed(1)} kg goal`
+                              : `▲ +${(parseFloat(targetWeightVal) - parseFloat(startWeightVal)).toFixed(1)} kg goal`}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-mono text-[9px] text-muted uppercase block mb-1">Starting Weight</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.1"
+                              required
+                              value={startWeightVal}
+                              onChange={e => setStartWeightVal(e.target.value)}
+                              placeholder="e.g. 80.0"
+                              className="w-full p-2.5 font-mono text-sm text-primary border border-border-color rounded-lg bg-bg-secondary outline-none focus:border-amber"
+                            />
+                            <span className="absolute right-2.5 top-2.5 font-mono text-xs text-muted">kg</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="font-mono text-[9px] text-amber uppercase block mb-1 font-bold">Goal / Target Weight</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.1"
+                              required
+                              value={targetWeightVal}
+                              onChange={e => setTargetWeightVal(e.target.value)}
+                              placeholder="e.g. 70.0"
+                              className="w-full p-2.5 font-mono text-sm text-primary border border-amber/50 rounded-lg bg-bg-secondary outline-none focus:border-amber"
+                            />
+                            <span className="absolute right-2.5 top-2.5 font-mono text-xs text-amber font-bold">kg</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Belly / Waist Card */}
+                    <div className="p-4 rounded-xl border border-sky-500/30 bg-bg-primary/80" style={{ borderLeft: '3px solid #38bdf8' }}>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <span className="font-mono text-[10px] uppercase font-bold text-sky-400 flex items-center gap-1.5">
+                          <Ruler size={12} color="#38bdf8" />
+                          BELLY / WAIST TARGETS (CM & INCHES)
+                        </span>
+                        {startBellyVal && targetBellyVal && !isNaN(parseFloat(startBellyVal)) && !isNaN(parseFloat(targetBellyVal)) && (
+                          <span className="font-mono text-[9px] font-bold text-sky-400 px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/30">
+                            {parseFloat(startBellyVal) > parseFloat(targetBellyVal)
+                              ? `▼ -${(parseFloat(startBellyVal) - parseFloat(targetBellyVal)).toFixed(1)} cm (-${((parseFloat(startBellyVal) - parseFloat(targetBellyVal)) / 2.54).toFixed(1)}")`
+                              : `▲ +${(parseFloat(targetBellyVal) - parseFloat(startBellyVal)).toFixed(1)} cm`}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="font-mono text-[9px] text-muted uppercase block mb-1">
+                            Starting Waist {startBellyVal && !isNaN(parseFloat(startBellyVal)) && <span className="text-muted">({(parseFloat(startBellyVal) / 2.54).toFixed(1)}")</span>}
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={startBellyVal}
+                              onChange={e => setStartBellyVal(e.target.value)}
+                              placeholder="e.g. 92.0"
+                              className="w-full p-2.5 font-mono text-sm text-primary border border-border-color rounded-lg bg-bg-secondary outline-none focus:border-sky-400"
+                            />
+                            <span className="absolute right-2.5 top-2.5 font-mono text-xs text-muted">cm</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="font-mono text-[9px] text-sky-400 uppercase block mb-1 font-bold">
+                            Goal / Target Waist {targetBellyVal && !isNaN(parseFloat(targetBellyVal)) && <span className="text-sky-300">({(parseFloat(targetBellyVal) / 2.54).toFixed(1)}")</span>}
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={targetBellyVal}
+                              onChange={e => setTargetBellyVal(e.target.value)}
+                              placeholder="e.g. 80.0"
+                              className="w-full p-2.5 font-mono text-sm text-primary border border-sky-500/50 rounded-lg bg-bg-secondary outline-none focus:border-sky-400"
+                            />
+                            <span className="absolute right-2.5 top-2.5 font-mono text-xs text-sky-400 font-bold">cm</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border-color/60">
+                    <button
+                      type="button"
+                      onClick={() => setShowTargetModal(false)}
+                      className="px-4 py-2.5 font-mono text-xs text-muted border border-border-color rounded-lg hover:bg-bg-tertiary transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="px-5 py-2.5 font-display font-bold text-xs uppercase tracking-wider bg-amber text-black rounded-lg hover:opacity-90 transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                    >
+                      {saving ? (
+                        <>
+                          <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <span>Save Baselines & Apply to Graphs</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
               </motion.div>
             </motion.div>
           )}
