@@ -106,7 +106,31 @@ export function useHabitsInternal(user) {
 
       const realLogs = logsRes.data || []
       const fetchedHabits = habitsRes.data || []
-      fetchedHabits.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0) || new Date(a.created_at) - new Date(b.created_at))
+
+      // Read local custom order map
+      const savedOrderMap = new Map()
+      if (typeof window !== 'undefined' && user?.id) {
+        try {
+          const rawOrder = localStorage.getItem(`lokios_habit_order_${user.id}`)
+          if (rawOrder) {
+            const parsed = JSON.parse(rawOrder)
+            if (Array.isArray(parsed)) {
+              parsed.forEach((id, idx) => savedOrderMap.set(id, idx + 1))
+            } else if (parsed && typeof parsed === 'object') {
+              Object.entries(parsed).forEach(([id, idx]) => savedOrderMap.set(id, Number(idx)))
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to parse local habit order:', e)
+        }
+      }
+
+      fetchedHabits.sort((a, b) => {
+        const orderA = a.display_order ?? (typeof a.order === 'number' ? a.order : null) ?? (typeof a.sort_order === 'number' ? a.sort_order : null) ?? (typeof a.position === 'number' ? a.position : null) ?? savedOrderMap.get(a.id) ?? 99999
+        const orderB = b.display_order ?? (typeof b.order === 'number' ? b.order : null) ?? (typeof b.sort_order === 'number' ? b.sort_order : null) ?? (typeof b.position === 'number' ? b.position : null) ?? savedOrderMap.get(b.id) ?? 99999
+        return (orderA - orderB) || (new Date(a.created_at) - new Date(b.created_at))
+      })
+
       setAllHabits(fetchedHabits)
       setMonthLogs(realLogs)
     } catch (err) {
@@ -315,21 +339,47 @@ export function useHabitsInternal(user) {
     if (!user) return null
 
     try {
-      const payload = { created_at: new Date().toISOString(), is_active: true, ...data, user_id: user.id }
-      const { data: newHabit, error } = await supabase
+      const nextOrder = (habits?.length || 0) + 1
+      const payload = { created_at: new Date().toISOString(), is_active: true, display_order: nextOrder, ...data, user_id: user.id }
+      let newHabit = null
+      const { data: inserted, error } = await supabase
         .from('habits')
         .insert(payload)
         .select()
         .single()
 
-      if (error) throw error
-      setAllHabits((prev) => [...prev, newHabit])
+      if (error) {
+        const fallbackPayload = { ...payload }
+        delete fallbackPayload.display_order
+        const { data: fallbackInserted, error: fallbackError } = await supabase
+          .from('habits')
+          .insert(fallbackPayload)
+          .select()
+          .single()
+        if (fallbackError) throw fallbackError
+        newHabit = fallbackInserted
+      } else {
+        newHabit = inserted
+      }
+
+      if (newHabit) {
+        setAllHabits((prev) => [...prev, newHabit])
+        if (typeof window !== 'undefined' && user?.id) {
+          try {
+            const raw = localStorage.getItem(`lokios_habit_order_${user.id}`)
+            const currentOrder = raw ? JSON.parse(raw) : []
+            if (Array.isArray(currentOrder) && !currentOrder.includes(newHabit.id)) {
+              localStorage.setItem(`lokios_habit_order_${user.id}`, JSON.stringify([...currentOrder, newHabit.id]))
+            }
+          } catch (e) {}
+        }
+      }
       return newHabit
     } catch (error) {
       console.error('Error adding habit:', error)
       return null
     }
-  }, [user])
+  }, [user, habits?.length])
 
   const deleteHabit = useCallback(async (habitId) => {
     if (!user) return null
@@ -341,6 +391,15 @@ export function useHabitsInternal(user) {
         .eq('user_id', user.id)
       if (error) throw error
       setAllHabits((prev) => prev.filter((h) => h.id !== habitId))
+      if (typeof window !== 'undefined' && user?.id) {
+        try {
+          const raw = localStorage.getItem(`lokios_habit_order_${user.id}`)
+          const currentOrder = raw ? JSON.parse(raw) : []
+          if (Array.isArray(currentOrder)) {
+            localStorage.setItem(`lokios_habit_order_${user.id}`, JSON.stringify(currentOrder.filter(id => id !== habitId)))
+          }
+        } catch (e) {}
+      }
       return true
     } catch (error) {
       console.error('Error deleting habit:', error)
@@ -422,55 +481,100 @@ export function useHabitsInternal(user) {
   }, [user])
 
   const reorderHabits = useCallback(async (habitId, direction) => {
-    const sorted = [...habits]
-    const index = sorted.findIndex(h => h.id === habitId)
+    if (!user) return
+    const activeHabits = [...habits]
+    const index = activeHabits.findIndex(h => h.id === habitId)
     if (index === -1) return
     
     let swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (swapIndex < 0 || swapIndex >= sorted.length) return
+    if (swapIndex < 0 || swapIndex >= activeHabits.length) return
     
-    const [moved] = sorted.splice(index, 1)
-    sorted.splice(swapIndex, 0, moved)
+    const [moved] = activeHabits.splice(index, 1)
+    activeHabits.splice(swapIndex, 0, moved)
     
-    const updatedHabits = sorted.map((h, i) => ({
+    const updatedActive = activeHabits.map((h, i) => ({
       ...h,
       display_order: i + 1
     }))
-    
-    setAllHabits(updatedHabits)
-    
+
+    // Keep stopped habits intact in allHabits so they are not dropped
+    const currentStopped = allHabits.filter(h => h.is_active === false)
+    const updatedAll = [...updatedActive, ...currentStopped]
+    setAllHabits(updatedAll)
+
+    // Save exact order array in localStorage for 100% instant and unbreakable persistence
+    const orderIds = updatedActive.map(h => h.id)
+    if (typeof window !== 'undefined' && user?.id) {
+      try {
+        localStorage.setItem(`lokios_habit_order_${user.id}`, JSON.stringify(orderIds))
+      } catch (e) {}
+    }
+
+    // Persist to Supabase with progressive fallbacks
     const supabase = createClient()
-    await Promise.all(
-      updatedHabits.map(h =>
-        supabase.from('habits').update({ display_order: h.display_order }).eq('id', h.id).eq('user_id', user.id)
-      )
-    )
-  }, [habits, user])
+    for (const h of updatedActive) {
+      try {
+        const { error: err1 } = await supabase
+          .from('habits')
+          .update({ display_order: h.display_order })
+          .eq('id', h.id)
+          .eq('user_id', user.id)
+
+        if (err1) {
+          await supabase.from('habits').update({ order: h.display_order }).eq('id', h.id).eq('user_id', user.id)
+        }
+      } catch (e) {
+        console.warn('Failed to sync habit order to DB (local storage preserved):', e)
+      }
+    }
+  }, [habits, allHabits, user])
 
   const reorderHabitsByDrag = useCallback(async (draggedId, targetId) => {
     if (!draggedId || !targetId || draggedId === targetId || !user) return
-    const sorted = [...habits]
-    const dragIdx = sorted.findIndex(h => h.id === draggedId)
-    const targetIdx = sorted.findIndex(h => h.id === targetId)
+    const activeHabits = [...habits]
+    const dragIdx = activeHabits.findIndex(h => h.id === draggedId)
+    const targetIdx = activeHabits.findIndex(h => h.id === targetId)
     if (dragIdx === -1 || targetIdx === -1) return
 
-    const [moved] = sorted.splice(dragIdx, 1)
-    sorted.splice(targetIdx, 0, moved)
+    const [moved] = activeHabits.splice(dragIdx, 1)
+    activeHabits.splice(targetIdx, 0, moved)
 
-    const updatedHabits = sorted.map((h, i) => ({
+    const updatedActive = activeHabits.map((h, i) => ({
       ...h,
       display_order: i + 1
     }))
 
-    setAllHabits(updatedHabits)
+    // Keep stopped habits intact in allHabits
+    const currentStopped = allHabits.filter(h => h.is_active === false)
+    const updatedAll = [...updatedActive, ...currentStopped]
+    setAllHabits(updatedAll)
 
+    // Save exact order array in localStorage
+    const orderIds = updatedActive.map(h => h.id)
+    if (typeof window !== 'undefined' && user?.id) {
+      try {
+        localStorage.setItem(`lokios_habit_order_${user.id}`, JSON.stringify(orderIds))
+      } catch (e) {}
+    }
+
+    // Persist to Supabase with progressive fallbacks
     const supabase = createClient()
-    await Promise.all(
-      updatedHabits.map(h =>
-        supabase.from('habits').update({ display_order: h.display_order }).eq('id', h.id).eq('user_id', user.id)
-      )
-    )
-  }, [habits, user])
+    for (const h of updatedActive) {
+      try {
+        const { error: err1 } = await supabase
+          .from('habits')
+          .update({ display_order: h.display_order })
+          .eq('id', h.id)
+          .eq('user_id', user.id)
+
+        if (err1) {
+          await supabase.from('habits').update({ order: h.display_order }).eq('id', h.id).eq('user_id', user.id)
+        }
+      } catch (e) {
+        console.warn('Failed to sync habit order to DB (local storage preserved):', e)
+      }
+    }
+  }, [habits, allHabits, user])
 
   // Auto-fail untouched habits
   useEffect(() => {

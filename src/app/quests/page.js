@@ -1421,7 +1421,11 @@ export default function DailyOps() {
                   <div className="font-display text-base text-primary truncate" onClick={() => openEditModal(habit)}>{habit.title}</div>
                   <div className="font-mono text-[10px] text-muted uppercase truncate">{cat.name} • {stats.pct}% WIN RATE</div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-col gap-0.5 pr-0.5">
+                    <button type="button" onClick={(e) => { e?.stopPropagation?.(); reorderHabits(habit.id, 'up') }} className="p-1 text-muted hover:text-amber transition-colors" title="Move Up"><ArrowUp size={12} /></button>
+                    <button type="button" onClick={(e) => { e?.stopPropagation?.(); reorderHabits(habit.id, 'down') }} className="p-1 text-muted hover:text-amber transition-colors" title="Move Down"><ArrowDown size={12} /></button>
+                  </div>
                   <span className="font-mono text-[10px] text-info font-bold">+{habit.xp_per_completion || 25} XP</span>
                   <button 
                     type="button"
