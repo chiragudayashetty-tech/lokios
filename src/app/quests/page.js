@@ -211,14 +211,25 @@ export default function DailyOps() {
         let localBellyMap = {}
         if (typeof window !== 'undefined') {
           try {
-            const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+            const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
             if (raw) localBellyMap = JSON.parse(raw)
           } catch (e) {}
         }
+
+        const parseB = (v) => {
+          if (!v) return null
+          if (typeof v === 'string' && v.startsWith('belly:')) {
+            const n = parseFloat(v.replace('belly:', ''))
+            return !isNaN(n) && n > 0 ? n : null
+          }
+          const n = typeof v === 'number' ? v : parseFloat(v)
+          return !isNaN(n) && n > 0 ? n : null
+        }
+
         if (data && data.length > 0) {
           const merged = data.map(d => ({
             ...d,
-            belly_size_cm: d.belly_size_cm ?? d.waist_cm ?? localBellyMap[d.date] ?? null
+            belly_size_cm: parseB(d.belly_size_cm) ?? parseB(d.waist_cm) ?? parseB(d.notes) ?? parseB(localBellyMap[d.date]) ?? null
           }))
           setRecentWeightLogs(merged)
           const todayEntry = merged.find(d => d.date === todayStr)
@@ -327,10 +338,11 @@ export default function DailyOps() {
 
     if (b && typeof window !== 'undefined') {
       try {
-        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
         const map = raw ? JSON.parse(raw) : {}
         map[todayStr] = b
         localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(map))
+        localStorage.setItem('lokios_belly_logs_cache', JSON.stringify(map))
       } catch (e) {}
     }
 
@@ -341,14 +353,16 @@ export default function DailyOps() {
       date: todayStr,
       weight_kg: w,
       belly_size_cm: b,
-      waist_cm: b
+      waist_cm: b,
+      notes: b ? `belly:${b}` : null
     })
 
     if (wErr) {
       await sb.from('weight_logs').insert({
         user_id: user.id,
         date: todayStr,
-        weight_kg: w
+        weight_kg: w,
+        notes: b ? `belly:${b}` : null
       })
     }
 

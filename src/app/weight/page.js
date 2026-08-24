@@ -57,6 +57,27 @@ export default function WellnessPage() {
   const [startWeightVal, setStartWeightVal] = useState('')
   const [startBellyVal, setStartBellyVal] = useState('')
 
+  // ─── BELLY SIZE RESOLVER HELPER ───
+  const parseBellyVal = useCallback((v) => {
+    if (v === null || v === undefined || v === '') return null
+    if (typeof v === 'string') {
+      const trimmed = v.trim()
+      if (trimmed.startsWith('belly:')) {
+        const num = parseFloat(trimmed.replace('belly:', ''))
+        return !isNaN(num) && num > 0 ? num : null
+      }
+      try {
+        if (trimmed.startsWith('{') && trimmed.includes('belly')) {
+          const parsed = JSON.parse(trimmed)
+          const n = parseFloat(parsed.belly_size_cm ?? parsed.belly_cm ?? parsed.waist_cm)
+          return !isNaN(n) && n > 0 ? n : null
+        }
+      } catch (e) {}
+    }
+    const n = typeof v === 'number' ? v : parseFloat(v)
+    return !isNaN(n) && n > 0 ? n : null
+  }, [])
+
   // ─── FETCH ALL WELLNESS DATA ───
   const fetchAllData = useCallback(async () => {
     if (!user) return
@@ -72,9 +93,9 @@ export default function WellnessPage() {
       let localBellyMap = {}
       if (typeof window !== 'undefined') {
         try {
-          const rawCfg = localStorage.getItem(`lokios_wellness_config_${user.id}`)
+          const rawCfg = localStorage.getItem(`lokios_wellness_config_${user.id}`) || localStorage.getItem('lokios_wellness_config_cache')
           if (rawCfg) localCfg = JSON.parse(rawCfg)
-          const rawBelly = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+          const rawBelly = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
           if (rawBelly) localBellyMap = JSON.parse(rawBelly)
         } catch (e) {}
       }
@@ -96,24 +117,26 @@ export default function WellnessPage() {
       // Merge Weight & Belly Logs
       const rawWeights = weightRes.data || []
       const mergedWeights = rawWeights.map(l => {
-        const localBelly = localBellyMap[l.date]
-        const dbBelly = l.belly_size_cm ?? l.waist_cm ?? l.belly_cm
-        const finalBelly = (typeof dbBelly === 'number' && dbBelly > 0) ? dbBelly : (typeof localBelly === 'number' && localBelly > 0 ? localBelly : null)
+        const bFromNote = parseBellyVal(l.notes)
+        const bFromCol = parseBellyVal(l.belly_size_cm ?? l.waist_cm ?? l.belly_cm)
+        const bFromLocal = parseBellyVal(localBellyMap[l.date])
+        const finalBelly = bFromCol ?? bFromNote ?? bFromLocal ?? null
         return {
           ...l,
           weight_kg: parseFloat(l.weight_kg),
-          belly_size_cm: finalBelly ? parseFloat(finalBelly) : null
+          belly_size_cm: finalBelly
         }
       })
 
       // Include local-only belly entries
       Object.entries(localBellyMap).forEach(([dStr, bVal]) => {
-        if (!mergedWeights.some(l => l.date === dStr) && typeof bVal === 'number') {
+        const parsed = parseBellyVal(bVal)
+        if (!mergedWeights.some(l => l.date === dStr) && parsed !== null) {
           mergedWeights.push({
             user_id: user.id,
             date: dStr,
             weight_kg: mergedCfg.starting_weight,
-            belly_size_cm: bVal
+            belly_size_cm: parsed
           })
         }
       })
@@ -136,7 +159,7 @@ export default function WellnessPage() {
     } finally {
       setLoading(false)
     }
-  }, [user, todayStr])
+  }, [user, todayStr, parseBellyVal])
 
   useEffect(() => { fetchAllData() }, [fetchAllData])
 
@@ -297,37 +320,44 @@ export default function WellnessPage() {
     if (!user) return
     setSaving(true)
 
-    const wVal = parseFloat(inputWeight)
-    const bVal = inputBelly ? parseFloat(inputBelly) : null
+    const rawW = parseFloat(inputWeight)
+    const bVal = parseBellyVal(inputBelly)
+    const wVal = !isNaN(rawW) && rawW > 0 ? rawW : (latestWeightLog?.weight_kg || config.starting_weight || 75)
     const sHours = parseFloat(inputSleepHours)
     const targetDate = logDate || todayStr
 
-    // 1. Cache belly in localStorage
-    if (bVal && typeof window !== 'undefined') {
+    // 1. Cache belly in localStorage immediately
+    if (typeof window !== 'undefined' && user?.id) {
       try {
-        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
         const map = raw ? JSON.parse(raw) : {}
-        map[targetDate] = bVal
+        if (bVal !== null) {
+          map[targetDate] = bVal
+        }
         localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(map))
+        localStorage.setItem('lokios_belly_logs_cache', JSON.stringify(map))
       } catch (err) {}
     }
 
     // 2. Persist to DB
     try {
-      if (!isNaN(wVal) && wVal > 0) {
+      if ((!isNaN(rawW) && rawW > 0) || bVal !== null) {
         await supabase.from('weight_logs').delete().eq('user_id', user.id).eq('date', targetDate)
-        const { error: wErr } = await supabase.from('weight_logs').insert({
+        const payload = {
           user_id: user.id,
           date: targetDate,
           weight_kg: wVal,
           belly_size_cm: bVal,
-          waist_cm: bVal
-        })
+          waist_cm: bVal,
+          notes: bVal ? `belly:${bVal}` : null
+        }
+        const { error: wErr } = await supabase.from('weight_logs').insert(payload)
         if (wErr) {
           await supabase.from('weight_logs').insert({
             user_id: user.id,
             date: targetDate,
-            weight_kg: wVal
+            weight_kg: wVal,
+            notes: bVal ? `belly:${bVal}` : null
           })
         }
       }

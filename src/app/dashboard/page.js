@@ -300,11 +300,21 @@ export default function MissionControl() {
         const effectiveTargetBelly = wConfig.target_belly_cm || localConfig.target_belly_cm || 80
 
         if (latestLog) {
+          const parseB = (v) => {
+            if (!v) return null
+            if (typeof v === 'string' && v.startsWith('belly:')) {
+              const n = parseFloat(v.replace('belly:', ''))
+              return !isNaN(n) && n > 0 ? n : null
+            }
+            const n = typeof v === 'number' ? v : parseFloat(v)
+            return !isNaN(n) && n > 0 ? n : null
+          }
+
           const lost = (effectiveStartWeight - latestLog.weight_kg).toFixed(1)
           const range = effectiveStartWeight - effectiveTargetWeight
           const pct = range > 0 ? Math.min(100, Math.max(0, Math.round((parseFloat(lost) / range) * 100))) : 0
 
-          const latestBellyVal = latestLog.belly_size_cm ?? latestLog.waist_cm ?? localBellyMap[latestLog.date] ?? (todayLog ? (todayLog.belly_size_cm ?? localBellyMap[todayStr]) : null)
+          const latestBellyVal = parseB(latestLog.belly_size_cm) ?? parseB(latestLog.waist_cm) ?? parseB(latestLog.notes) ?? parseB(localBellyMap[latestLog.date]) ?? (todayLog ? (parseB(todayLog.belly_size_cm) ?? parseB(todayLog.notes) ?? parseB(localBellyMap[todayStr])) : null)
           const bellyLost = (latestBellyVal && effectiveStartBelly) ? (effectiveStartBelly - latestBellyVal).toFixed(1) : null
 
           setWeightData({
@@ -597,10 +607,11 @@ export default function MissionControl() {
     // Cache belly in localStorage
     if (!isSleep && bVal && typeof window !== 'undefined') {
       try {
-        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`)
+        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
         const map = raw ? JSON.parse(raw) : {}
         map[todayStr] = bVal
         localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(map))
+        localStorage.setItem('lokios_belly_logs_cache', JSON.stringify(map))
       } catch (err) {}
     }
 
@@ -622,14 +633,16 @@ export default function MissionControl() {
         date: todayStr,
         weight_kg: parseFloat(eodWellnessForm.weight_kg) || 75,
         belly_size_cm: bVal,
-        waist_cm: bVal
+        waist_cm: bVal,
+        notes: bVal ? `belly:${bVal}` : null
       }
       const { error: err1 } = await sb.from('weight_logs').insert(payload)
       if (err1) {
         await sb.from('weight_logs').insert({
           user_id: user.id,
           date: todayStr,
-          weight_kg: payload.weight_kg
+          weight_kg: payload.weight_kg,
+          notes: bVal ? `belly:${bVal}` : null
         })
       }
     }
