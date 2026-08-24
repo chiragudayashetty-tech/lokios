@@ -198,66 +198,100 @@ export default function DailyOps() {
     if (typeof window !== 'undefined') localStorage.setItem('lokios_last_waketime', val)
   }
 
-  // Fetch recent weight & belly logs & delta calculations
-  useEffect(() => {
+  // ─── FETCH RECENT WEIGHT & BELLY LOGS ───
+  const fetchWeightLogs = useCallback(async () => {
     if (!user) return
     const sb = createClient()
-    sb.from('weight_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('date', { ascending: true })
-      .limit(30)
-      .then(({ data }) => {
-        let localBellyMap = {}
-        if (typeof window !== 'undefined') {
-          try {
-            const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
-            if (raw) localBellyMap = JSON.parse(raw)
-          } catch (e) {}
-        }
+    try {
+      const { data } = await sb.from('weight_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: true })
+        .limit(30)
 
-        const parseB = (v) => {
-          if (!v) return null
-          if (typeof v === 'string' && v.startsWith('belly:')) {
-            const n = parseFloat(v.replace('belly:', ''))
-            return !isNaN(n) && n > 0 ? n : null
-          }
-          const n = typeof v === 'number' ? v : parseFloat(v)
+      let localBellyMap = {}
+      let lastSavedWeight = null
+      let lastSavedBelly = null
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
+          if (raw) localBellyMap = JSON.parse(raw)
+          lastSavedWeight = localStorage.getItem(`lokios_latest_weight_${user.id}`)
+          lastSavedBelly = localStorage.getItem(`lokios_latest_belly_${user.id}`)
+        } catch (e) {}
+      }
+
+      const parseB = (v) => {
+        if (!v) return null
+        if (typeof v === 'string' && v.startsWith('belly:')) {
+          const n = parseFloat(v.replace('belly:', ''))
           return !isNaN(n) && n > 0 ? n : null
         }
+        const n = typeof v === 'number' ? v : parseFloat(v)
+        return !isNaN(n) && n > 0 ? n : null
+      }
 
-        if (data && data.length > 0) {
-          const merged = data.map(d => ({
-            ...d,
-            belly_size_cm: parseB(d.belly_size_cm) ?? parseB(d.waist_cm) ?? parseB(d.notes) ?? parseB(localBellyMap[d.date]) ?? null
-          }))
-          setRecentWeightLogs(merged)
-          const todayEntry = merged.find(d => d.date === todayStr)
-          if (todayEntry) {
-            setWeightKg(String(todayEntry.weight_kg))
-            if (todayEntry.belly_size_cm) setBellyCm(String(todayEntry.belly_size_cm))
-            setWeightLoggedToday(true)
-          } else {
-            const latest = merged[merged.length - 1]
-            setWeightKg(String(latest.weight_kg))
-            if (latest.belly_size_cm) setBellyCm(String(latest.belly_size_cm))
-            setWeightLoggedToday(false)
-          }
-          
-          const yesterdayEntry = merged.find(d => d.date === yesterdayStr)
-          const currentW = todayEntry ? todayEntry.weight_kg : merged[merged.length - 1].weight_kg
-          if (yesterdayEntry) {
-            const diff = parseFloat((currentW - yesterdayEntry.weight_kg).toFixed(1))
-            setWeightDeltaYesterday(diff)
-          }
-          if (merged.length >= 2) {
-            const weekAgoEntry = merged[Math.max(0, merged.length - 7)]
-            const diff7 = parseFloat((currentW - weekAgoEntry.weight_kg).toFixed(1))
-            setWeightDelta7Days(diff7)
-          }
+      const rawLogs = data || []
+      const merged = rawLogs.map(d => ({
+        ...d,
+        belly_size_cm: parseB(d.belly_size_cm) ?? parseB(d.waist_cm) ?? parseB(d.notes) ?? parseB(localBellyMap[d.date]) ?? null
+      }))
+
+      // Include local-only today entry if not in DB yet
+      const localTodayBelly = parseB(localBellyMap[todayStr]) ?? parseB(lastSavedBelly)
+      if (!merged.some(d => d.date === todayStr) && (lastSavedWeight || localTodayBelly)) {
+        merged.push({
+          user_id: user.id,
+          date: todayStr,
+          weight_kg: lastSavedWeight ? parseFloat(lastSavedWeight) : (merged[merged.length - 1]?.weight_kg || 77.5),
+          belly_size_cm: localTodayBelly
+        })
+      }
+
+      if (merged.length > 0) {
+        setRecentWeightLogs(merged)
+        const todayEntry = merged.find(d => d.date === todayStr)
+        if (todayEntry) {
+          setWeightKg(String(todayEntry.weight_kg))
+          if (todayEntry.belly_size_cm) setBellyCm(String(todayEntry.belly_size_cm))
+          setWeightLoggedToday(true)
+        } else {
+          const latest = merged[merged.length - 1]
+          setWeightKg(String(latest.weight_kg))
+          if (latest.belly_size_cm) setBellyCm(String(latest.belly_size_cm))
+          setWeightLoggedToday(false)
         }
-      })
+
+        const yesterdayEntry = merged.find(d => d.date === yesterdayStr)
+        const currentW = todayEntry ? todayEntry.weight_kg : merged[merged.length - 1].weight_kg
+        if (yesterdayEntry) {
+          const diff = parseFloat((currentW - yesterdayEntry.weight_kg).toFixed(1))
+          setWeightDeltaYesterday(diff)
+        }
+        if (merged.length >= 2) {
+          const weekAgoEntry = merged[Math.max(0, merged.length - 7)]
+          const diff7 = parseFloat((currentW - weekAgoEntry.weight_kg).toFixed(1))
+          setWeightDelta7Days(diff7)
+        }
+      } else {
+        if (lastSavedWeight) setWeightKg(String(lastSavedWeight))
+        if (localTodayBelly) setBellyCm(String(localTodayBelly))
+      }
+    } catch (err) {
+      console.warn('Error fetching weight logs:', err)
+    }
   }, [user, todayStr, yesterdayStr])
+
+  useEffect(() => {
+    fetchWeightLogs()
+  }, [fetchWeightLogs])
+
+  // Listen for weight updates
+  useEffect(() => {
+    const handleUpdate = () => { fetchWeightLogs() }
+    window.addEventListener('lokios_weight_updated', handleUpdate)
+    return () => window.removeEventListener('lokios_weight_updated', handleUpdate)
+  }, [fetchWeightLogs])
 
   // Fetch existing sleep log when selected date changes
   useEffect(() => {
@@ -329,41 +363,53 @@ export default function DailyOps() {
   }, [bedtime, wakeTime])
 
   const handleSaveWeight = async () => {
-    if (!user || (!weightKg && !bellyCm)) return
-    const w = parseFloat(weightKg)
-    const b = bellyCm ? parseFloat(bellyCm) : null
-    if (isNaN(w) || w <= 0) return
+    if (!user) return
+    const rawW = parseFloat(weightKg)
+    const b = bellyCm && !isNaN(parseFloat(bellyCm)) && parseFloat(bellyCm) > 0 ? parseFloat(bellyCm) : null
+    const w = !isNaN(rawW) && rawW > 0 ? rawW : (recentWeightLogs[recentWeightLogs.length - 1]?.weight_kg || 77.5)
+
     setWeightSaving(true)
     const sb = createClient()
 
-    if (b && typeof window !== 'undefined') {
+    // 1. Synchronously cache to localStorage
+    if (typeof window !== 'undefined') {
       try {
-        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
-        const map = raw ? JSON.parse(raw) : {}
-        map[todayStr] = b
-        localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(map))
-        localStorage.setItem('lokios_belly_logs_cache', JSON.stringify(map))
+        localStorage.setItem(`lokios_latest_weight_${user.id}`, String(w))
+        localStorage.setItem('lokios_latest_weight_cache', String(w))
+        if (b !== null) {
+          localStorage.setItem(`lokios_latest_belly_${user.id}`, String(b))
+          localStorage.setItem('lokios_latest_belly_cache', String(b))
+          const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
+          const map = raw ? JSON.parse(raw) : {}
+          map[todayStr] = b
+          localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(map))
+          localStorage.setItem('lokios_belly_logs_cache', JSON.stringify(map))
+        }
       } catch (e) {}
     }
 
-    // Delete any existing weight log for today, then insert fresh
-    await sb.from('weight_logs').delete().eq('user_id', user.id).eq('date', todayStr)
-    const { error: wErr } = await sb.from('weight_logs').insert({
-      user_id: user.id,
-      date: todayStr,
-      weight_kg: w,
-      belly_size_cm: b,
-      waist_cm: b,
-      notes: b ? `belly:${b}` : null
-    })
-
-    if (wErr) {
-      await sb.from('weight_logs').insert({
+    // 2. Persist to DB
+    try {
+      await sb.from('weight_logs').delete().eq('user_id', user.id).eq('date', todayStr)
+      const payload = {
         user_id: user.id,
         date: todayStr,
         weight_kg: w,
+        belly_size_cm: b,
+        waist_cm: b,
         notes: b ? `belly:${b}` : null
-      })
+      }
+      const { error: wErr } = await sb.from('weight_logs').insert(payload)
+      if (wErr) {
+        await sb.from('weight_logs').insert({
+          user_id: user.id,
+          date: todayStr,
+          weight_kg: w,
+          notes: b ? `belly:${b}` : null
+        })
+      }
+    } catch (err) {
+      console.warn('DB Save error:', err)
     }
 
     setWeightLoggedToday(true)
@@ -373,6 +419,12 @@ export default function DailyOps() {
       subtitle: `${w} kg${b ? ` · ${b} cm waist` : ''} recorded for today`
     })
     setWeightSaving(false)
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lokios_weight_updated'))
+    }
+
+    await fetchWeightLogs()
   }
 
   const handleSaveSleep = async () => {
@@ -895,6 +947,8 @@ export default function DailyOps() {
                       placeholder="77.5"
                       value={weightKg}
                       onChange={e => setWeightKg(e.target.value)}
+                      onBlur={handleSaveWeight}
+                      onKeyDown={e => e.key === 'Enter' && handleSaveWeight()}
                       className="font-display font-black text-3xl sm:text-4xl text-emerald-400 bg-transparent border-none outline-none w-28 sm:w-32 text-center sm:text-left tracking-tight focus:ring-1 focus:ring-emerald-500/50 rounded-lg"
                     />
                     <span className="font-mono text-sm font-bold text-slate-400 select-none">kg</span>
@@ -914,6 +968,8 @@ export default function DailyOps() {
                       placeholder="88.0"
                       value={bellyCm}
                       onChange={e => setBellyCm(e.target.value)}
+                      onBlur={handleSaveWeight}
+                      onKeyDown={e => e.key === 'Enter' && handleSaveWeight()}
                       className="font-display font-black text-3xl sm:text-4xl text-sky-400 bg-transparent border-none outline-none w-28 sm:w-32 text-center sm:text-left tracking-tight focus:ring-1 focus:ring-sky-500/50 rounded-lg"
                     />
                     <span className="font-mono text-sm font-bold text-sky-400 select-none">cm</span>
@@ -949,13 +1005,17 @@ export default function DailyOps() {
               <button
                 type="button"
                 onClick={handleSaveWeight}
-                disabled={weightSaving || !weightKg}
-                className="px-4 py-2 rounded-xl border border-amber-500/50 bg-amber-950/20 hover:bg-amber-900/40 text-amber-400 font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-[0_0_12px_rgba(245,158,11,0.15)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={weightSaving}
+                className={`px-4 py-2 rounded-xl border font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                  weightLoggedToday
+                    ? 'border-emerald-500/40 bg-emerald-950/30 hover:bg-emerald-900/40 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
+                    : 'border-amber-500/50 bg-amber-950/20 hover:bg-amber-900/40 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.15)]'
+                }`}
               >
                 {weightSaving ? (
                   <><span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> SAVING</>
                 ) : (
-                  <>↑ {weightLoggedToday ? 'UPDATE WEIGHT' : 'LOG WEIGHT'}</>
+                  <>{weightLoggedToday ? '✓ RECORDED FOR TODAY' : '↑ SAVE & LOG TODAY'}</>
                 )}
               </button>
             </div>
