@@ -1059,35 +1059,52 @@ export default function WellnessPage() {
         {/* ─── TARGETS & BASELINES MODAL ─── */}
         <AnimatePresence>
           {showTargetModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md"
-              style={{ background: 'rgba(0,0,0,0.85)' }}
+            <div
+              className="modal-overlay"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 99999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                background: 'rgba(0, 0, 0, 0.88)',
+                backdropFilter: 'blur(14px)',
+                WebkitBackdropFilter: 'blur(14px)'
+              }}
               onClick={() => setShowTargetModal(false)}
             >
               <motion.div
-                initial={{ scale: 0.94, opacity: 0, y: 10 }}
+                initial={{ scale: 0.92, opacity: 0, y: 15 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.94, opacity: 0, y: 10 }}
-                transition={{ duration: 0.2 }}
+                exit={{ scale: 0.92, opacity: 0, y: 15 }}
+                transition={{ duration: 0.18 }}
                 onClick={e => e.stopPropagation()}
-                className="w-full max-w-lg p-6 rounded-2xl bg-bg-secondary border border-border-color shadow-2xl overflow-hidden relative"
-                style={{ borderLeft: '4px solid var(--accent-primary)' }}
+                className="w-full relative shadow-2xl"
+                style={{
+                  maxWidth: '480px',
+                  width: '100%',
+                  background: '#0e1217',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  borderLeft: '4px solid var(--accent-primary)',
+                  borderRadius: '18px',
+                  padding: '22px',
+                  boxShadow: '0 30px 90px rgba(0, 0, 0, 0.95), 0 0 45px rgba(245, 158, 11, 0.15)'
+                }}
               >
                 {/* Modal Header */}
-                <div className="flex items-center justify-between pb-3 mb-4 border-b border-border-color">
+                <div className="flex items-center justify-between pb-3 mb-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-amber/15 border border-amber/30 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.35)' }}>
                       <Sliders size={16} color="var(--accent-primary)" />
                     </div>
                     <div>
-                      <h3 className="font-display font-bold text-primary text-base leading-tight">
-                        TARGETS & RECON BASELINES
+                      <h3 className="font-display font-bold text-base leading-tight tracking-tight text-white">
+                        TARGETS & BASELINE PROTOCOL
                       </h3>
-                      <p className="font-mono text-[9px] text-muted uppercase tracking-wider mt-0.5">
-                        Define Starting Points & Target Reference Lines
+                      <p className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 mt-0.5">
+                        Set Starting Points & Goal References
                       </p>
                     </div>
                   </div>
@@ -1095,7 +1112,7 @@ export default function WellnessPage() {
                   <button
                     type="button"
                     onClick={() => setShowTargetModal(false)}
-                    className="p-1.5 text-muted hover:text-primary rounded-lg hover:bg-bg-tertiary transition-colors cursor-pointer"
+                    className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
                     title="Close"
                   >
                     <X size={16} />
@@ -1103,16 +1120,16 @@ export default function WellnessPage() {
                 </div>
 
                 <form onSubmit={handleSaveTargets}>
-                  <div className="space-y-4 mb-5">
+                  <div className="space-y-3.5 mb-5">
                     {/* Weight Card */}
-                    <div className="p-4 rounded-xl border border-border-color bg-bg-primary/80">
-                      <div className="flex items-center justify-between mb-2.5">
-                        <span className="font-mono text-[10px] uppercase font-bold text-primary flex items-center gap-1.5">
-                          <Scale size={12} color="var(--accent-primary)" />
+                    <div className="p-3.5 rounded-xl" style={{ background: '#080a0e', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-[10px] uppercase font-bold text-neutral-200 flex items-center gap-1.5">
+                          <Scale size={13} color="var(--accent-primary)" />
                           BODY WEIGHT TARGETS (KG)
                         </span>
                         {startWeightVal && targetWeightVal && !isNaN(parseFloat(startWeightVal)) && !isNaN(parseFloat(targetWeightVal)) && (
-                          <span className="font-mono text-[9px] font-bold text-amber px-2 py-0.5 rounded bg-amber/10 border border-amber/30">
+                          <span className="font-mono text-[9px] font-bold text-amber px-2 py-0.5 rounded" style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
                             {parseFloat(startWeightVal) > parseFloat(targetWeightVal)
                               ? `▼ -${(parseFloat(startWeightVal) - parseFloat(targetWeightVal)).toFixed(1)} kg goal`
                               : `▲ +${(parseFloat(targetWeightVal) - parseFloat(startWeightVal)).toFixed(1)} kg goal`}
@@ -1120,9 +1137,9 @@ export default function WellnessPage() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-2.5">
                         <div>
-                          <label className="font-mono text-[9px] text-muted uppercase block mb-1">Starting Weight</label>
+                          <label className="font-mono text-[9px] text-neutral-400 uppercase block mb-1">Starting Weight</label>
                           <div className="relative">
                             <input
                               type="number"
@@ -1131,9 +1148,10 @@ export default function WellnessPage() {
                               value={startWeightVal}
                               onChange={e => setStartWeightVal(e.target.value)}
                               placeholder="e.g. 80.0"
-                              className="w-full p-2.5 font-mono text-sm text-primary border border-border-color rounded-lg bg-bg-secondary outline-none focus:border-amber"
+                              className="w-full p-2.5 font-mono text-sm text-white rounded-lg outline-none focus:border-amber"
+                              style={{ background: '#12161d', border: '1px solid rgba(255, 255, 255, 0.12)' }}
                             />
-                            <span className="absolute right-2.5 top-2.5 font-mono text-xs text-muted">kg</span>
+                            <span className="absolute right-2.5 top-2.5 font-mono text-xs text-neutral-400 font-bold">kg</span>
                           </div>
                         </div>
 
@@ -1147,7 +1165,8 @@ export default function WellnessPage() {
                               value={targetWeightVal}
                               onChange={e => setTargetWeightVal(e.target.value)}
                               placeholder="e.g. 70.0"
-                              className="w-full p-2.5 font-mono text-sm text-primary border border-amber/50 rounded-lg bg-bg-secondary outline-none focus:border-amber"
+                              className="w-full p-2.5 font-mono text-sm text-amber font-bold rounded-lg outline-none"
+                              style={{ background: '#12161d', border: '1px solid rgba(245, 158, 11, 0.45)' }}
                             />
                             <span className="absolute right-2.5 top-2.5 font-mono text-xs text-amber font-bold">kg</span>
                           </div>
@@ -1156,14 +1175,14 @@ export default function WellnessPage() {
                     </div>
 
                     {/* Belly / Waist Card */}
-                    <div className="p-4 rounded-xl border border-sky-500/30 bg-bg-primary/80" style={{ borderLeft: '3px solid #38bdf8' }}>
-                      <div className="flex items-center justify-between mb-2.5">
+                    <div className="p-3.5 rounded-xl" style={{ background: '#080a0e', border: '1px solid rgba(56, 189, 248, 0.25)', borderLeft: '3px solid #38bdf8' }}>
+                      <div className="flex items-center justify-between mb-2">
                         <span className="font-mono text-[10px] uppercase font-bold text-sky-400 flex items-center gap-1.5">
-                          <Ruler size={12} color="#38bdf8" />
+                          <Ruler size={13} color="#38bdf8" />
                           BELLY / WAIST TARGETS (CM & INCHES)
                         </span>
                         {startBellyVal && targetBellyVal && !isNaN(parseFloat(startBellyVal)) && !isNaN(parseFloat(targetBellyVal)) && (
-                          <span className="font-mono text-[9px] font-bold text-sky-400 px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/30">
+                          <span className="font-mono text-[9px] font-bold text-sky-400 px-2 py-0.5 rounded" style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
                             {parseFloat(startBellyVal) > parseFloat(targetBellyVal)
                               ? `▼ -${(parseFloat(startBellyVal) - parseFloat(targetBellyVal)).toFixed(1)} cm (-${((parseFloat(startBellyVal) - parseFloat(targetBellyVal)) / 2.54).toFixed(1)}")`
                               : `▲ +${(parseFloat(targetBellyVal) - parseFloat(startBellyVal)).toFixed(1)} cm`}
@@ -1171,10 +1190,10 @@ export default function WellnessPage() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-2.5">
                         <div>
-                          <label className="font-mono text-[9px] text-muted uppercase block mb-1">
-                            Starting Waist {startBellyVal && !isNaN(parseFloat(startBellyVal)) && <span className="text-muted">({(parseFloat(startBellyVal) / 2.54).toFixed(1)}")</span>}
+                          <label className="font-mono text-[9px] text-neutral-400 uppercase block mb-1">
+                            Starting Waist {startBellyVal && !isNaN(parseFloat(startBellyVal)) && <span className="text-neutral-500">({(parseFloat(startBellyVal) / 2.54).toFixed(1)}")</span>}
                           </label>
                           <div className="relative">
                             <input
@@ -1183,9 +1202,10 @@ export default function WellnessPage() {
                               value={startBellyVal}
                               onChange={e => setStartBellyVal(e.target.value)}
                               placeholder="e.g. 92.0"
-                              className="w-full p-2.5 font-mono text-sm text-primary border border-border-color rounded-lg bg-bg-secondary outline-none focus:border-sky-400"
+                              className="w-full p-2.5 font-mono text-sm text-white rounded-lg outline-none focus:border-sky-400"
+                              style={{ background: '#12161d', border: '1px solid rgba(255, 255, 255, 0.12)' }}
                             />
-                            <span className="absolute right-2.5 top-2.5 font-mono text-xs text-muted">cm</span>
+                            <span className="absolute right-2.5 top-2.5 font-mono text-xs text-neutral-400 font-bold">cm</span>
                           </div>
                         </div>
 
@@ -1200,7 +1220,8 @@ export default function WellnessPage() {
                               value={targetBellyVal}
                               onChange={e => setTargetBellyVal(e.target.value)}
                               placeholder="e.g. 80.0"
-                              className="w-full p-2.5 font-mono text-sm text-primary border border-sky-500/50 rounded-lg bg-bg-secondary outline-none focus:border-sky-400"
+                              className="w-full p-2.5 font-mono text-sm text-sky-400 font-bold rounded-lg outline-none"
+                              style={{ background: '#12161d', border: '1px solid rgba(56, 189, 248, 0.45)' }}
                             />
                             <span className="absolute right-2.5 top-2.5 font-mono text-xs text-sky-400 font-bold">cm</span>
                           </div>
@@ -1210,18 +1231,19 @@ export default function WellnessPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border-color/60">
+                  <div className="flex items-center justify-end gap-2.5 pt-2" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
                     <button
                       type="button"
                       onClick={() => setShowTargetModal(false)}
-                      className="px-4 py-2.5 font-mono text-xs text-muted border border-border-color rounded-lg hover:bg-bg-tertiary transition-colors cursor-pointer"
+                      className="px-4 py-2 font-mono text-xs text-neutral-400 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                      style={{ border: '1px solid rgba(255, 255, 255, 0.12)' }}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={saving}
-                      className="px-5 py-2.5 font-display font-bold text-xs uppercase tracking-wider bg-amber text-black rounded-lg hover:opacity-90 transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                      className="px-5 py-2 font-display font-bold text-xs uppercase tracking-wider bg-amber text-black rounded-lg hover:opacity-90 transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                     >
                       {saving ? (
                         <>
@@ -1235,7 +1257,7 @@ export default function WellnessPage() {
                   </div>
                 </form>
               </motion.div>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
 
