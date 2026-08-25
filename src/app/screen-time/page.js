@@ -201,7 +201,16 @@ export default function ScreenIntel() {
     }
   }
 
-  if (loading) return <AppShell><div className="flex-center h-full"><span className="typewriter-text">GATHERING INTEL...</span></div></AppShell>
+  if (loading) return (
+    <AppShell>
+      <div className="flex-center h-full flex-col gap-2">
+        <span className="typewriter-text">GATHERING INTEL...</span>
+        <span className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase animate-pulse flex items-center gap-1.5">
+          <span>❄️</span> WINTER IS COMING <span>❄️</span>
+        </span>
+      </div>
+    </AppShell>
+  )
 
   // Unified Digital Discipline Score formula per day:
   // Score = (focusPct * 40) + (cleanScreenPct * 35) + (cleanDoomPct * 25)

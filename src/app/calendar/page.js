@@ -143,8 +143,11 @@ export default function Calendar() {
   if (isLoading && !events.length && !tasks.length) {
     return (
       <AppShell>
-        <div className="flex-center h-full min-h-[60vh]">
+        <div className="flex-center h-full min-h-[60vh] flex-col gap-2">
           <span className="typewriter-text">SYNCING SATELLITES...</span>
+          <span className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase animate-pulse flex items-center gap-1.5">
+            <span>❄️</span> WINTER IS COMING <span>❄️</span>
+          </span>
         </div>
       </AppShell>
     )
