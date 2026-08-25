@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   X, Download, Calendar, CheckSquare, Target, Monitor, 
-  Scale, Moon, Crosshair, FileText, Check, Printer, Sparkles, Briefcase,
+  Crosshair, FileText, Check, Printer, Sparkles, Briefcase,
   BookOpen, Zap, Camera, Brain, ClipboardList, Mic
 } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
@@ -31,8 +31,6 @@ export default function IntelExportModal({ isOpen, onClose }) {
     proof_of_work: true,
     brain_dump: false,
     screen_intel: true,
-    weight_recon: true,
-    sleep_intel: true,
     speaking_intel: true,
     xp_timeline: true,
   })
@@ -72,13 +70,11 @@ export default function IntelExportModal({ isOpen, onClose }) {
 
       // Fetch all data in parallel
       const [
-        screenRes, weightRes, sleepRes,
+        screenRes,
         workHoursRes, workRes, contentRes,
         habitLogsRes, journalRes, brainDumpRes, speakingRes, xpHistoryRes
       ] = await Promise.all([
         supabase.from('screen_time_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
-        supabase.from('weight_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
-        supabase.from('sleep_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('work_hours_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
         supabase.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
         supabase.from('content_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
@@ -111,8 +107,6 @@ export default function IntelExportModal({ isOpen, onClose }) {
       }
 
       const screenLogs = screenRes.data || []
-      const weightLogs = weightRes.data || []
-      const sleepLogs = sleepRes.data || []
       let speakingLogs = speakingRes?.data || []
       if (speakingLogs.length === 0 && typeof window !== 'undefined') {
         const cached = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
@@ -130,6 +124,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
         l.title && l.title.toLowerCase().startsWith('weekly debrief') &&
         l.date >= startDate && l.date <= endDate
       )
+
+      const xpAuditLogs = xpHistoryRes.data || []
 
       // Proof of work — work_logs with media_urls
       const proofLogs = allWorkLogs.filter(l =>
@@ -593,52 +589,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
         `
       }
 
-      // 9. WEIGHT RECON
-      if (selectedModules.weight_recon) {
-        sectionsHTML += `
-          <div class="section">
-            <h2 class="section-title">⚖️ WEIGHT RECON LOGS (${weightLogs.length})</h2>
-            <table>
-              <thead><tr><th>Date</th><th>Weight (kg)</th><th>Belly / Waist</th><th>Notes</th></tr></thead>
-              <tbody>
-                ${weightLogs.map(l => `
-                  <tr>
-                    <td>${l.date}</td>
-                    <td><strong class="text-amber">${l.weight_kg ?? l.weight ?? '—'}kg</strong></td>
-                    <td>${l.belly_size_cm ? `${l.belly_size_cm}cm` : l.waist_cm ? `${l.waist_cm}cm` : '—'}</td>
-                    <td>${l.notes || '—'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `
-      }
-
-      // 10. SLEEP INTEL
-      if (selectedModules.sleep_intel) {
-        sectionsHTML += `
-          <div class="section">
-            <h2 class="section-title">🌙 SLEEP INTEL LOGS (${sleepLogs.length})</h2>
-            <table>
-              <thead><tr><th>Date</th><th>Bedtime</th><th>Wake Time</th><th>Duration</th><th>Quality</th></tr></thead>
-              <tbody>
-                ${sleepLogs.map(l => `
-                  <tr>
-                    <td>${l.date}</td>
-                    <td>${l.bedtime || '—'}</td>
-                    <td>${l.wake_time || '—'}</td>
-                    <td><strong>${l.duration_hours || 0}hrs</strong></td>
-                    <td><span class="badge ${l.quality_score >= 8 ? 'badge-success' : l.quality_score >= 5 ? 'badge-warning' : 'badge-danger'}">${l.quality_score || 5}/10</span></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `
-      }
-
-      // 11. SPEAKING PRACTICE
+      // 9. SPEAKING PRACTICE
       if (selectedModules.speaking_intel) {
         sectionsHTML += `
           <div class="section">
@@ -796,8 +747,6 @@ export default function IntelExportModal({ isOpen, onClose }) {
     { key: 'proof_of_work',   icon: Camera,          label: 'Proof of Work / Portfolio',color: 'text-amber',   desc: 'Portfolio log with media links' },
     { key: 'brain_dump',      icon: Brain,           label: 'Brain Dump Log',           color: 'text-info',    desc: 'Raw thoughts & ideas' },
     { key: 'screen_intel',    icon: Monitor,         label: 'Screen Intel',             color: 'text-success', desc: 'Screen time logs' },
-    { key: 'weight_recon',    icon: Scale,           label: 'Weight Recon',             color: 'text-amber',   desc: 'Weight & body fat logs' },
-    { key: 'sleep_intel',     icon: Moon,            label: 'Sleep Intel',              color: 'text-info',    desc: 'Bedtime, wake, quality' },
     { key: 'speaking_intel',  icon: Mic,             label: 'Speaking Practice',        color: 'text-amber',   desc: '30-day camera challenge & video links' },
     { key: 'xp_timeline',     icon: Zap,             label: 'XP Timeline Audit Log',    color: 'text-amber',   desc: 'Minute-to-minute XP additions, deductions & auto-penalties' },
   ]

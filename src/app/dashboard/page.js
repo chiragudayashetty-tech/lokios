@@ -6,7 +6,7 @@ import {
   Target, AlertTriangle, Zap, Swords, Flame, ChevronDown,
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
   Activity, Clock, Terminal, ArrowUpRight, BarChart2,
-  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, Scale, X, RotateCcw,
+  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, X, RotateCcw,
   Calendar as CalendarIcon, MapPin, Plus, ExternalLink, Briefcase, Sun, FileText, CheckCircle2, Mic, Sparkles
 } from 'lucide-react'
 import Link from 'next/link'
@@ -38,17 +38,7 @@ const BATTLE_ICONS = {
   'Inconsistent Execution':Repeat,
   'Fear of Selling':       DollarSign,
   'Poor Sleep Discipline': Moon,
-  'Overthinking':          Brain,
 }
-
-const DEFAULT_BATTLES = [
-  { name: 'Phone Addiction', hp: 80, severity: 'high', notes: 'Primary discipline threat.', linked_habits: [] },
-  { name: 'Porn Consumption', hp: 90, severity: 'high', notes: 'Drain on discipline and self-respect.', linked_habits: [] },
-  { name: 'Inconsistent Execution', hp: 70, severity: 'high', notes: 'Starting strong, dropping off.', linked_habits: [] },
-  { name: 'Fear of Selling', hp: 75, severity: 'medium', notes: 'Hesitation to pitch or ask for money.', linked_habits: [] },
-  { name: 'Poor Sleep Discipline', hp: 85, severity: 'high', notes: 'Sleeping past 12 AM, waking up fatigued.', linked_habits: [] },
-  { name: 'Overthinking', hp: 65, severity: 'medium', notes: 'Analyzing instead of executing.', linked_habits: [] }
-]
 
 const SEVERITY_COLORS = {
   extreme: '#FF3B3B',
@@ -123,25 +113,21 @@ export default function MissionControl() {
   
   // New metrics states
   const [xpTrajectory, setXpTrajectory] = useState([])
-  const [weightData, setWeightData] = useState(null)
   const [latestDebrief, setLatestDebrief] = useState(null)
   const [todayScreenTime, setTodayScreenTime] = useState(null)
-  const [sleepData, setSleepData] = useState(null)
   const [addictionData, setAddictionData] = useState(null)
-  const [expandedWidget, setExpandedWidget] = useState(null) // 'sleep' | 'addiction'
+  const [expandedWidget, setExpandedWidget] = useState(null) // 'addiction'
 
   // ── EOD Recon Checklist Widget States ──
   const [eodWorkData, setEodWorkData] = useState({ logged: false, hours: 0 })
-  const [eodWellnessData, setEodWellnessData] = useState({ logged: false, detail: '' })
   const [eodSpeakingData, setEodSpeakingData] = useState({ logged: false, detail: '' })
-  const [eodQuickLogModal, setEodQuickLogModal] = useState(null) // 'wellness' | 'work' | 'journal' | 'screen' | 'speaking'
+  const [eodQuickLogModal, setEodQuickLogModal] = useState(null) // 'work' | 'journal' | 'screen' | 'speaking'
   const [eodJournalLogged, setEodJournalLogged] = useState(false)
 
   // Quick form states
   const [eodScreenForm, setEodScreenForm] = useState({ total_hours: '4', doomscroll_minutes: '30', streaming_hours: '0.5' })
   const [eodJournalForm, setEodJournalForm] = useState({ mood: 'good', content: '' })
   const [eodWorkForm, setEodWorkForm] = useState({ hours: '2', work_type: 'deep_work', notes: '' })
-  const [eodWellnessForm, setEodWellnessForm] = useState({ type: 'sleep', sleep_hours: '8', bedtime: '23:00', wake_time: '07:00', weight_kg: '', belly_size_cm: '' })
   const [eodSpeakingForm, setEodSpeakingForm] = useState({ topic: '', drive_link: '', notes: '' })
 
   useEffect(() => {
@@ -159,7 +145,6 @@ export default function MissionControl() {
       if (cached) {
         const parsed = JSON.parse(cached)
         if (parsed.eodWorkData) setEodWorkData(parsed.eodWorkData)
-        if (parsed.eodWellnessData) setEodWellnessData(parsed.eodWellnessData)
         if (parsed.eodSpeakingData) setEodSpeakingData(parsed.eodSpeakingData)
         if (parsed.todayScreenTime) setTodayScreenTime(parsed.todayScreenTime)
         if (parsed.latestDebrief) setLatestDebrief(parsed.latestDebrief)
@@ -277,110 +262,9 @@ export default function MissionControl() {
         setWeeklyWinRate(Math.round((uniqueDaysWithCompletion / daysElapsed) * 100))
       }
 
-      // ── Weight & Belly Tracking (Body Recon Widget) ──
-      const { data: wConfig } = await sb.from('weight_config').select('*').eq('user_id', user.id).maybeSingle()
-      if (wConfig) {
-        const { data: latestLog } = await sb.from('weight_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(1).maybeSingle()
-        const { data: todayLog } = await sb.from('weight_logs').select('*').eq('user_id', user.id).eq('date', todayStr).maybeSingle()
-        
-        let localBellyMap = {}
-        let localConfig = {}
-        if (typeof window !== 'undefined') {
-          try {
-            const rawBelly = localStorage.getItem(`lokios_belly_logs_${user.id}`)
-            if (rawBelly) localBellyMap = JSON.parse(rawBelly)
-            const rawCfg = localStorage.getItem(`lokios_wellness_config_${user.id}`)
-            if (rawCfg) localConfig = JSON.parse(rawCfg)
-          } catch (e) {}
-        }
-
-        const effectiveStartWeight = wConfig.starting_weight || localConfig.starting_weight || 80
-        const effectiveTargetWeight = wConfig.target_weight || localConfig.target_weight || 70
-        const effectiveStartBelly = wConfig.starting_belly_cm || localConfig.starting_belly_cm || 92
-        const effectiveTargetBelly = wConfig.target_belly_cm || localConfig.target_belly_cm || 80
-
-        if (latestLog) {
-          const parseB = (v) => {
-            if (!v) return null
-            if (typeof v === 'string' && v.startsWith('belly:')) {
-              const n = parseFloat(v.replace('belly:', ''))
-              return !isNaN(n) && n > 0 ? n : null
-            }
-            const n = typeof v === 'number' ? v : parseFloat(v)
-            return !isNaN(n) && n > 0 ? n : null
-          }
-
-          const lost = (effectiveStartWeight - latestLog.weight_kg).toFixed(1)
-          const range = effectiveStartWeight - effectiveTargetWeight
-          const pct = range > 0 ? Math.min(100, Math.max(0, Math.round((parseFloat(lost) / range) * 100))) : 0
-
-          const latestBellyVal = parseB(latestLog.belly_size_cm) ?? parseB(latestLog.waist_cm) ?? parseB(latestLog.notes) ?? parseB(localBellyMap[latestLog.date]) ?? (todayLog ? (parseB(todayLog.belly_size_cm) ?? parseB(todayLog.notes) ?? parseB(localBellyMap[todayStr])) : null)
-          const bellyLost = (latestBellyVal && effectiveStartBelly) ? (effectiveStartBelly - latestBellyVal).toFixed(1) : null
-
-          setWeightData({
-            current: parseFloat(latestLog.weight_kg),
-            target: parseFloat(effectiveTargetWeight),
-            start: parseFloat(effectiveStartWeight),
-            lost: parseFloat(lost),
-            progressPct: pct,
-            currentBelly: latestBellyVal ? parseFloat(latestBellyVal) : null,
-            targetBelly: effectiveTargetBelly ? parseFloat(effectiveTargetBelly) : null,
-            bellyLost: bellyLost ? parseFloat(bellyLost) : null,
-            loggedToday: !!todayLog
-          })
-        }
-      }
-
-      // ── Sleep Sentinel Widget ──
+      // ── Digital Addiction Widget ──
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      const { data: sleepLogs } = await sb.from('sleep_logs')
-        .select('*').eq('user_id', user.id)
-        .gte('date', getLocalDateStr(sevenDaysAgo))
-        .order('date', { ascending: false })
-
-      if (sleepLogs && sleepLogs.length > 0) {
-        const last = sleepLogs[0]
-        const isLogHealthy = (l) => {
-          if (l.status === 'healthy') return true
-          const [bH] = (l.bedtime || '23:00').split(':').map(Number)
-          const [wH, wM] = (l.wake_time || '08:00').split(':').map(Number)
-          const dur = parseFloat(l.duration_hours || 0)
-          return (bH >= 20 || bH <= 2) && (wH < 10 || (wH === 10 && wM === 0)) && (dur >= 5.5 && dur <= 10.5)
-        }
-
-        const healthy = sleepLogs.filter(isLogHealthy).length
-        const total = sleepLogs.length
-        const streak = (() => { let s = 0; for (const l of sleepLogs) { if (isLogHealthy(l)) s++; else break; } return s })()
-
-        // Check criteria for latest log
-        const [bH] = (last.bedtime || '23:00').split(':').map(Number)
-        const [wH, wM] = (last.wake_time || '08:00').split(':').map(Number)
-        const dur = parseFloat(last.duration_hours || 0)
-
-        const isBedtimeOk = bH >= 20 || bH <= 2
-        const isWakeOk = wH < 10 || (wH === 10 && wM === 0)
-        const isDurationOk = dur >= 5.5 && dur <= 10.5
-        const isStreakOk = streak >= 3
-        const isComplianceOk = (healthy / total) >= 0.7
-
-        // Threat score: 0 = no threat, 100 = critical
-        let threat = 0
-        if (!isBedtimeOk) threat += 20
-        if (!isWakeOk) threat += 20
-        if (!isDurationOk) threat += 20
-        if (streak === 0) threat += 20
-        else if (!isStreakOk) threat += 10
-        if ((healthy / total) < 0.5) threat += 20
-        else if (!isComplianceOk) threat += 10
-
-        threat = Math.min(100, Math.max(0, threat))
-        setSleepData({ last, healthy, streak, threat, total, isBedtimeOk, isWakeOk, isDurationOk, isStreakOk, isComplianceOk })
-      } else {
-        setSleepData({ last: null, healthy: 0, streak: 0, threat: 50, total: 0, isBedtimeOk: false, isWakeOk: false, isDurationOk: false, isStreakOk: false, isComplianceOk: false })
-      }
-
-      // ── Digital Addiction Widget ──
       const sevenDaysAgoStr = getLocalDateStr(sevenDaysAgo)
       const { data: stHistory } = await sb.from('screen_time_logs')
         .select('*').eq('user_id', user.id)
@@ -457,28 +341,6 @@ export default function MissionControl() {
       }
       setEodWorkData({ logged: workLogged, hours: workHours })
 
-      const { data: todaySleepLog } = await sb
-        .from('sleep_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', todayStr)
-        .maybeSingle()
-
-      const { data: todayWeightLog } = await sb
-        .from('weight_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', todayStr)
-        .maybeSingle()
-
-      const wellnessLogged = !!todaySleepLog || !!todayWeightLog
-      let wellnessDetail = ''
-      if (todaySleepLog && todayWeightLog) wellnessDetail = `Sleep ${todaySleepLog.duration_hours || 8}h · ${todayWeightLog.weight_kg}kg`
-      else if (todaySleepLog) wellnessDetail = `Sleep: ${todaySleepLog.duration_hours || 8}h`
-      else if (todayWeightLog) wellnessDetail = `Weight: ${todayWeightLog.weight_kg}kg`
-
-      setEodWellnessData({ logged: wellnessLogged, detail: wellnessDetail })
-
       // Fetch Today Speaking Practice Log
       const { data: todaySpeakingLog } = await sb
         .from('speaking_logs')
@@ -509,7 +371,6 @@ export default function MissionControl() {
         const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
         localStorage.setItem(cacheKey, JSON.stringify({
           eodWorkData: { logged: workLogged, hours: workHours },
-          eodWellnessData: { logged: wellnessLogged, detail: wellnessDetail },
           eodSpeakingData: todaySpeakingLog ? { logged: true, detail: `Topic: ${todaySpeakingLog.topic}` } : { logged: false, detail: '' },
           todayScreenTime: stLogs && stLogs.length > 0 ? stLogs[0] : null,
           latestDebrief: debriefLogs && debriefLogs.length > 0 ? debriefLogs[0] : null,
@@ -591,63 +452,6 @@ export default function MissionControl() {
     }
   }
 
-  const submitEodWellness = async (e) => {
-    e.preventDefault()
-    if (!user) return
-    const isSleep = eodWellnessForm.type === 'sleep'
-    const bVal = eodWellnessForm.belly_size_cm ? parseFloat(eodWellnessForm.belly_size_cm) : null
-    const detail = isSleep 
-      ? `Sleep: ${parseFloat(eodWellnessForm.sleep_hours) || 8}h`
-      : `Weight: ${parseFloat(eodWellnessForm.weight_kg) || 75}kg${bVal ? ` · ${bVal}cm` : ''}`
-
-    // Optimistic UI updates (0ms delay)
-    setEodWellnessData({ logged: true, detail })
-    setEodQuickLogModal(null)
-
-    // Cache belly in localStorage
-    if (!isSleep && bVal && typeof window !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(`lokios_belly_logs_${user.id}`) || localStorage.getItem('lokios_belly_logs_cache')
-        const map = raw ? JSON.parse(raw) : {}
-        map[todayStr] = bVal
-        localStorage.setItem(`lokios_belly_logs_${user.id}`, JSON.stringify(map))
-        localStorage.setItem('lokios_belly_logs_cache', JSON.stringify(map))
-      } catch (err) {}
-    }
-
-    // Background DB sync
-    const sb = createClient()
-    if (isSleep) {
-      const payload = {
-        user_id: user.id,
-        date: todayStr,
-        duration_hours: parseFloat(eodWellnessForm.sleep_hours) || 8,
-        bedtime: eodWellnessForm.bedtime,
-        wake_time: eodWellnessForm.wake_time,
-        status: 'healthy'
-      }
-      await sb.from('sleep_logs').insert(payload)
-    } else {
-      const payload = {
-        user_id: user.id,
-        date: todayStr,
-        weight_kg: parseFloat(eodWellnessForm.weight_kg) || 75,
-        belly_size_cm: bVal,
-        waist_cm: bVal,
-        notes: bVal ? `belly:${bVal}` : null
-      }
-      const { error: err1 } = await sb.from('weight_logs').insert(payload)
-      if (err1) {
-        await sb.from('weight_logs').insert({
-          user_id: user.id,
-          date: todayStr,
-          weight_kg: payload.weight_kg,
-          notes: bVal ? `belly:${bVal}` : null
-        })
-      }
-    }
-  }
-
   const submitEodSpeaking = async (e) => {
     if (e && e.preventDefault) e.preventDefault()
     if (!user) return
@@ -712,16 +516,6 @@ export default function MissionControl() {
 
   const eodItems = [
     {
-      key: 'wellness',
-      label: 'Morning Wellness',
-      subtitle: 'Sleep, weight recon, or morning habits',
-      isDone: eodWellnessData.logged,
-      detail: eodWellnessData.detail || (eodWellnessData.logged ? 'Logged' : 'Missing log for today'),
-      path: '/quests',
-      icon: Flame,
-      color: '#f97316'
-    },
-    {
       key: 'work',
       label: 'Work Session',
       subtitle: 'Work hours & tasks completed',
@@ -764,7 +558,7 @@ export default function MissionControl() {
   ]
 
   const eodCompletedCount = eodItems.filter(i => i.isDone).length
-  const isEodAllDone = eodCompletedCount === 5
+  const isEodAllDone = eodCompletedCount === eodItems.length
   const longestStreak = profile?.longest_streak ?? 0
 
   const currentLevel                                           = calculateLevel(totalXp)
@@ -1464,14 +1258,14 @@ export default function MissionControl() {
           <div 
             style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', 
+              gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', 
               gap: '8px', 
               width: '100%' 
             }}
           >
             {eodItems.map((item) => {
               const ItemIcon = item.icon
-              const displayLabel = item.key === 'wellness' ? 'Wellness' : item.key === 'work' ? 'Work' : item.key === 'journal' ? 'Journal' : item.key === 'screen' ? 'Screen Intel' : item.key === 'speaking' ? 'Speaking' : item.label
+              const displayLabel = item.key === 'work' ? 'Work' : item.key === 'journal' ? 'Journal' : item.key === 'screen' ? 'Screen Intel' : item.key === 'speaking' ? 'Speaking' : item.label
               return (
                 <Link 
                   key={item.key} 
@@ -1945,137 +1739,6 @@ export default function MissionControl() {
               </div>
             </div>
 
-            {/* BODY & BELLY RECON WIDGET */}
-            {weightData && (
-              <Link href="/weight">
-                <div className="dashboard-card hover:border-amber transition-colors cursor-pointer" style={{ borderLeft: '3px solid var(--accent-primary)' }}>
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <Scale size={10} color="var(--accent-primary)" />
-                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Body Recon & Waist</span>
-                    {weightData.loggedToday && <span className="ml-auto font-mono text-[8px] text-success">✓ LOGGED</span>}
-                  </div>
-                  <div className="flex items-end justify-between mb-3">
-                    <div>
-                      <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.8rem', color: 'var(--text-primary)' }}>
-                        {weightData.current}
-                        <span className="font-mono text-[9px] text-muted ml-1">kg</span>
-                        {weightData.currentBelly && (
-                          <span className="font-mono text-xs text-info font-bold ml-2">
-                            · {weightData.currentBelly} <span className="text-[9px] text-muted font-normal">cm</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="font-mono text-[8px] text-muted uppercase mt-1">
-                        {weightData.lost > 0 ? `▼ ${weightData.lost} kg lost` : 'Current'}
-                        {weightData.bellyLost !== null && (
-                          <span className="text-info ml-1.5 font-bold">
-                            {weightData.bellyLost > 0 ? `· ▼ ${weightData.bellyLost}cm waist` : weightData.bellyLost < 0 ? `· ▲ +${Math.abs(weightData.bellyLost)}cm` : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono text-[10px] font-bold" style={{ color: 'var(--accent-primary)' }}>
-                        → {weightData.target} kg
-                      </div>
-                      {weightData.targetBelly && (
-                        <div className="font-mono text-[9px] text-info font-bold">
-                          → {weightData.targetBelly} cm
-                        </div>
-                      )}
-                      <div className="font-mono text-[8px] text-muted mt-0.5">{weightData.progressPct}%</div>
-                    </div>
-                  </div>
-                  <div style={{ height: '3px', background: 'var(--bg-primary)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${weightData.progressPct}%`, background: weightData.progressPct >= 100 ? 'var(--success)' : 'var(--accent-primary)', transition: 'width 1s ease' }} />
-                  </div>
-                </div>
-              </Link>
-            )}
-
-            {/* ── SLEEP SENTINEL WIDGET ── */}
-            {sleepData !== null && (
-              <div
-                className="dashboard-card cursor-pointer transition-colors hover:border-primary"
-                style={{ borderLeft: `3px solid ${sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)'}` }}
-                onClick={() => setExpandedWidget(expandedWidget === 'sleep' ? null : 'sleep')}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <Moon size={10} style={{ color: sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)' }} />
-                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Sleep Sentinel</span>
-                  </div>
-                  <span className="font-mono text-[8px] font-bold" style={{ color: sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)' }}>
-                    {sleepData.threat >= 60 ? '⚠ THREAT' : sleepData.threat >= 30 ? 'MONITOR' : '✓ STABLE'}
-                  </span>
-                </div>
-
-                <div className="flex items-end justify-between mb-3">
-                  <div>
-                    <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.8rem', color: sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)' }}>
-                      {sleepData.threat}
-                      <span className="font-mono text-[9px] text-muted ml-1">/ 100</span>
-                    </div>
-                    <div className="font-mono text-[8px] text-muted uppercase mt-1">Threat Score</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-mono text-[10px] font-bold text-primary">{sleepData.streak}d <span className="text-muted font-normal">streak</span></div>
-                    <div className="font-mono text-[8px] text-muted mt-0.5">{sleepData.healthy}/{sleepData.total} healthy</div>
-                  </div>
-                </div>
-
-                {/* Threat bar */}
-                <div style={{ height: '3px', background: 'var(--bg-primary)', overflow: 'hidden', marginBottom: '8px' }}>
-                  <motion.div
-                    style={{ height: '100%', background: sleepData.threat >= 60 ? 'var(--danger)' : sleepData.threat >= 30 ? 'var(--warning)' : 'var(--success)' }}
-                    initial={{ width: 0 }} animate={{ width: `${sleepData.threat}%` }} transition={{ duration: 1, ease: 'easeOut' }}
-                  />
-                </div>
-
-                {/* Last night pill */}
-                {sleepData.last && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-[8px] text-muted">Last night:</span>
-                    <span className="font-mono text-[8px] font-bold" style={{ color: sleepData.last.status === 'healthy' ? 'var(--success)' : 'var(--danger)' }}>
-                      {sleepData.last.bedtime || '?'} → {sleepData.last.wake_time || '?'}
-                    </span>
-                    <span className="font-mono text-[8px] font-bold" style={{ color: sleepData.last.status === 'healthy' ? 'var(--success)' : 'var(--danger)' }}>
-                      {sleepData.last.duration_hours ? `${sleepData.last.duration_hours}h` : ''}
-                    </span>
-                    <span className="ml-auto font-mono text-[8px] px-1.5 py-0.5" style={{ background: sleepData.last.status === 'healthy' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: sleepData.last.status === 'healthy' ? 'var(--success)' : 'var(--danger)' }}>
-                      {sleepData.last.status === 'healthy' ? '✓ CLEAN' : '✗ MISSED'}
-                    </span>
-                  </div>
-                )}
-
-                <AnimatePresence>
-                  {expandedWidget === 'sleep' && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-                      <div className="flex flex-col gap-1.5 font-mono text-[9px]">
-                        <div className="text-muted uppercase tracking-widest mb-1">INTEL BREAKDOWN</div>
-                        {[
-                          { label: `Target: Sleep before 12 AM ${sleepData.last?.bedtime ? `(${sleepData.last.bedtime})` : ''}`, ok: sleepData.isBedtimeOk },
-                          { label: `Target: Wake before 9 AM ${sleepData.last?.wake_time ? `(${sleepData.last.wake_time})` : ''}`, ok: sleepData.isWakeOk },
-                          { label: `Target: Duration 6–10h ${sleepData.last?.duration_hours ? `(${sleepData.last.duration_hours}h)` : ''}`, ok: sleepData.isDurationOk },
-                          { label: `Clean streak: ${sleepData.streak} night(s) (target ≥3)`, ok: sleepData.isStreakOk },
-                          { label: `7-day compliance: ${sleepData.healthy}/${sleepData.total} healthy (target ≥70%)`, ok: sleepData.isComplianceOk },
-                        ].map((f, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span style={{ color: f.ok ? 'var(--success)' : 'var(--danger)' }}>{f.ok ? '✓' : '✗'}</span>
-                            <span className="text-secondary">{f.label}</span>
-                          </div>
-                        ))}
-                        <div className="mt-2 pt-2" style={{ borderTop: '1px dashed var(--border-color)' }}>
-                          <div className="text-muted">Tonight's directive: In bed by 23:45 · Up by 08:30</div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-
             {/* ── DIGITAL ADDICTION WIDGET ── */}
             {addictionData !== null && (
               <div
@@ -2304,60 +1967,6 @@ export default function MissionControl() {
                   <div className="flex justify-end gap-2 mt-2">
                     <button type="button" className="btn btn-ghost btn-sm font-mono text-xs" onClick={() => setEodQuickLogModal(null)}>CANCEL</button>
                     <button type="submit" className="btn btn-primary btn-sm font-mono text-xs font-bold">+ SAVE WORK LOG</button>
-                  </div>
-                </form>
-              )}
-
-              {/* MORNING WELLNESS QUICK LOG */}
-              {eodQuickLogModal === 'wellness' && (
-                <form onSubmit={submitEodWellness} className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2 text-amber border-b border-white/10 pb-3">
-                    <Flame size={18} />
-                    <span className="font-mono text-sm uppercase tracking-widest font-bold text-primary">
-                      QUICK LOG // MORNING WELLNESS
-                    </span>
-                  </div>
-                  <div>
-                    <label className="font-mono text-xs text-muted mb-1 block">WELLNESS METRIC TYPE</label>
-                    <div className="flex gap-2 mb-2">
-                      <button type="button" className={`btn btn-xs flex-1 font-mono ${eodWellnessForm.type === 'sleep' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEodWellnessForm({...eodWellnessForm, type: 'sleep'})}>😴 Sleep Log</button>
-                      <button type="button" className={`btn btn-xs flex-1 font-mono ${eodWellnessForm.type === 'weight' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setEodWellnessForm({...eodWellnessForm, type: 'weight'})}>⚖️ Weight Log</button>
-                    </div>
-                  </div>
-
-                  {eodWellnessForm.type === 'sleep' ? (
-                    <>
-                      <div>
-                        <label className="font-mono text-xs text-muted mb-1 block">SLEEP DURATION (HOURS)</label>
-                        <input type="number" step="0.5" required className="input w-full font-mono text-xs" value={eodWellnessForm.sleep_hours} onChange={e => setEodWellnessForm({...eodWellnessForm, sleep_hours: e.target.value})} placeholder="e.g. 7.5" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="font-mono text-xs text-muted mb-1 block">BEDTIME</label>
-                          <input type="time" className="input w-full font-mono text-xs" value={eodWellnessForm.bedtime} onChange={e => setEodWellnessForm({...eodWellnessForm, bedtime: e.target.value})} />
-                        </div>
-                        <div>
-                          <label className="font-mono text-xs text-muted mb-1 block">WAKE TIME</label>
-                          <input type="time" className="input w-full font-mono text-xs" value={eodWellnessForm.wake_time} onChange={e => setEodWellnessForm({...eodWellnessForm, wake_time: e.target.value})} />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="font-mono text-xs text-muted mb-1 block">WEIGHT (KG)</label>
-                        <input type="number" step="0.1" required className="input w-full font-mono text-xs" value={eodWellnessForm.weight_kg} onChange={e => setEodWellnessForm({...eodWellnessForm, weight_kg: e.target.value})} placeholder="e.g. 75.0" />
-                      </div>
-                      <div>
-                        <label className="font-mono text-xs text-info mb-1 block">BELLY / WAIST (CM)</label>
-                        <input type="number" step="0.5" className="input w-full font-mono text-xs border-info/40" value={eodWellnessForm.belly_size_cm} onChange={e => setEodWellnessForm({...eodWellnessForm, belly_size_cm: e.target.value})} placeholder="e.g. 88.0" />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end gap-2 mt-2">
-                    <button type="button" className="btn btn-ghost btn-sm font-mono text-xs" onClick={() => setEodQuickLogModal(null)}>CANCEL</button>
-                    <button type="submit" className="btn btn-primary btn-sm font-mono text-xs font-bold">+ SAVE WELLNESS LOG</button>
                   </div>
                 </form>
               )}

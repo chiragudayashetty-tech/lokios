@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList, Scale, Download, Mic
+  Menu, X, Shield, Trophy, RefreshCw, LogOut, ClipboardList, Download, Mic
 } from 'lucide-react'
 import IntelExportModal from '@/components/ui/IntelExportModal'
 import XPToastStack from '@/components/ui/XPToastStack'
@@ -29,7 +29,6 @@ const NAV_ITEMS = [
 
   { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
   { href: '/xp', icon: Trophy, label: 'XP Metrics' },
-  { href: '/weight', icon: Scale, label: 'Wellness' },
   { href: '/profile', icon: User, label: 'Operator Profile' }
 ]
 
