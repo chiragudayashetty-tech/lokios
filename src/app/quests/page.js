@@ -197,7 +197,7 @@ export default function DailyOps() {
         mainEl.scrollTo({ top: lastScrollPosRef.top, behavior: 'instant' })
       }
     }
-  }, [monthLogs, todayLogs, habits, weightLoggedToday, sleepMsg, lastScrollPosRef])
+  }, [monthLogs, todayLogs, habits, lastScrollPosRef])
 
   // Auto-scroll grid to today
   useEffect(() => {
