@@ -1487,3 +1487,58 @@ body {
 }
 @media (min-width: 641px) and (max-width: 1023px) {
 }
+
+/* WINTER ARC // unified cold field */
+:root {
+  --game-bg: #050a14 !important;
+  --game-panel: rgba(8, 20, 36, 0.86) !important;
+  --game-border: rgba(125, 211, 252, 0.24) !important;
+  --game-border-soft: rgba(125, 211, 252, 0.12) !important;
+  --game-gold: #bfefff !important;
+  --game-cyan: #67e8f9 !important;
+  --game-violet: #a5b4fc !important;
+  --text-primary: #e9f8ff !important;
+}
+
+html, body { background: #050a14 !important; }
+body {
+  background:
+    radial-gradient(circle at 78% -10%, rgba(103, 232, 249, .12), transparent 30rem),
+    radial-gradient(circle at 10% 100%, rgba(125, 211, 252, .08), transparent 34rem),
+    linear-gradient(180deg, #050a14 0%, #071222 55%, #030711 100%) !important;
+}
+.app-shell {
+  background: linear-gradient(180deg, rgba(18, 45, 70, .2), transparent 28%) !important;
+}
+.hud-panel, .glass-panel, .dashboard-card {
+  background: linear-gradient(145deg, rgba(12, 31, 51, .9), rgba(5, 14, 26, .88)) !important;
+  border-color: rgba(125, 211, 252, .2) !important;
+  box-shadow: 0 18px 55px rgba(0, 8, 20, .38), inset 0 1px 0 rgba(213, 246, 255, .05) !important;
+}
+.hud-panel:hover, .glass-panel:hover { border-color: rgba(103, 232, 249, .48) !important; }
+.btn-primary { background: linear-gradient(135deg, #d8f7ff, #67c8ed) !important; color: #04101b !important; }
+th, .page-title, .typewriter-text { color: #bfefff !important; }
+::selection { background: rgba(103, 232, 249, .26); color: #effcff; }
+
+.winter-boot-screen {
+  position: relative; min-height: 100dvh; overflow: hidden; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px; color: #dff7ff; background: #050a14;
+  font-family: var(--font-mono, monospace);
+}
+.winter-boot-grid { position: absolute; inset: 0; opacity: .22; background-image: linear-gradient(rgba(125,211,252,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(125,211,252,.08) 1px, transparent 1px); background-size: 44px 44px; mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent); }
+.winter-boot-mark { position: relative; width: 190px; height: 190px; display: grid; place-items: center; border: 1px solid rgba(125,211,252,.35); border-radius: 50%; box-shadow: 0 0 0 12px rgba(125,211,252,.035), 0 0 55px rgba(103,232,249,.24); animation: winter-boot-pulse 2.8s ease-in-out infinite; }
+.winter-boot-mark::before { content: ''; position: absolute; inset: -14px; border: 1px solid rgba(103,232,249,.18); border-radius: 50%; border-top-color: #67e8f9; animation: winter-boot-spin 9s linear infinite; }
+.winter-boot-mark img { width: 174px; height: 174px; object-fit: contain; filter: drop-shadow(0 0 18px rgba(103,232,249,.5)); }
+.winter-boot-kicker { position: relative; color: #67e8f9; font-size: 11px; letter-spacing: .28em; }
+.winter-boot-title { position: relative; font-family: var(--font-display, sans-serif); font-size: clamp(24px, 4vw, 40px); font-weight: 800; letter-spacing: .18em; text-shadow: 0 0 22px rgba(191,239,255,.28); }
+.winter-boot-status { position: relative; display: flex; align-items: center; gap: 8px; color: rgba(223,247,255,.58); font-size: 9px; letter-spacing: .18em; }
+.winter-boot-status span { width: 6px; height: 6px; border-radius: 50%; background: #67e8f9; box-shadow: 0 0 12px #67e8f9; animation: winter-boot-blink 1s steps(2) infinite; }
+.loki-trigger, .loki-title, .loki-logo, .loki-action-icon, .loki-response-header, .loki-resp-heading, .loki-resp-line strong, .loki-resp-bullet-dot, .loki-resp-num, .loki-chat-send { color: #bfefff !important; }
+.loki-trigger, .loki-header, .loki-response, .loki-chat-send { border-color: rgba(103, 232, 249, .24) !important; background-color: rgba(8, 24, 42, .72) !important; }
+.loki-panel { background: linear-gradient(180deg, rgba(7, 20, 35, .99), rgba(3, 10, 20, .99)) !important; border-left-color: rgba(103, 232, 249, .24) !important; }
+[class*="D4AF37"], [class*="B8860B"] { color: #bfefff !important; border-color: rgba(103, 232, 249, .42) !important; background-color: rgba(103, 232, 249, .12) !important; }
+[class*="D4AF37"][class*="bg-"] { background: linear-gradient(135deg, #d8f7ff, #67c8ed) !important; color: #04101b !important; }
+@keyframes winter-boot-spin { to { transform: rotate(360deg); } }
+@keyframes winter-boot-pulse { 50% { transform: translateY(-4px); box-shadow: 0 0 0 18px rgba(125,211,252,.03), 0 0 72px rgba(103,232,249,.34); } }
+@keyframes winter-boot-blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .winter-boot-mark, .winter-boot-mark::before, .winter-boot-status span { animation: none; } }

@@ -48,16 +48,16 @@ const SEVERITY_COLORS = {
 }
 
 const BRIEFINGS = [
-  "The discipline you build in private becomes the edge you show in public.",
-  "Amateurs wait for motivation. Professionals execute on schedule.",
-  "Pain is temporary. Quitting lasts forever. Push through.",
-  "Every action is a vote for the person you wish to become.",
-  "Do not stop when you are tired. Stop when you are done.",
-  "Small daily disciplines compound into massive results over time.",
-  "Your mind will quit 100 times before your body does. Ignore it.",
-  "Victory is reserved for those who are willing to pay its price.",
-  "Focus on the next step, not the entire staircase.",
-  "Comfort is the enemy of progress. Seek the friction."
+  "Cold days reveal the discipline that comfort conceals.",
+  "Hold the line. The storm is part of the ascent.",
+  "Move quietly. Let consistency leave the tracks.",
+  "The mountain does not negotiate with hesitation.",
+  "Build heat through action, not intention.",
+  "One clean execution is a mark in the snow.",
+  "The frost is temporary. The system remains.",
+  "Winter is the forge. Return sharper.",
+  "Protect the mission when motivation freezes.",
+  "No drama. No rush. Just the next deliberate step."
 ]
 
 export default function MissionControl() {
@@ -614,12 +614,12 @@ export default function MissionControl() {
 
   const SAGA_DISCIPLINE_QUOTES = useMemo(() => [
     currentArc?.flavor || "I rebuilt my mind, habits, and identity one day at a time.",
-    "Discipline is choosing between what you want now and what you want most.",
-    "Small actions compounded daily become unstoppable momentum.",
-    "Stop chasing motivation. Build ironclad routines and relentless consistency.",
-    "You do not rise to the level of your goals. You fall to the level of your systems.",
-    "The pain of discipline is far less than the pain of regret.",
-    "Master self-command before seeking command over anything else.",
+    "Discipline is the heat you build when the world goes cold.",
+    "Small actions become a trail through the whiteout.",
+    "Stop waiting for warmth. Start the next deliberate move.",
+    "Your systems are the shelter that keeps the mission alive.",
+    "The storm passes. The standard stays.",
+    "Master the cold room before you claim the summit.",
     "Every day you don't execute is a day you concede ground."
   ], [currentArc?.flavor])
 

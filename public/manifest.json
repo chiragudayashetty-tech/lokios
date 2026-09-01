@@ -4,8 +4,8 @@
   "description": "Your Personal Operating System — Track quests, build habits, level up your life.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#040507",
-  "theme_color": "#040507",
+  "background_color": "#050A14",
+  "theme_color": "#67E8F9",
   "orientation": "portrait",
   "categories": ["productivity", "lifestyle"],
   "icons": [

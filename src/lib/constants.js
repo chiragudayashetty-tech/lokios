@@ -20,13 +20,13 @@ export const STAT_CATEGORIES = [
 
 export const RANK_CONFIG = {
   Fallen: { code: 'Fallen', name: 'The Fallen', minXp: -999999, maxXp: -1, minLvl: 0, maxLvl: 0, icon: '💀', color: '#EF4444' },
-  I:      { code: 'I',      name: 'The Awakening', minXp: 0, maxXp: 4999, minLvl: 1, maxLvl: 10, icon: '🛡️', color: '#5267FF' },
-  II:     { code: 'II',     name: 'The Discipline Rebuild', minXp: 5000, maxXp: 14449, minLvl: 11, maxLvl: 17, icon: '🗡️', color: '#30D6A0' },
-  III:    { code: 'III',    name: 'The Spark', minXp: 14450, maxXp: 33799, minLvl: 18, maxLvl: 26, icon: '◆', color: '#FF7418' },
-  IV:     { code: 'IV',     name: 'The Architect', minXp: 33800, maxXp: 72199, minLvl: 27, maxLvl: 38, icon: '⬡', color: '#805CFF' },
-  V:      { code: 'V',      name: 'The King', minXp: 72200, maxXp: 145799, minLvl: 39, maxLvl: 54, icon: '✦', color: '#FFD166' },
-  VI:     { code: 'VI',     name: 'The Empire', minXp: 145800, maxXp: 296449, minLvl: 55, maxLvl: 77, icon: '★', color: '#E63CFF' },
-  VII:    { code: 'VII',    name: 'The Legacy', minXp: 296450, maxXp: 490049, minLvl: 78, maxLvl: 99, icon: '♛', color: '#D8E4F5' },
+  I:      { code: 'I',      name: 'The Awakening', minXp: 0, maxXp: 4999, minLvl: 1, maxLvl: 10, icon: '🛡️', color: '#A7E8FF' },
+  II:     { code: 'II',     name: 'The Discipline Rebuild', minXp: 5000, maxXp: 14449, minLvl: 11, maxLvl: 17, icon: '🗡️', color: '#7DD3FC' },
+  III:    { code: 'III',    name: 'The Spark', minXp: 14450, maxXp: 33799, minLvl: 18, maxLvl: 26, icon: '◆', color: '#67E8F9' },
+  IV:     { code: 'IV',     name: 'The Architect', minXp: 33800, maxXp: 72199, minLvl: 27, maxLvl: 38, icon: '⬡', color: '#A5B4FC' },
+  V:      { code: 'V',      name: 'The King', minXp: 72200, maxXp: 145799, minLvl: 39, maxLvl: 54, icon: '✦', color: '#C4B5FD' },
+  VI:     { code: 'VI',     name: 'The Empire', minXp: 145800, maxXp: 296449, minLvl: 55, maxLvl: 77, icon: '★', color: '#C7D2FE' },
+  VII:    { code: 'VII',    name: 'The Legacy', minXp: 296450, maxXp: 490049, minLvl: 78, maxLvl: 99, icon: '♛', color: '#E0F2FE' },
   VIII:   { code: 'VIII',   name: 'Beyond', minXp: 490050, maxXp: 99999999, minLvl: 100, maxLvl: 999, icon: '∞', color: '#FFFFFF' }
 };
 
