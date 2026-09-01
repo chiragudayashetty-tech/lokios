@@ -300,7 +300,9 @@ export default function JournalPage() {
 
       // 3. Deploy priority goals to tasks table for Command Center widget
       const targetDateObj = new Date()
-      targetDateObj.setDate(targetDateObj.getDate() + (debriefWeekOffset * 7))
+      if (debriefWeekOffset > 0) {
+        targetDateObj.setDate(targetDateObj.getDate() + (debriefWeekOffset * 7))
+      }
       const endOfWeekStr = getLocalDateStr(getEndOfWeek(targetDateObj))
 
       for (const goalText of goalsList) {

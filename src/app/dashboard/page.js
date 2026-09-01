@@ -150,6 +150,13 @@ export default function MissionControl() {
         if (parsed.latestDebrief) setLatestDebrief(parsed.latestDebrief)
         if (parsed.eodJournalLogged !== undefined) setEodJournalLogged(parsed.eodJournalLogged)
       }
+      const rawHist = localStorage.getItem(`lokios_debrief_history_${user.id}`)
+      if (rawHist) {
+        const parsedHist = JSON.parse(rawHist)
+        if (Array.isArray(parsedHist) && parsedHist.length > 0) {
+          setLatestDebrief(prev => prev || parsedHist[0])
+        }
+      }
     } catch (e) {
       console.warn('Recon cache read error:', e)
     }
@@ -198,10 +205,26 @@ export default function MissionControl() {
         .eq('user_id', user.id)
         .ilike('title', 'Weekly Debrief%')
         .order('created_at', { ascending: false })
-        .limit(1)
+        .limit(10)
 
       if (debriefLogs && debriefLogs.length > 0) {
-        setLatestDebrief(debriefLogs[0])
+        const sorted = [...debriefLogs].sort((a, b) => {
+          const dateA = a.date || (a.created_at ? getLocalDateStr(new Date(a.created_at)) : '')
+          const dateB = b.date || (b.created_at ? getLocalDateStr(new Date(b.created_at)) : '')
+          if (dateA !== dateB) return dateB.localeCompare(dateA)
+          return (b.created_at || '').localeCompare(a.created_at || '')
+        })
+        setLatestDebrief(sorted[0])
+      } else if (typeof window !== 'undefined') {
+        try {
+          const rawHist = localStorage.getItem(`lokios_debrief_history_${user.id}`)
+          if (rawHist) {
+            const parsedHist = JSON.parse(rawHist)
+            if (Array.isArray(parsedHist) && parsedHist.length > 0) {
+              setLatestDebrief(parsedHist[0])
+            }
+          }
+        } catch (err) {}
       }
         
       if (xpData) {
@@ -645,32 +668,59 @@ export default function MissionControl() {
   const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
   const momentumColor        = dailyMomentum?.color || (momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)')
   const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
-  // Check if Weekly Debrief has been completed for the current week starting Sunday
+  // Check if Weekly Debrief has been completed for the current week or within the last 7 days
   const isDebriefDoneThisWeek = useMemo(() => {
     if (!latestDebrief) return false
     const now = new Date()
+    const debriefDateStr = latestDebrief.date || (latestDebrief.created_at ? getLocalDateStr(new Date(latestDebrief.created_at)) : '')
+    if (!debriefDateStr) return false
+
     const dayOfWeek = now.getDay() // 0 = Sun, 1 = Mon, ..., 6 = Sat
     const sunday = new Date(now)
     sunday.setDate(now.getDate() - dayOfWeek)
     sunday.setHours(0, 0, 0, 0)
     const currentCycleStartStr = getLocalDateStr(sunday)
 
-    const debriefDate = latestDebrief.date || (latestDebrief.created_at ? getLocalDateStr(new Date(latestDebrief.created_at)) : '')
-    return debriefDate >= currentCycleStartStr
+    const sevenDaysAgo = new Date(now)
+    sevenDaysAgo.setDate(now.getDate() - 7)
+    sevenDaysAgo.setHours(0, 0, 0, 0)
+    const sevenDaysAgoStr = getLocalDateStr(sevenDaysAgo)
+
+    return debriefDateStr >= currentCycleStartStr || debriefDateStr >= sevenDaysAgoStr
   }, [latestDebrief])
 
-  // Parse Next Week Priorities ONLY if the debrief belongs to the current cycle
+  // Parse Next Week Priorities from the latest debrief
   const nextWeekPriorities = useMemo(() => {
-    if (!isDebriefDoneThisWeek || !latestDebrief?.description) return null
+    if (!latestDebrief?.description) return null
     const text = latestDebrief.description
     const marker = '### Priorities for Next Week'
     const idx = text.indexOf(marker)
-    if (idx === -1) return null
-    let section = text.substring(idx + marker.length).trim()
-    const nextHeaderIdx = section.indexOf('### ')
-    if (nextHeaderIdx !== -1) section = section.substring(0, nextHeaderIdx).trim()
-    return section
-  }, [isDebriefDoneThisWeek, latestDebrief])
+    if (idx !== -1) {
+      let section = text.substring(idx + marker.length).trim()
+      const nextHeaderIdx = section.indexOf('### ')
+      if (nextHeaderIdx !== -1) section = section.substring(0, nextHeaderIdx).trim()
+      if (section) return section
+    }
+
+    // Fallback markers for alternative formats
+    const lower = text.toLowerCase()
+    const fallbackMarkers = [
+      'priorities for next week',
+      'next week priorities',
+      'weekly priorities',
+      'priorities'
+    ]
+    for (const m of fallbackMarkers) {
+      const fIdx = lower.indexOf(m)
+      if (fIdx !== -1) {
+        let section = text.substring(fIdx + m.length).replace(/^[:#\s\n]+/, '').trim()
+        const nextH = section.indexOf('### ')
+        if (nextH !== -1) section = section.substring(0, nextH).trim()
+        if (section) return section
+      }
+    }
+    return null
+  }, [latestDebrief])
 
   // Split raw debrief priorities string into up to 3 separate priority tasks
   const parsedPriorities = useMemo(() => {
@@ -712,16 +762,14 @@ export default function MissionControl() {
     if (parsedPriorities && parsedPriorities.length > 0) {
       sourceList = parsedPriorities
     } else {
-      const now = new Date()
-      const dayOfWeek = now.getDay()
-      const sunday = new Date(now)
-      sunday.setDate(now.getDate() - dayOfWeek)
-      const currentCycleStartStr = getLocalDateStr(sunday)
+      const fourteenDaysAgo = new Date()
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+      const fourteenDaysAgoStr = getLocalDateStr(fourteenDaysAgo)
 
       sourceList = tasks.filter(t => 
         t.category === 'weekly_goal' && 
         t.status !== 'cancelled' &&
-        (!t.due_date || t.due_date >= currentCycleStartStr)
+        (!t.due_date || t.due_date >= fourteenDaysAgoStr || !t.created_at || t.created_at >= fourteenDaysAgoStr)
       ).slice(0, 3)
     }
 
