@@ -163,3 +163,58 @@ export function parseTaskNotes(description = '') {
   return { cleanDesc, completionNote, failureNote }
 }
 
+/**
+ * Calculates a reliable chronological timestamp for sorting Weekly Debrief work logs
+ * based on the cycle date range in the title ("Weekly Debrief: Aug 25 - Aug 31"),
+ * falling back to log.date or log.created_at.
+ */
+export function getDebriefSortTime(log) {
+  if (!log) return 0
+  const currentYear = new Date().getFullYear()
+  const title = String(log.title || '')
+
+  // 1. Extract end date from title range like "Weekly Debrief: Aug 25 - Aug 31"
+  const rangeMatch = title.match(/[-–—]\s*([A-Za-z]{3,}\s+\d{1,2}(?:,?\s*\d{4})?|\d{4}-\d{2}-\d{2})/i)
+  if (rangeMatch && rangeMatch[1]) {
+    let datePart = rangeMatch[1].trim()
+    if (!datePart.match(/\d{4}/)) {
+      datePart = `${datePart}, ${currentYear}`
+    }
+    const parsed = new Date(datePart)
+    if (!isNaN(parsed.getTime())) {
+      parsed.setHours(23, 59, 59, 999)
+      return parsed.getTime()
+    }
+  }
+
+  // 2. Extract start date from title
+  const startMatch = title.match(/(?:Weekly Debrief:\s*)([A-Za-z]{3,}\s+\d{1,2}(?:,?\s*\d{4})?|\d{4}-\d{2}-\d{2})/i)
+  if (startMatch && startMatch[1]) {
+    let datePart = startMatch[1].trim()
+    if (!datePart.match(/\d{4}/)) {
+      datePart = `${datePart}, ${currentYear}`
+    }
+    const parsed = new Date(datePart)
+    if (!isNaN(parsed.getTime())) {
+      return parsed.getTime()
+    }
+  }
+
+  // 3. Fallback to log.date
+  if (log.date) {
+    const parsed = new Date(log.date)
+    if (!isNaN(parsed.getTime())) {
+      return parsed.getTime()
+    }
+  }
+
+  // 4. Fallback to log.created_at
+  if (log.created_at) {
+    const parsed = new Date(log.created_at)
+    if (!isNaN(parsed.getTime())) {
+      return parsed.getTime()
+    }
+  }
+
+  return 0
+}

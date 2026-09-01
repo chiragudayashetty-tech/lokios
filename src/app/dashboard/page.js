@@ -18,7 +18,7 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { RANK_CONFIG, SAGA_IMAGES, SAGA_TITLES } from '@/lib/constants'
-import { getLocalDateStr, getEndOfWeek, getStartOfWeek } from '@/lib/utils/dates'
+import { getLocalDateStr, getEndOfWeek, getStartOfWeek, getDebriefSortTime } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
@@ -154,7 +154,13 @@ export default function MissionControl() {
       if (rawHist) {
         const parsedHist = JSON.parse(rawHist)
         if (Array.isArray(parsedHist) && parsedHist.length > 0) {
-          setLatestDebrief(prev => prev || parsedHist[0])
+          parsedHist.sort((a, b) => {
+            const timeA = getDebriefSortTime(a)
+            const timeB = getDebriefSortTime(b)
+            if (timeA !== timeB) return timeB - timeA
+            return (b.created_at || '').localeCompare(a.created_at || '')
+          })
+          setLatestDebrief(parsedHist[0])
         }
       }
     } catch (e) {
@@ -205,26 +211,32 @@ export default function MissionControl() {
         .eq('user_id', user.id)
         .ilike('title', 'Weekly Debrief%')
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(20)
 
-      if (debriefLogs && debriefLogs.length > 0) {
-        const sorted = [...debriefLogs].sort((a, b) => {
-          const dateA = a.date || (a.created_at ? getLocalDateStr(new Date(a.created_at)) : '')
-          const dateB = b.date || (b.created_at ? getLocalDateStr(new Date(b.created_at)) : '')
-          if (dateA !== dateB) return dateB.localeCompare(dateA)
-          return (b.created_at || '').localeCompare(a.created_at || '')
-        })
-        setLatestDebrief(sorted[0])
-      } else if (typeof window !== 'undefined') {
+      let localDebriefs = []
+      if (typeof window !== 'undefined') {
         try {
           const rawHist = localStorage.getItem(`lokios_debrief_history_${user.id}`)
           if (rawHist) {
-            const parsedHist = JSON.parse(rawHist)
-            if (Array.isArray(parsedHist) && parsedHist.length > 0) {
-              setLatestDebrief(parsedHist[0])
-            }
+            const parsed = JSON.parse(rawHist)
+            if (Array.isArray(parsed)) localDebriefs = parsed
           }
-        } catch (err) {}
+        } catch (e) {}
+      }
+
+      const combinedDebriefs = new Map()
+      localDebriefs.forEach(d => combinedDebriefs.set(d.title || d.id, d))
+      ;(debriefLogs || []).forEach(d => combinedDebriefs.set(d.title || d.id, d))
+
+      const allDebriefList = Array.from(combinedDebriefs.values())
+      if (allDebriefList.length > 0) {
+        allDebriefList.sort((a, b) => {
+          const timeA = getDebriefSortTime(a)
+          const timeB = getDebriefSortTime(b)
+          if (timeA !== timeB) return timeB - timeA
+          return (b.created_at || '').localeCompare(a.created_at || '')
+        })
+        setLatestDebrief(allDebriefList[0])
       }
         
       if (xpData) {

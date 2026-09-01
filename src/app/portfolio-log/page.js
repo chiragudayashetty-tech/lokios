@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
-import { getLocalDateStr } from '@/lib/utils/dates'
+import { getLocalDateStr, getDebriefSortTime } from '@/lib/utils/dates'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useProfile } from '@/lib/hooks/useProfile'
@@ -675,7 +675,7 @@ export default function ProofOfWork() {
         {activeTab === 'reviews' && (
           <div className="flex-col gap-6">
             <div className="flex-col gap-0 border-l border-border-strong ml-4 pl-6 relative">
-              {logs.filter(l => l.title?.startsWith('Weekly Debrief')).map((log, idx, arr) => (
+              {logs.filter(l => l.title?.startsWith('Weekly Debrief')).sort((a, b) => getDebriefSortTime(b) - getDebriefSortTime(a)).map((log, idx, arr) => (
                 <div key={log.id} className="relative pb-8 group">
                   <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
                   

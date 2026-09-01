@@ -7,7 +7,7 @@ import HudPanel from '@/components/ui/HudPanel'
 import { useOS } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
-import { getLocalDateStr, formatDate, getStartOfWeek, getEndOfWeek } from '@/lib/utils/dates'
+import { getLocalDateStr, formatDate, getStartOfWeek, getEndOfWeek, getDebriefSortTime } from '@/lib/utils/dates'
 import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
 import {
   BookOpen, Smile, Frown, Meh, Save, Zap, Flame, ShieldAlert,
@@ -208,7 +208,12 @@ export default function JournalPage() {
           prev.forEach(l => map.set(l.title || l.id, l))
           // Add Supabase entries
           historyRes.data.forEach(l => map.set(l.title || l.id, l))
-          const merged = Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+          const merged = Array.from(map.values()).sort((a, b) => {
+            const timeA = getDebriefSortTime(a)
+            const timeB = getDebriefSortTime(b)
+            if (timeA !== timeB) return timeB - timeA
+            return (b.created_at || '').localeCompare(a.created_at || '')
+          })
           if (typeof window !== 'undefined') {
             localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(merged))
           }
@@ -243,30 +248,39 @@ export default function JournalPage() {
     const debriefTitle = editingDebriefLog ? editingDebriefLog.title : `Weekly Debrief: ${dateRange.start} - ${dateRange.end}`
     const targetLogId = editingDebriefLog ? editingDebriefLog.id : ('debrief_' + Date.now())
 
+    const targetDate = new Date()
+    targetDate.setDate(targetDate.getDate() + (debriefWeekOffset * 7))
+    const endOfWeek = getEndOfWeek(targetDate)
+    const cycleEndDateStr = getLocalDateStr(endOfWeek)
+
     const logPayload = {
       id: targetLogId,
       user_id: user.id,
       title: debriefTitle,
       type: 'project_work',
       description: formattedContent,
-      date: editingDebriefLog?.date || todayStr,
+      date: editingDebriefLog?.date || cycleEndDateStr,
       created_at: editingDebriefLog?.created_at || new Date().toISOString()
     }
 
     // 1. Immediately update local state & localStorage cache for zero delay
     setHistoryLogs(prev => {
       const next = [logPayload, ...prev.filter(l => l.id !== targetLogId && l.title !== debriefTitle)]
+      next.sort((a, b) => {
+        const timeA = getDebriefSortTime(a)
+        const timeB = getDebriefSortTime(b)
+        if (timeA !== timeB) return timeB - timeA
+        return (b.created_at || '').localeCompare(a.created_at || '')
+      })
       if (typeof window !== 'undefined') {
         localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
-        if (debriefWeekOffset === 0 || editingDebriefLog?.date === todayStr) {
-          const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
-          try {
-            const existingCache = localStorage.getItem(cacheKey)
-            const parsed = existingCache ? JSON.parse(existingCache) : {}
-            parsed.latestDebrief = logPayload
-            localStorage.setItem(cacheKey, JSON.stringify(parsed))
-          } catch (errCache) {}
-        }
+        const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+        try {
+          const existingCache = localStorage.getItem(cacheKey)
+          const parsed = existingCache ? JSON.parse(existingCache) : {}
+          parsed.latestDebrief = next[0]
+          localStorage.setItem(cacheKey, JSON.stringify(parsed))
+        } catch (errCache) {}
       }
       return next
     })
