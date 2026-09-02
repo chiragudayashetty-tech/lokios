@@ -359,7 +359,7 @@ export default function MissionControl() {
       let workHours = 0
       if (workHoursLogRows && workHoursLogRows.length > 0) {
         workLogged = true
-        workHours = workHoursLogRows[0].hours || workHoursLogRows[0].duration_hours || 0
+        workHours = Number(workHoursLogRows[0].total_hours_worked) || Number(workHoursLogRows[0].hours) || Number(workHoursLogRows[0].duration_hours) || 0
       } else {
         // Fallback: check work_logs but EXCLUDE speaking_practice entries
         const { data: directWorkLogs } = await sb
@@ -371,7 +371,7 @@ export default function MissionControl() {
           .limit(1)
         if (directWorkLogs && directWorkLogs.length > 0) {
           workLogged = true
-          workHours = directWorkLogs[0].total_hours_worked || directWorkLogs[0].duration_hours || 0
+          workHours = Number(directWorkLogs[0].total_hours_worked) || Number(directWorkLogs[0].duration_hours) || Number(directWorkLogs[0].hours) || 0
         }
       }
       setEodWorkData({ logged: workLogged, hours: workHours })
@@ -467,23 +467,66 @@ export default function MissionControl() {
     e.preventDefault()
     if (!user) return
     const hrs = parseFloat(eodWorkForm.hours) || 0
-    const payload = {
-      user_id: user.id,
-      date: todayStr,
-      hours: hrs,
-      duration_hours: hrs,
-      work_type: eodWorkForm.work_type,
-      notes: eodWorkForm.notes
-    }
+    const cleanNotes = (eodWorkForm.notes || '').trim()
+
     // Optimistic UI updates (0ms delay)
     setEodWorkData({ logged: true, hours: hrs })
     setEodQuickLogModal(null)
 
+    if (typeof window !== 'undefined') {
+      const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+      try {
+        const cached = localStorage.getItem(cacheKey)
+        const parsed = cached ? JSON.parse(cached) : {}
+        parsed.eodWorkData = { logged: true, hours: hrs }
+        localStorage.setItem(cacheKey, JSON.stringify(parsed))
+      } catch (errCache) {}
+    }
+
     // Background DB sync
-    const sb = createClient()
-    const { error } = await sb.from('work_hours_logs').insert(payload)
-    if (error) {
-      await sb.from('work_logs').insert({ user_id: user.id, title: 'Work Session', description: eodWorkForm.notes, duration_hours: hrs })
+    try {
+      const sb = createClient()
+      const cleanWorkHoursData = {
+        user_id: user.id,
+        date: todayStr,
+        total_hours_worked: hrs,
+        focused_hours: hrs,
+        beyond_tatva_hours: 0,
+        unfocused_hours: 0,
+        deep_execution_hours: 0,
+        notes: cleanNotes,
+        updated_at: new Date().toISOString()
+      }
+
+      await sb.from('work_hours_logs').upsert(cleanWorkHoursData, { onConflict: 'user_id,date' })
+
+      const cleanWorkLogData = {
+        user_id: user.id,
+        date: todayStr,
+        title: eodWorkForm.work_type ? `Work Session (${eodWorkForm.work_type})` : 'Work Session',
+        type: 'project_work',
+        description: cleanNotes,
+        duration_hours: hrs,
+        total_hours_worked: hrs,
+        focused_hours: hrs,
+        notes: cleanNotes,
+        updated_at: new Date().toISOString()
+      }
+
+      const { data: existingWorkLog } = await sb
+        .from('work_logs')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('date', todayStr)
+        .limit(1)
+
+      if (existingWorkLog && existingWorkLog.length > 0) {
+        await sb.from('work_logs').update(cleanWorkLogData).eq('id', existingWorkLog[0].id)
+      } else {
+        await sb.from('work_logs').insert(cleanWorkLogData)
+      }
+    } catch (err) {
+      console.error('submitEodWork error:', err)
     }
   }
 

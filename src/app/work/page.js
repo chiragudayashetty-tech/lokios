@@ -166,71 +166,72 @@ export default function WorkPage() {
         const mergedMap = new Map()
 
         wData.forEach(l => {
-          const key = l.id ? `id_${l.id}` : `date_${l.date}`
+          if (!l.date) return
+          const key = `date_${l.date}`
           mergedMap.set(key, { ...l })
         })
 
         whData.forEach(l => {
-          const existingKey = Array.from(mergedMap.keys()).find(k => {
-            const item = mergedMap.get(k)
-            return item && item.date === l.date
-          })
-
-          if (existingKey) {
-            const existing = mergedMap.get(existingKey)
-            mergedMap.set(existingKey, {
+          if (!l.date) return
+          const key = `date_${l.date}`
+          const existing = mergedMap.get(key)
+          if (existing) {
+            mergedMap.set(key, {
               ...existing,
-              beyond_tatva_hours: Number(existing.beyond_tatva_hours) || Number(l.beyond_tatva_hours) || 0,
-              focused_hours: Number(existing.focused_hours) || Number(l.focused_hours) || 0,
-              unfocused_hours: Number(existing.unfocused_hours) || Number(l.unfocused_hours) || 0,
-              total_hours_worked: Number(existing.total_hours_worked) || Number(l.total_hours_worked) || Number(l.hours) || Number(l.duration_hours) || 0,
-              work_type: existing.work_type || l.work_type,
-              notes: existing.notes || l.notes || existing.description || l.description
+              ...l,
+              beyond_tatva_hours: Number(l.beyond_tatva_hours) || Number(existing.beyond_tatva_hours) || 0,
+              focused_hours: Number(l.focused_hours) || Number(existing.focused_hours) || 0,
+              unfocused_hours: Number(l.unfocused_hours) || Number(existing.unfocused_hours) || 0,
+              total_hours_worked: Number(l.total_hours_worked) || Number(existing.total_hours_worked) || Number(existing.hours) || Number(existing.duration_hours) || 0,
+              work_type: l.work_type || existing.work_type,
+              notes: l.notes || existing.notes || l.description || existing.description || ''
             })
           } else {
-            const key = l.id ? `id_${l.id}` : `date_${l.date}`
             mergedMap.set(key, { ...l, total_hours_worked: l.total_hours_worked ?? l.hours ?? l.duration_hours })
           }
         })
 
-        fetchedW = Array.from(mergedMap.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-
+        let fetchedW = Array.from(mergedMap.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
         let fetchedC = cRes.data || []
 
         // Merge with local cache & auto-push local-only entries to Supabase for 100% phone/desktop sync
         if (typeof window !== 'undefined') {
           const wCached = localStorage.getItem('lokios_work_logs_cache')
           if (wCached) {
-            const parsedW = JSON.parse(wCached)
-            const map = new Map()
-            fetchedW.forEach(l => map.set(l.date, l))
-            parsedW.forEach(l => {
-              if (!map.has(l.date)) {
-                map.set(l.date, l)
-                sb.from('work_hours_logs').upsert({
-                  user_id: user?.id,
-                  date: l.date,
-                  total_hours_worked: l.total_hours_worked ?? l.hours ?? l.duration_hours ?? 0,
-                  deep_execution_hours: l.deep_execution_hours || 0,
-                  focused_hours: l.focused_hours || 0,
-                  beyond_tatva_hours: l.beyond_tatva_hours || 0,
-                  unfocused_hours: l.unfocused_hours || 0,
-                  notes: l.notes || l.description || '',
-                }, { onConflict: 'user_id,date' }).then(() => {}).catch(() => {})
-              }
-            })
-            fetchedW = Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+            try {
+              const parsedW = JSON.parse(wCached)
+              const map = new Map()
+              fetchedW.forEach(l => map.set(l.date, l))
+              parsedW.forEach(l => {
+                if (l && l.date && !map.has(l.date)) {
+                  map.set(l.date, l)
+                  sb.from('work_hours_logs').upsert({
+                    user_id: user?.id,
+                    date: l.date,
+                    total_hours_worked: l.total_hours_worked ?? l.hours ?? l.duration_hours ?? 0,
+                    deep_execution_hours: l.deep_execution_hours || 0,
+                    focused_hours: l.focused_hours || 0,
+                    beyond_tatva_hours: l.beyond_tatva_hours || 0,
+                    unfocused_hours: l.unfocused_hours || 0,
+                    notes: l.notes || l.description || '',
+                  }, { onConflict: 'user_id,date' }).then(() => {}).catch(() => {})
+                }
+              })
+              fetchedW = Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+            } catch (errParse) {}
           }
 
           const cCached = localStorage.getItem('lokios_content_logs_cache')
           if (cCached) {
-            const parsedC = JSON.parse(cCached)
-            const map = new Map()
-            fetchedC.forEach(l => map.set(l.date, l))
-            parsedC.forEach(l => {
-              if (!map.has(l.date)) map.set(l.date, l)
-            })
-            fetchedC = Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date))
+            try {
+              const parsedC = JSON.parse(cCached)
+              const map = new Map()
+              fetchedC.forEach(l => map.set(l.date, l))
+              parsedC.forEach(l => {
+                if (l && l.date && !map.has(l.date)) map.set(l.date, l)
+              })
+              fetchedC = Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date))
+            } catch (errParseC) {}
           }
         }
 
@@ -242,11 +243,16 @@ export default function WorkPage() {
           localStorage.setItem('lokios_content_logs_cache', JSON.stringify(fetchedC))
         }
       } catch (err) {
+        console.error('[Work Sync] Fetch error:', err)
         if (typeof window !== 'undefined') {
           const wCached = localStorage.getItem('lokios_work_logs_cache')
-          if (wCached) setWorkLogs(JSON.parse(wCached))
+          if (wCached) {
+            try { setWorkLogs(JSON.parse(wCached)) } catch (e) {}
+          }
           const cCached = localStorage.getItem('lokios_content_logs_cache')
-          if (cCached) setContentLogs(JSON.parse(cCached))
+          if (cCached) {
+            try { setContentLogs(JSON.parse(cCached)) } catch (e) {}
+          }
         }
       }
     }
@@ -425,24 +431,44 @@ export default function WorkPage() {
     setSavingWork(true)
 
     const cleanNotes = (workNotes || '').trim()
+    const whatDidIDo = (workWhatDidYouDo || '').trim()
+    const combinedNotes = whatDidIDo && cleanNotes
+      ? `${whatDidIDo}\n\n--- WIN/LEARNING ---\n${cleanNotes}`
+      : whatDidIDo || cleanNotes
+
+    const totalHours = toHours(valTotalWorked, unitTotalWorked)
+    const beyondTatvaHours = toHours(valBeyondTatva, unitBeyondTatva)
+    const focusedHours = toHours(valFocused, unitFocused)
+    const unfocusedHours = toHours(valUnfocused, unitUnfocused)
 
     const payload = {
       user_id: user.id,
       date: selectedDate,
-      total_hours_worked: toHours(valTotalWorked, unitTotalWorked),
-      beyond_tatva_hours: toHours(valBeyondTatva, unitBeyondTatva),
-      focused_hours: toHours(valFocused, unitFocused),
-      unfocused_hours: toHours(valUnfocused, unitUnfocused),
-      deep_execution_hours: toHours(valUnfocused, unitUnfocused),
-      notes: cleanNotes,
-      description: cleanNotes,
+      total_hours_worked: totalHours,
+      beyond_tatva_hours: beyondTatvaHours,
+      focused_hours: focusedHours,
+      unfocused_hours: unfocusedHours,
+      deep_execution_hours: unfocusedHours,
+      notes: combinedNotes,
+      description: combinedNotes,
       work_type: workTypes.join(', ')
     }
 
     // Update local state & localStorage cache immediately
     const updated = [payload, ...workLogs.filter(l => l.date !== selectedDate)].sort((a, b) => b.date.localeCompare(a.date))
     setWorkLogs(updated)
-    if (typeof window !== 'undefined') localStorage.setItem('lokios_work_logs_cache', JSON.stringify(updated))
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lokios_work_logs_cache', JSON.stringify(updated))
+      if (selectedDate === todayStr) {
+        const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+        try {
+          const cached = localStorage.getItem(cacheKey)
+          const parsed = cached ? JSON.parse(cached) : {}
+          parsed.eodWorkData = { logged: true, hours: totalHours }
+          localStorage.setItem(cacheKey, JSON.stringify(parsed))
+        } catch (e) {}
+      }
+    }
 
     // Sync to Supabase in both work_hours_logs and work_logs with clean column payloads
     try {
@@ -451,48 +477,53 @@ export default function WorkPage() {
       const cleanWorkHoursData = {
         user_id: user.id,
         date: selectedDate,
-        total_hours_worked: payload.total_hours_worked || 0,
-        focused_hours: payload.focused_hours || 0,
-        beyond_tatva_hours: payload.beyond_tatva_hours || 0,
-        unfocused_hours: payload.unfocused_hours || 0,
-        deep_execution_hours: payload.deep_execution_hours || 0,
-        notes: payload.notes || '',
+        total_hours_worked: totalHours || 0,
+        focused_hours: focusedHours || 0,
+        beyond_tatva_hours: beyondTatvaHours || 0,
+        unfocused_hours: unfocusedHours || 0,
+        deep_execution_hours: unfocusedHours || 0,
+        notes: combinedNotes || '',
         updated_at: new Date().toISOString()
       }
 
       const cleanWorkLogData = {
         user_id: user.id,
         date: selectedDate,
-        total_hours_worked: payload.total_hours_worked || 0,
-        beyond_tatva_hours: payload.beyond_tatva_hours || 0,
-        focused_hours: payload.focused_hours || 0,
-        unfocused_hours: payload.unfocused_hours || 0,
-        deep_execution_hours: payload.deep_execution_hours || 0,
-        notes: payload.notes || '',
+        title: workTypes.length > 0 ? `Work Session (${workTypes.join(', ')})` : 'Work Session',
+        type: 'project_work',
+        description: combinedNotes || '',
+        duration_hours: totalHours || 0,
+        total_hours_worked: totalHours || 0,
+        beyond_tatva_hours: beyondTatvaHours || 0,
+        focused_hours: focusedHours || 0,
+        unfocused_hours: unfocusedHours || 0,
+        deep_execution_hours: unfocusedHours || 0,
+        notes: combinedNotes || '',
         updated_at: new Date().toISOString()
       }
 
-      // 1. Upsert work_hours_logs
+      // 1. Upsert work_hours_logs (primary)
       try {
-        const { data: existingHours } = await sb
-          .from('work_hours_logs')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('date', selectedDate)
-          .limit(1)
+        const { error } = await sb.from('work_hours_logs').upsert(cleanWorkHoursData, { onConflict: 'user_id,date' })
+        if (error) {
+          const { data: existingHours } = await sb
+            .from('work_hours_logs')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('date', selectedDate)
+            .limit(1)
 
-        if (existingHours && existingHours.length > 0) {
-          const { error } = await sb.from('work_hours_logs').update(cleanWorkHoursData).eq('id', existingHours[0].id)
-          if (error) throw error
-        } else {
-          const { error } = await sb.from('work_hours_logs').insert(cleanWorkHoursData)
-          if (error) throw error
+          if (existingHours && existingHours.length > 0) {
+            await sb.from('work_hours_logs').update(cleanWorkHoursData).eq('id', existingHours[0].id)
+          } else {
+            await sb.from('work_hours_logs').insert(cleanWorkHoursData)
+          }
         }
       } catch (whErr) {
         console.warn('work_hours_logs sync warning:', whErr)
       }
 
-      // 2. Upsert work_logs
+      // 2. Upsert work_logs (dual-table backup)
       try {
         const { data: existingWorkLog } = await sb
           .from('work_logs')
@@ -502,11 +533,9 @@ export default function WorkPage() {
           .limit(1)
 
         if (existingWorkLog && existingWorkLog.length > 0) {
-          const { error } = await sb.from('work_logs').update(cleanWorkLogData).eq('id', existingWorkLog[0].id)
-          if (error) throw error
+          await sb.from('work_logs').update(cleanWorkLogData).eq('id', existingWorkLog[0].id)
         } else {
-          const { error } = await sb.from('work_logs').insert(cleanWorkLogData)
-          if (error) throw error
+          await sb.from('work_logs').insert(cleanWorkLogData)
         }
       } catch (wlErr) {
         console.warn('work_logs sync warning:', wlErr)
