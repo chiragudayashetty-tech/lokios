@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useHabitsInternal } from '@/lib/hooks/useHabitsInternal'
 import { useTasksInternal } from '@/lib/hooks/useTasksInternal'
@@ -62,7 +63,6 @@ export function OSProvider({ children }) {
   // Cross-device sync: Supabase Realtime + window focus/visibility
   useEffect(() => {
     if (!auth?.user?.id) return
-    const { createClient } = require('@/lib/supabase/client')
     const supabase = createClient()
     const userId = auth.user.id
     

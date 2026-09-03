@@ -63,18 +63,31 @@ const BRIEFINGS = [
 export default function MissionControl() {
   const { user } = useAuth()
 
-  const {
-    profile: { profile } = {},
-    goals:   { mainQuest, sideQuests, longTermGoals } = {},
-    habits:  { todayLogs = [], habits = [] } = {},
-    tasks:   { tasks = [], addTask, completeTask, undoCompleteTask, fetchTasks } = {},
-    journal: { entries = [] } = {},
-    calendar: { events = [] } = {},
-    xp: { dailyMomentum } = {},
-    completeOperation,
-    failOperation,
-    undoFailOperation
-  } = useOS() || {}
+  const os = useOS() || {}
+  const profileHook = os.profile || {}
+  const profile = profileHook.profile || null
+  const goalsObj = os.goals || {}
+  const mainQuest = goalsObj.mainQuest || null
+  const sideQuests = goalsObj.sideQuests || []
+  const longTermGoals = goalsObj.longTermGoals || []
+  const habitsObj = os.habits || {}
+  const todayLogs = habitsObj.todayLogs || []
+  const habits = habitsObj.habits || []
+  const tasksObj = os.tasks || {}
+  const tasks = tasksObj.tasks || []
+  const addTask = tasksObj.addTask
+  const completeTask = tasksObj.completeTask
+  const undoCompleteTask = tasksObj.undoCompleteTask
+  const fetchTasks = tasksObj.fetchTasks
+  const journalObj = os.journal || {}
+  const entries = journalObj.entries || []
+  const calendarObj = os.calendar || {}
+  const events = calendarObj.events || []
+  const xpObj = os.xp || {}
+  const dailyMomentum = xpObj.dailyMomentum || null
+  const completeOperation = os.completeOperation
+  const failOperation = os.failOperation
+  const undoFailOperation = os.undoFailOperation
 
   const todayStr = getLocalDateStr()
 
@@ -169,6 +182,7 @@ export default function MissionControl() {
   }, [user])
 
   useEffect(() => {
+    if (!user) return
     async function fetchMetrics() {
       if (!user) return
       const sb = createClient()
@@ -464,18 +478,12 @@ export default function MissionControl() {
     window.addEventListener('focus', handleResume)
     document.addEventListener('visibilitychange', handleResume)
 
-    const handleBattlesUpdated = (e) => {
-      if (e.detail && Array.isArray(e.detail)) {
-        setBattles(e.detail)
-      }
-    }
-    window.addEventListener('lokios_battles_updated', handleBattlesUpdated)
-
     return () => {
-      sb.removeChannel(channel)
+      if (channel && sb?.removeChannel) {
+        sb.removeChannel(channel)
+      }
       window.removeEventListener('focus', handleResume)
       document.removeEventListener('visibilitychange', handleResume)
-      window.removeEventListener('lokios_battles_updated', handleBattlesUpdated)
     }
   }, [user, todayLogs])
 
@@ -1644,7 +1652,7 @@ export default function MissionControl() {
                       await updateDebriefWorkLog(goalTitleText, '[DONE]')
                       await robustAwardXP(user.id, 25, 'task_complete', stableSourceId, `Completed Priority Goal: ${goalTitleText}`, 'discipline')
 
-                      await profile.fetchProfile()
+                      await profileHook?.fetchProfile?.()
                       if (fetchTasks) await fetchTasks()
                     }
 
@@ -1676,7 +1684,7 @@ export default function MissionControl() {
                       await updateDebriefWorkLog(goalTitleText, '[FAILED]')
                       await robustAwardXP(user.id, -25, 'task_failed', stableSourceId, `Failed Priority Goal: ${goalTitleText}`, 'discipline')
 
-                      await profile.fetchProfile()
+                      await profileHook?.fetchProfile?.()
                       if (fetchTasks) await fetchTasks()
                     }
 
@@ -1691,7 +1699,7 @@ export default function MissionControl() {
                       await updateDebriefWorkLog(gt.title, '')
                       await robustRemoveXP(user.id, 'task_complete', stableSourceId)
                       await robustRemoveXP(user.id, 'task_failed', stableSourceId)
-                      await profile.fetchProfile()
+                      await profileHook?.fetchProfile?.()
                       if (fetchTasks) await fetchTasks()
                     }
 
