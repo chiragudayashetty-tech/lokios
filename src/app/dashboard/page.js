@@ -204,39 +204,68 @@ export default function MissionControl() {
         setTodayScreenTime(stLogs[0])
       }
 
-      // 1c. Fetch Latest Weekly Debrief (Work Log)
+      // 1c. Fetch Latest Weekly Debrief (Work Log) from Supabase
       const { data: debriefLogs } = await sb
         .from('work_logs')
         .select('*')
         .eq('user_id', user.id)
         .ilike('title', 'Weekly Debrief%')
         .order('created_at', { ascending: false })
-        .limit(20)
+        .limit(30)
 
-      let localDebriefs = []
-      if (typeof window !== 'undefined') {
+      if (debriefLogs && debriefLogs.length > 0) {
+        // Group by title / cycle to deduplicate any duplicate entries across devices
+        const debriefMap = new Map()
+        debriefLogs.forEach(d => {
+          const key = d.title ? d.title.trim().toLowerCase() : (d.date || d.id)
+          const existing = debriefMap.get(key)
+          if (!existing) {
+            debriefMap.set(key, d)
+          } else {
+            const timeExisting = new Date(existing.updated_at || existing.created_at || 0).getTime()
+            const timeNew = new Date(d.updated_at || d.created_at || 0).getTime()
+            if (timeNew > timeExisting) {
+              debriefMap.set(key, d)
+            }
+          }
+        })
+
+        const sortedDebriefs = Array.from(debriefMap.values()).sort((a, b) => {
+          const timeA = getDebriefSortTime(a)
+          const timeB = getDebriefSortTime(b)
+          if (timeA !== timeB) return timeB - timeA
+          return (b.updated_at || b.created_at || '').localeCompare(a.updated_at || a.created_at || '')
+        })
+
+        if (sortedDebriefs.length > 0) {
+          setLatestDebrief(sortedDebriefs[0])
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(sortedDebriefs))
+              const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+              const existingCache = localStorage.getItem(cacheKey)
+              const parsed = existingCache ? JSON.parse(existingCache) : {}
+              parsed.latestDebrief = sortedDebriefs[0]
+              localStorage.setItem(cacheKey, JSON.stringify(parsed))
+            } catch (errCache) {}
+          }
+        }
+      } else if (typeof window !== 'undefined') {
         try {
           const rawHist = localStorage.getItem(`lokios_debrief_history_${user.id}`)
           if (rawHist) {
             const parsed = JSON.parse(rawHist)
-            if (Array.isArray(parsed)) localDebriefs = parsed
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed.sort((a, b) => {
+                const timeA = getDebriefSortTime(a)
+                const timeB = getDebriefSortTime(b)
+                if (timeA !== timeB) return timeB - timeA
+                return (b.created_at || '').localeCompare(a.created_at || '')
+              })
+              setLatestDebrief(parsed[0])
+            }
           }
-        } catch (e) {}
-      }
-
-      const combinedDebriefs = new Map()
-      localDebriefs.forEach(d => combinedDebriefs.set(d.title || d.id, d))
-      ;(debriefLogs || []).forEach(d => combinedDebriefs.set(d.title || d.id, d))
-
-      const allDebriefList = Array.from(combinedDebriefs.values())
-      if (allDebriefList.length > 0) {
-        allDebriefList.sort((a, b) => {
-          const timeA = getDebriefSortTime(a)
-          const timeB = getDebriefSortTime(b)
-          if (timeA !== timeB) return timeB - timeA
-          return (b.created_at || '').localeCompare(a.created_at || '')
-        })
-        setLatestDebrief(allDebriefList[0])
+        } catch (err) {}
       }
         
       if (xpData) {
@@ -415,13 +444,39 @@ export default function MissionControl() {
     }
     fetchMetrics()
 
+    const sb = createClient()
+    const channel = sb
+      .channel(`dashboard_realtime_sync_${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `user_id=eq.${user.id}` }, () => {
+        fetchMetrics()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_hours_logs', filter: `user_id=eq.${user.id}` }, () => {
+        fetchMetrics()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${user.id}` }, () => {
+        fetchMetrics()
+      })
+      .subscribe()
+
+    const handleResume = () => {
+      if (document.visibilityState === 'visible') fetchMetrics()
+    }
+    window.addEventListener('focus', handleResume)
+    document.addEventListener('visibilitychange', handleResume)
+
     const handleBattlesUpdated = (e) => {
       if (e.detail && Array.isArray(e.detail)) {
         setBattles(e.detail)
       }
     }
     window.addEventListener('lokios_battles_updated', handleBattlesUpdated)
-    return () => window.removeEventListener('lokios_battles_updated', handleBattlesUpdated)
+
+    return () => {
+      sb.removeChannel(channel)
+      window.removeEventListener('focus', handleResume)
+      document.removeEventListener('visibilitychange', handleResume)
+      window.removeEventListener('lokios_battles_updated', handleBattlesUpdated)
+    }
   }, [user, todayLogs])
 
   // ── Quick Log Submit Handlers for EOD Recon ──
@@ -1546,8 +1601,19 @@ export default function MissionControl() {
                       })
 
                       const newDesc = updatedLines.join('\n')
-                      await sb.from('work_logs').update({ description: newDesc }).eq('id', latestDebrief.id)
-                      setLatestDebrief(prev => prev ? { ...prev, description: newDesc } : null)
+                      await sb.from('work_logs').update({ description: newDesc, updated_at: new Date().toISOString() }).eq('id', latestDebrief.id)
+                      const updatedObj = { ...latestDebrief, description: newDesc, updated_at: new Date().toISOString() }
+                      setLatestDebrief(updatedObj)
+                      if (typeof window !== 'undefined') {
+                        try {
+                          const rawHist = localStorage.getItem(`lokios_debrief_history_${user.id}`)
+                          if (rawHist) {
+                            const parsed = JSON.parse(rawHist)
+                            const next = parsed.map(p => p.id === latestDebrief.id || p.title === latestDebrief.title ? updatedObj : p)
+                            localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
+                          }
+                        } catch (e) {}
+                      }
                     }
 
                     const handleMarkDone = async () => {

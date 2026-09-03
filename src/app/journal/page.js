@@ -286,12 +286,26 @@ export default function JournalPage() {
     })
 
     try {
-      // 2. Insert or Update Supabase work_logs
-      if (editingDebriefLog && editingDebriefLog.id && !editingDebriefLog.id.toString().startsWith('debrief_')) {
+      // 2. Insert or Update Supabase work_logs without creating duplicate entries
+      let targetId = editingDebriefLog && !editingDebriefLog.id.toString().startsWith('debrief_') ? editingDebriefLog.id : null
+      if (!targetId) {
+        const { data: existingLogs } = await supabase
+          .from('work_logs')
+          .select('id')
+          .eq('user_id', user.id)
+          .ilike('title', debriefTitle)
+          .limit(1)
+        if (existingLogs && existingLogs.length > 0) {
+          targetId = existingLogs[0].id
+        }
+      }
+
+      if (targetId) {
         await supabase.from('work_logs').update({
           description: formattedContent,
-          title: debriefTitle
-        }).eq('id', editingDebriefLog.id)
+          title: debriefTitle,
+          date: logPayload.date
+        }).eq('id', targetId)
       } else {
         const { data: inserted } = await supabase.from('work_logs').insert([{
           user_id: user.id,
@@ -302,6 +316,7 @@ export default function JournalPage() {
         }]).select()
 
         if (inserted && inserted.length > 0) {
+          targetId = inserted[0].id
           setHistoryLogs(prev => {
             const next = [inserted[0], ...prev.filter(l => l.title !== debriefTitle && l.id !== targetLogId)]
             if (typeof window !== 'undefined') {
@@ -318,6 +333,16 @@ export default function JournalPage() {
         targetDateObj.setDate(targetDateObj.getDate() + (debriefWeekOffset * 7))
       }
       const endOfWeekStr = getLocalDateStr(getEndOfWeek(targetDateObj))
+
+      // Clean up any stale pending weekly_goal tasks so both devices stay 100% in sync
+      try {
+        await supabase
+          .from('tasks')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('category', 'weekly_goal')
+          .eq('status', 'pending')
+      } catch (delErr) {}
 
       for (const goalText of goalsList) {
         const cleanTitle = typeof goalText === 'string' ? goalText.trim() : String(goalText)
