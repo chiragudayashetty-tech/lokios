@@ -214,8 +214,8 @@ export async function cleanupAllDuplicateXP(userId) {
   if (!userId) return 0
 
   const [historyRes, habitLogsRes, habitsRes] = await Promise.all([
-    supabase.from('xp_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-    supabase.from('habit_logs').select('id, habit_id, date, status').eq('user_id', userId),
+    supabase.from('xp_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(10000),
+    supabase.from('habit_logs').select('id, habit_id, date, status').eq('user_id', userId).order('date', { ascending: false }).limit(10000),
     supabase.from('habits').select('id, title, xp_per_completion').eq('user_id', userId)
   ])
 
@@ -322,25 +322,21 @@ export async function cleanupAllDuplicateXP(userId) {
         const habitDateKey = `${habitId}_${dateStr}`
         const realStatus = realHabitMap.get(habitDateKey)
 
-        if (!realStatus || realStatus === 'none' || realStatus === 'rest' || realStatus === 'blocked') {
-          // Habit was not logged or reset to none on that day -> delete XP
+        if (realStatus === 'none' || realStatus === 'rest' || realStatus === 'blocked') {
+          // Explicitly cancelled / none / rest -> delete XP
           toDeleteIds.push(entry.id)
-        } else if (realStatus === 'completed') {
+        } else if (realStatus === 'completed' || (!realStatus && entry.amount > 0)) {
           if (!seenHabitDays.has(habitDateKey) && entry.amount > 0) {
-            // Keep the single valid positive entry for completed status
             seenHabitDays.add(habitDateKey)
           } else {
             toDeleteIds.push(entry.id)
           }
-        } else if (realStatus === 'failed') {
+        } else if (realStatus === 'failed' || (!realStatus && entry.amount < 0)) {
           if (!seenHabitDays.has(habitDateKey) && entry.amount < 0) {
-            // Keep the single valid negative penalty entry for failed status
             seenHabitDays.add(habitDateKey)
           } else {
             toDeleteIds.push(entry.id)
           }
-        } else {
-          toDeleteIds.push(entry.id)
         }
         continue
       }
@@ -350,9 +346,6 @@ export async function cleanupAllDuplicateXP(userId) {
     let key = null
     if (entry.source_id) {
       key = `${entry.source_type}|${entry.source_id}`
-    } else if (entry.description) {
-      const entryDate = entry.created_at ? entry.created_at.substring(0, 10) : ''
-      key = `${entry.source_type}|${entry.description.trim().toLowerCase()}|${entryDate}`
     }
 
     if (key) {

@@ -24,7 +24,9 @@ export function useXPInternal(user) {
       .from('xp_history')
       .select('amount, created_at')
       .eq('user_id', user.id)
-      .gte('created_at', getLocalDateStr(start))
+      .gte('created_at', `${getLocalDateStr(start)}T00:00:00.000Z`)
+      .order('created_at', { ascending: false })
+      .limit(5000)
 
     if (error) {
       console.warn('Failed to load daily momentum:', error)

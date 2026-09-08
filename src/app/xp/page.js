@@ -133,22 +133,51 @@ export default function XPDashboard() {
 
   useEffect(() => {
     if (!user) return
-    const fetchData = async () => {
-      const supabase = createClient()
-      
-      // Auto-clean any invisible duplicate XP entries for sleep/weight
-      const cleaned = await cleanupAllDuplicateXP(user.id)
-      if (cleaned > 0) console.log(`Cleaned ${cleaned} duplicate XP entries`)
+    const supabase = createClient()
 
+    const fetchData = async () => {
       const { data: profile } = await supabase.from('profiles').select('total_xp').eq('id', user.id).single()
       if (profile) setTotalXp(profile.total_xp || 0)
 
-      const { data: history } = await supabase.from('xp_history').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
-      if (history) setTimeline(history || [])
+      const { data: history } = await supabase
+        .from('xp_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10000)
+
+      if (history) {
+        // Chronological order for area chart & metrics
+        const sorted = history.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+        setTimeline(sorted)
+      }
 
       setLoading(false)
     }
+
     fetchData()
+
+    const channel = supabase
+      .channel(`xp_dashboard_sync_${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${user.id}` }, () => {
+        fetchData()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, () => {
+        fetchData()
+      })
+      .subscribe()
+
+    const handleResume = () => {
+      if (document.visibilityState === 'visible') fetchData()
+    }
+    window.addEventListener('focus', handleResume)
+    document.addEventListener('visibilitychange', handleResume)
+
+    return () => {
+      supabase.removeChannel(channel)
+      window.removeEventListener('focus', handleResume)
+      document.removeEventListener('visibilitychange', handleResume)
+    }
   }, [user])
 
   const handleFixDuplicates = async () => {

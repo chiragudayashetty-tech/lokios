@@ -204,7 +204,9 @@ export default function MissionControl() {
         .from('xp_history')
         .select('amount, created_at')
         .eq('user_id', user.id)
-        .gte('created_at', thirtyDaysAgoStr)
+        .gte('created_at', `${thirtyDaysAgoStr}T00:00:00.000Z`)
+        .order('created_at', { ascending: false })
+        .limit(5000)
 
       // Fetch today's screen time log
       const { data: stLogs } = await sb
@@ -319,7 +321,8 @@ export default function MissionControl() {
         .from('habit_logs')
         .select('date, status, habit_id')
         .eq('user_id', user.id)
-        .order('date', { ascending: true })
+        .order('date', { ascending: false })
+        .limit(5000)
 
       const { data: allHabitsData } = await sb
         .from('habits')
