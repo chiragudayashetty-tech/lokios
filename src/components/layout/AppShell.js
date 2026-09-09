@@ -16,20 +16,20 @@ import CharacterCapsuleHUD from '@/components/ui/CharacterCapsuleHUD'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: Home, label: 'Command Center' },
-  { href: '/quests', icon: Crosshair, label: 'Daily Ops' },
-  { href: '/tasks', icon: CheckSquare, label: 'Operations' },
-  { href: '/goals', icon: Target, label: 'Missions' },
-  { href: '/work', icon: Briefcase, label: 'Work' },
-  { href: '/speaking', icon: Mic, label: 'Speaking Practice' },
-  { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
+  { href: '/dashboard', icon: Home, label: 'Home' },
+  { href: '/quests', icon: Crosshair, label: 'Daily Focus' },
+  { href: '/tasks', icon: CheckSquare, label: 'Tasks' },
+  { href: '/goals', icon: Target, label: 'Goals' },
+  { href: '/work', icon: Briefcase, label: 'Work log' },
+  { href: '/speaking', icon: Mic, label: 'Speaking' },
+  { href: '/brain-dump', icon: Lightbulb, label: 'Brain dump' },
   { href: '/journal', icon: BookOpen, label: 'Journal' },
-  { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },
+  { href: '/portfolio-log', icon: Briefcase, label: 'Portfolio' },
   { href: '/calendar', icon: CalendarDays, label: 'Calendar' },
 
-  { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
-  { href: '/xp', icon: Trophy, label: 'XP Metrics' },
-  { href: '/profile', icon: User, label: 'Operator Profile' }
+  { href: '/screen-time', icon: Monitor, label: 'Screen time' },
+  { href: '/xp', icon: Trophy, label: 'Progress' },
+  { href: '/profile', icon: User, label: 'Profile' }
 ]
 
 export default function AppShell({ children }) {
@@ -128,7 +128,7 @@ export default function AppShell({ children }) {
                     <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
                       <div className={`flex items-center gap-4 p-4 rounded-xl transition-transform active:scale-95 ${isActive ? 'bg-amber text-bg-primary shadow-lg shadow-amber/20' : 'bg-tertiary text-primary border border-border-color'}`}>
                         <Icon size={24} strokeWidth={isActive ? 2 : 1.5} />
-                        <span className="font-display text-xl uppercase tracking-wider">{item.label}</span>
+                        <span className="font-display text-xl tracking-wide">{item.label}</span>
                       </div>
                     </Link>
                   )
