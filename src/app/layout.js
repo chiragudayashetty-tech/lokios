@@ -1,7 +1,6 @@
 import './globals.css'
 import './design-overrides.css'
 import './dashboard-overrides.css'
-import './premium.css'
 
 export const metadata = {
   title: 'ChiragOS',

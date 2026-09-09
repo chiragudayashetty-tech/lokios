@@ -212,10 +212,14 @@ export function OSProvider({ children }) {
 
   if (booting) {
     return (
-      <div className="premium-boot-screen" role="status" aria-live="polite">
-        <div className="premium-boot-mark" aria-hidden="true">C</div>
-        <div className="premium-boot-title">ChiragOS</div>
-        <div className="premium-boot-status"><span /> Preparing your workspace</div>
+      <div className="winter-boot-screen">
+        <div className="winter-boot-grid" aria-hidden="true" />
+        <div className="winter-boot-mark">
+          <img src="/icons/winter-warrior-logo.png" alt="Winter Arc warrior" />
+        </div>
+        <div className="winter-boot-kicker">LOKI OS // WINTER ARC</div>
+        <div className="winter-boot-title">THE FROST FORGE</div>
+        <div className="winter-boot-status"><span /> INITIALIZING FIELD SYSTEMS</div>
       </div>
     )
   }
