@@ -6,6 +6,7 @@ import HudPanel from '@/components/ui/HudPanel'
 import { createClient } from '@/lib/supabase/client'
 import { useOS } from '@/lib/context/OSContext'
 import { robustRemoveXP } from '@/lib/utils/xpFallback'
+import { calculateScreenTimeXP, syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { Shield, Target, AlertTriangle } from 'lucide-react'
@@ -107,57 +108,14 @@ export default function ScreenIntel() {
     const { data } = await supabase.from('screen_time_logs').select('*').eq('user_id', user.id).order('date', { ascending: false })
     if (data) setLogs(data)
 
-    // Remove any previously awarded XP for this exact screen time log to prevent duplicates
-    if (savedLogId) {
-      await robustRemoveXP(user.id, 'screen_time', savedLogId)
-      // Cleanup for legacy bug: also remove any XP that was incorrectly logged under the date string
-      await robustRemoveXP(user.id, 'screen_time', date)
-    }
-
-    // Calculate dynamic XP
-    let xpAmount = 0
-    let reasons = []
-
-    const tHours = parseFloat(totalHours) || 0
-    const fHours = parseFloat(focusHours) || 0
-    const dMins = parsedDoom
-    const sHours = parseFloat(streamingHours) || 0
-
-    // 1. Total Hours: Target 6
-    const totalDiff = 6 - tHours
-    const totalXp = Math.round(totalDiff * 10)
-    if (totalXp !== 0) {
-      xpAmount += totalXp
-      reasons.push(`Total Time: ${totalXp > 0 ? '+' : ''}${totalXp}`)
-    }
-
-    // 2. Doom Scroll: Target 60 mins (1 hr)
-    const doomDiff = 60 - dMins
-    const doomXp = Math.round(doomDiff * 0.5)
-    if (doomXp !== 0) {
-      xpAmount += doomXp
-      reasons.push(`Doomscroll: ${doomXp > 0 ? '+' : ''}${doomXp}`)
-    }
-
-    // 3. Focus Hours: Target 3
-    const focusDiff = fHours - 3
-    const focusXp = Math.round(focusDiff * 15)
-    if (focusXp !== 0) {
-      xpAmount += focusXp
-      reasons.push(`Focus: ${focusXp > 0 ? '+' : ''}${focusXp}`)
-    }
-
-    // 4. Streaming Hours: Target 1h (60 min)
-    const streamingDiff = 1 - sHours
-    const streamingXp = Math.round(streamingDiff * 10)
-    if (streamingXp !== 0) {
-      xpAmount += streamingXp
-      reasons.push(`Streaming: ${streamingXp > 0 ? '+' : ''}${streamingXp}`)
-    }
-
-    let finalReason = reasons.join(' | ') || 'Screen Time logged'
+    // Calculate dynamic XP & sync to xp_history / Daily Momentum
+    const { xpAmount, finalReason: calcReason } = calculateScreenTimeXP(payload)
+    let finalReason = calcReason
 
     // Update Phone Addiction Battle based on all metrics
+    const tHours = parseFloat(totalHours) || 0
+    const dMins = parsedDoom
+    const sHours = parseFloat(streamingHours) || 0
     let hpChange = 0;
     if (tHours <= 6) hpChange -= 5; else hpChange += 10;
     if (dMins <= 60) hpChange -= 5; else hpChange += 10;
@@ -191,10 +149,12 @@ export default function ScreenIntel() {
       }
     }
 
-    if (xpAmount !== 0 && savedLogId) {
-      await awardXP(xpAmount, 'screen_time', savedLogId, finalReason, 'discipline')
-      setXpAnim({ amount: xpAmount, reason: finalReason })
-      setTimeout(() => setXpAnim(null), 4000)
+    if (savedLogId) {
+      await syncScreenTimeXP(user.id, { id: savedLogId, ...payload })
+      if (xpAmount !== 0) {
+        setXpAnim({ amount: xpAmount, reason: finalReason })
+        setTimeout(() => setXpAnim(null), 4000)
+      }
     }
     } finally {
       setSaving(false)

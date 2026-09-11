@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
+import { syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
 import { RANK_CONFIG, SAGA_IMAGES, SAGA_TITLES } from '@/lib/constants'
 import { getLocalDateStr, getEndOfWeek, getStartOfWeek, getDebriefSortTime } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
@@ -473,6 +474,12 @@ export default function MissionControl() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${user.id}` }, () => {
         fetchMetrics()
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'screen_time_logs', filter: `user_id=eq.${user.id}` }, () => {
+        fetchMetrics()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${user.id}` }, () => {
+        fetchMetrics()
+      })
       .subscribe()
 
     const handleResume = () => {
@@ -505,10 +512,17 @@ export default function MissionControl() {
     setTodayScreenTime(payload)
     setEodQuickLogModal(null)
 
-    // Background DB sync
+    // Background DB sync with upsert and dynamic XP calculation
     const sb = createClient()
-    const { data } = await sb.from('screen_time_logs').insert(payload).select().single()
-    if (data) setTodayScreenTime(data)
+    const { data } = await sb.from('screen_time_logs')
+      .upsert(payload, { onConflict: 'user_id,date' })
+      .select()
+      .single()
+    const saved = data || payload
+    setTodayScreenTime(saved)
+    await syncScreenTimeXP(user.id, saved)
+    await profileHook?.fetchProfile?.()
+    fetchMetrics()
   }
 
   const submitEodJournal = async (e) => {
@@ -785,7 +799,23 @@ export default function MissionControl() {
   const streakComponent      = currentStreak >= 14 ? 3.0 : currentStreak >= 7 ? 2.0 : currentStreak >= 1 ? 1.0 : 0.0
   const winRateComponent     = weeklyWinRate >= 80 ? 3.0 : weeklyWinRate >= 60 ? 1.5 : weeklyWinRate >= 40 ? 0.0 : -3.0
 
-  const rawMomentum          = habitComponent + opsComponent + missionsComponent + streakComponent + winRateComponent
+  // 5. Digital Discipline / Screen Intel Component (-2.0 to +2.0)
+  let screenComponent = 0
+  if (todayScreenTime) {
+    const stHours = parseFloat(todayScreenTime.total_hours) || 0
+    const stDoom = parseInt(todayScreenTime.doom_scroll_minutes) || 0
+    if (stHours <= 4 && stDoom <= 30) {
+      screenComponent = 2.0
+    } else if (stHours <= 6 && stDoom <= 60) {
+      screenComponent = 1.5
+    } else if (stHours > 8 || stDoom > 120) {
+      screenComponent = -2.0
+    } else if (stHours > 6.5 || stDoom > 80) {
+      screenComponent = -1.5
+    }
+  }
+
+  const rawMomentum          = habitComponent + opsComponent + missionsComponent + streakComponent + winRateComponent + screenComponent
   const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
   const momentumColor        = dailyMomentum?.color || (momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)')
   const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
@@ -1885,6 +1915,12 @@ export default function MissionControl() {
                         <span>WEEKLY WIN RATE ({weeklyWinRate}%)</span> 
                         <span className="font-bold" style={{ color: winRateComponent > 0 ? 'var(--success)' : winRateComponent < 0 ? 'var(--danger)' : 'inherit' }}>{winRateComponent > 0 ? '+' : ''}{winRateComponent.toFixed(1)}</span>
                       </div>
+                      {todayScreenTime && (
+                        <div className="flex justify-between">
+                          <span>SCREEN INTEL ({todayScreenTime.total_hours}h / {todayScreenTime.doom_scroll_minutes || 0}m doom)</span> 
+                          <span className="font-bold" style={{ color: screenComponent > 0 ? 'var(--success)' : screenComponent < 0 ? 'var(--danger)' : 'inherit' }}>{screenComponent > 0 ? '+' : ''}{screenComponent.toFixed(1)}</span>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}

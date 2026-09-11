@@ -35,7 +35,8 @@ export async function robustAwardXP(
         sourceId.startsWith('goal_') ||
         sourceId.startsWith('debrief_') ||
         sourceId.startsWith('daily_all_') ||
-        sourceId.startsWith('streak_')
+        sourceId.startsWith('streak_') ||
+        sourceId.startsWith('screen_time_')
       ) {
         query = query.eq('source_id', sourceId)
       } else if (sourceType) {

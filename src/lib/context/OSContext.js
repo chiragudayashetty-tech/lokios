@@ -92,8 +92,11 @@ export function OSProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'work_hours_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'habits', filter: `user_id=eq.${userId}` }, debouncedSync)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'habit_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'xp_history', filter: `user_id=eq.${userId}` }, (payload) => {
-        xpRef.current?.handleXpRealtime?.(payload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'screen_time_logs', filter: `user_id=eq.${userId}` }, debouncedSync)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xp_history', filter: `user_id=eq.${userId}` }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          xpRef.current?.handleXpRealtime?.(payload)
+        }
         debouncedXpSync()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, debouncedSync)
