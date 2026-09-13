@@ -823,8 +823,11 @@ export default function MissionControl() {
   const isDebriefDoneThisWeek = useMemo(() => {
     if (!latestDebrief) return false
     const now = new Date()
+    const sortTime = getDebriefSortTime(latestDebrief)
+    const titleDateStr = sortTime ? getLocalDateStr(new Date(sortTime)) : ''
     const debriefDateStr = latestDebrief.date || (latestDebrief.created_at ? getLocalDateStr(new Date(latestDebrief.created_at)) : '')
-    if (!debriefDateStr) return false
+    const effectiveDateStr = titleDateStr || debriefDateStr
+    if (!effectiveDateStr) return false
 
     const dayOfWeek = now.getDay() // 0 = Sun, 1 = Mon, ..., 6 = Sat
     const sunday = new Date(now)
@@ -837,7 +840,7 @@ export default function MissionControl() {
     sevenDaysAgo.setHours(0, 0, 0, 0)
     const sevenDaysAgoStr = getLocalDateStr(sevenDaysAgo)
 
-    return debriefDateStr >= currentCycleStartStr || debriefDateStr >= sevenDaysAgoStr
+    return effectiveDateStr >= currentCycleStartStr || effectiveDateStr >= sevenDaysAgoStr
   }, [latestDebrief])
 
   // Parse Next Week Priorities from the latest debrief

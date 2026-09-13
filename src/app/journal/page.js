@@ -238,103 +238,139 @@ export default function JournalPage() {
     e.preventDefault()
     if (!user || savingDebrief) return
     const goalsList = [nextGoal1, nextGoal2, nextGoal3].filter(g => typeof g === 'string' && g.trim())
-    if (!wins.trim() || !fails.trim() || goalsList.length === 0) { alert('Please fill out wins, fails, and at least 1 Next Week Priority Goal.'); return }
+    if (!wins.trim() || !fails.trim() || goalsList.length === 0) { 
+      alert('Please fill out wins, fails, and at least 1 Next Week Priority Goal.')
+      return 
+    }
     setSavingDebrief(true)
     const supabase = createClient()
     const todayStr = getLocalDateStr(new Date())
     const formattedGoals = goalsList.map((g, i) => `${i + 1}. ${g.trim()}`).join('\n')
     const formattedContent = `### What went well?\n${wins}\n\n### Bottlenecks & Fails\n${fails}\n\n### Priorities for Next Week\n${formattedGoals}`
     
-    const debriefTitle = editingDebriefLog ? editingDebriefLog.title : `Weekly Debrief: ${dateRange.start} - ${dateRange.end}`
-    const targetLogId = editingDebriefLog ? editingDebriefLog.id : ('debrief_' + Date.now())
-
     const targetDate = new Date()
     targetDate.setDate(targetDate.getDate() + (debriefWeekOffset * 7))
+    const startOfWeek = getStartOfWeek(targetDate)
     const endOfWeek = getEndOfWeek(targetDate)
+    const startStr = getLocalDateStr(startOfWeek)
+    const endStr = getLocalDateStr(endOfWeek)
+    const rangeStart = dateRange.start || formatDate(startStr, 'MMM DD')
+    const rangeEnd = dateRange.end || formatDate(endStr, 'MMM DD')
+    const debriefTitle = editingDebriefLog ? editingDebriefLog.title : `Weekly Debrief: ${rangeStart} - ${rangeEnd}`
     const cycleEndDateStr = getLocalDateStr(endOfWeek)
 
     const logPayload = {
-      id: targetLogId,
       user_id: user.id,
       title: debriefTitle,
-      type: 'project_work',
+      type: 'weekly_review',
       description: formattedContent,
       date: editingDebriefLog?.date || cycleEndDateStr,
-      created_at: editingDebriefLog?.created_at || new Date().toISOString()
+      created_at: editingDebriefLog?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
 
-    // 1. Immediately update local state & localStorage cache for zero delay
-    setHistoryLogs(prev => {
-      const next = [logPayload, ...prev.filter(l => l.id !== targetLogId && l.title !== debriefTitle)]
-      next.sort((a, b) => {
-        const timeA = getDebriefSortTime(a)
-        const timeB = getDebriefSortTime(b)
-        if (timeA !== timeB) return timeB - timeA
-        return (b.created_at || '').localeCompare(a.created_at || '')
-      })
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
-        const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
-        try {
-          const existingCache = localStorage.getItem(cacheKey)
-          const parsed = existingCache ? JSON.parse(existingCache) : {}
-          parsed.latestDebrief = next[0]
-          localStorage.setItem(cacheKey, JSON.stringify(parsed))
-        } catch (errCache) {}
-      }
-      return next
-    })
-
     try {
-      // 2. Insert or Update Supabase work_logs without creating duplicate entries
+      // 1. Locate existing debrief record if updating
       let targetId = editingDebriefLog && !editingDebriefLog.id.toString().startsWith('debrief_') ? editingDebriefLog.id : null
+      
       if (!targetId) {
+        // Query by exact title or matching week range
         const { data: existingLogs } = await supabase
           .from('work_logs')
-          .select('id')
+          .select('id, title, date')
           .eq('user_id', user.id)
-          .ilike('title', debriefTitle)
+          .or(`title.eq.${debriefTitle},title.ilike.%${rangeStart}%${rangeEnd}%`)
           .limit(1)
         if (existingLogs && existingLogs.length > 0) {
           targetId = existingLogs[0].id
         }
       }
 
-      if (targetId) {
-        await supabase.from('work_logs').update({
-          description: formattedContent,
-          title: debriefTitle,
-          date: logPayload.date
-        }).eq('id', targetId)
-      } else {
-        const { data: inserted } = await supabase.from('work_logs').insert([{
-          user_id: user.id,
-          title: debriefTitle,
-          type: 'project_work',
-          description: formattedContent,
-          date: logPayload.date
-        }]).select()
-
-        if (inserted && inserted.length > 0) {
-          targetId = inserted[0].id
-          setHistoryLogs(prev => {
-            const next = [inserted[0], ...prev.filter(l => l.title !== debriefTitle && l.id !== targetLogId)]
-            if (typeof window !== 'undefined') {
-              localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
-            }
-            return next
-          })
+      if (!targetId) {
+        // Also query by date where title is a weekly debrief
+        const { data: existingByDate } = await supabase
+          .from('work_logs')
+          .select('id, title, date')
+          .eq('user_id', user.id)
+          .eq('date', logPayload.date)
+          .ilike('title', 'Weekly Debrief%')
+          .limit(1)
+        if (existingByDate && existingByDate.length > 0) {
+          targetId = existingByDate[0].id
         }
       }
 
-      // 3. Deploy priority goals to tasks table for Command Center widget
-      const targetDateObj = new Date()
-      if (debriefWeekOffset > 0) {
-        targetDateObj.setDate(targetDateObj.getDate() + (debriefWeekOffset * 7))
-      }
-      const endOfWeekStr = getLocalDateStr(getEndOfWeek(targetDateObj))
+      let savedRecord = null
 
-      // Clean up any stale pending weekly_goal tasks so both devices stay 100% in sync
+      if (targetId) {
+        const { data: updatedData, error: updateErr } = await supabase
+          .from('work_logs')
+          .update({
+            description: formattedContent,
+            title: debriefTitle,
+            type: 'weekly_review',
+            date: logPayload.date,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', targetId)
+          .select()
+
+        if (updateErr) throw updateErr
+        savedRecord = updatedData?.[0] || { ...logPayload, id: targetId }
+      } else {
+        const { data: insertedData, error: insertErr } = await supabase
+          .from('work_logs')
+          .insert([{
+            user_id: user.id,
+            title: debriefTitle,
+            type: 'weekly_review',
+            description: formattedContent,
+            date: logPayload.date
+          }])
+          .select()
+
+        if (insertErr) {
+          // If collision with unique constraint on date
+          if (insertErr.code === '23505' || String(insertErr.message).includes('work_logs_user_date_key')) {
+            const { data: rowOnDate } = await supabase
+              .from('work_logs')
+              .select('id, title')
+              .eq('user_id', user.id)
+              .eq('date', logPayload.date)
+              .limit(1)
+
+            if (rowOnDate && rowOnDate.length > 0 && String(rowOnDate[0].title).toLowerCase().startsWith('weekly debrief')) {
+              const { data: upd, error: updErr } = await supabase
+                .from('work_logs')
+                .update({
+                  title: debriefTitle,
+                  type: 'weekly_review',
+                  description: formattedContent,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', rowOnDate[0].id)
+                .select()
+              if (updErr) throw updErr
+              savedRecord = upd?.[0]
+            } else {
+              throw new Error(`Unique constraint conflict on date (${logPayload.date}). Please run fix_weekly_debrief_and_work_logs.sql in Supabase SQL editor to drop work_logs_user_date_key so work sessions and debriefs can coexist on Sundays! Details: ${insertErr.message}`)
+            }
+          } else {
+            throw insertErr
+          }
+        } else if (insertedData && insertedData.length > 0) {
+          savedRecord = insertedData[0]
+        } else {
+          savedRecord = logPayload
+        }
+      }
+
+      // 2. Deploy priority goals to tasks table for Next Week (due end of next week)
+      const targetDateObj = new Date(targetDate)
+      targetDateObj.setDate(targetDateObj.getDate() + 7)
+      const nextWeekEndStr = getLocalDateStr(getEndOfWeek(targetDateObj))
+
+      // Clean up stale pending weekly_goal tasks
       try {
         await supabase
           .from('tasks')
@@ -342,30 +378,62 @@ export default function JournalPage() {
           .eq('user_id', user.id)
           .eq('category', 'weekly_goal')
           .eq('status', 'pending')
-      } catch (delErr) {}
+      } catch (delErr) {
+        console.warn('Error clearing old weekly goals:', delErr)
+      }
 
       for (const goalText of goalsList) {
         const cleanTitle = typeof goalText === 'string' ? goalText.trim() : String(goalText)
         if (!cleanTitle) continue
-        await supabase.from('tasks').insert([{
+        const { error: taskErr } = await supabase.from('tasks').insert([{
           user_id: user.id,
           title: cleanTitle,
           type: 'custom',
           category: 'weekly_goal',
-          due_date: endOfWeekStr,
+          due_date: nextWeekEndStr,
           status: 'pending',
           description: '[Weekly Goal] Priority for Next Week (from Weekly Debrief)'
         }])
+        if (taskErr) console.warn('Task insert warning:', taskErr)
       }
 
+      // 3. Immediately update local state & localStorage cache for 0ms delay
+      const finalItem = savedRecord || { ...logPayload, id: 'debrief_' + Date.now() }
+      setHistoryLogs(prev => {
+        const next = [finalItem, ...prev.filter(l => l.id !== finalItem.id && l.title !== debriefTitle)]
+        next.sort((a, b) => {
+          const timeA = getDebriefSortTime(a)
+          const timeB = getDebriefSortTime(b)
+          if (timeA !== timeB) return timeB - timeA
+          return (b.created_at || '').localeCompare(a.created_at || '')
+        })
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
+          const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+          try {
+            const existingCache = localStorage.getItem(cacheKey)
+            const parsed = existingCache ? JSON.parse(existingCache) : {}
+            parsed.latestDebrief = next[0]
+            localStorage.setItem(cacheKey, JSON.stringify(parsed))
+          } catch (errCache) {}
+        }
+        return next
+      })
 
-      setWins(''); setFails(''); setNextGoal1(''); setNextGoal2(''); setNextGoal3('')
+      // 4. Reset form only after successful persistence
+      setWins('')
+      setFails('')
+      setNextGoal1('')
+      setNextGoal2('')
+      setNextGoal3('')
       setEditingDebriefLog(null)
       setShowDebriefHistory(true)
     } catch (err) {
-      console.error('Failed to save review:', err)
-      alert('Failed to save review. Please try again.')
-    } finally { setSavingDebrief(false) }
+      console.error('Failed to save debrief:', err)
+      alert(`Failed to save Weekly Debrief: ${err.message || err.details || 'Unknown error'}\n\nYour inputs were preserved.`)
+    } finally { 
+      setSavingDebrief(false) 
+    }
   }
 
   const isFullEntry = content.length >= 100 && mood

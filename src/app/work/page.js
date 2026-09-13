@@ -433,13 +433,15 @@ export default function WorkPage() {
         console.warn('work_hours_logs sync warning:', whErr)
       }
 
-      // 2. Upsert work_logs (dual-table backup)
+      // 2. Upsert work_logs (dual-table backup, protecting weekly debriefs from being overwritten)
       try {
         const { data: existingWorkLog } = await sb
           .from('work_logs')
           .select('id')
           .eq('user_id', user.id)
           .eq('date', selectedDate)
+          .not('title', 'ilike', 'Weekly Debrief%')
+          .neq('type', 'weekly_review')
           .limit(1)
 
         if (existingWorkLog && existingWorkLog.length > 0) {
