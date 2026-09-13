@@ -303,7 +303,7 @@ export default function DailyOps() {
       const status = getStatus(habitId, d)
       if (status === 'completed') completed++
       if (status === 'failed') failed++
-      if ((status === 'blocked' || status === 'locked') && freqDays.includes(dateObj.getDay())) goal--
+      if ((status === 'blocked' || status === 'locked' || status === 'rest') && freqDays.includes(dateObj.getDay())) goal--
     })
     
     const left = goal - completed - failed
@@ -315,7 +315,7 @@ export default function DailyOps() {
     let done = 0
     let total = 0
     habits.forEach((h) => {
-      const freqDays = h.frequency_days || [0,1,2,3,4,5,6]
+      const freqDays = Array.isArray(h.frequency_days) && h.frequency_days.length > 0 ? h.frequency_days : [0,1,2,3,4,5,6]
       days.forEach((d) => {
         const dateObj = new Date(viewYear, viewMonth, d)
         if (freqDays.includes(dateObj.getDay())) {
@@ -323,16 +323,20 @@ export default function DailyOps() {
         }
         const status = getStatus(h.id, d)
         if (status === 'completed') done++
-        if ((status === 'blocked' || status === 'locked') && freqDays.includes(dateObj.getDay())) total--
+        if ((status === 'blocked' || status === 'locked' || status === 'rest') && freqDays.includes(dateObj.getDay())) total--
       })
     })
-    return { completed: done, goal: total, pct: total === 0 ? 0 : Math.round((done / total) * 100) }
+    return { completed: done, goal: Math.max(0, total), pct: total <= 0 ? 0 : Math.round((done / total) * 100) }
   }, [habits, logMap, days, viewYear, viewMonth])
 
-  // Today's completion stats
-  const todayComplete = habits.filter(h => todayLogs.some(l => l.habit_id === h.id && (!l.status || l.status === 'completed'))).length
-  const todayFailed = habits.filter(h => todayLogs.some(l => l.habit_id === h.id && l.status === 'failed')).length
-  const todayTotal = habits.length
+  // Today's completion stats (excluding rest days and locked days)
+  const todayActiveHabits = habits.filter(h => {
+    const s = getStatus(h.id, todayDay)
+    return s !== 'rest' && s !== 'locked' && s !== 'blocked'
+  })
+  const todayComplete = todayActiveHabits.filter(h => todayLogs.some(l => l.habit_id === h.id && (!l.status || l.status === 'completed'))).length
+  const todayFailed = todayActiveHabits.filter(h => todayLogs.some(l => l.habit_id === h.id && l.status === 'failed')).length
+  const todayTotal = todayActiveHabits.length
   const todayPct = todayTotal === 0 ? 0 : Math.round((todayComplete / todayTotal) * 100)
 
   // Top Consistent Habits
@@ -766,9 +770,12 @@ export default function DailyOps() {
                     <div className="w-full"></div>
                   </td>
                   {days.map((d) => {
-                    const dayDate = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-                    const dayDone = habits.filter(h => logMap.get(`${h.id}::${dayDate}`) === 'completed').length
-                    const dayPct = habits.length === 0 ? 0 : Math.round((dayDone / habits.length) * 100)
+                    const activeHabits = habits.filter(h => {
+                      const s = getStatus(h.id, d)
+                      return s !== 'rest' && s !== 'locked' && s !== 'blocked'
+                    })
+                    const dayDone = activeHabits.filter(h => getStatus(h.id, d) === 'completed').length
+                    const dayPct = activeHabits.length === 0 ? 0 : Math.round((dayDone / activeHabits.length) * 100)
                     const isToday = isCurrentMonth && d === todayDay
                     return (
                       <td key={d} style={{
