@@ -262,7 +262,7 @@ export default function JournalPage() {
     const logPayload = {
       user_id: user.id,
       title: debriefTitle,
-      type: 'weekly_review',
+      type: 'project_work',
       description: formattedContent,
       date: editingDebriefLog?.date || cycleEndDateStr,
       created_at: editingDebriefLog?.created_at || new Date().toISOString(),
@@ -308,7 +308,7 @@ export default function JournalPage() {
           .update({
             description: formattedContent,
             title: debriefTitle,
-            type: 'weekly_review',
+            type: 'project_work',
             date: logPayload.date,
             updated_at: new Date().toISOString()
           })
@@ -323,7 +323,7 @@ export default function JournalPage() {
           .insert([{
             user_id: user.id,
             title: debriefTitle,
-            type: 'weekly_review',
+            type: 'project_work',
             description: formattedContent,
             date: logPayload.date
           }])
@@ -344,7 +344,7 @@ export default function JournalPage() {
                 .from('work_logs')
                 .update({
                   title: debriefTitle,
-                  type: 'weekly_review',
+                  type: 'project_work',
                   description: formattedContent,
                   updated_at: new Date().toISOString()
                 })
