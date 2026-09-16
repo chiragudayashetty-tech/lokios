@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getRankForXp } from '@/lib/utils/xp'
+import { getRankForXp, calculateLevel } from '@/lib/utils/xp'
 
 export async function generateMetadata({ params }) {
   const supabase = await createClient()
@@ -46,7 +46,7 @@ export default async function PublicPortfolio({ params }) {
           <p style={{ fontSize: 'var(--text-xl-size)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)' }}>{profile.portfolio_headline}</p>
           
           <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-            <span className="badge" style={{ background: rank.color, color: '#fff', fontSize: 'var(--text-sm-size)', padding: 'var(--space-2) var(--space-4)' }}>{rank.icon} {rank.name} • Lvl {profile.current_level}</span>
+            <span className="badge" style={{ background: rank.color, color: '#fff', fontSize: 'var(--text-sm-size)', padding: 'var(--space-2) var(--space-4)' }}>{rank.icon} {rank.name} • Lvl {calculateLevel(profile.total_xp || 0)}</span>
           </div>
         </div>
       </header>
