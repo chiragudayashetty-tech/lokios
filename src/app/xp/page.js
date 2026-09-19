@@ -136,16 +136,6 @@ export default function XPDashboard() {
     const supabase = createClient()
 
     const fetchData = async () => {
-      // Auto-heal missing XP once per browser session
-      if (typeof window !== 'undefined' && !sessionStorage.getItem(`xp_auto_heal_${user.id}`)) {
-        try {
-          await cleanupAllDuplicateXP(user.id)
-          sessionStorage.setItem(`xp_auto_heal_${user.id}`, 'true')
-        } catch (e) {
-          console.warn('XP auto-heal error:', e)
-        }
-      }
-
       const { data: profile } = await supabase.from('profiles').select('total_xp').eq('id', user.id).single()
       if (profile) setTotalXp(profile.total_xp || 0)
 
@@ -193,10 +183,10 @@ export default function XPDashboard() {
   const handleFixDuplicates = async () => {
     setLoading(true)
     const res = await cleanupAllDuplicateXP(user.id)
-    if (res && (res.cleanedCount > 0 || res.restoredCount > 0)) {
-      alert(`Neural Sync Complete:\n• Removed ${res.cleanedCount || 0} duplicate entries\n• Restored ${res.restoredCount || 0} legitimate XP records (speaking/journal/tasks)\n• Current Total XP: ${res.totalXp} (Level ${res.level || calculateLevel(res.totalXp)})`)
+    if (res && res.cleanedCount > 0) {
+      alert(`Cleanup Complete: Purged ${res.cleanedCount} duplicate entries. Your actual Total XP is ${res.totalXp} (Level ${res.level}).`)
     } else {
-      alert(`All XP systems in sync! Total XP: ${res?.totalXp || totalXp} (Level ${res?.level || calculateLevel(res?.totalXp || totalXp)}).`)
+      alert(`No duplicates found! All XP entries are unique. Your actual Total XP is ${res?.totalXp || totalXp} (Level ${res?.level || calculateLevel(res?.totalXp || totalXp)}).`)
     }
     window.location.reload()
   }
