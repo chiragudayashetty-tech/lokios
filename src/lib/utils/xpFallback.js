@@ -208,237 +208,80 @@ export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount =
 }
 
 /**
- * Clean up ALL true duplicate entries across habits, tasks, and daily records.
- * Keeps exactly 1 valid record per unique activity/day without fabricating or altering XP.
- * Recalculates the profile's honest ground-truth total_xp and actual mathematical level.
+ * Clean up ONLY true duplicate entries in xp_history.
+ * If multiple records exist for the same exact action/source, keep the first one and remove the duplicate copies.
+ * Never deletes single entries, penalties, or valid historical logs.
+ * Recalculates profiles.total_xp strictly as the sum of all unique records.
  */
 export async function cleanupAllDuplicateXP(userId) {
   const supabase = createClient()
   if (!userId) return { cleanedCount: 0, totalXp: 0, level: 1 }
 
   try {
-    const [historyRes, habitLogsRes, habitsRes] = await Promise.all([
-      supabase.from('xp_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(10000),
-      supabase.from('habit_logs').select('id, habit_id, date, status').eq('user_id', userId).order('date', { ascending: false }).limit(10000),
-      supabase.from('habits').select('id, title, xp_per_completion').eq('user_id', userId)
-    ])
+    const { data: allHistory, error } = await supabase
+      .from('xp_history')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10000)
 
-    const allHistory = historyRes.data || []
-    if (allHistory.length === 0) return { cleanedCount: 0, totalXp: 0, level: 1 }
+    if (error || !allHistory || allHistory.length === 0) {
+      return { cleanedCount: 0, totalXp: 0, level: 1 }
+    }
 
-    const realHabitLogs = habitLogsRes.data || []
-    const allHabits = habitsRes.data || []
-
-    // Fast lookup maps for habits
-    const realHabitMap = new Map()
-    const logIdToHabitDate = new Map()
-    realHabitLogs.forEach(l => {
-      realHabitMap.set(`${l.habit_id}_${l.date}`, l.status || 'completed')
-      if (l.id) logIdToHabitDate.set(l.id, `${l.habit_id}_${l.date}`)
-    })
-
-    const habitTitleToId = new Map()
-    allHabits.forEach(h => {
-      if (h.title) habitTitleToId.set(h.title.trim().toLowerCase(), h.id)
-    })
-
-    // Sets to track seen unique keys
-    const seenHabitDays = new Set()
-    const seenScreenTimeDates = new Set()
-    const seenDailyAllDates = new Set()
-    const seenTaskIds = new Set()
-    const seenGoalIds = new Set()
-    const seenStreakMilestones = new Set()
-    const seenGeneralKeys = new Set()
-
+    const seenKeys = new Set()
     const toDeleteIds = []
 
     for (const entry of allHistory) {
-      const desc = (entry.description || '').toLowerCase()
-      const srcType = (entry.source_type || '').toLowerCase()
-      const srcId = (entry.source_id || '')
+      const srcType = (entry.source_type || '').toLowerCase().trim()
+      const srcId = (entry.source_id || '').trim()
+      const desc = (entry.description || '').toLowerCase().trim()
 
-      // 1. Purge action reversal markers that pollute history
-      if (srcType.endsWith('_reversed') || desc.includes('action reversed')) {
-        toDeleteIds.push(entry.id)
-        continue
-      }
+      let dedupKey = null
 
-      // 2. Any protocol auto-fail penalties prior to protocol start date ('2026-08-09')
-      const isProtocolPenalty =
-        srcType.includes('journal_missed') ||
-        srcType.includes('speaking_missed') ||
-        srcType.includes('speaking_rest_day') ||
-        desc.includes('3 am cutoff') ||
-        desc.includes('speaking practice off-day')
-
-      if (isProtocolPenalty) {
-        const textToSearch = `${entry.description || ''} ${entry.source_id || ''}`
-        const dateMatch = textToSearch.match(/202\d-\d{2}-\d{2}/)
-        if (dateMatch && dateMatch[0]) {
-          if (dateMatch[0] < '2026-08-09') {
-            toDeleteIds.push(entry.id)
-            continue
-          }
+      // 1. If entry has source_id (e.g. habit_UUID_YYYY-MM-DD, task_UUID, goal_UUID, screen_time_YYYY-MM-DD, etc.)
+      if (srcId) {
+        if (
+          srcId.startsWith('habit_') ||
+          srcId.startsWith('task_') ||
+          srcId.startsWith('goal_') ||
+          srcId.startsWith('screen_time_') ||
+          srcId.startsWith('daily_all_') ||
+          srcId.startsWith('streak_') ||
+          srcId.startsWith('speaking_') ||
+          srcId.startsWith('journal_')
+        ) {
+          dedupKey = srcId
+        } else {
+          dedupKey = `${srcType}|${srcId}`
         }
-      }
-
-      // 3. Screen Time deduplication (KEEP 1 per date, purge duplicate saves)
-      const isScreenTimeEntry =
-        srcType === 'screen_time' ||
-        srcId.startsWith('screen_time_') ||
-        desc.includes('screen time') ||
-        desc.includes('screen intel')
-
-      if (isScreenTimeEntry) {
-        let dateStr = null
-        const dateMatch = `${srcId} ${entry.description || ''}`.match(/202\d-\d{2}-\d{2}/)
-        if (dateMatch) dateStr = dateMatch[0]
-        else if (entry.created_at) dateStr = getLocalDateStr(new Date(entry.created_at))
-
+      } 
+      // 2. If no source_id, check for habit routine description with date
+      else if (srcType.startsWith('habit') || desc.includes('routine:')) {
+        const dateStr = entry.created_at ? getLocalDateStr(new Date(entry.created_at)) : null
         if (dateStr) {
-          if (seenScreenTimeDates.has(dateStr)) {
-            toDeleteIds.push(entry.id)
-          } else {
-            seenScreenTimeDates.add(dateStr)
-          }
-          continue
+          dedupKey = `${srcType}|${desc}|${dateStr}`
         }
       }
-
-      // 4. 100% Daily All Habits Bonus (KEEP 1 per date)
-      if (srcType === 'daily_all_complete' || srcId.startsWith('daily_all_')) {
-        let dateStr = null
-        const dateMatch = `${srcId} ${entry.description || ''}`.match(/202\d-\d{2}-\d{2}/)
-        if (dateMatch) dateStr = dateMatch[0]
-        else if (entry.created_at) dateStr = getLocalDateStr(new Date(entry.created_at))
-
-        if (dateStr) {
-          if (seenDailyAllDates.has(dateStr)) {
-            toDeleteIds.push(entry.id)
-          } else {
-            seenDailyAllDates.add(dateStr)
-          }
-          continue
-        }
+      // 3. General entries with description and date
+      else if (desc && entry.created_at) {
+        const dateStr = getLocalDateStr(new Date(entry.created_at))
+        dedupKey = `${srcType}|${desc}|${dateStr}`
       }
 
-      // 5. Streak Milestones (KEEP 1 per milestone)
-      if (srcType === 'streak_milestone' || srcId.startsWith('streak_')) {
-        const mKey = srcId || desc
-        if (seenStreakMilestones.has(mKey)) {
+      // If this exact action key was already encountered:
+      if (dedupKey) {
+        if (seenKeys.has(dedupKey)) {
+          // DUPLICATE ENTRY: add to delete list
           toDeleteIds.push(entry.id)
         } else {
-          seenStreakMilestones.add(mKey)
-        }
-        continue
-      }
-
-      // 6. Habit XP deduplication against habit_logs ground truth
-      const isHabitEntry =
-        srcType.startsWith('habit_') ||
-        srcId.startsWith('habit_') ||
-        desc.includes('routine:') ||
-        desc.includes('missed routine') ||
-        desc.includes('failed routine') ||
-        desc.includes('completed routine')
-
-      if (isHabitEntry) {
-        let habitId = null
-        let dateStr = null
-
-        if (srcId.startsWith('habit_')) {
-          const parts = srcId.split('_')
-          if (parts.length >= 3) {
-            dateStr = parts[parts.length - 1]
-            habitId = parts.slice(1, parts.length - 1).join('_')
-          }
-        }
-
-        if (!habitId && logIdToHabitDate.has(srcId)) {
-          const pair = logIdToHabitDate.get(srcId).split('_')
-          habitId = pair[0]
-          dateStr = pair[1]
-        }
-
-        if (!dateStr && entry.created_at) {
-          dateStr = getLocalDateStr(new Date(entry.created_at))
-        }
-
-        if (!habitId) {
-          for (const [title, hId] of habitTitleToId.entries()) {
-            if (desc.includes(title)) {
-              habitId = hId
-              break
-            }
-          }
-        }
-
-        if (habitId && dateStr) {
-          const habitDateKey = `${habitId}_${dateStr}`
-          const realStatus = realHabitMap.get(habitDateKey)
-
-          if (realStatus === 'none' || realStatus === 'blocked') {
-            toDeleteIds.push(entry.id)
-          } else if (realStatus === 'completed' || (!realStatus && entry.amount > 0)) {
-            if (!seenHabitDays.has(habitDateKey) && entry.amount > 0) {
-              seenHabitDays.add(habitDateKey)
-            } else {
-              toDeleteIds.push(entry.id)
-            }
-          } else if (realStatus === 'failed' || (!realStatus && entry.amount < 0)) {
-            if (!seenHabitDays.has(habitDateKey) && entry.amount < 0) {
-              seenHabitDays.add(habitDateKey)
-            } else {
-              toDeleteIds.push(entry.id)
-            }
-          }
-          continue
-        }
-      }
-
-      // 7. Task deduplication (KEEP 1 per task ID)
-      if (srcType === 'task_complete' || srcType === 'task_failed') {
-        const rawTaskId = srcId.replace(/^task_/, '')
-        if (rawTaskId) {
-          if (seenTaskIds.has(rawTaskId)) {
-            toDeleteIds.push(entry.id)
-          } else {
-            seenTaskIds.add(rawTaskId)
-          }
-          continue
-        }
-      }
-
-      // 8. Goal deduplication (KEEP 1 per goal ID)
-      if (srcType === 'goal_complete' || srcType === 'goal_failed') {
-        const rawGoalId = srcId.replace(/^goal_/, '')
-        if (rawGoalId) {
-          if (seenGoalIds.has(rawGoalId)) {
-            toDeleteIds.push(entry.id)
-          } else {
-            seenGoalIds.add(rawGoalId)
-          }
-          continue
-        }
-      }
-
-      // 9. General composite key deduplication
-      let key = null
-      if (entry.source_id) {
-        key = `${entry.source_type}|${entry.source_id}`
-      }
-
-      if (key) {
-        if (seenGeneralKeys.has(key)) {
-          toDeleteIds.push(entry.id)
-        } else {
-          seenGeneralKeys.add(key)
+          // FIRST TIME SEEN: keep this record!
+          seenKeys.add(dedupKey)
         }
       }
     }
 
-    // Delete verified duplicate IDs
+    // Delete ONLY the verified duplicate rows
     if (toDeleteIds.length > 0) {
       for (let i = 0; i < toDeleteIds.length; i += 50) {
         const batch = toDeleteIds.slice(i, i + 50)
@@ -446,13 +289,13 @@ export async function cleanupAllDuplicateXP(userId) {
       }
     }
 
-    // Recalculate true total_xp from remaining unique history entries
-    const { data: finalHistory } = await supabase
+    // Recalculate true total_xp strictly from remaining unique entries
+    const { data: remaining } = await supabase
       .from('xp_history')
       .select('amount')
       .eq('user_id', userId)
 
-    const trueTotalXp = (finalHistory || []).reduce((sum, r) => sum + (r.amount || 0), 0)
+    const trueTotalXp = (remaining || []).reduce((sum, r) => sum + (r.amount || 0), 0)
     const safeXp = Math.max(0, trueTotalXp)
     const newLevel = calculateLevel(safeXp)
     const newRank = getRankForXp(safeXp).code
