@@ -5,7 +5,7 @@ import React from 'react'
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props)
-    this.state = { hasError: false, error: null }
+    this.state = { hasError: false, error: null, errorInfo: null }
   }
 
   static getDerivedStateFromError(error) {
@@ -14,6 +14,7 @@ export class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('OS Error Boundary caught an exception:', error, errorInfo)
+    this.setState({ errorInfo })
   }
 
   render() {
@@ -30,6 +31,12 @@ export class ErrorBoundary extends React.Component {
             </p>
             <div className="bg-bg-tertiary p-4 rounded border border-border-color mb-8 overflow-auto max-h-48 text-xs text-danger font-mono whitespace-pre-wrap">
               {this.state.error?.toString() || 'Unknown runtime error.'}
+              {this.state.errorInfo?.componentStack && (
+                <div className="mt-2 pt-2 border-t border-danger/30 text-[10px] text-muted">
+                  Component Trace:
+                  {this.state.errorInfo.componentStack}
+                </div>
+              )}
             </div>
             <div className="flex gap-4">
               <button 
@@ -40,7 +47,7 @@ export class ErrorBoundary extends React.Component {
               </button>
               <button 
                 className="btn btn-secondary"
-                onClick={() => this.setState({ hasError: false, error: null })}
+                onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
               >
                 IGNORE EXCEPTION
               </button>
