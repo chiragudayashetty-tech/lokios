@@ -16,20 +16,20 @@ import CharacterCapsuleHUD from '@/components/ui/CharacterCapsuleHUD'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: Home, label: 'Command Center' },
-  { href: '/quests', icon: Crosshair, label: 'Daily Ops' },
-  { href: '/tasks', icon: CheckSquare, label: 'Operations' },
-  { href: '/goals', icon: Target, label: 'Missions' },
-  { href: '/work', icon: Briefcase, label: 'Work' },
-  { href: '/speaking', icon: Mic, label: 'Speaking Practice' },
-  { href: '/brain-dump', icon: Lightbulb, label: 'Intel Drop' },
-  { href: '/journal', icon: BookOpen, label: 'Journal' },
-  { href: '/portfolio-log', icon: Briefcase, label: 'Proof of Work' },
-  { href: '/calendar', icon: CalendarDays, label: 'Calendar' },
+  { href: '/dashboard', icon: Home, label: 'Home', group: 'Plan' },
+  { href: '/quests', icon: Crosshair, label: 'Focus', group: 'Plan' },
+  { href: '/tasks', icon: CheckSquare, label: 'Tasks', group: 'Plan' },
+  { href: '/goals', icon: Target, label: 'Goals', group: 'Plan' },
+  { href: '/work', icon: Briefcase, label: 'Work log', group: 'Build' },
+  { href: '/speaking', icon: Mic, label: 'Speaking', group: 'Build' },
+  { href: '/brain-dump', icon: Lightbulb, label: 'Brain dump', group: 'Reflect' },
+  { href: '/journal', icon: BookOpen, label: 'Journal', group: 'Reflect' },
+  { href: '/portfolio-log', icon: Briefcase, label: 'Portfolio', group: 'Reflect' },
+  { href: '/calendar', icon: CalendarDays, label: 'Calendar', group: 'Reflect' },
 
-  { href: '/screen-time', icon: Monitor, label: 'Screen Intel' },
-  { href: '/xp', icon: Trophy, label: 'XP Metrics' },
-  { href: '/profile', icon: User, label: 'Operator Profile' }
+  { href: '/screen-time', icon: Monitor, label: 'Screen time', group: 'Reflect' },
+  { href: '/xp', icon: Trophy, label: 'Progress', group: 'Reflect' },
+  { href: '/profile', icon: User, label: 'Profile', group: 'Account' }
 ]
 
 export default function AppShell({ children }) {
@@ -136,8 +136,12 @@ export default function AppShell({ children }) {
                 </button>
               </div>
 
-              <nav className="grid grid-cols-2 gap-2.5">
-                {NAV_ITEMS.map((item) => {
+              <nav className="mobile-menu-groups">
+                {['Plan', 'Build', 'Reflect', 'Account'].map((group) => (
+                  <div className="mobile-menu-group" key={group}>
+                    <span className="mobile-menu-group-label">{group}</span>
+                    <div className="grid grid-cols-2 gap-2.5">
+                    {NAV_ITEMS.filter(item => item.group === group).map((item) => {
                   const isActive = pathname === item.href
                   const Icon = item.icon
                   return (
@@ -156,7 +160,10 @@ export default function AppShell({ children }) {
                       </div>
                     </Link>
                   )
-                })}
+                    })}
+                    </div>
+                  </div>
+                ))}
               </nav>
             </div>
             

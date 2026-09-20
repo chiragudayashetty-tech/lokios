@@ -550,7 +550,7 @@ export default function WorkPage() {
         )}
       </AnimatePresence>
 
-      <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5 sm:space-y-6">
+      <div className="work-page-shell p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5 sm:space-y-6">
         
         {/* ========================================================================= */}
         {/* TOP BAR: HEADER & SUBPAGE TABS */}
@@ -907,7 +907,7 @@ export default function WorkPage() {
               const weekTotal = visibleLogs.reduce((acc, l) => acc + (parseFloat(l.total_hours_worked ?? l.duration_hours) || 0), 0)
 
               return (
-                <HudPanel className="p-5 sm:p-6 space-y-4">
+                <HudPanel className="work-history-card p-5 sm:p-6 space-y-4">
                   
                   {/* WORK HISTORY HEADER WITH TOGGLE */}
                   <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
