@@ -997,31 +997,21 @@ export default function DailyOps() {
               <p className="font-mono text-xs text-muted mb-4">
                 These routines are currently stopped and hidden from the daily ops table. All historical log data and completion history are completely saved. Click <strong className="text-primary">CONTINUE ROUTINE</strong> anytime to reactivate tracking.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {stoppedHabits.map((h) => {
                   const cat = QUEST_CATEGORIES.find(c => c.id === h.category) || QUEST_CATEGORIES[0]
                   return (
-                    <div key={h.id} className="p-4 rounded border border-border-subtle bg-bg-secondary flex-between gap-3">
-                      <div className="flex flex-col gap-1 truncate">
-                        <div className="flex items-center gap-2">
-                          <span className="font-display text-sm text-primary truncate">{h.title}</span>
-                          <span className="px-2 py-0.5 rounded font-mono text-[9px] bg-danger/20 border border-danger/40 text-danger uppercase font-bold">STOPPED</span>
+                    <div key={h.id} className="p-3 rounded-xl border border-border-subtle bg-bg-secondary flex flex-col gap-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-display text-sm text-primary">{h.title}</span>
+                            <span className="px-2 py-0.5 rounded font-mono text-[9px] bg-danger/20 border border-danger/40 text-danger uppercase font-bold shrink-0">STOPPED</span>
+                          </div>
+                          <div className="font-mono text-[10px] text-muted">
+                            {cat.name}{h.created_at ? ` • ${h.created_at.substring(0, 10)}` : ''}
+                          </div>
                         </div>
-                        <div className="font-mono text-[10px] text-muted truncate">
-                          {cat.name} {h.created_at ? `• Deployed: ${h.created_at.substring(0, 10)}` : ''} {h.stopped_at ? `• Stopped: ${h.stopped_at.substring(0, 10)}` : ''}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            await resumeHabit(h.id)
-                          }}
-                          className="btn btn-primary btn-sm flex items-center gap-1 text-xs font-mono"
-                          title="Reactivate this routine"
-                        >
-                          <PlayCircle size={14} /> CONTINUE
-                        </button>
                         <button
                           type="button"
                           onClick={() => {
@@ -1038,12 +1028,20 @@ export default function DailyOps() {
                               onCancel: () => setConfirmModal({ isOpen: false })
                             })
                           }}
-                          className="p-2 text-muted hover:text-danger rounded border border-border-subtle hover:border-danger transition-colors"
+                          className="p-1.5 text-muted hover:text-danger rounded border border-border-subtle hover:border-danger transition-colors shrink-0"
                           title="Permanently delete routine"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={13} />
                         </button>
                       </div>
+                      <button
+                        type="button"
+                        onClick={async () => { await resumeHabit(h.id) }}
+                        className="w-full btn btn-primary btn-sm flex items-center justify-center gap-1.5 text-xs font-mono"
+                        title="Reactivate this routine"
+                      >
+                        <PlayCircle size={14} /> CONTINUE ROUTINE
+                      </button>
                     </div>
                   )
                 })}

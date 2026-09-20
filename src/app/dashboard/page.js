@@ -1646,17 +1646,17 @@ export default function MissionControl() {
                 TODAY'S OPERATIONS & SCHEDULE
             ══════════════════════════════════════════════════════════════════ */}
             <div className="dashboard-card p-5 sm:p-6" style={{ borderLeft: '4px solid var(--accent-primary)' }}>
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
                   <CalendarIcon size={14} className="text-amber-400" />
                   <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-amber-300 font-bold">
-                    Today's Operations & Schedule
+                    Today's Operations
                   </span>
                   <span className="px-2 py-0.5 rounded-full font-mono text-[8px] font-bold uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30">
                     {todayCalendarEvents.length + todayTasksScheduled.length} {todayCalendarEvents.length + todayTasksScheduled.length === 1 ? 'Item' : 'Items'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <Link
                     href="/tasks"
                     className="font-mono text-[9px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
@@ -2103,8 +2103,8 @@ export default function MissionControl() {
               </div>
 
               {/* Signature Opal SVG Circular Gauge */}
-              <div className="relative w-44 h-44 flex items-center justify-center my-1">
-                <svg className="w-full h-full transform -rotate-90">
+              <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center my-1 shrink-0">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 176 176">
                   {/* Background Track Ring */}
                   <circle
                     cx="88"
@@ -2135,23 +2135,23 @@ export default function MissionControl() {
 
                 {/* Ring Center Metrics */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 font-semibold mb-0.5">
+                  <span className="font-mono text-[8px] uppercase tracking-widest text-slate-400 font-semibold mb-0.5">
                     Momentum
                   </span>
                   <div 
                     className="font-display font-black tracking-tight leading-none"
-                    style={{ fontSize: '2.5rem', color: momentumColor }}
+                    style={{ fontSize: '2rem', color: momentumColor }}
                   >
                     {momentumScore > 0 ? '+' : ''}{momentumScore}
                   </div>
-                  <span className="font-mono text-[8px] text-slate-500 uppercase mt-1">
+                  <span className="font-mono text-[7px] text-slate-500 uppercase mt-1">
                     -10 to +10 range
                   </span>
                 </div>
               </div>
 
               {/* Status Pills: Streak & Win Rate */}
-              <div className="grid grid-cols-2 gap-2 w-full mt-3.5 relative z-10">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%' }} className="mt-3.5 relative z-10">
                 <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-2xl bg-white/[0.03] border border-white/10">
                   <Flame size={14} color={flameColor} className="animate-pulse" />
                   <span className="font-mono font-bold text-white text-xs">
@@ -2239,7 +2239,7 @@ export default function MissionControl() {
                 </div>
                 <span className="font-mono text-[8px] text-slate-500 uppercase font-semibold">LV.{currentLevel} DYNAMICS</span>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                 <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
                   <div className="font-display font-black tracking-tight leading-none text-cyan-400 text-lg sm:text-xl">
                     {xpNeeded >= 1000 ? `${(xpNeeded / 1000).toFixed(1)}k` : xpNeeded}

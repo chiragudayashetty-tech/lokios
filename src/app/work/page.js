@@ -555,7 +555,7 @@ export default function WorkPage() {
         {/* ========================================================================= */}
         {/* TOP BAR: HEADER & SUBPAGE TABS */}
         {/* ========================================================================= */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37]">
               <Briefcase size={22} />
@@ -568,7 +568,7 @@ export default function WorkPage() {
           <button
             type="button"
             onClick={() => setExportModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] hover:opacity-90 text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg transition-all active:scale-95 shrink-0 self-start sm:self-auto"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] hover:opacity-90 text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg transition-all active:scale-95 shrink-0"
           >
             <Download size={14} />
             <span>Export Intel</span>
@@ -606,7 +606,7 @@ export default function WorkPage() {
         </div>
 
         {/* DATE SELECTOR ROW */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-black/60 border border-white/10 rounded-2xl backdrop-blur-md">
+        <div className="flex items-center justify-between gap-3 p-3.5 bg-black/60 border border-white/10 rounded-2xl backdrop-blur-md flex-wrap">
           <div className="flex items-center gap-3">
             <span className="font-mono text-xs text-[#D4AF37] uppercase font-bold tracking-widest flex items-center gap-1.5">
               LOG DATE:
@@ -622,7 +622,7 @@ export default function WorkPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setSelectedDate(todayStr)}
@@ -967,22 +967,22 @@ export default function WorkPage() {
                   )}
 
                   {/* SUMMARY METRICS BAR */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-xl bg-black/40 border border-white/10 text-center font-mono text-xs">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', padding: '10px 14px', borderRadius: '12px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
                     <div>
-                      <div className="text-muted uppercase text-[9px] font-bold">BEYOND TATVA</div>
-                      <div className="text-[#00F0FF] font-bold mt-0.5">{weekBeyond.toFixed(1)}h</div>
+                      <div className="text-muted uppercase text-[9px] font-bold font-mono">BEYOND TATVA</div>
+                      <div className="text-[#00F0FF] font-bold mt-0.5 font-mono text-xs">{weekBeyond.toFixed(1)}h</div>
                     </div>
                     <div>
-                      <div className="text-muted uppercase text-[9px] font-bold">FOCUSED</div>
-                      <div className="text-[#22c55e] font-bold mt-0.5">{weekFocused.toFixed(1)}h</div>
+                      <div className="text-muted uppercase text-[9px] font-bold font-mono">FOCUSED</div>
+                      <div className="text-[#22c55e] font-bold mt-0.5 font-mono text-xs">{weekFocused.toFixed(1)}h</div>
                     </div>
                     <div>
-                      <div className="text-muted uppercase text-[9px] font-bold">UNFOCUSED</div>
-                      <div className="text-[#ef4444] font-bold mt-0.5">{weekUnfocused.toFixed(1)}h</div>
+                      <div className="text-muted uppercase text-[9px] font-bold font-mono">UNFOCUSED</div>
+                      <div className="text-[#ef4444] font-bold mt-0.5 font-mono text-xs">{weekUnfocused.toFixed(1)}h</div>
                     </div>
                     <div>
-                      <div className="text-muted uppercase text-[9px] font-bold">TOTAL</div>
-                      <div className="text-white font-bold mt-0.5">{weekTotal.toFixed(1)}h</div>
+                      <div className="text-muted uppercase text-[9px] font-bold font-mono">TOTAL</div>
+                      <div className="text-white font-bold mt-0.5 font-mono text-xs">{weekTotal.toFixed(1)}h</div>
                     </div>
                   </div>
 
@@ -1028,18 +1028,18 @@ export default function WorkPage() {
                             {isExpanded && (
                               <div className="px-4 pb-4 pt-2 border-t border-white/10 bg-black/40 space-y-3">
                                 {/* 3 METRIC CARDS ROW */}
-                                <div className="grid grid-cols-3 gap-2.5 text-center font-mono text-xs">
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
                                   <div className="p-2.5 rounded-xl bg-black/40 border border-[#00F0FF]/30">
-                                    <div className="text-[10px] text-muted uppercase font-bold tracking-wider">BEYOND</div>
-                                    <div className="text-[#00F0FF] font-extrabold text-sm mt-0.5">{btNum.toFixed(1)}h</div>
+                                    <div className="text-[10px] text-muted uppercase font-bold tracking-wider font-mono">BEYOND</div>
+                                    <div className="text-[#00F0FF] font-extrabold text-sm mt-0.5 font-mono">{btNum.toFixed(1)}h</div>
                                   </div>
                                   <div className="p-2.5 rounded-xl bg-black/40 border border-[#22c55e]/30">
-                                    <div className="text-[10px] text-muted uppercase font-bold tracking-wider">FOCUSED</div>
-                                    <div className="text-[#22c55e] font-extrabold text-sm mt-0.5">{focNum.toFixed(1)}h</div>
+                                    <div className="text-[10px] text-muted uppercase font-bold tracking-wider font-mono">FOCUSED</div>
+                                    <div className="text-[#22c55e] font-extrabold text-sm mt-0.5 font-mono">{focNum.toFixed(1)}h</div>
                                   </div>
                                   <div className="p-2.5 rounded-xl bg-black/40 border border-[#ef4444]/30">
-                                    <div className="text-[10px] text-muted uppercase font-bold tracking-wider">UNFOCUSED</div>
-                                    <div className="text-[#ef4444] font-extrabold text-sm mt-0.5">{unfocNum.toFixed(1)}h</div>
+                                    <div className="text-[10px] text-muted uppercase font-bold tracking-wider font-mono">UNFOCUSED</div>
+                                    <div className="text-[#ef4444] font-extrabold text-sm mt-0.5 font-mono">{unfocNum.toFixed(1)}h</div>
                                   </div>
                                 </div>
 
@@ -1091,7 +1091,7 @@ export default function WorkPage() {
             </div>
 
             {/* KPI STAT CARDS */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }} className="sm:grid-2-to-4">
               <HudPanel className="p-4 space-y-1">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>TOTAL WORKED</span>

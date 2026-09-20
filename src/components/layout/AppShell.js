@@ -75,11 +75,12 @@ export default function AppShell({ children }) {
 
   if (!user) return null
 
-  const mainItems = [
-    NAV_ITEMS.find(item => item.href === '/dashboard'), // Command Center
-    NAV_ITEMS.find(item => item.href === '/quests'),    // Daily Ops
-    NAV_ITEMS.find(item => item.href === '/tasks'),     // Operations
-    NAV_ITEMS.find(item => item.href === '/goals'),     // Missions
+  // Mobile bottom bar - use shortened labels to prevent wrapping
+  const mobileNavItems = [
+    { ...NAV_ITEMS.find(item => item.href === '/dashboard'), label: 'Home' },
+    { ...NAV_ITEMS.find(item => item.href === '/quests'), label: 'Daily Ops' },
+    { ...NAV_ITEMS.find(item => item.href === '/tasks'), label: 'Tasks' },
+    { ...NAV_ITEMS.find(item => item.href === '/goals'), label: 'Missions' },
   ].filter(Boolean)
 
   return (
@@ -274,20 +275,20 @@ export default function AppShell({ children }) {
 
       {/* Opal Mobile Floating Island Navigation */}
       <nav className="mobile-nav">
-        {mainItems.map((item) => {
+        {mobileNavItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
           return (
             <Link key={item.href} href={item.href} className="flex-1 flex justify-center py-1">
               <div 
-                className={`flex flex-col items-center justify-center w-full py-1.5 px-1 rounded-full transition-all duration-300 active:scale-95 ${
+                className={`flex flex-col items-center justify-center w-full py-1 px-0.5 rounded-full transition-all duration-300 active:scale-95 ${
                   isActive 
                     ? 'active-nav-item text-white' 
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Icon size={18} strokeWidth={isActive ? 2.2 : 1.6} />
-                <span className="mt-0.5 font-display text-[9px] uppercase tracking-wider font-semibold">
+                <span className="mt-0.5 font-display text-[9px] uppercase tracking-wide font-semibold whitespace-nowrap">
                   {item.label}
                 </span>
               </div>
@@ -296,13 +297,13 @@ export default function AppShell({ children }) {
         })}
         <button 
           type="button" 
-          className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-full transition-all duration-300 active:scale-95 ${
+          className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-full transition-all duration-300 active:scale-95 ${
             mobileMenuOpen ? 'active-nav-item text-white' : 'text-slate-400 hover:text-slate-200'
           }`}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           {mobileMenuOpen ? <X size={18} strokeWidth={2.2} /> : <Menu size={18} strokeWidth={1.6} />}
-          <span className="mt-0.5 font-display text-[9px] uppercase tracking-wider font-semibold">
+          <span className="mt-0.5 font-display text-[9px] uppercase tracking-wide font-semibold whitespace-nowrap">
             {mobileMenuOpen ? 'Close' : 'More'}
           </span>
         </button>
