@@ -14,7 +14,6 @@ import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useOS } from '@/lib/context/OSContext'
-import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
@@ -79,9 +78,8 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export default function MissionControl() {
-  const authHook = useAuth()
   const os = useOS() || {}
-  const user = os.auth?.user || authHook?.user || null
+  const user = os.auth?.user || null
   const profileHook = os.profile || {}
   const profile = profileHook.profile || null
   const goalsObj = os.goals || {}

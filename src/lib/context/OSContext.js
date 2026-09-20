@@ -55,10 +55,12 @@ export function OSProvider({ children }) {
   const xpRef = React.useRef(xp)
   const habitsRef = React.useRef(habits)
   const tasksRef = React.useRef(tasks)
-  profileRef.current = profile
-  xpRef.current = xp
-  habitsRef.current = habits
-  tasksRef.current = tasks
+  useEffect(() => {
+    profileRef.current = profile
+    xpRef.current = xp
+    habitsRef.current = habits
+    tasksRef.current = tasks
+  }, [profile, xp, habits, tasks])
 
   // Cross-device sync: Supabase Realtime + window focus/visibility
   useEffect(() => {
