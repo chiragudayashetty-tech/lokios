@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, BarChart, Bar, Cell, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { Activity, RefreshCw, RotateCcw, TrendingUp, TrendingDown, Calendar, Target, Trophy } from 'lucide-react'
 import { RANK_CONFIG, SAGA_TITLES, SAGA_IMAGES } from '@/lib/constants'
-import { cleanupAllDuplicateXP } from '@/lib/utils/xpFallback'
+import { cleanupAllDuplicateXP, fetchAllXpHistory } from '@/lib/utils/xpFallback'
 
 // Custom Area Sparkline Component with Rigid Constrained Dimensions
 function MetricCardSparkline({ points = [], strokeColor = '#30d6a0', height = 32, width = 130 }) {
@@ -136,21 +136,32 @@ export default function XPDashboard() {
     const supabase = createClient()
 
     const fetchData = async () => {
-      const { data: profile } = await supabase.from('profiles').select('total_xp').eq('id', user.id).single()
-      if (profile) setTotalXp(profile.total_xp || 0)
+      const profilePromise = supabase.from('profiles').select('total_xp').eq('id', user.id).single()
+      const historyPromise = fetchAllXpHistory(supabase, user.id, '*', false)
 
-      const { data: history } = await supabase
-        .from('xp_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10000)
+      const [{ data: profile }, history] = await Promise.all([profilePromise, historyPromise])
 
-      if (history) {
-        // Chronological order for area chart & metrics
-        const sorted = history.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-        setTimeline(sorted)
+      const validHistory = history || []
+      const historySum = validHistory.reduce((s, r) => s + (r.amount || 0), 0)
+      const safeHistorySum = Math.max(0, historySum)
+
+      // If profile.total_xp was truncated by the old 1,000-row bug and is lower than the actual sum of history rows, restore it!
+      if (profile && profile.total_xp < safeHistorySum) {
+        setTotalXp(safeHistorySum)
+        supabase.from('profiles').update({
+          total_xp: safeHistorySum,
+          current_level: calculateLevel(safeHistorySum),
+          current_rank: getRankForXp(safeHistorySum).code
+        }).eq('id', user.id).then(() => {})
+      } else if (profile) {
+        setTotalXp(profile.total_xp || 0)
+      } else {
+        setTotalXp(safeHistorySum)
       }
+
+      // Chronological order for area chart & metrics
+      const sorted = validHistory.slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      setTimeline(sorted)
 
       setLoading(false)
     }

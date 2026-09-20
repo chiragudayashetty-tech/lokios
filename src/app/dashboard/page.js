@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Target, AlertTriangle, Zap, Swords, Flame, ChevronDown,
@@ -116,6 +116,32 @@ export default function MissionControl() {
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
   const [completedEventIds, setCompletedEventIds] = useState(new Set())
 
+  // Load persistent priority statuses from localStorage immediately on mount
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user) return
+    try {
+      const saved = localStorage.getItem(`lokios_priority_status_${user.id}`)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed && typeof parsed === 'object') {
+          setPriorityStatusMap(parsed)
+        }
+      }
+    } catch (e) {}
+  }, [user])
+
+  const updatePriorityStatus = (entries) => {
+    setPriorityStatusMap(prev => {
+      const next = { ...prev, ...entries }
+      if (typeof window !== 'undefined' && user) {
+        try {
+          localStorage.setItem(`lokios_priority_status_${user.id}`, JSON.stringify(next))
+        } catch (e) {}
+      }
+      return next
+    })
+  }
+
   const toggleEventCompleted = (id) => {
     setCompletedEventIds(prev => {
       const next = new Set(prev)
@@ -128,6 +154,10 @@ export default function MissionControl() {
   // New metrics states
   const [xpTrajectory, setXpTrajectory] = useState([])
   const [latestDebrief, setLatestDebrief] = useState(null)
+  const latestDebriefRef = useRef(null)
+  useEffect(() => {
+    latestDebriefRef.current = latestDebrief
+  }, [latestDebrief])
   const [todayScreenTime, setTodayScreenTime] = useState(null)
   const [addictionData, setAddictionData] = useState(null)
   const [expandedWidget, setExpandedWidget] = useState(null) // 'addiction'
@@ -172,7 +202,7 @@ export default function MissionControl() {
             const timeA = getDebriefSortTime(a)
             const timeB = getDebriefSortTime(b)
             if (timeA !== timeB) return timeB - timeA
-            return (b.created_at || '').localeCompare(a.created_at || '')
+            return (b.updated_at || b.created_at || '').localeCompare(a.updated_at || a.created_at || '')
           })
           setLatestDebrief(parsedHist[0])
         }
@@ -958,7 +988,8 @@ export default function MissionControl() {
       const activeTask = completedTask || failedTask || matchingTasks[0]
 
       const keyId = activeTask ? activeTask.id : `debrief_p_${idx}_${itemTitle.slice(0, 8)}`
-      const localOverride = priorityStatusMap[keyId] || priorityStatusMap[itemTitle]
+      const stableSourceId = `debrief_p_${itemTitle.trim().toLowerCase().replace(/\s+/g, '_')}`
+      const localOverride = priorityStatusMap[keyId] || priorityStatusMap[itemTitle] || priorityStatusMap[stableSourceId]
       const effectiveStatus = localOverride || (item.status !== 'pending' ? item.status : (activeTask ? activeTask.status : 'pending'))
 
       return {
@@ -1624,184 +1655,224 @@ export default function MissionControl() {
               </div>
 
               {debriefPriorityList.length > 0 ? (
-                <div className="space-y-2">
-                  {debriefPriorityList.map((gt) => {
-                    const isDone = gt.status === 'completed'
-                    const isFailed = gt.status === 'failed' || gt.status === 'cancelled'
+                (() => {
+                  const updateDebriefWorkLog = async (priorityTitle, newTag) => {
+                    if (!user) return
+                    const sb = createClient()
+                    const curDebrief = latestDebriefRef.current || latestDebrief
+                    if (!curDebrief?.id) return
 
-                    const updateDebriefWorkLog = async (priorityTitle, newTag) => {
-                      if (!latestDebrief?.id || !user) return
-                      const sb = createClient()
-                      const currentDesc = latestDebrief.description || ''
-                      const cleanTarget = priorityTitle.replace('[DONE]', '').replace('[FAILED]', '').trim().toLowerCase()
+                    const cleanTarget = priorityTitle
+                      .replace(/\[DONE\]|\[FAILED\]/gi, '')
+                      .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
+                      .replace(/^\d+[\.\)]\s*/, '')
+                      .trim()
+                      .toLowerCase()
 
-                      const lines = currentDesc.split('\n')
-                      const updatedLines = lines.map(line => {
-                        const cleanLine = line.replace('[DONE]', '').replace('[FAILED]', '').trim()
-                        if (cleanLine.toLowerCase().includes(cleanTarget)) {
-                          return newTag ? `${cleanLine} ${newTag}` : cleanLine
+                    if (!cleanTarget) return
+
+                    // Fetch fresh description from Supabase to prevent race conditions across rapid clicks
+                    let currentDesc = curDebrief.description || ''
+                    try {
+                      const { data: fresh } = await sb.from('work_logs').select('description').eq('id', curDebrief.id).single()
+                      if (fresh?.description) {
+                        currentDesc = fresh.description
+                      }
+                    } catch (err) {}
+
+                    const lines = currentDesc.split('\n')
+                    let matched = false
+                    const updatedLines = lines.map(line => {
+                      const cleanLine = line
+                        .replace(/\[DONE\]|\[FAILED\]/gi, '')
+                        .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
+                        .replace(/^\d+[\.\)]\s*/, '')
+                        .trim()
+                        .toLowerCase()
+
+                      if (!matched && (cleanLine === cleanTarget || cleanLine.includes(cleanTarget) || cleanTarget.includes(cleanLine))) {
+                        matched = true
+                        const prefixMatch = line.match(/^(\s*\d+[\.\)]\s*|\s*[-*•]\s*)?/)?.[0] || ''
+                        const pureLine = line
+                          .replace(/\[DONE\]|\[FAILED\]/gi, '')
+                          .replace(/^(\s*\d+[\.\)]\s*|\s*[-*•]\s*)?/, '')
+                          .trim()
+                        return newTag ? `${prefixMatch}${pureLine} ${newTag}` : `${prefixMatch}${pureLine}`
+                      }
+                      return line
+                    })
+
+                    const newDesc = updatedLines.join('\n')
+                    const nowIso = new Date().toISOString()
+                    await sb.from('work_logs').update({ description: newDesc, updated_at: nowIso }).eq('id', curDebrief.id)
+                    const updatedObj = { ...curDebrief, description: newDesc, updated_at: nowIso }
+                    latestDebriefRef.current = updatedObj
+                    setLatestDebrief(updatedObj)
+
+                    if (typeof window !== 'undefined') {
+                      try {
+                        const rawHist = localStorage.getItem(`lokios_debrief_history_${user.id}`)
+                        if (rawHist) {
+                          const parsed = JSON.parse(rawHist)
+                          const next = parsed.map(p => (p.id === curDebrief.id || p.title === curDebrief.title) ? updatedObj : p)
+                          localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
                         }
-                        return line
-                      })
+                        const todayStr = getLocalDateStr(new Date())
+                        const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
+                        const reconCache = localStorage.getItem(cacheKey)
+                        const parsedRecon = reconCache ? JSON.parse(reconCache) : {}
+                        parsedRecon.latestDebrief = updatedObj
+                        localStorage.setItem(cacheKey, JSON.stringify(parsedRecon))
+                      } catch (e) {}
+                    }
+                  }
 
-                      const newDesc = updatedLines.join('\n')
-                      await sb.from('work_logs').update({ description: newDesc, updated_at: new Date().toISOString() }).eq('id', latestDebrief.id)
-                      const updatedObj = { ...latestDebrief, description: newDesc, updated_at: new Date().toISOString() }
-                      setLatestDebrief(updatedObj)
-                      if (typeof window !== 'undefined') {
-                        try {
-                          const rawHist = localStorage.getItem(`lokios_debrief_history_${user.id}`)
-                          if (rawHist) {
-                            const parsed = JSON.parse(rawHist)
-                            const next = parsed.map(p => p.id === latestDebrief.id || p.title === latestDebrief.title ? updatedObj : p)
-                            localStorage.setItem(`lokios_debrief_history_${user.id}`, JSON.stringify(next))
+                  return (
+                    <div className="space-y-2">
+                      {debriefPriorityList.map((gt) => {
+                        const isDone = gt.status === 'completed'
+                        const isFailed = gt.status === 'failed' || gt.status === 'cancelled'
+
+                        const goalTitleText = typeof gt.title === 'string' ? gt.title : (gt.title?.title || gt.title?.name || 'Priority Goal')
+                        const isLongTitle = goalTitleText.length > 35
+                        const stableSourceId = `debrief_p_${goalTitleText.trim().toLowerCase().replace(/\s+/g, '_')}`
+
+                        const handleMarkDone = async () => {
+                          updatePriorityStatus({ [gt.id]: 'completed', [goalTitleText]: 'completed', [stableSourceId]: 'completed' })
+                          let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
+
+                          if (targetIds.length === 0 && user) {
+                            const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
+                            const res = await addTask({
+                              title: goalTitleText,
+                              type: 'custom',
+                              category: 'weekly_goal',
+                              due_date: endOfWeekStr,
+                              status: 'completed',
+                              completed_at: new Date().toISOString(),
+                              description: '[Weekly Goal] Priority for Next Week'
+                            })
+                            if (res?.data?.id) targetIds.push(res.data.id)
                           }
-                        } catch (e) {}
-                      }
-                    }
 
-                    const handleMarkDone = async () => {
-                      const goalTitleText = typeof gt.title === 'string' ? gt.title : (gt.title?.title || gt.title?.name || 'Priority Goal')
-                      const stableSourceId = `debrief_p_${goalTitleText.trim().toLowerCase().replace(/\s+/g, '_')}`
-                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'completed', [goalTitleText]: 'completed' }))
-                      let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
+                          for (const tid of targetIds) {
+                            const updates = { completed_at: new Date().toISOString(), status: 'completed' }
+                            await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
+                          }
 
-                      if (targetIds.length === 0 && user) {
-                        const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
-                        const res = await addTask({
-                          title: goalTitleText,
-                          type: 'custom',
-                          category: 'weekly_goal',
-                          due_date: endOfWeekStr,
-                          status: 'pending',
-                          description: '[Weekly Goal] Priority for Next Week'
-                        })
-                        if (res?.data?.id) targetIds.push(res.data.id)
-                        if (fetchTasks) await fetchTasks()
-                      }
+                          await updateDebriefWorkLog(goalTitleText, '[DONE]')
+                          await robustAwardXP(user.id, 25, 'task_complete', stableSourceId, `Completed Priority Goal: ${goalTitleText}`, 'discipline')
 
-                      for (const tid of targetIds) {
-                        const updates = { completed_at: new Date().toISOString(), status: 'completed' }
-                        await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
-                      }
+                          if (fetchTasks) await fetchTasks()
+                          await profileHook?.fetchProfile?.()
+                        }
 
-                      await updateDebriefWorkLog(goalTitleText, '[DONE]')
-                      await robustAwardXP(user.id, 25, 'task_complete', stableSourceId, `Completed Priority Goal: ${goalTitleText}`, 'discipline')
+                        const handleMarkFailed = async () => {
+                          updatePriorityStatus({ [gt.id]: 'failed', [goalTitleText]: 'failed', [stableSourceId]: 'failed' })
+                          let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
 
-                      await profileHook?.fetchProfile?.()
-                      if (fetchTasks) await fetchTasks()
-                    }
+                          if (targetIds.length === 0 && user) {
+                            const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
+                            const res = await addTask({
+                              title: goalTitleText,
+                              type: 'custom',
+                              category: 'weekly_goal',
+                              due_date: endOfWeekStr,
+                              status: 'failed',
+                              completed_at: new Date().toISOString(),
+                              description: '[Weekly Goal] Priority for Next Week'
+                            })
+                            if (res?.data?.id) targetIds.push(res.data.id)
+                          }
 
-                    const handleMarkFailed = async () => {
-                      const goalTitleText = typeof gt.title === 'string' ? gt.title : (gt.title?.title || gt.title?.name || 'Priority Goal')
-                      const stableSourceId = `debrief_p_${goalTitleText.trim().toLowerCase().replace(/\s+/g, '_')}`
-                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'failed', [goalTitleText]: 'failed' }))
-                      let targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? [...gt.matchingTaskIds] : []
+                          for (const tid of targetIds) {
+                            const updates = { completed_at: new Date().toISOString(), status: 'failed' }
+                            await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
+                          }
 
-                      if (targetIds.length === 0 && user) {
-                        const endOfWeekStr = getLocalDateStr(getEndOfWeek(new Date()))
-                        const res = await addTask({
-                          title: goalTitleText,
-                          type: 'custom',
-                          category: 'weekly_goal',
-                          due_date: endOfWeekStr,
-                          status: 'pending',
-                          description: '[Weekly Goal] Priority for Next Week'
-                        })
-                        if (res?.data?.id) targetIds.push(res.data.id)
-                        if (fetchTasks) await fetchTasks()
-                      }
+                          await updateDebriefWorkLog(goalTitleText, '[FAILED]')
+                          await robustAwardXP(user.id, -25, 'task_failed', stableSourceId, `Failed Priority Goal: ${goalTitleText}`, 'discipline')
 
-                      for (const tid of targetIds) {
-                        const updates = { completed_at: new Date().toISOString(), status: 'failed' }
-                        await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
-                      }
+                          if (fetchTasks) await fetchTasks()
+                          await profileHook?.fetchProfile?.()
+                        }
 
-                      await updateDebriefWorkLog(goalTitleText, '[FAILED]')
-                      await robustAwardXP(user.id, -25, 'task_failed', stableSourceId, `Failed Priority Goal: ${goalTitleText}`, 'discipline')
+                        const handleReopen = async () => {
+                          updatePriorityStatus({ [gt.id]: 'pending', [goalTitleText]: 'pending', [stableSourceId]: 'pending', [gt.title]: 'pending' })
+                          const targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? gt.matchingTaskIds : (gt.taskId ? [gt.taskId] : [])
+                          for (const tid of targetIds) {
+                            const updates = { completed_at: null, status: 'pending' }
+                            await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
+                          }
+                          await updateDebriefWorkLog(goalTitleText, '')
+                          await robustRemoveXP(user.id, 'task_complete', stableSourceId)
+                          await robustRemoveXP(user.id, 'task_failed', stableSourceId)
+                          if (fetchTasks) await fetchTasks()
+                          await profileHook?.fetchProfile?.()
+                        }
 
-                      await profileHook?.fetchProfile?.()
-                      if (fetchTasks) await fetchTasks()
-                    }
-
-                    const handleReopen = async () => {
-                      const stableSourceId = `debrief_p_${gt.title.trim().toLowerCase().replace(/\s+/g, '_')}`
-                      setPriorityStatusMap(prev => ({ ...prev, [gt.id]: 'pending', [gt.title]: 'pending' }))
-                      const targetIds = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? gt.matchingTaskIds : (gt.taskId ? [gt.taskId] : [])
-                      for (const tid of targetIds) {
-                        const updates = { completed_at: null, status: 'pending' }
-                        await createClient().from('tasks').update(updates).eq('id', tid).eq('user_id', user.id)
-                      }
-                      await updateDebriefWorkLog(gt.title, '')
-                      await robustRemoveXP(user.id, 'task_complete', stableSourceId)
-                      await robustRemoveXP(user.id, 'task_failed', stableSourceId)
-                      await profileHook?.fetchProfile?.()
-                      if (fetchTasks) await fetchTasks()
-                    }
-
-                    const goalTitleText = typeof gt.title === 'string' ? gt.title : (gt.title?.title || gt.title?.name || 'Priority Goal')
-                    const isLongTitle = goalTitleText.length > 35
-
-                    return (
-                      <div key={gt.id} className={`flex items-start sm:items-center justify-between gap-2.5 p-2.5 rounded bg-bg-primary border transition-all w-full max-w-full overflow-hidden ${
-                        isDone ? 'border-success/40 bg-success/5' : isFailed ? 'border-danger/40 bg-danger/5' : 'border-border-color'
-                      }`}>
-                        <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0">
-                          {/* Action Buttons */}
-                          <div className="flex items-center gap-1 shrink-0 mt-0.5 sm:mt-0">
-                            {isDone || isFailed ? (
-                              <button
-                                type="button"
-                                onClick={handleReopen}
-                                title="Re-open Priority Goal"
-                                className="w-6 h-6 rounded flex items-center justify-center border border-border-color hover:border-info text-info bg-bg-tertiary transition-all shrink-0"
-                              >
-                                <RotateCcw size={12} />
-                              </button>
+                        return (
+                          <div key={gt.id} className={`flex items-start sm:items-center justify-between gap-2.5 p-2.5 rounded bg-bg-primary border transition-all w-full max-w-full overflow-hidden ${
+                            isDone ? 'border-success/40 bg-success/5' : isFailed ? 'border-danger/40 bg-danger/5' : 'border-border-color'
+                          }`}>
+                            <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0">
+                              {/* Action Buttons */}
+                              <div className="flex items-center gap-1 shrink-0 mt-0.5 sm:mt-0">
+                                {isDone || isFailed ? (
+                                  <button
+                                    type="button"
+                                    onClick={handleReopen}
+                                    title="Re-open Priority Goal"
+                                    className="w-6 h-6 rounded flex items-center justify-center border border-border-color hover:border-info text-info bg-bg-tertiary transition-all shrink-0"
+                                  >
+                                    <RotateCcw size={12} />
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={handleMarkDone}
+                                      title="Mark Completed (+25 XP)"
+                                      className="w-6 h-6 rounded flex items-center justify-center border border-success/60 hover:bg-success text-success hover:text-bg-primary transition-all shrink-0"
+                                    >
+                                      <Check size={13} strokeWidth={2.5} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleMarkFailed}
+                                      title="Mark Failed (-25 XP)"
+                                      className="w-6 h-6 rounded flex items-center justify-center border border-danger/60 hover:bg-danger text-danger hover:text-white transition-all shrink-0"
+                                    >
+                                      <X size={13} strokeWidth={2.5} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                              <span className={`font-mono leading-snug break-words whitespace-normal flex-1 min-w-0 transition-all ${
+                                isLongTitle ? 'text-[11px]' : 'text-xs'
+                              } ${
+                                isDone 
+                                  ? 'text-success line-through decoration-success font-medium opacity-90' 
+                                  : isFailed 
+                                  ? 'text-danger line-through decoration-danger font-medium opacity-90' 
+                                  : 'text-primary font-medium'
+                              }`}>
+                                {goalTitleText}
+                              </span>
+                            </div>
+                            {isDone ? (
+                              <span className="font-mono text-[9px] text-success font-bold shrink-0 px-1.5 py-0.5 rounded bg-success/10 border border-success/30 whitespace-nowrap self-center">DONE (+25 XP)</span>
+                            ) : isFailed ? (
+                              <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-1.5 py-0.5 rounded bg-danger/10 border border-danger/30 whitespace-nowrap self-center">FAILED (-25 XP)</span>
                             ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={handleMarkDone}
-                                  title="Mark Completed (+25 XP)"
-                                  className="w-6 h-6 rounded flex items-center justify-center border border-success/60 hover:bg-success text-success hover:text-bg-primary transition-all shrink-0"
-                                >
-                                  <Check size={13} strokeWidth={2.5} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleMarkFailed}
-                                  title="Mark Failed (-25 XP)"
-                                  className="w-6 h-6 rounded flex items-center justify-center border border-danger/60 hover:bg-danger text-danger hover:text-white transition-all shrink-0"
-                                >
-                                  <X size={13} strokeWidth={2.5} />
-                                </button>
-                              </>
+                              <span className="font-mono text-[9px] text-amber shrink-0 font-semibold whitespace-nowrap self-center">+25 XP</span>
                             )}
                           </div>
-                          <span className={`font-mono leading-snug break-words whitespace-normal flex-1 min-w-0 transition-all ${
-                            isLongTitle ? 'text-[11px]' : 'text-xs'
-                          } ${
-                            isDone 
-                              ? 'text-success line-through decoration-success font-medium opacity-90' 
-                              : isFailed 
-                              ? 'text-danger line-through decoration-danger font-medium opacity-90' 
-                              : 'text-primary font-medium'
-                          }`}>
-                            {goalTitleText}
-                          </span>
-                        </div>
-                        {isDone ? (
-                          <span className="font-mono text-[9px] text-success font-bold shrink-0 px-1.5 py-0.5 rounded bg-success/10 border border-success/30 whitespace-nowrap self-center">DONE (+25 XP)</span>
-                        ) : isFailed ? (
-                          <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-1.5 py-0.5 rounded bg-danger/10 border border-danger/30 whitespace-nowrap self-center">FAILED (-25 XP)</span>
-                        ) : (
-                          <span className="font-mono text-[9px] text-amber shrink-0 font-semibold whitespace-nowrap self-center">+25 XP</span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()
               ) : (
                 <div className="p-4 text-center rounded-sm bg-bg-primary border border-dashed border-border-color">
                   <p className="font-mono text-[10px] text-muted mb-2">No priorities logged for this cycle.</p>

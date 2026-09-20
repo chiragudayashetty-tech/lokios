@@ -208,24 +208,61 @@ export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount =
 }
 
 /**
+ * Paginated fetch helper for xp_history to bypass PostgREST's default 1,000-row limit.
+ * Fetches all matching rows across multiple pages of 1,000 until exhausted.
+ */
+export async function fetchAllXpHistory(supabase, userId, select = '*', orderAscending = false) {
+  if (!supabase || !userId) return []
+  const PAGE_SIZE = 1000
+  let allRows = []
+  let from = 0
+  let hasMore = true
+
+  while (hasMore) {
+    const to = from + PAGE_SIZE - 1
+    const { data, error } = await supabase
+      .from('xp_history')
+      .select(select)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: orderAscending })
+      .range(from, to)
+
+    if (error) {
+      console.error('Error in fetchAllXpHistory:', error)
+      break
+    }
+
+    if (!data || data.length === 0) {
+      break
+    }
+
+    allRows.push(...data)
+
+    if (data.length < PAGE_SIZE) {
+      hasMore = false
+    } else {
+      from += PAGE_SIZE
+    }
+  }
+
+  return allRows
+}
+
+/**
  * Clean up ONLY true duplicate entries in xp_history.
  * If multiple records exist for the same exact action/source, keep the first one and remove the duplicate copies.
  * Never deletes single entries, penalties, or valid historical logs.
- * Recalculates profiles.total_xp strictly as the sum of all unique records.
+ * Recalculates profiles.total_xp strictly as the sum of all unique records without any 1,000-row truncation.
  */
 export async function cleanupAllDuplicateXP(userId) {
   const supabase = createClient()
   if (!userId) return { cleanedCount: 0, totalXp: 0, level: 1 }
 
   try {
-    const { data: allHistory, error } = await supabase
-      .from('xp_history')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(10000)
+    // 1. Fetch ALL records across all pages to prevent 1,000-row PostgREST truncation
+    const allHistory = await fetchAllXpHistory(supabase, userId, '*', false)
 
-    if (error || !allHistory || allHistory.length === 0) {
+    if (!allHistory || allHistory.length === 0) {
       return { cleanedCount: 0, totalXp: 0, level: 1 }
     }
 
@@ -249,7 +286,8 @@ export async function cleanupAllDuplicateXP(userId) {
           srcId.startsWith('daily_all_') ||
           srcId.startsWith('streak_') ||
           srcId.startsWith('speaking_') ||
-          srcId.startsWith('journal_')
+          srcId.startsWith('journal_') ||
+          srcId.startsWith('debrief_')
         ) {
           dedupKey = srcId
         } else {
@@ -289,11 +327,8 @@ export async function cleanupAllDuplicateXP(userId) {
       }
     }
 
-    // Recalculate true total_xp strictly from remaining unique entries
-    const { data: remaining } = await supabase
-      .from('xp_history')
-      .select('amount')
-      .eq('user_id', userId)
+    // Recalculate true total_xp strictly from ALL remaining unique entries via pagination
+    const remaining = await fetchAllXpHistory(supabase, userId, 'amount', false)
 
     const trueTotalXp = (remaining || []).reduce((sum, r) => sum + (r.amount || 0), 0)
     const safeXp = Math.max(0, trueTotalXp)
