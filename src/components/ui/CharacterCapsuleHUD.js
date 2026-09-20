@@ -3,7 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Shield, ShieldAlert, Flame, Box, User } from 'lucide-react'
+import { Shield, ShieldAlert, Flame } from 'lucide-react'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { SAGA_TITLES } from '@/lib/constants'
 
@@ -26,22 +26,52 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
     { heightPct: 40, isPositive: todayNet >= 0 }
   ]
 
-  // Date formatting
-  const now = new Date()
-  const monthDayStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()
-  const weekdayStr = now.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
   const toNext = Math.max(0, xpProgress.required - xpProgress.current)
+  const pct = Math.max(4, Math.min(100, Math.round(xpProgress.percentage)))
 
   return (
-    <div className="w-full flex justify-center px-1 sm:px-4 mb-5">
-      <div className="loki-capsule-hud w-full max-w-[1280px] flex items-center justify-between gap-3 sm:gap-6 py-2.5 px-4 sm:px-6 rounded-full border border-white/10 bg-[#090d1a]/85 backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1)]">
+    <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '0 4px', marginBottom: '20px', boxSizing: 'border-box' }}>
+      <div 
+        className="loki-capsule-hud"
+        style={{
+          width: '100%',
+          maxWidth: '1280px',
+          minHeight: '48px',
+          borderRadius: '9999px',
+          background: 'rgba(9, 13, 24, 0.88)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          boxShadow: '0 14px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.12)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 16px',
+          gap: '12px',
+          boxSizing: 'border-box'
+        }}
+      >
         
         {/* ── 1. SAGA & LEVEL (Left) ── */}
-        <Link href="/xp" className="flex items-center gap-3 shrink-0 group select-none hover:opacity-90 transition-opacity">
+        <Link 
+          href="/xp" 
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
+        >
           {/* Glowing Faceted Crystal Gem Icon */}
-          <div className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-950 border border-indigo-400/40 shadow-[0_0_15px_rgba(168,85,247,0.35)] shrink-0 group-hover:scale-105 transition-transform">
-            <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-pulse" />
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="relative z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]">
+          <div style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #1e1b4b, #581c87, #0f172a)',
+            border: '1px solid rgba(168, 85, 247, 0.5)',
+            boxShadow: '0 0 15px rgba(168, 85, 247, 0.35)',
+            flexShrink: 0
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ filter: 'drop-shadow(0 0 8px rgba(168,85,247,0.8))' }}>
               <path d="M12 2L2 9L12 22L22 9L12 2Z" fill="url(#hudGemGrad1)" stroke="#c084fc" strokeWidth="1.2" strokeLinejoin="round" />
               <path d="M12 2L7 9L12 22L17 9L12 2Z" fill="url(#hudGemGrad2)" fillOpacity="0.9" />
               <path d="M2 9H22" stroke="#e9d5ff" strokeWidth="0.8" strokeLinecap="round" />
@@ -59,45 +89,60 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
             </svg>
           </div>
 
-          <div className="flex flex-col justify-center min-w-0">
-            <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-slate-400 font-semibold leading-tight hidden xs:block">
-              SAGA {rank.code}
-            </span>
-            <span className="font-display font-black text-xs sm:text-sm text-white tracking-wide leading-tight">
-              LV.{level}
-            </span>
-            <span className="font-display font-semibold text-[10px] uppercase tracking-wider text-indigo-300 leading-tight truncate hidden md:block">
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '14px', color: '#ffffff', letterSpacing: '0.04em', lineHeight: 1 }}>
+                LV.{level}
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 700 }}>
+                SAGA {rank.code}
+              </span>
+            </div>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '10px', color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
               {rankTitle}
             </span>
           </div>
         </Link>
 
         {/* ── 2. LEVEL PROGRESS CAPSULE BAR (Center) ── */}
-        <div className="flex flex-col justify-center gap-1 flex-1 max-w-[280px] sm:max-w-xs px-2">
-          <div className="w-full h-1.5 sm:h-2 rounded-full bg-slate-950 border border-white/10 p-[0.5px] overflow-hidden">
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px', flex: 1, maxWidth: '320px', minWidth: 0, padding: '0 6px' }}>
+          <div className="capsule-track" style={{ width: '100%', height: '8px', borderRadius: '9999px', background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255, 255, 255, 0.12)', overflow: 'hidden' }}>
             <motion.div 
-              className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 shadow-[0_0_10px_rgba(168,85,247,0.7)]"
+              className="capsule-fill"
+              style={{
+                height: '100%',
+                borderRadius: '9999px',
+                background: 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #22d3ee 100%)',
+                boxShadow: '0 0 12px rgba(168, 85, 247, 0.7)'
+              }}
               initial={{ width: 0 }}
-              animate={{ width: `${Math.max(5, Math.min(100, xpProgress.percentage))}%` }}
+              animate={{ width: `${pct}%` }}
               transition={{ duration: 1.2, ease: 'easeOut' }}
             />
           </div>
-          <div className="flex items-center justify-between font-mono text-[9px] text-slate-300">
-            <span className="font-bold">{xpProgress.current.toLocaleString()} / {xpProgress.required.toLocaleString()} XP</span>
-            <span className="text-slate-400 hidden sm:inline">{toNext.toLocaleString()} to LV.{level + 1}</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#94a3b8' }}>
+            <span style={{ fontWeight: 700, color: '#f1f5f9' }}>{xpProgress.current.toLocaleString()} / {xpProgress.required.toLocaleString()} XP</span>
+            <span style={{ color: '#64748b' }}>{toNext.toLocaleString()} to LV.{level + 1}</span>
           </div>
         </div>
 
-        {/* ── 3. 3-DAY TREND & LIFETIME (Desktop only) ── */}
-        <div className="hidden lg:flex items-center gap-5 border-l border-white/10 pl-5">
-          {/* Trend */}
-          <div className="flex flex-col justify-center">
-            <span className="font-mono text-[8px] uppercase tracking-[0.18em] text-slate-400 font-semibold">
+        {/* ── 3. 3-DAY TREND (Desktop only) ── */}
+        <div className="hidden lg:flex" style={{ alignItems: 'center', gap: '16px', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '16px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#64748b', fontWeight: 700 }}>
               3-DAY TREND
             </span>
             <div 
-              className="font-mono text-xs font-bold flex items-center gap-1 mt-0.5"
-              style={{ color: trend3Day < 0 ? '#f43f5e' : '#34d399' }}
+              style={{ 
+                fontFamily: 'var(--font-mono)', 
+                fontSize: '11px', 
+                fontWeight: 800, 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px',
+                marginTop: '1px',
+                color: trend3Day < 0 ? '#f43f5e' : '#34d399' 
+              }}
             >
               <span>{trend3Day >= 0 ? '↗' : '↘'}</span>
               <span>{trend3Day >= 0 ? `+${trend3Day}` : trend3Day} XP</span>
@@ -105,12 +150,13 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
           </div>
 
           {/* Sparkline */}
-          <div className="flex items-end gap-1 h-4 pb-0.5">
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '16px', paddingBottom: '1px' }}>
             {sparklineBars.slice(-5).map((bar, idx) => (
               <div 
                 key={idx}
-                className="w-1 rounded-t-sm"
                 style={{ 
+                  width: '4px',
+                  borderRadius: '2px 2px 0 0',
                   height: `${bar.heightPct}%`,
                   backgroundColor: bar.isPositive ? '#34d399' : '#f43f5e',
                 }}
@@ -120,38 +166,59 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
         </div>
 
         {/* ── 4. MOMENTUM & STATUS PILL (Right) ── */}
-        <Link href="/xp" className="flex items-center gap-2.5 shrink-0 group select-none hover:opacity-90 transition-opacity border-l border-white/10 pl-3 sm:pl-5">
-          <div className="flex flex-col justify-center text-right">
-            <span className="font-mono text-[8px] uppercase tracking-[0.18em] text-slate-400 font-semibold hidden sm:block">
+        <Link 
+          href="/xp" 
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, textDecoration: 'none', color: 'inherit', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '12px' }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'right' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#64748b', fontWeight: 700 }}>
               TODAY
             </span>
             <div 
-              className="font-display font-black text-xs sm:text-sm tracking-tight leading-none"
-              style={{ color: todayNet < 0 ? '#f43f5e' : todayNet > 0 ? '#34d399' : '#818cf8' }}
+              style={{ 
+                fontFamily: 'var(--font-display)', 
+                fontWeight: 900, 
+                fontSize: '13px', 
+                letterSpacing: '-0.02em', 
+                lineHeight: 1, 
+                color: todayNet < 0 ? '#f43f5e' : todayNet > 0 ? '#34d399' : '#818cf8' 
+              }}
             >
-              {todayNet >= 0 ? `+${todayNet}` : todayNet} <span className="font-mono text-[9px] font-bold text-slate-400">XP</span>
+              {todayNet >= 0 ? `+${todayNet}` : todayNet} <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: '#64748b' }}>XP</span>
             </div>
           </div>
 
-          {/* Standalone Status Pill Badge */}
+          {/* Status Pill Badge */}
           <div 
-            className="px-2.5 sm:px-3 py-1 rounded-full border text-[9px] sm:text-[10px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0"
             style={{
+              padding: '4px 10px',
+              borderRadius: '9999px',
+              border: '1px solid',
+              fontSize: '10px',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              flexShrink: 0,
               backgroundColor: state === 'AT RISK' ? 'rgba(76, 5, 25, 0.85)' : state === 'RECOVERY' ? 'rgba(6, 40, 55, 0.85)' : state === 'SURGING' ? 'rgba(6, 44, 28, 0.85)' : 'rgba(30, 27, 75, 0.85)',
               borderColor: state === 'AT RISK' ? '#f43f5e' : state === 'RECOVERY' ? '#22d3ee' : state === 'SURGING' ? '#34d399' : '#818cf8',
               color: state === 'AT RISK' ? '#f43f5e' : state === 'RECOVERY' ? '#22d3ee' : state === 'SURGING' ? '#34d399' : '#818cf8',
+              boxShadow: state === 'SURGING' ? '0 0 10px rgba(52, 211, 153, 0.35)' : 'none'
             }}
           >
             {state === 'AT RISK' ? (
-              <ShieldAlert size={11} style={{ color: '#f43f5e' }} className="shrink-0" />
+              <ShieldAlert size={11} style={{ color: '#f43f5e' }} />
             ) : state === 'RECOVERY' ? (
-              <Shield size={11} style={{ color: '#22d3ee' }} className="shrink-0" />
+              <Shield size={11} style={{ color: '#22d3ee' }} />
             ) : state === 'SURGING' ? (
-              <Flame size={11} style={{ color: '#34d399' }} className="shrink-0" />
+              <Flame size={11} style={{ color: '#34d399' }} />
             ) : (
-              <Shield size={11} style={{ color: '#818cf8' }} className="shrink-0" />
+              <Shield size={11} style={{ color: '#818cf8' }} />
             )}
-            <span className="leading-none">{state}</span>
+            <span>{state}</span>
           </div>
         </Link>
 
@@ -159,3 +226,4 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
     </div>
   )
 }
+

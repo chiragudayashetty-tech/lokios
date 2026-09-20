@@ -62,6 +62,22 @@ const BRIEFINGS = [
   "Comfort is the enemy of progress. Seek the friction."
 ]
 
+// Helper for Tooltip in Recharts (declared at module scope)
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const val = payload[0].value
+    return (
+      <div className="p-2 bg-bg-primary/95 border border-border-color rounded shadow-xl backdrop-blur-md font-mono text-[10px] pointer-events-none">
+        <p className="text-muted text-[9px] mb-0.5">{label}</p>
+        <p className="font-bold" style={{ color: val >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+          {val >= 0 ? `+${val}` : val} XP
+        </p>
+      </div>
+    )
+  }
+  return null
+}
+
 export default function MissionControl() {
   const { user } = useAuth()
 
@@ -92,21 +108,12 @@ export default function MissionControl() {
   const undoFailOperation = os.undoFailOperation
 
   const todayStr = getLocalDateStr()
+  const totalXp = profile?.total_xp || 0
+  const currentRank = getRankForXp(totalXp)
+  const currentArc = ARC_CONFIG.find(a => a.rank === currentRank.code) || ARC_CONFIG[0]
+  const currentArcIndex = ARC_CONFIG.findIndex(a => a.rank === currentRank.code)
 
-  // Today's Calendar Events & Scheduled Due Tasks
-  const todayCalendarEvents = useMemo(() => {
-    return (events || []).filter(e => {
-      const eDate = e.event_date || e.date || (e.start_time ? e.start_time.split('T')[0] : '')
-      return eDate === todayStr
-    })
-  }, [events, todayStr])
-
-  const todayTasksScheduled = useMemo(() => {
-    return (tasks || []).filter(t => t.due_date === todayStr && t.status !== 'cancelled')
-  }, [tasks, todayStr])
-
-  const weeklyGoalTasks = (tasks || []).filter(t => t.category === 'weekly_goal' && t.status !== 'cancelled')
-
+  // ── Top Level States ──
   const [currentTime, setCurrentTime] = useState(new Date())
   const [xpToday, setXpToday]         = useState(0)
   const [xpThisWeek, setXpThisWeek]   = useState(0)
@@ -118,8 +125,245 @@ export default function MissionControl() {
   const [completedEventIds, setCompletedEventIds] = useState(new Set())
   const [activeArtworkIndex, setActiveArtworkIndex] = useState(null)
   const [isAutoCycling, setIsAutoCycling] = useState(true)
+  const [quoteIndex, setQuoteIndex] = useState(0)
 
-  // Load persistent priority statuses from localStorage immediately on mount
+  const [xpTrajectory, setXpTrajectory] = useState([])
+  const [latestDebrief, setLatestDebrief] = useState(null)
+  const latestDebriefRef = useRef(null)
+  const [todayScreenTime, setTodayScreenTime] = useState(null)
+  const [addictionData, setAddictionData] = useState(null)
+  const [expandedWidget, setExpandedWidget] = useState(null)
+
+  const [eodWorkData, setEodWorkData] = useState({ logged: false, hours: 0 })
+  const [eodSpeakingData, setEodSpeakingData] = useState({ logged: false, detail: '' })
+  const [eodQuickLogModal, setEodQuickLogModal] = useState(null)
+  const [eodJournalLogged, setEodJournalLogged] = useState(false)
+
+  const [eodScreenForm, setEodScreenForm] = useState({ total_hours: '4', doomscroll_minutes: '30', streaming_hours: '0.5' })
+  const [eodJournalForm, setEodJournalForm] = useState({ mood: 'good', content: '' })
+  const [eodWorkForm, setEodWorkForm] = useState({ hours: '2', work_type: 'deep_work', notes: '' })
+  const [eodSpeakingForm, setEodSpeakingForm] = useState({ topic: '', drive_link: '', notes: '' })
+
+  // ── Top Level Memoized Computations ──
+  const todayCalendarEvents = useMemo(() => {
+    return (events || []).filter(e => {
+      const eDate = e.event_date || e.date || (e.start_time ? e.start_time.split('T')[0] : '')
+      return eDate === todayStr
+    })
+  }, [events, todayStr])
+
+  const todayTasksScheduled = useMemo(() => {
+    return (tasks || []).filter(t => t.due_date === todayStr && t.status !== 'cancelled')
+  }, [tasks, todayStr])
+
+  const displayedSagaIndex = activeArtworkIndex !== null ? activeArtworkIndex : (currentArcIndex >= 0 ? currentArcIndex : 0)
+  const displayedArc = ARC_CONFIG[displayedSagaIndex] || currentArc
+
+  const splitTitle = useMemo(() => {
+    const rawName = displayedArc?.name || 'The Spark'
+    if (rawName === 'The Discipline Rebuild') return { primary: 'THE DISCIPLINE', secondary: 'REBUILD' }
+    const parts = rawName.split(' ')
+    if (parts.length === 1) return { primary: 'SAGA', secondary: parts[0].toUpperCase() }
+    return { primary: parts.slice(0, -1).join(' ').toUpperCase(), secondary: parts[parts.length - 1].toUpperCase() }
+  }, [displayedArc?.name])
+
+  const SAGA_DISCIPLINE_QUOTES = useMemo(() => [
+    displayedArc?.flavor || "I rebuilt my mind, habits, and identity one day at a time.",
+    "Discipline is choosing between what you want now and what you want most.",
+    "Small actions compounded daily become unstoppable momentum.",
+    "Stop chasing motivation. Build ironclad routines and relentless consistency.",
+    "You do not rise to the level of your goals. You fall to the level of your systems.",
+    "The pain of discipline is far less than the pain of regret.",
+    "Master self-command before seeking command over anything else.",
+    "Every day you don't execute is a day you concede ground."
+  ], [displayedArc?.flavor])
+
+  const timeAtmosphere = useMemo(() => {
+    const h = currentTime.getHours()
+    if (h >= 5 && h < 11) {
+      return {
+        label: 'Dawn Protocol',
+        timeDesc: 'Morning clarity & disciplined momentum',
+        accent: '#f59e0b',
+        glow: 'rgba(245, 158, 11, 0.22)',
+        icon: Sun
+      }
+    } else if (h >= 11 && h < 17) {
+      return {
+        label: 'Peak Focus',
+        timeDesc: 'Deep work execution & relentless progress',
+        accent: '#22d3ee',
+        glow: 'rgba(34, 211, 238, 0.22)',
+        icon: Zap
+      }
+    } else if (h >= 17 && h < 21) {
+      return {
+        label: 'Twilight Consolidation',
+        timeDesc: 'Close active loops & review debriefs',
+        accent: '#a855f7',
+        glow: 'rgba(168, 85, 247, 0.22)',
+        icon: Sparkles
+      }
+    } else {
+      return {
+        label: 'Night Protocol',
+        timeDesc: 'Reflect, recharge & prepare tomorrow',
+        accent: '#818cf8',
+        glow: 'rgba(129, 140, 248, 0.22)',
+        icon: Moon
+      }
+    }
+  }, [currentTime])
+
+  const isDebriefDoneThisWeek = useMemo(() => {
+    if (!latestDebrief) return false
+    const now = new Date()
+    const sortTime = getDebriefSortTime(latestDebrief)
+    const titleDateStr = sortTime ? getLocalDateStr(new Date(sortTime)) : ''
+    const debriefDateStr = latestDebrief.date || (latestDebrief.created_at ? getLocalDateStr(new Date(latestDebrief.created_at)) : '')
+    const effectiveDateStr = titleDateStr || debriefDateStr
+    if (!effectiveDateStr) return false
+
+    const dayOfWeek = now.getDay()
+    const sunday = new Date(now)
+    sunday.setDate(now.getDate() - dayOfWeek)
+    sunday.setHours(0, 0, 0, 0)
+    const currentCycleStartStr = getLocalDateStr(sunday)
+
+    const sevenDaysAgo = new Date(now)
+    sevenDaysAgo.setDate(now.getDate() - 7)
+    sevenDaysAgo.setHours(0, 0, 0, 0)
+    const sevenDaysAgoStr = getLocalDateStr(sevenDaysAgo)
+
+    return effectiveDateStr >= currentCycleStartStr || effectiveDateStr >= sevenDaysAgoStr
+  }, [latestDebrief])
+
+  const nextWeekPriorities = useMemo(() => {
+    if (!latestDebrief?.description) return null
+    const text = latestDebrief.description
+    const marker = '### Priorities for Next Week'
+    const idx = text.indexOf(marker)
+    if (idx !== -1) {
+      let section = text.substring(idx + marker.length).trim()
+      const nextHeaderIdx = section.indexOf('### ')
+      if (nextHeaderIdx !== -1) section = section.substring(0, nextHeaderIdx).trim()
+      if (section) return section
+    }
+
+    const lower = text.toLowerCase()
+    const fallbackMarkers = [
+      'priorities for next week',
+      'next week priorities',
+      'weekly priorities',
+      'priorities'
+    ]
+    for (const m of fallbackMarkers) {
+      const fIdx = lower.indexOf(m)
+      if (fIdx !== -1) {
+        let section = text.substring(fIdx + m.length).replace(/^[:#\s\n]+/, '').trim()
+        const nextH = section.indexOf('### ')
+        if (nextH !== -1) section = section.substring(0, nextH).trim()
+        if (section) return section
+      }
+    }
+    return null
+  }, [latestDebrief])
+
+  const parsedPriorities = useMemo(() => {
+    if (!nextWeekPriorities) return []
+    const rawItems = nextWeekPriorities
+      .split(/(?=\b\d+[\.\)])|\n+/)
+      .map(s => s.replace(/^\d+[\.\)]\s*/, '').trim())
+      .filter(Boolean)
+    if (rawItems.length === 0 && nextWeekPriorities.trim()) {
+      return [{ id: 'p1', title: nextWeekPriorities.trim().replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '').replace(/^[xXvV✓✕]\s+/, '').trim(), status: 'pending' }]
+    }
+    return rawItems.slice(0, 3).map((rawTitle, idx) => {
+      let status = 'pending'
+      let title = rawTitle
+      if (rawTitle.includes('[DONE]')) {
+        status = 'completed'
+        title = rawTitle.replace('[DONE]', '').trim()
+      } else if (rawTitle.includes('[FAILED]')) {
+        status = 'failed'
+        title = rawTitle.replace('[FAILED]', '').trim()
+      }
+      title = title
+        .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
+        .replace(/^[xXvV✓✕]\s+/, '')
+        .replace(/^[-*•]\s*/, '')
+        .trim()
+      return {
+        id: `p-${idx + 1}`,
+        title,
+        status
+      }
+    })
+  }, [nextWeekPriorities])
+
+  const debriefPriorityList = useMemo(() => {
+    let sourceList = []
+
+    if (parsedPriorities && parsedPriorities.length > 0) {
+      sourceList = parsedPriorities
+    } else {
+      const fourteenDaysAgo = new Date()
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+      const fourteenDaysAgoStr = getLocalDateStr(fourteenDaysAgo)
+
+      sourceList = tasks.filter(t => 
+        t.category === 'weekly_goal' && 
+        t.status !== 'cancelled' &&
+        (!t.due_date || t.due_date >= fourteenDaysAgoStr || !t.created_at || t.created_at >= fourteenDaysAgoStr)
+      ).slice(0, 3)
+    }
+
+    return sourceList.map((item, idx) => {
+      let itemTitle = ''
+      if (typeof item === 'string') {
+        itemTitle = item.trim()
+      } else if (item && typeof item === 'object') {
+        if (typeof item.title === 'string') itemTitle = item.title.trim()
+        else if (item.title && typeof item.title === 'object' && typeof item.title.title === 'string') itemTitle = item.title.title.trim()
+        else if (typeof item.name === 'string') itemTitle = item.name.trim()
+      }
+      if (!itemTitle || itemTitle === '[object Object]') {
+        itemTitle = `Priority Goal #${idx + 1}`
+      }
+
+      itemTitle = itemTitle
+        .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
+        .replace(/^[xXvV✓✕]\s+/, '')
+        .replace(/^[-*•]\s*/, '')
+        .trim()
+
+      const matchingTasks = tasks.filter(t => 
+        (item.id && t.id === item.id) ||
+        (t.category === 'weekly_goal' && t.title && t.title.trim().toLowerCase() === itemTitle.toLowerCase()) ||
+        (t.description && t.description.includes('[Weekly Goal]') && t.title && t.title.trim().toLowerCase() === itemTitle.toLowerCase())
+      )
+
+      const completedTask = matchingTasks.find(t => t.status === 'completed')
+      const failedTask = matchingTasks.find(t => t.status === 'failed' || t.status === 'cancelled')
+      const activeTask = completedTask || failedTask || matchingTasks[0]
+
+      const keyId = activeTask ? activeTask.id : `debrief_p_${idx}_${itemTitle.slice(0, 8)}`
+      const stableSourceId = `debrief_p_${itemTitle.trim().toLowerCase().replace(/\s+/g, '_')}`
+      const localOverride = priorityStatusMap[keyId] || priorityStatusMap[itemTitle] || priorityStatusMap[stableSourceId]
+      const effectiveStatus = localOverride || (item.status !== 'pending' ? item.status : (activeTask ? activeTask.status : 'pending'))
+
+      return {
+        id: keyId,
+        taskId: activeTask ? activeTask.id : null,
+        matchingTaskIds: matchingTasks.map(t => t.id),
+        title: itemTitle,
+        status: effectiveStatus,
+        category: 'weekly_goal'
+      }
+    })
+  }, [parsedPriorities, tasks, priorityStatusMap])
+
+  // ── Top Level Effects ──
   useEffect(() => {
     if (typeof window === 'undefined' || !user) return
     try {
@@ -132,6 +376,33 @@ export default function MissionControl() {
       }
     } catch (e) {}
   }, [user])
+
+  useEffect(() => {
+    latestDebriefRef.current = latestDebrief
+  }, [latestDebrief])
+
+  useEffect(() => {
+    const t = setInterval(() => setCurrentTime(new Date()), 60000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    if (!isAutoCycling) return
+    const interval = setInterval(() => {
+      setActiveArtworkIndex(prev => {
+        const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
+        return (base + 1) % ARC_CONFIG.length
+      })
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [isAutoCycling, currentArcIndex])
+
+  useEffect(() => {
+    const quoteInterval = setInterval(() => {
+      setQuoteIndex(prev => (prev + 1) % SAGA_DISCIPLINE_QUOTES.length)
+    }, 10000)
+    return () => clearInterval(quoteInterval)
+  }, [SAGA_DISCIPLINE_QUOTES.length])
 
   const updatePriorityStatus = (entries) => {
     setPriorityStatusMap(prev => {
@@ -153,34 +424,6 @@ export default function MissionControl() {
       return next
     })
   }
-  
-  // New metrics states
-  const [xpTrajectory, setXpTrajectory] = useState([])
-  const [latestDebrief, setLatestDebrief] = useState(null)
-  const latestDebriefRef = useRef(null)
-  useEffect(() => {
-    latestDebriefRef.current = latestDebrief
-  }, [latestDebrief])
-  const [todayScreenTime, setTodayScreenTime] = useState(null)
-  const [addictionData, setAddictionData] = useState(null)
-  const [expandedWidget, setExpandedWidget] = useState(null) // 'addiction'
-
-  // ── EOD Recon Checklist Widget States ──
-  const [eodWorkData, setEodWorkData] = useState({ logged: false, hours: 0 })
-  const [eodSpeakingData, setEodSpeakingData] = useState({ logged: false, detail: '' })
-  const [eodQuickLogModal, setEodQuickLogModal] = useState(null) // 'work' | 'journal' | 'screen' | 'speaking'
-  const [eodJournalLogged, setEodJournalLogged] = useState(false)
-
-  // Quick form states
-  const [eodScreenForm, setEodScreenForm] = useState({ total_hours: '4', doomscroll_minutes: '30', streaming_hours: '0.5' })
-  const [eodJournalForm, setEodJournalForm] = useState({ mood: 'good', content: '' })
-  const [eodWorkForm, setEodWorkForm] = useState({ hours: '2', work_type: 'deep_work', notes: '' })
-  const [eodSpeakingForm, setEodSpeakingForm] = useState({ topic: '', drive_link: '', notes: '' })
-
-  useEffect(() => {
-    const t = setInterval(() => setCurrentTime(new Date()), 60000)
-    return () => clearInterval(t)
-  }, [])
 
   // Instant cache loader from localStorage for zero-delay initial widget status
   useEffect(() => {
@@ -699,7 +942,6 @@ export default function MissionControl() {
   }
 
   // ── Derived values ────────────────────────────────────────────────────────
-  const totalXp       = profile?.total_xp       || 0
   const currentStreak = profile?.current_streak ?? profile?.streak_days ?? 0
 
   const journalLoggedToday = (entries || []).some(e => e.date === todayStr) || eodJournalLogged
@@ -755,13 +997,10 @@ export default function MissionControl() {
   const currentLevel                                           = calculateLevel(totalXp)
   const { current: xpInLevel, required: xpForNextLevel, percentage: levelPct } = xpToNextLevel(totalXp)
   const xpNeeded     = Math.max(0, xpForNextLevel - xpInLevel)
-  const currentRank  = getRankForXp(totalXp)
   const currentRankConfig = RANK_CONFIG[currentRank.code] || RANK_CONFIG['I']
   const arcColor     = currentRankConfig?.color || '#9CA3AF'
   const sagaAccentColor = currentRankConfig?.color || '#f97316'
   const momentumStateColor = dailyMomentum?.color || 'var(--warning)'
-  const currentArc   = ARC_CONFIG.find(a => a.rank === currentRank.code) || ARC_CONFIG[0]
-  const currentArcIndex = ARC_CONFIG.findIndex(a => a.rank === currentRank.code)
   const nextArc      = ARC_CONFIG[currentArcIndex + 1] || null
 
   const minSagaXp = currentRankConfig.minXp || 0
@@ -773,89 +1012,9 @@ export default function MissionControl() {
   const currentSagaImage = SAGA_IMAGES[currentRank.code] || SAGA_IMAGES['I'] || '/sagas/Awakening.png'
 
   // Active artwork & saga display (auto-cycling or user selected)
-  const displayedSagaIndex = activeArtworkIndex !== null ? activeArtworkIndex : (currentArcIndex >= 0 ? currentArcIndex : 0)
-  const displayedArc = ARC_CONFIG[displayedSagaIndex] || currentArc
   const displayedRankConfig = RANK_CONFIG[displayedArc.rank] || RANK_CONFIG['I']
   const displayedSagaImage = SAGA_IMAGES[displayedArc.rank] || SAGA_IMAGES['I'] || '/sagas/Awakening.png'
   const displayedSagaColor = displayedRankConfig?.color || sagaAccentColor
-
-  // Auto-cycle artwork every 10 seconds if enabled
-  useEffect(() => {
-    if (!isAutoCycling) return
-    const interval = setInterval(() => {
-      setActiveArtworkIndex(prev => {
-        const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
-        return (base + 1) % ARC_CONFIG.length
-      })
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [isAutoCycling, currentArcIndex])
-
-  // Time of day atmosphere engine
-  const timeAtmosphere = useMemo(() => {
-    const h = currentTime.getHours()
-    if (h >= 5 && h < 11) {
-      return {
-        label: 'Dawn Protocol',
-        timeDesc: 'Morning clarity & disciplined momentum',
-        accent: '#f59e0b',
-        glow: 'rgba(245, 158, 11, 0.22)',
-        icon: Sun
-      }
-    } else if (h >= 11 && h < 17) {
-      return {
-        label: 'Peak Focus',
-        timeDesc: 'Deep work execution & relentless progress',
-        accent: '#22d3ee',
-        glow: 'rgba(34, 211, 238, 0.22)',
-        icon: Zap
-      }
-    } else if (h >= 17 && h < 21) {
-      return {
-        label: 'Twilight Consolidation',
-        timeDesc: 'Close active loops & review debriefs',
-        accent: '#a855f7',
-        glow: 'rgba(168, 85, 247, 0.22)',
-        icon: Sparkles
-      }
-    } else {
-      return {
-        label: 'Night Protocol',
-        timeDesc: 'Reflect, recharge & prepare tomorrow',
-        accent: '#818cf8',
-        glow: 'rgba(129, 140, 248, 0.22)',
-        icon: Moon
-      }
-    }
-  }, [currentTime])
-
-  const splitTitle = useMemo(() => {
-    const rawName = displayedArc?.name || 'The Spark'
-    if (rawName === 'The Discipline Rebuild') return { primary: 'THE DISCIPLINE', secondary: 'REBUILD' }
-    const parts = rawName.split(' ')
-    if (parts.length === 1) return { primary: 'SAGA', secondary: parts[0].toUpperCase() }
-    return { primary: parts.slice(0, -1).join(' ').toUpperCase(), secondary: parts[parts.length - 1].toUpperCase() }
-  }, [displayedArc?.name])
-
-  const SAGA_DISCIPLINE_QUOTES = useMemo(() => [
-    displayedArc?.flavor || "I rebuilt my mind, habits, and identity one day at a time.",
-    "Discipline is choosing between what you want now and what you want most.",
-    "Small actions compounded daily become unstoppable momentum.",
-    "Stop chasing motivation. Build ironclad routines and relentless consistency.",
-    "You do not rise to the level of your goals. You fall to the level of your systems.",
-    "The pain of discipline is far less than the pain of regret.",
-    "Master self-command before seeking command over anything else.",
-    "Every day you don't execute is a day you concede ground."
-  ], [displayedArc?.flavor])
-
-  const [quoteIndex, setQuoteIndex] = useState(0)
-
-  useEffect(() => {
-    const quoteInterval = setInterval(() => {
-      setQuoteIndex(prev => (prev + 1) % SAGA_DISCIPLINE_QUOTES.length)
-    }, 10000)
-    return () => clearInterval(quoteInterval)
-  }, [SAGA_DISCIPLINE_QUOTES.length])
 
   const handleNextQuote = () => {
     setQuoteIndex(prev => (prev + 1) % SAGA_DISCIPLINE_QUOTES.length)
@@ -909,159 +1068,6 @@ export default function MissionControl() {
   const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
   const momentumColor        = dailyMomentum?.color || (momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)')
   const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
-  // Check if Weekly Debrief has been completed for the current week or within the last 7 days
-  const isDebriefDoneThisWeek = useMemo(() => {
-    if (!latestDebrief) return false
-    const now = new Date()
-    const sortTime = getDebriefSortTime(latestDebrief)
-    const titleDateStr = sortTime ? getLocalDateStr(new Date(sortTime)) : ''
-    const debriefDateStr = latestDebrief.date || (latestDebrief.created_at ? getLocalDateStr(new Date(latestDebrief.created_at)) : '')
-    const effectiveDateStr = titleDateStr || debriefDateStr
-    if (!effectiveDateStr) return false
-
-    const dayOfWeek = now.getDay() // 0 = Sun, 1 = Mon, ..., 6 = Sat
-    const sunday = new Date(now)
-    sunday.setDate(now.getDate() - dayOfWeek)
-    sunday.setHours(0, 0, 0, 0)
-    const currentCycleStartStr = getLocalDateStr(sunday)
-
-    const sevenDaysAgo = new Date(now)
-    sevenDaysAgo.setDate(now.getDate() - 7)
-    sevenDaysAgo.setHours(0, 0, 0, 0)
-    const sevenDaysAgoStr = getLocalDateStr(sevenDaysAgo)
-
-    return effectiveDateStr >= currentCycleStartStr || effectiveDateStr >= sevenDaysAgoStr
-  }, [latestDebrief])
-
-  // Parse Next Week Priorities from the latest debrief
-  const nextWeekPriorities = useMemo(() => {
-    if (!latestDebrief?.description) return null
-    const text = latestDebrief.description
-    const marker = '### Priorities for Next Week'
-    const idx = text.indexOf(marker)
-    if (idx !== -1) {
-      let section = text.substring(idx + marker.length).trim()
-      const nextHeaderIdx = section.indexOf('### ')
-      if (nextHeaderIdx !== -1) section = section.substring(0, nextHeaderIdx).trim()
-      if (section) return section
-    }
-
-    // Fallback markers for alternative formats
-    const lower = text.toLowerCase()
-    const fallbackMarkers = [
-      'priorities for next week',
-      'next week priorities',
-      'weekly priorities',
-      'priorities'
-    ]
-    for (const m of fallbackMarkers) {
-      const fIdx = lower.indexOf(m)
-      if (fIdx !== -1) {
-        let section = text.substring(fIdx + m.length).replace(/^[:#\s\n]+/, '').trim()
-        const nextH = section.indexOf('### ')
-        if (nextH !== -1) section = section.substring(0, nextH).trim()
-        if (section) return section
-      }
-    }
-    return null
-  }, [latestDebrief])
-
-  // Split raw debrief priorities string into up to 3 separate priority tasks
-  const parsedPriorities = useMemo(() => {
-    if (!nextWeekPriorities) return []
-    const rawItems = nextWeekPriorities
-      .split(/(?=\b\d+[\.\)])|\n+/)
-      .map(s => s.replace(/^\d+[\.\)]\s*/, '').trim())
-      .filter(Boolean)
-    if (rawItems.length === 0 && nextWeekPriorities.trim()) {
-      return [{ id: 'p1', title: nextWeekPriorities.trim().replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '').replace(/^[xXvV✓✕]\s+/, '').trim(), status: 'pending' }]
-    }
-    return rawItems.slice(0, 3).map((rawTitle, idx) => {
-      let status = 'pending'
-      let title = rawTitle
-      if (rawTitle.includes('[DONE]')) {
-        status = 'completed'
-        title = rawTitle.replace('[DONE]', '').trim()
-      } else if (rawTitle.includes('[FAILED]')) {
-        status = 'failed'
-        title = rawTitle.replace('[FAILED]', '').trim()
-      }
-      title = title
-        .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
-        .replace(/^[xXvV✓✕]\s+/, '')
-        .replace(/^[-*•]\s*/, '')
-        .trim()
-      return {
-        id: `p-${idx + 1}`,
-        title,
-        status
-      }
-    })
-  }, [nextWeekPriorities])
-
-  // Combined list of Weekly Priorities mapped directly to DB tasks
-  const debriefPriorityList = useMemo(() => {
-    let sourceList = []
-
-    if (parsedPriorities && parsedPriorities.length > 0) {
-      sourceList = parsedPriorities
-    } else {
-      const fourteenDaysAgo = new Date()
-      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
-      const fourteenDaysAgoStr = getLocalDateStr(fourteenDaysAgo)
-
-      sourceList = tasks.filter(t => 
-        t.category === 'weekly_goal' && 
-        t.status !== 'cancelled' &&
-        (!t.due_date || t.due_date >= fourteenDaysAgoStr || !t.created_at || t.created_at >= fourteenDaysAgoStr)
-      ).slice(0, 3)
-    }
-
-    return sourceList.map((item, idx) => {
-      let itemTitle = ''
-      if (typeof item === 'string') {
-        itemTitle = item.trim()
-      } else if (item && typeof item === 'object') {
-        if (typeof item.title === 'string') itemTitle = item.title.trim()
-        else if (item.title && typeof item.title === 'object' && typeof item.title.title === 'string') itemTitle = item.title.title.trim()
-        else if (typeof item.name === 'string') itemTitle = item.name.trim()
-      }
-      if (!itemTitle || itemTitle === '[object Object]') {
-        itemTitle = `Priority Goal #${idx + 1}`
-      }
-
-      itemTitle = itemTitle
-        .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
-        .replace(/^[xXvV✓✕]\s+/, '')
-        .replace(/^[-*•]\s*/, '')
-        .trim()
-
-      // Match ALL tasks in tasks array matching this title or category
-      const matchingTasks = tasks.filter(t => 
-        (item.id && t.id === item.id) ||
-        (t.category === 'weekly_goal' && t.title && t.title.trim().toLowerCase() === itemTitle.toLowerCase()) ||
-        (t.description && t.description.includes('[Weekly Goal]') && t.title && t.title.trim().toLowerCase() === itemTitle.toLowerCase())
-      )
-
-      const completedTask = matchingTasks.find(t => t.status === 'completed')
-      const failedTask = matchingTasks.find(t => t.status === 'failed' || t.status === 'cancelled')
-      const activeTask = completedTask || failedTask || matchingTasks[0]
-
-      const keyId = activeTask ? activeTask.id : `debrief_p_${idx}_${itemTitle.slice(0, 8)}`
-      const stableSourceId = `debrief_p_${itemTitle.trim().toLowerCase().replace(/\s+/g, '_')}`
-      const localOverride = priorityStatusMap[keyId] || priorityStatusMap[itemTitle] || priorityStatusMap[stableSourceId]
-      const effectiveStatus = localOverride || (item.status !== 'pending' ? item.status : (activeTask ? activeTask.status : 'pending'))
-
-      return {
-        id: keyId,
-        taskId: activeTask ? activeTask.id : null,
-        matchingTaskIds: matchingTasks.map(t => t.id),
-        title: itemTitle,
-        status: effectiveStatus,
-        category: 'weekly_goal'
-      }
-    })
-  }, [parsedPriorities, tasks, priorityStatusMap])
 
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
@@ -1077,24 +1083,6 @@ export default function MissionControl() {
     deadlineUrgency = deadlineDays <= 3 ? 'danger' : deadlineDays <= 7 ? 'warning' : 'ok'
   }
 
-
-
-  // Helper for Tooltip in Recharts
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const val = payload[0].value
-      return (
-        <div className="p-2 bg-bg-primary/95 border border-border-color rounded shadow-xl backdrop-blur-md font-mono text-[10px] pointer-events-none">
-          <p className="text-muted text-[9px] mb-0.5">{label}</p>
-          <p className="font-bold" style={{ color: val >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-            {val >= 0 ? `+${val}` : val} XP
-          </p>
-        </div>
-      )
-    }
-    return null
-  }
-
   return (
     <AppShell>
       <div className="page-container relative max-w-[1600px] pb-2 lg:pb-10">
@@ -1102,20 +1090,6 @@ export default function MissionControl() {
         <style dangerouslySetInnerHTML={{ __html: `
           :root { --arc-color: ${arcColor}; }
           .arc-glow { box-shadow: 0 0 30px ${arcColor}15, 0 0 60px ${arcColor}05; }
-          .bento-grid {
-            display: grid; grid-template-columns: 1fr; gap: 12px;
-          }
-          .dashboard-card {
-            padding: 16px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-          }
-          @media (min-width: 1024px) {
-            .bento-grid { grid-template-columns: repeat(12, 1fr); gap: 16px; }
-            .col-8 { grid-column: span 8; }
-            .col-4 { grid-column: span 4; }
-            .dashboard-card { padding: 20px; }
-          }
         ` }} />
 
 
@@ -1123,7 +1097,16 @@ export default function MissionControl() {
         {/* ══════════════════════════════════════════════════════════════════
             OPAL DYNAMIC ATMOSPHERIC HERO CANVAS (CHANGING IMAGERY & MOOD)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="mb-6 rounded-3xl border border-white/10 bg-[#0a0d18]/90 backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden transition-all relative">
+        <div 
+          className="mb-6 rounded-3xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden transition-all relative"
+          style={{
+            background: 'rgba(10, 13, 24, 0.9)',
+            backdropFilter: 'blur(24px)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            overflow: 'hidden'
+          }}
+        >
           
           {/* Subtle Ambient Radial Aura behind Hero */}
           <div 
@@ -1498,7 +1481,16 @@ export default function MissionControl() {
         {/* ══════════════════════════════════════════════════════════════════
             DAILY PROTOCOL STATUS FLOATING DECK (INSTANT MODAL LAUNCH)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="mb-6 rounded-3xl border border-white/10 bg-[#090d1a]/85 backdrop-blur-2xl p-3.5 sm:p-5 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+        <div 
+          className="mb-6 rounded-3xl border border-white/10 p-3.5 sm:p-5"
+          style={{
+            background: 'rgba(9, 13, 26, 0.85)',
+            backdropFilter: 'blur(24px)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.5)'
+          }}
+        >
           <div className="flex items-center justify-between mb-3 px-1">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
@@ -1511,7 +1503,7 @@ export default function MissionControl() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+          <div className="daily-protocols-grid gap-2.5">
             {eodItems.map((item) => {
               const ItemIcon = item.icon
               const displayLabel = item.key === 'work' ? 'Work Session' : item.key === 'journal' ? 'Daily Journal' : item.key === 'screen' ? 'Screen Intel' : item.key === 'speaking' ? 'Speaking Challenge' : item.label
@@ -2305,10 +2297,23 @@ export default function MissionControl() {
                 </div>
 
                 {/* Addiction bar */}
-                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-3">
+                <div 
+                  className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-3"
+                  style={{
+                    height: '6px',
+                    borderRadius: '9999px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    overflow: 'hidden',
+                    marginBottom: '12px'
+                  }}
+                >
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ background: addictionData.addScore >= 55 ? '#ef4444' : addictionData.addScore >= 30 ? '#f59e0b' : '#10b981' }}
+                    style={{ 
+                      height: '100%',
+                      borderRadius: '9999px',
+                      background: addictionData.addScore >= 55 ? '#ef4444' : addictionData.addScore >= 30 ? '#f59e0b' : '#10b981' 
+                    }}
                     initial={{ width: 0 }} animate={{ width: `${addictionData.addScore}%` }} transition={{ duration: 1, ease: 'easeOut' }}
                   />
                 </div>
@@ -2416,7 +2421,15 @@ export default function MissionControl() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-md p-6 bg-[#0a0d18]/95 border border-white/10 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.8)] backdrop-blur-3xl relative m-4"
+              className="w-full max-w-md p-6 border border-white/10 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.8)] relative m-4"
+              style={{
+                background: 'rgba(10, 13, 24, 0.96)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '24px',
+                backdropFilter: 'blur(32px)',
+                WebkitBackdropFilter: 'blur(32px)',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+              }}
             >
               <button 
                 onClick={() => setEodQuickLogModal(null)}
