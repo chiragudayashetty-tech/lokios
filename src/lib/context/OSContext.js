@@ -241,23 +241,20 @@ export function OSProvider({ children }) {
     undoFailMission,
   ])
 
-  if (booting) {
-    return (
-      <div className="winter-boot-screen">
-        <div className="winter-boot-grid" aria-hidden="true" />
-        <div className="winter-boot-mark">
-          <img src="/icons/winter-warrior-logo.png" alt="Winter Arc warrior" />
-        </div>
-        <div className="winter-boot-kicker">LOKI OS // WINTER ARC</div>
-        <div className="winter-boot-title">THE FROST FORGE</div>
-        <div className="winter-boot-status"><span /> INITIALIZING FIELD SYSTEMS</div>
-      </div>
-    )
-  }
-
   return (
     <OSContext.Provider value={osState}>
       {children}
+      {booting && (
+        <div className="winter-boot-screen" role="status" aria-live="polite">
+          <div className="winter-boot-grid" aria-hidden="true" />
+          <div className="winter-boot-mark">
+            <img src="/icons/winter-warrior-logo.png" alt="Winter Arc warrior" />
+          </div>
+          <div className="winter-boot-kicker">LOKI OS // WINTER ARC</div>
+          <div className="winter-boot-title">THE FROST FORGE</div>
+          <div className="winter-boot-status"><span /> INITIALIZING FIELD SYSTEMS</div>
+        </div>
+      )}
     </OSContext.Provider>
   )
 }
