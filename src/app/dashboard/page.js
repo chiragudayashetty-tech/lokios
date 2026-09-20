@@ -7,7 +7,8 @@ import {
   ChevronUp, Lock, Check, ClipboardList, BookOpen,
   Activity, Clock, Terminal, ArrowUpRight, BarChart2,
   Smartphone, Shield, DollarSign, Moon, Brain, Repeat, X, RotateCcw,
-  Calendar as CalendarIcon, MapPin, Plus, ExternalLink, Briefcase, Sun, FileText, CheckCircle2, Mic, Sparkles
+  Calendar as CalendarIcon, MapPin, Plus, ExternalLink, Briefcase, Sun, FileText, CheckCircle2, Mic, Sparkles,
+  ChevronLeft, ChevronRight, Play, Pause, Circle
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
@@ -115,6 +116,8 @@ export default function MissionControl() {
   const [momentumExpanded, setMomentumExpanded] = useState(false)
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
   const [completedEventIds, setCompletedEventIds] = useState(new Set())
+  const [activeArtworkIndex, setActiveArtworkIndex] = useState(null)
+  const [isAutoCycling, setIsAutoCycling] = useState(true)
 
   // Load persistent priority statuses from localStorage immediately on mount
   useEffect(() => {
@@ -767,18 +770,75 @@ export default function MissionControl() {
   const totalXpInSaga = Math.max(1, maxSagaXp - minSagaXp + 1)
   const sagaProgressPct = Math.min(100, Math.max(0, Math.round((currentXpInSaga / totalXpInSaga) * 100)))
 
-  const currentSagaImage = SAGA_IMAGES[currentRank.code] || SAGA_IMAGES['I'] || '/sagas/awakening.png'
+  const currentSagaImage = SAGA_IMAGES[currentRank.code] || SAGA_IMAGES['I'] || '/sagas/Awakening.png'
+
+  // Active artwork & saga display (auto-cycling or user selected)
+  const displayedSagaIndex = activeArtworkIndex !== null ? activeArtworkIndex : (currentArcIndex >= 0 ? currentArcIndex : 0)
+  const displayedArc = ARC_CONFIG[displayedSagaIndex] || currentArc
+  const displayedRankConfig = RANK_CONFIG[displayedArc.rank] || RANK_CONFIG['I']
+  const displayedSagaImage = SAGA_IMAGES[displayedArc.rank] || SAGA_IMAGES['I'] || '/sagas/Awakening.png'
+  const displayedSagaColor = displayedRankConfig?.color || sagaAccentColor
+
+  // Auto-cycle artwork every 10 seconds if enabled
+  useEffect(() => {
+    if (!isAutoCycling) return
+    const interval = setInterval(() => {
+      setActiveArtworkIndex(prev => {
+        const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
+        return (base + 1) % ARC_CONFIG.length
+      })
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [isAutoCycling, currentArcIndex])
+
+  // Time of day atmosphere engine
+  const timeAtmosphere = useMemo(() => {
+    const h = currentTime.getHours()
+    if (h >= 5 && h < 11) {
+      return {
+        label: 'Dawn Protocol',
+        timeDesc: 'Morning clarity & disciplined momentum',
+        accent: '#f59e0b',
+        glow: 'rgba(245, 158, 11, 0.22)',
+        icon: Sun
+      }
+    } else if (h >= 11 && h < 17) {
+      return {
+        label: 'Peak Focus',
+        timeDesc: 'Deep work execution & relentless progress',
+        accent: '#22d3ee',
+        glow: 'rgba(34, 211, 238, 0.22)',
+        icon: Zap
+      }
+    } else if (h >= 17 && h < 21) {
+      return {
+        label: 'Twilight Consolidation',
+        timeDesc: 'Close active loops & review debriefs',
+        accent: '#a855f7',
+        glow: 'rgba(168, 85, 247, 0.22)',
+        icon: Sparkles
+      }
+    } else {
+      return {
+        label: 'Night Protocol',
+        timeDesc: 'Reflect, recharge & prepare tomorrow',
+        accent: '#818cf8',
+        glow: 'rgba(129, 140, 248, 0.22)',
+        icon: Moon
+      }
+    }
+  }, [currentTime])
 
   const splitTitle = useMemo(() => {
-    const rawName = currentArc?.name || 'The Spark'
+    const rawName = displayedArc?.name || 'The Spark'
     if (rawName === 'The Discipline Rebuild') return { primary: 'THE DISCIPLINE', secondary: 'REBUILD' }
     const parts = rawName.split(' ')
     if (parts.length === 1) return { primary: 'SAGA', secondary: parts[0].toUpperCase() }
     return { primary: parts.slice(0, -1).join(' ').toUpperCase(), secondary: parts[parts.length - 1].toUpperCase() }
-  }, [currentArc?.name])
+  }, [displayedArc?.name])
 
   const SAGA_DISCIPLINE_QUOTES = useMemo(() => [
-    currentArc?.flavor || "I rebuilt my mind, habits, and identity one day at a time.",
+    displayedArc?.flavor || "I rebuilt my mind, habits, and identity one day at a time.",
     "Discipline is choosing between what you want now and what you want most.",
     "Small actions compounded daily become unstoppable momentum.",
     "Stop chasing motivation. Build ironclad routines and relentless consistency.",
@@ -786,7 +846,7 @@ export default function MissionControl() {
     "The pain of discipline is far less than the pain of regret.",
     "Master self-command before seeking command over anything else.",
     "Every day you don't execute is a day you concede ground."
-  ], [currentArc?.flavor])
+  ], [displayedArc?.flavor])
 
   const [quoteIndex, setQuoteIndex] = useState(0)
 
@@ -1061,26 +1121,77 @@ export default function MissionControl() {
 
 
         {/* ══════════════════════════════════════════════════════════════════
-            COMMAND CENTER SAGA HERO CARD (TEXT AT LEFT, 1:1 IMAGE AT RIGHT)
+            OPAL DYNAMIC ATMOSPHERIC HERO CANVAS (CHANGING IMAGERY & MOOD)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden transition-all">
+        <div className="mb-6 rounded-3xl border border-white/10 bg-[#0a0d18]/90 backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden transition-all relative">
           
-          <div className="flex flex-col-reverse lg:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
+          {/* Subtle Ambient Radial Aura behind Hero */}
+          <div 
+            className="absolute top-0 right-0 w-[450px] h-[450px] rounded-full pointer-events-none transition-all duration-1000"
+            style={{
+              background: `radial-gradient(circle, ${displayedSagaColor}25, transparent 70%)`,
+              transform: 'translate(20%, -20%)',
+              filter: 'blur(60px)'
+            }}
+          />
+
+          <div className="relative z-10 flex flex-col-reverse lg:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
             
-            {/* ── LEFT SIDE (DESKTOP): INTELLIGENCE & PROGRESSION (TEXT AT LEFT) ── */}
+            {/* ── LEFT SIDE (DESKTOP): INTELLIGENCE & PROGRESSION ── */}
             <div className="flex-1 w-full min-w-0 flex flex-col justify-between space-y-4 sm:space-y-5">
               
-              {/* Header: SAGA Title */}
-              <div>
-                <span className="font-mono text-xs uppercase tracking-[0.25em] font-bold text-indigo-400 block mb-1">
-                  SAGA {currentRank.code}
+              {/* Top Time-of-Day Atmosphere Pill */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div 
+                  className="px-3 py-1 rounded-full border text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+                  style={{
+                    backgroundColor: `${timeAtmosphere.accent}15`,
+                    borderColor: `${timeAtmosphere.accent}35`,
+                    color: timeAtmosphere.accent,
+                    boxShadow: `0 0 14px ${timeAtmosphere.glow}`
+                  }}
+                >
+                  <timeAtmosphere.icon size={13} />
+                  <span>{timeAtmosphere.label}</span>
+                </div>
+                <span className="font-mono text-[10px] text-slate-400 hidden sm:inline">
+                  {timeAtmosphere.timeDesc}
                 </span>
-                <h1 className="font-display font-black text-2xl sm:text-4xl text-white tracking-[0.15em] uppercase leading-tight">
+
+                {/* Auto-cycle toggle pill */}
+                <button
+                  type="button"
+                  onClick={() => setIsAutoCycling(prev => !prev)}
+                  title={isAutoCycling ? "Auto-cycling imagery every 10s (Click to pause)" : "Auto-cycle paused (Click to resume)"}
+                  className="ml-auto px-2.5 py-0.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 font-mono text-[9px] uppercase tracking-wider flex items-center gap-1.5 transition-all"
+                >
+                  {isAutoCycling ? <Pause size={10} className="text-cyan-400" /> : <Play size={10} className="text-slate-400" />}
+                  <span>{isAutoCycling ? 'Auto' : 'Paused'}</span>
+                </button>
+              </div>
+
+              {/* Header: SAGA Title & Switcher */}
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-xs uppercase tracking-[0.25em] font-bold text-indigo-400">
+                    SAGA {displayedArc.rank}
+                  </span>
+                  {displayedSagaIndex !== currentArcIndex && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveArtworkIndex(currentArcIndex)}
+                      className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 font-mono text-[8px] uppercase tracking-wider hover:bg-indigo-500/30 transition-all"
+                    >
+                      Return to LV.{currentLevel} Saga ({currentRank.code})
+                    </button>
+                  )}
+                </div>
+                <h1 className="font-display font-black text-2xl sm:text-4xl text-white tracking-[0.12em] uppercase leading-tight">
                   {splitTitle.primary}
                 </h1>
                 <h2 
-                  className="font-display font-black text-xl sm:text-3xl tracking-[0.2em] uppercase leading-none mt-1"
-                  style={{ color: sagaAccentColor }}
+                  className="font-display font-black text-xl sm:text-3xl tracking-[0.18em] uppercase leading-none mt-1 transition-colors duration-500"
+                  style={{ color: displayedSagaColor }}
                 >
                   {splitTitle.secondary}
                 </h2>
@@ -1093,15 +1204,15 @@ export default function MissionControl() {
                 className="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 flex items-center gap-4 hover:border-white/20 transition-all cursor-pointer group"
               >
                 <div 
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105"
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105"
                   style={{ 
-                    backgroundColor: `${sagaAccentColor}15`, 
-                    borderColor: `${sagaAccentColor}40`, 
-                    color: sagaAccentColor,
-                    boxShadow: `0 0 16px ${sagaAccentColor}25`
+                    backgroundColor: `${displayedSagaColor}15`, 
+                    borderColor: `${displayedSagaColor}40`, 
+                    color: displayedSagaColor,
+                    boxShadow: `0 0 16px ${displayedSagaColor}25`
                   }}
                 >
-                  <Sparkles size={22} />
+                  <Sparkles size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-xs sm:text-sm text-slate-200 leading-relaxed italic">
@@ -1133,7 +1244,7 @@ export default function MissionControl() {
                     </div>
 
                     {/* Glowing Progress Track */}
-                    <div className="w-full h-3 rounded-full bg-slate-950 border border-white/10 p-[1.5px] relative overflow-hidden">
+                    <div className="w-full h-2.5 rounded-full bg-slate-950 border border-white/10 p-[1px] relative overflow-hidden">
                       <motion.div 
                         className="h-full rounded-full transition-all duration-500 shadow-lg"
                         style={{ 
@@ -1148,8 +1259,8 @@ export default function MissionControl() {
                   {/* Right: Next Saga Inset Capsule */}
                   {nextArc && (
                     <div className="p-3 rounded-xl border border-white/10 bg-black/50 flex items-center gap-3 shrink-0">
-                      <div className="w-9 h-9 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
-                        <Target size={16} />
+                      <div className="w-8 h-8 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
+                        <Target size={15} />
                       </div>
                       <div className="min-w-0">
                         <span className="font-mono text-[9px] uppercase tracking-wider text-purple-400 font-bold block">
@@ -1164,13 +1275,40 @@ export default function MissionControl() {
                 </div>
               </div>
 
-              {/* Bottom Footer Subtitle & Roster Toggle */}
-              <div className="flex items-center justify-between pt-1 text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
-                <span className="truncate">KEEP BUILDING. YOUR NEXT BREAKTHROUGH IS CLOSER THAN YOU THINK.</span>
+              {/* Bottom Quick Saga Switcher Dots & Roster Toggle */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                {/* 8 Saga Quick Dot Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-1">
+                  {ARC_CONFIG.map((s, idx) => {
+                    const isSelected = idx === displayedSagaIndex
+                    const isUserCurrent = s.rank === currentRank.code
+                    return (
+                      <button
+                        key={s.rank}
+                        type="button"
+                        onClick={() => {
+                          setActiveArtworkIndex(idx)
+                          setIsAutoCycling(false)
+                        }}
+                        title={`Saga ${s.rank}: ${s.name}`}
+                        className={`px-2 py-0.5 rounded-full font-mono text-[9px] font-bold uppercase transition-all ${
+                          isSelected
+                            ? 'bg-white text-black shadow-md shadow-white/20 scale-105'
+                            : isUserCurrent
+                            ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/40'
+                            : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {s.rank}
+                      </button>
+                    )
+                  })}
+                </div>
+
                 <button
                   type="button"
                   onClick={() => setSagaRosterOpen(prev => !prev)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white transition-all shrink-0 ml-3"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-mono text-[10px] font-bold uppercase tracking-wider transition-all shrink-0 ml-auto"
                 >
                   <span>{sagaRosterOpen ? 'HIDE ROSTER' : 'VIEW ALL SAGAS'}</span>
                   {sagaRosterOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -1179,22 +1317,76 @@ export default function MissionControl() {
 
             </div>
 
-            {/* ── RIGHT SIDE (DESKTOP): 1:1 SQUARE ARTWORK (IMAGE AT RIGHT) ── */}
-            <div className="w-full sm:w-[320px] md:w-[360px] lg:w-[380px] shrink-0 flex justify-center">
+            {/* ── RIGHT SIDE (DESKTOP): 1:1 SQUARE ARTWORK WITH SMOOTH CROSSFADE ── */}
+            <div className="w-full sm:w-[320px] md:w-[360px] lg:w-[380px] shrink-0 flex flex-col items-center">
               <div 
-                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.8)] group"
-                style={{ width: '100%', maxWidth: '380px', aspectRatio: '1 / 1' }}
+                onClick={() => {
+                  setActiveArtworkIndex(prev => {
+                    const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
+                    return (base + 1) % ARC_CONFIG.length
+                  })
+                }}
+                title="Click image to cycle next artwork"
+                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_40px_rgba(0,0,0,0.85)] group cursor-pointer w-full max-w-[380px] aspect-square"
               >
-                {/* Background 1:1 Artwork Image */}
-                <img 
-                  src={currentSagaImage} 
-                  alt={currentArc.name} 
-                  className="w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
-                  onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
-                />
+                {/* Crossfading Dynamic Image */}
+                <AnimatePresence mode="wait">
+                  <motion.img 
+                    key={displayedSagaImage}
+                    src={displayedSagaImage} 
+                    alt={displayedArc.name} 
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.03 }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    className="w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
+                  />
+                </AnimatePresence>
 
-                {/* Cyber subtle border ring */}
+                {/* Subtle cyber border & caption overlay on hover */}
                 <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
+                <div className="absolute bottom-2 inset-x-2 py-1 px-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-between text-[9px] font-mono text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span>{displayedArc.name}</span>
+                  <span className="text-indigo-300">Tap to cycle ↻</span>
+                </div>
+              </div>
+
+              {/* Prev / Next Chevrons below image */}
+              <div className="flex items-center justify-center gap-3 mt-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveArtworkIndex(prev => {
+                      const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
+                      return (base - 1 + ARC_CONFIG.length) % ARC_CONFIG.length
+                    })
+                    setIsAutoCycling(false)
+                  }}
+                  className="w-8 h-8 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 flex items-center justify-center text-slate-300 transition-all active:scale-95"
+                  title="Previous Saga Artwork"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                <span className="font-mono text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                  {displayedSagaIndex + 1} / {ARC_CONFIG.length}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveArtworkIndex(prev => {
+                      const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
+                      return (base + 1) % ARC_CONFIG.length
+                    })
+                    setIsAutoCycling(false)
+                  }}
+                  className="w-8 h-8 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 flex items-center justify-center text-slate-300 transition-all active:scale-95"
+                  title="Next Saga Artwork"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
             </div>
 
@@ -1229,8 +1421,9 @@ export default function MissionControl() {
                     width: '100%' 
                   }}
                 >
-                  {ARC_CONFIG.map((saga) => {
+                  {ARC_CONFIG.map((saga, sIdx) => {
                     const isCurrent = saga.rank === currentRank.code
+                    const isSelected = sIdx === displayedSagaIndex
                     const isUnlocked = currentLevel >= saga.minLvl
                     const isCompleted = currentLevel > saga.maxLvl
                     const sagaImg = SAGA_IMAGES[saga.rank] || '/sagas/the-spark.png'
@@ -1238,9 +1431,15 @@ export default function MissionControl() {
                     return (
                       <div 
                         key={saga.rank}
-                        className={`rounded-2xl border p-2.5 flex flex-col items-center text-center transition-all ${
-                          isCurrent
-                            ? 'bg-indigo-950/40 border-indigo-400/80 shadow-[0_0_18px_rgba(129,140,248,0.35)] ring-1 ring-indigo-400/40'
+                        onClick={() => {
+                          setActiveArtworkIndex(sIdx)
+                          setIsAutoCycling(false)
+                        }}
+                        className={`rounded-2xl border p-2.5 flex flex-col items-center text-center transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-indigo-950/50 border-indigo-400 shadow-[0_0_20px_rgba(129,140,248,0.4)] ring-2 ring-indigo-400/50'
+                            : isCurrent
+                            ? 'bg-indigo-950/30 border-indigo-400/50'
                             : isUnlocked
                             ? 'bg-black/40 border-white/10 hover:border-white/20'
                             : 'bg-black/60 border-white/5 opacity-50'
@@ -1297,278 +1496,91 @@ export default function MissionControl() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            TOP STRIP — TODAY'S OPERATIONS & SCHEDULE
+            DAILY PROTOCOL STATUS FLOATING DECK (INSTANT MODAL LAUNCH)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="mb-5 p-3.5 sm:p-4 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl overflow-hidden">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 pb-3 border-b border-white/10">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <div className="w-2.5 h-2.5 rounded-full bg-amber animate-pulse shrink-0" style={{ boxShadow: '0 0 10px var(--amber)' }} />
-              <span className="font-mono text-xs uppercase tracking-widest text-amber font-bold truncate">
-                TODAY'S OPERATIONS & SCHEDULE
-              </span>
-              <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-amber/15 border border-amber/40 text-amber font-bold shrink-0">
-                {todayTasksScheduled.filter(t => t.status === 'completed').length + Array.from(completedEventIds).length} / {todayCalendarEvents.length + todayTasksScheduled.length} DONE
+        <div className="mb-6 rounded-3xl border border-white/10 bg-[#090d1a]/85 backdrop-blur-2xl p-3.5 sm:p-5 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+              <span className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-white font-bold">
+                DAILY PROTOCOLS ({eodCompletedCount} / {eodItems.length + (isDebriefDoneThisWeek ? 1 : 0)} LOGGED)
               </span>
             </div>
-
-            <div className="flex items-center gap-2.5 font-mono text-[10px] uppercase font-bold shrink-0">
-              <Link
-                href="/tasks"
-                className="px-2.5 py-1 rounded-lg bg-bg-tertiary border border-border-color text-muted hover:text-amber transition-colors flex items-center gap-1"
-              >
-                <span>Ops Hub</span>
-                <ExternalLink size={10} />
-              </Link>
-              <Link
-                href="/calendar"
-                className="px-2.5 py-1 rounded-lg bg-bg-tertiary border border-border-color text-amber hover:text-amber-hover transition-colors flex items-center gap-1"
-              >
-                <span>Calendar</span>
-                <ExternalLink size={10} />
-              </Link>
-            </div>
+            <span className="font-mono text-[9px] text-slate-400 uppercase font-semibold">
+              TAP PILL TO QUICK LOG
+            </span>
           </div>
 
-          {/* Content Items Grid */}
-          {todayCalendarEvents.length === 0 && todayTasksScheduled.length === 0 ? (
-            <div className="p-4 text-center rounded-lg bg-black/20 border border-dashed border-white/10 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <p className="font-mono text-xs text-muted">No scheduled operations or calendar events for today.</p>
-              <Link href="/tasks" className="btn btn-secondary btn-xs font-mono text-[10px] inline-flex items-center gap-1">
-                <Plus size={11} /> DEPLOY OPERATION
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {/* Scheduled Operations / Tasks */}
-              {todayTasksScheduled.map(task => {
-                const isDone = task.status === 'completed'
-                const titleText = typeof task.title === 'string' ? task.title : (task.title?.title || task.title?.name || 'Operation')
-                const isLongTitle = titleText.length > 35
-
-                return (
-                  <div
-                    key={task.id}
-                    className={`p-3 rounded-xl border transition-all flex items-start sm:items-center justify-between gap-3 ${
-                      isDone 
-                        ? 'bg-success/5 border-success/30' 
-                        : 'bg-black/50 border-white/10 hover:border-amber/40'
-                    }`}
-                  >
-                    <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
-                      {/* Checkbox button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isDone) undoCompleteTask(task.id)
-                          else completeTask(task.id)
-                        }}
-                        title={isDone ? "Mark as Pending" : "Mark as Completed"}
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all mt-0.5 sm:mt-0 ${
-                          isDone 
-                            ? 'bg-success text-black border border-success' 
-                            : 'border border-amber/60 hover:bg-amber/20 text-amber'
-                        }`}
-                      >
-                        {isDone ? <Check size={14} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-amber/80" />}
-                      </button>
-
-                      <div className="min-w-0 flex-1">
-                        <div 
-                          className={`font-mono font-bold leading-snug break-words whitespace-normal ${
-                            isLongTitle ? 'text-[11px]' : 'text-xs'
-                          } ${isDone ? 'text-muted line-through opacity-60' : 'text-primary'}`}
-                        >
-                          {titleText}
-                        </div>
-                        <div className="font-mono text-[9px] text-muted uppercase tracking-wider flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className="text-amber font-semibold">{task.category ? task.category.replace('_', ' ') : 'OPERATION'}</span>
-                          {task.difficulty && <span className="text-secondary">• {task.difficulty}</span>}
-                          {(() => {
-                            const cleanDueDate = task.due_date ? task.due_date.substring(0, 10) : null
-                            const isOverdue = !isDone && cleanDueDate && cleanDueDate < todayStr && task.category !== 'weekly_goal'
-                            if (!isOverdue) return null
-                            const [tY, tM, tD] = todayStr.split('-').map(Number)
-                            const [dY, dM, dD] = cleanDueDate.split('-').map(Number)
-                            const daysOverdue = Math.max(1, Math.round((Date.UTC(tY, tM - 1, tD) - Date.UTC(dY, dM - 1, dD)) / (1000 * 60 * 60 * 24)))
-                            return (
-                              <span className="text-danger font-bold bg-danger/15 px-1.5 py-0.5 rounded border border-danger/30">
-                                ⚠ {daysOverdue}d overdue (-{daysOverdue * 5} XP)
-                              </span>
-                            )
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isDone) undoCompleteTask(task.id)
-                        else completeTask(task.id)
-                      }}
-                      className={`font-mono text-[9px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider shrink-0 transition-all whitespace-nowrap self-center ${
-                        isDone 
-                          ? 'bg-success/20 text-success border border-success/40 hover:bg-success/30' 
-                          : 'bg-amber/20 text-amber hover:bg-amber/30 border border-amber/40'
-                      }`}
-                    >
-                      {isDone ? '✓ DONE' : 'MARK DONE'}
-                    </button>
-                  </div>
-                )
-              })}
-
-              {/* Calendar Events */}
-              {todayCalendarEvents.map((evt, idx) => {
-                const evtId = evt.id || `evt-${idx}`
-                const isAttended = completedEventIds.has(evtId)
-                const titleText = evt.title || evt.summary || 'Calendar Event'
-                const isLongTitle = titleText.length > 35
-
-                return (
-                  <div
-                    key={evtId}
-                    className={`p-3 rounded-xl border transition-all flex items-start sm:items-center justify-between gap-3 ${
-                      isAttended 
-                        ? 'bg-cyan/5 border-cyan/30' 
-                        : 'bg-black/50 border-white/10 hover:border-cyan/40'
-                    }`}
-                  >
-                    <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => toggleEventCompleted(evtId)}
-                        title={isAttended ? "Mark as Pending" : "Mark as Completed"}
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all mt-0.5 sm:mt-0 ${
-                          isAttended 
-                            ? 'bg-cyan text-black border border-cyan' 
-                            : 'border border-cyan/60 hover:bg-cyan/20 text-cyan'
-                        }`}
-                      >
-                        {isAttended ? <Check size={14} strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-cyan/80 animate-pulse" />}
-                      </button>
-
-                      <div className="min-w-0 flex-1">
-                        <div 
-                          className={`font-mono font-bold leading-snug break-words whitespace-normal ${
-                            isLongTitle ? 'text-[11px]' : 'text-xs'
-                          } ${isAttended ? 'text-muted line-through opacity-60' : 'text-primary'}`}
-                        >
-                          {titleText}
-                        </div>
-                        <div className="font-mono text-[9px] text-muted flex items-center gap-1.5 mt-1 flex-wrap">
-                          <Clock size={10} className="text-cyan shrink-0" />
-                          <span>{evt.start_time ? (evt.start_time.includes('T') ? evt.start_time.split('T')[1].slice(0, 5) : evt.start_time) : 'All Day'}</span>
-                          {evt.location && <span className="break-words">· {evt.location}</span>}
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => toggleEventCompleted(evtId)}
-                      className={`font-mono text-[9px] font-bold px-2.5 py-1.5 rounded-lg uppercase tracking-wider shrink-0 transition-all whitespace-nowrap self-center ${
-                        isAttended 
-                          ? 'bg-cyan/20 text-cyan border border-cyan/40 hover:bg-cyan/30' 
-                          : 'bg-cyan/20 text-cyan hover:bg-cyan/30 border border-cyan/40'
-                      }`}
-                    >
-                      {isAttended ? '✓ DONE' : 'MARK DONE'}
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            DAILY PROTOCOL STATUS // ICON-ONLY SQUARES (GREY WHEN NOT COMPLETED)
-        ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-5 rounded-2xl border border-white/10 bg-[#090d1a]/95 backdrop-blur-2xl p-2.5 sm:p-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-          <div 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', 
-              gap: '8px', 
-              width: '100%' 
-            }}
-          >
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
             {eodItems.map((item) => {
               const ItemIcon = item.icon
-              const displayLabel = item.key === 'work' ? 'Work' : item.key === 'journal' ? 'Journal' : item.key === 'screen' ? 'Screen Intel' : item.key === 'speaking' ? 'Speaking' : item.label
-              return (
-                <Link 
-                  key={item.key} 
-                  href={item.path}
-                  title={`${displayLabel}: ${item.isDone ? '✓ Logged' : 'Open'}`}
-                  className="block group"
-                >
-                  <div 
-                    className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative group-hover:scale-[1.03] ${
-                      item.isDone 
-                        ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.18)]' 
-                        : 'bg-white/[0.02] border-white/5 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 hover:bg-white/[0.05]'
-                    }`}
-                  >
-                    {/* Status Pip Dot */}
-                    <div 
-                      className={`absolute top-1.5 right-1.5 rounded-full ${
-                        item.isDone 
-                          ? 'w-2 h-2 bg-emerald-400 shadow-[0_0_6px_#34d399]' 
-                          : 'w-1.5 h-1.5 bg-zinc-700'
-                      }`}
-                    />
+              const displayLabel = item.key === 'work' ? 'Work Session' : item.key === 'journal' ? 'Daily Journal' : item.key === 'screen' ? 'Screen Intel' : item.key === 'speaking' ? 'Speaking Challenge' : item.label
 
-                    {/* Logo / Icon Only (Grey when not completed, Emerald when completed) */}
-                    <ItemIcon 
-                      size={22} 
-                      style={{ color: item.isDone ? '#34d399' : '#71717a' }}
-                      className="transition-transform group-hover:scale-110" 
-                    />
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setEodQuickLogModal(item.key)}
+                  className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between group relative overflow-hidden active:scale-95 ${
+                    item.isDone
+                      ? 'bg-emerald-950/30 border-emerald-500/40 text-white shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                      : 'bg-white/[0.02] border-white/10 hover:border-white/20 text-slate-300 hover:bg-white/[0.05]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${item.isDone ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-slate-400'}`}>
+                      <ItemIcon size={16} style={{ color: item.isDone ? '#34d399' : 'currentColor' }} />
+                    </div>
+                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[8px] font-bold uppercase tracking-wider ${
+                      item.isDone ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-white/5 text-slate-400'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${item.isDone ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : 'bg-slate-500'}`} />
+                      <span>{item.isDone ? 'DONE' : '+ LOG'}</span>
+                    </div>
                   </div>
-                </Link>
+
+                  <div>
+                    <div className="font-display font-bold text-xs uppercase tracking-wide truncate text-white">
+                      {displayLabel}
+                    </div>
+                    <div className="font-mono text-[9px] text-slate-400 truncate mt-0.5">
+                      {item.detail}
+                    </div>
+                  </div>
+                </button>
               )
             })}
 
-            {/* DEBRIEF BOX (EXTREME RIGHT - ICON ONLY) */}
-            <Link 
-              href="/journal?tab=weekly" 
-              title={`Debrief: ${isDebriefDoneThisWeek ? '✓ Done' : new Date().getDay() === 0 ? 'Due Today' : 'Due Sunday'}`}
-              className="block group"
+            {/* 5th Pill: Weekly Debrief */}
+            <Link
+              href="/journal?tab=weekly"
+              className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between group relative overflow-hidden active:scale-95 ${
+                isDebriefDoneThisWeek
+                  ? 'bg-emerald-950/30 border-emerald-500/40 text-white shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                  : new Date().getDay() === 0
+                  ? 'bg-amber-950/30 border-amber-500/40 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                  : 'bg-white/[0.02] border-white/10 hover:border-white/20 text-slate-300 hover:bg-white/[0.05]'
+              }`}
             >
-              <div 
-                className={`aspect-square text-center transition-all duration-200 flex flex-col justify-center items-center rounded-xl border relative group-hover:scale-[1.03] ${
-                  isDebriefDoneThisWeek
-                    ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.18)]'
-                    : new Date().getDay() === 0 
-                    ? 'bg-amber-950/25 border-amber-500/50 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.12)]' 
-                    : 'bg-white/[0.02] border-white/5 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 hover:bg-white/[0.05]'
-                }`}
-              >
-                {/* Status Pip Dot */}
-                <div 
-                  className={`absolute top-1.5 right-1.5 rounded-full ${
-                    isDebriefDoneThisWeek 
-                      ? 'w-2 h-2 bg-emerald-400 shadow-[0_0_6px_#34d399]' 
-                      : new Date().getDay() === 0 
-                      ? 'w-2 h-2 bg-amber-400 shadow-[0_0_6px_#fbbf24] animate-pulse'
-                      : 'w-1.5 h-1.5 bg-zinc-700'
-                  }`}
-                />
+              <div className="flex items-center justify-between w-full mb-2">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isDebriefDoneThisWeek ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-slate-400'}`}>
+                  {isDebriefDoneThisWeek ? <CheckCircle2 size={16} className="text-emerald-400" /> : <ClipboardList size={16} className={new Date().getDay() === 0 ? 'text-amber-400' : 'text-slate-400'} />}
+                </div>
+                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[8px] font-bold uppercase tracking-wider ${
+                  isDebriefDoneThisWeek ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : new Date().getDay() === 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-white/5 text-slate-400'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isDebriefDoneThisWeek ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : new Date().getDay() === 0 ? 'bg-amber-400 animate-pulse' : 'bg-slate-500'}`} />
+                  <span>{isDebriefDoneThisWeek ? 'DONE' : new Date().getDay() === 0 ? 'DUE TODAY' : 'DUE SUN'}</span>
+                </div>
+              </div>
 
-                {/* Logo / Icon Only */}
-                {isDebriefDoneThisWeek ? (
-                  <CheckCircle2 size={22} style={{ color: '#34d399' }} className="transition-transform group-hover:scale-110" />
-                ) : (
-                  <ClipboardList 
-                    size={22} 
-                    style={{ color: new Date().getDay() === 0 ? '#f59e0b' : '#71717a' }} 
-                    className="transition-transform group-hover:scale-110" 
-                  />
-                )}
+              <div>
+                <div className="font-display font-bold text-xs uppercase tracking-wide truncate text-white">
+                  Weekly Debrief
+                </div>
+                <div className="font-mono text-[9px] text-slate-400 truncate mt-0.5">
+                  {isDebriefDoneThisWeek ? 'Cycle completed' : new Date().getDay() === 0 ? 'Sunday debrief due' : 'Reflection cycle'}
+                </div>
               </div>
             </Link>
           </div>
@@ -1585,72 +1597,219 @@ export default function MissionControl() {
             {/* ACTIVE OBJECTIVE & COUNTDOWN */}
             {mainQuest ? (
               <div
-                className="relative overflow-hidden dashboard-card"
+                className="relative overflow-hidden dashboard-card p-5 sm:p-6"
                 style={{
-                  background: 'linear-gradient(135deg, #111111, #0a0a0a)',
-                  border: '1px solid var(--info-subtle)',
-                  borderLeft: '3px solid var(--info)',
+                  borderLeft: '4px solid var(--info)',
                 }}
               >
                 <div className="absolute top-0 right-0 pointer-events-none" style={{
-                  width: '200px', height: '200px', borderRadius: '50%',
-                  background: 'var(--info)', opacity: 0.05, filter: 'blur(50px)',
+                  width: '240px', height: '240px', borderRadius: '50%',
+                  background: 'var(--info)', opacity: 0.07, filter: 'blur(50px)',
                   transform: 'translate(30%, -30%)',
                 }} />
                 <div className="flex items-center gap-2 mb-3 relative z-10">
-                  <Target size={10} color="var(--info)" />
-                  <span className="font-mono text-[8px] uppercase tracking-widest text-info">Active Objective</span>
-                  <span className="ml-auto font-mono text-[8px] text-info animate-pulse">● EXECUTING</span>
+                  <Target size={14} color="var(--info)" />
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-info font-bold">Active Objective</span>
+                  <span className="ml-auto font-mono text-[8px] text-info animate-pulse px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30">● EXECUTING</span>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row justify-between gap-4 relative z-10">
                   <div className="flex-1">
-                    <h2 className="font-display font-bold text-primary leading-tight mb-2"
+                    <h2 className="font-display font-bold text-white leading-tight mb-2"
                       style={{ fontSize: 'clamp(1.2rem, 3vw, 1.6rem)' }}>
                       {mainQuest.title}
                     </h2>
                     {mainQuest.description && (
-                      <p className="font-mono text-[10px] text-muted mb-4 line-clamp-2">{mainQuest.description}</p>
+                      <p className="font-mono text-[10px] text-slate-400 mb-4 line-clamp-2">{mainQuest.description}</p>
                     )}
                     <TacticalProgress value={mainQuest.progress} max={100} showValue color="var(--info)" />
                   </div>
 
                   {/* OPERATION DEADLINE COUNTDOWN */}
                   {deadlineDays !== null && (
-                    <div className="shrink-0 flex flex-col items-center justify-center p-3 border border-border-color bg-bg-primary min-w-[100px] sm:min-w-[120px]">
-                      <Clock size={14} className="mb-1" style={{
+                    <div className="shrink-0 flex flex-col items-center justify-center p-3.5 rounded-2xl border border-white/10 bg-white/[0.02] min-w-[100px] sm:min-w-[120px]">
+                      <Clock size={16} className="mb-1" style={{
                         color: deadlineUrgency === 'danger' ? 'var(--danger)' : deadlineUrgency === 'warning' ? 'var(--warning)' : 'var(--info)'
                       }} />
                       <div className="font-display font-bold" style={{
                         fontSize: '2rem', lineHeight: 1,
-                        color: deadlineUrgency === 'danger' ? 'var(--danger)' : deadlineUrgency === 'warning' ? 'var(--warning)' : 'var(--text-primary)'
+                        color: deadlineUrgency === 'danger' ? 'var(--danger)' : deadlineUrgency === 'warning' ? 'var(--warning)' : '#ffffff'
                       }}>
                         {deadlineDays}
                       </div>
-                      <div className="font-mono text-[8px] text-muted uppercase mt-1">Days Left</div>
+                      <div className="font-mono text-[8px] text-slate-400 uppercase mt-1">Days Left</div>
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="dashboard-card border-dashed text-center">
-                <AlertTriangle size={20} className="text-muted mx-auto mb-2" />
-                <p className="font-mono text-[10px] text-muted mb-3">No active directives</p>
-                <Link href="/goals" className="btn btn-primary btn-sm" style={{ fontSize: '10px', padding: '4px 12px' }}>ASSIGN MISSION</Link>
+              <div className="dashboard-card border-dashed text-center p-6">
+                <AlertTriangle size={24} className="text-slate-500 mx-auto mb-2" />
+                <p className="font-mono text-[11px] text-slate-400 mb-3">No active directives</p>
+                <Link href="/goals" className="btn btn-primary btn-sm rounded-xl font-mono text-[10px] px-4 py-2">ASSIGN MISSION</Link>
               </div>
             )}
+
+            {/* ══════════════════════════════════════════════════════════════════
+                TODAY'S OPERATIONS & SCHEDULE
+            ══════════════════════════════════════════════════════════════════ */}
+            <div className="dashboard-card p-5 sm:p-6" style={{ borderLeft: '4px solid var(--accent-primary)' }}>
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon size={14} className="text-amber-400" />
+                  <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-amber-300 font-bold">
+                    Today's Operations & Schedule
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full font-mono text-[8px] font-bold uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    {todayCalendarEvents.length + todayTasksScheduled.length} {todayCalendarEvents.length + todayTasksScheduled.length === 1 ? 'Item' : 'Items'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/tasks"
+                    className="font-mono text-[9px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                  >
+                    <span>Tasks</span>
+                    <ArrowUpRight size={10} />
+                  </Link>
+                  <span className="text-slate-600 text-xs">·</span>
+                  <Link
+                    href="/calendar"
+                    className="font-mono text-[9px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                  >
+                    <span>Calendar</span>
+                    <ArrowUpRight size={10} />
+                  </Link>
+                </div>
+              </div>
+
+              {todayCalendarEvents.length === 0 && todayTasksScheduled.length === 0 ? (
+                <div className="p-5 text-center rounded-2xl bg-white/[0.02] border border-dashed border-white/10">
+                  <p className="font-mono text-[11px] text-slate-400 mb-2.5">No scheduled operations or calendar events for today.</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <Link href="/tasks" className="btn btn-secondary btn-sm font-mono text-[9px] rounded-xl">
+                      + ADD TASK
+                    </Link>
+                    <Link href="/calendar" className="btn btn-secondary btn-sm font-mono text-[9px] rounded-xl">
+                      + ADD EVENT
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {/* Calendar Events First */}
+                  {todayCalendarEvents.map((evt, idx) => (
+                    <div
+                      key={evt.id || idx}
+                      className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 transition-all hover:border-cyan-500/50"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee] shrink-0" />
+                        <div className="min-w-0">
+                          <span className="font-display font-semibold text-xs text-white truncate block">
+                            {evt.title}
+                          </span>
+                          {evt.description && (
+                            <span className="font-mono text-[9px] text-slate-400 truncate block">
+                              {evt.description}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {evt.start_time && (
+                          <span className="font-mono text-[10px] text-cyan-300 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                            {evt.start_time.includes('T') ? evt.start_time.split('T')[1].slice(0, 5) : evt.start_time}
+                          </span>
+                        )}
+                        <span className="font-mono text-[8px] font-bold text-cyan-400 uppercase tracking-wider bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                          EVENT
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Scheduled Tasks */}
+                  {todayTasksScheduled.map(task => {
+                    const isDone = task.status === 'completed'
+                    return (
+                      <div
+                        key={task.id}
+                        className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all ${
+                          isDone
+                            ? 'bg-emerald-950/20 border-emerald-500/30 text-slate-400'
+                            : 'bg-white/[0.02] border-white/10 hover:border-white/20 text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (isDone) {
+                                if (undoCompleteTask) await undoCompleteTask(task.id)
+                              } else {
+                                if (completeTask) await completeTask(task.id)
+                              }
+                              if (fetchTasks) await fetchTasks()
+                              if (profileHook?.fetchProfile) await profileHook.fetchProfile()
+                            }}
+                            className={`w-6 h-6 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+                              isDone
+                                ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.4)]'
+                                : 'border border-white/20 hover:border-emerald-400 hover:bg-emerald-500/10 text-transparent hover:text-emerald-400'
+                            }`}
+                            title={isDone ? 'Undo complete' : 'Mark complete'}
+                          >
+                            <Check size={13} strokeWidth={3} className={isDone ? 'opacity-100' : 'opacity-0 hover:opacity-100'} />
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <span className={`font-mono text-xs leading-snug break-words whitespace-normal block ${
+                              isDone ? 'line-through text-slate-500' : 'text-slate-200'
+                            }`}>
+                              {task.title}
+                            </span>
+                            {task.description && (
+                              <span className="font-mono text-[9px] text-slate-500 truncate block mt-0.5">
+                                {task.description}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {task.due_time && (
+                            <span className="font-mono text-[9px] text-slate-400">
+                              {task.due_time}
+                            </span>
+                          )}
+                          {isDone ? (
+                            <span className="font-mono text-[8px] font-bold text-emerald-300 uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40">
+                              DONE
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[8px] font-bold text-amber-300 uppercase px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40">
+                              +25 XP
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
 
 
             {/* NEXT WEEK PRIORITIES // WEEKLY DEBRIEF WIDGET */}
-            <div className="dashboard-card border-info-subtle" style={{ borderLeft: '3px solid var(--info)' }}>
-              <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="dashboard-card p-5 sm:p-6" style={{ borderLeft: '4px solid var(--info)' }}>
+              <div className="flex items-center justify-between gap-2 mb-4">
                 <div className="flex items-center gap-2">
-                  <ClipboardList size={12} color="var(--info)" />
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-info">Next Week Priorities // Weekly Debrief</span>
+                  <ClipboardList size={14} color="var(--info)" />
+                  <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-info font-bold">Next Week Priorities // Weekly Debrief</span>
                 </div>
-                <Link href="/journal" className="font-mono text-[9px] text-muted hover:text-info flex items-center gap-1">
-                  DEBRIEF <ArrowUpRight size={10} />
+                <Link href="/journal" className="font-mono text-[9px] text-slate-400 hover:text-info flex items-center gap-1 transition-colors">
+                  <span>DEBRIEF</span>
+                  <ArrowUpRight size={10} />
                 </Link>
               </div>
 
@@ -1812,18 +1971,18 @@ export default function MissionControl() {
                         }
 
                         return (
-                          <div key={gt.id} className={`flex items-start sm:items-center justify-between gap-2.5 p-2.5 rounded bg-bg-primary border transition-all w-full max-w-full overflow-hidden ${
-                            isDone ? 'border-success/40 bg-success/5' : isFailed ? 'border-danger/40 bg-danger/5' : 'border-border-color'
+                          <div key={gt.id} className={`flex items-start sm:items-center justify-between gap-3 p-3 rounded-2xl border transition-all w-full max-w-full overflow-hidden ${
+                            isDone ? 'border-emerald-500/30 bg-emerald-950/20' : isFailed ? 'border-rose-500/30 bg-rose-950/20' : 'border-white/10 bg-white/[0.02] hover:border-white/20'
                           }`}>
-                            <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0">
+                            <div className="flex items-start sm:items-center gap-2.5 flex-1 min-w-0">
                               {/* Action Buttons */}
-                              <div className="flex items-center gap-1 shrink-0 mt-0.5 sm:mt-0">
+                              <div className="flex items-center gap-1.5 shrink-0 mt-0.5 sm:mt-0">
                                 {isDone || isFailed ? (
                                   <button
                                     type="button"
                                     onClick={handleReopen}
                                     title="Re-open Priority Goal"
-                                    className="w-6 h-6 rounded flex items-center justify-center border border-border-color hover:border-info text-info bg-bg-tertiary transition-all shrink-0"
+                                    className="w-7 h-7 rounded-xl flex items-center justify-center border border-white/10 hover:border-cyan-400 text-cyan-400 bg-white/5 transition-all shrink-0 active:scale-95"
                                   >
                                     <RotateCcw size={12} />
                                   </button>
@@ -1833,17 +1992,17 @@ export default function MissionControl() {
                                       type="button"
                                       onClick={handleMarkDone}
                                       title="Mark Completed (+25 XP)"
-                                      className="w-6 h-6 rounded flex items-center justify-center border border-success/60 hover:bg-success text-success hover:text-bg-primary transition-all shrink-0"
+                                      className="w-7 h-7 rounded-xl flex items-center justify-center border border-emerald-500/40 hover:bg-emerald-500 text-emerald-400 hover:text-black transition-all shrink-0 active:scale-95"
                                     >
-                                      <Check size={13} strokeWidth={2.5} />
+                                      <Check size={14} strokeWidth={2.5} />
                                     </button>
                                     <button
                                       type="button"
                                       onClick={handleMarkFailed}
                                       title="Mark Failed (-25 XP)"
-                                      className="w-6 h-6 rounded flex items-center justify-center border border-danger/60 hover:bg-danger text-danger hover:text-white transition-all shrink-0"
+                                      className="w-7 h-7 rounded-xl flex items-center justify-center border border-rose-500/40 hover:bg-rose-500 text-rose-400 hover:text-white transition-all shrink-0 active:scale-95"
                                     >
-                                      <X size={13} strokeWidth={2.5} />
+                                      <X size={14} strokeWidth={2.5} />
                                     </button>
                                   </>
                                 )}
@@ -1852,20 +2011,20 @@ export default function MissionControl() {
                                 isLongTitle ? 'text-[11px]' : 'text-xs'
                               } ${
                                 isDone 
-                                  ? 'text-success line-through decoration-success font-medium opacity-90' 
+                                  ? 'text-emerald-400/80 line-through decoration-emerald-500 font-medium' 
                                   : isFailed 
-                                  ? 'text-danger line-through decoration-danger font-medium opacity-90' 
-                                  : 'text-primary font-medium'
+                                  ? 'text-rose-400/80 line-through decoration-rose-500 font-medium' 
+                                  : 'text-slate-200 font-medium'
                               }`}>
                                 {goalTitleText}
                               </span>
                             </div>
                             {isDone ? (
-                              <span className="font-mono text-[9px] text-success font-bold shrink-0 px-1.5 py-0.5 rounded bg-success/10 border border-success/30 whitespace-nowrap self-center">DONE (+25 XP)</span>
+                              <span className="font-mono text-[8px] font-bold text-emerald-300 uppercase shrink-0 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 whitespace-nowrap self-center">DONE (+25 XP)</span>
                             ) : isFailed ? (
-                              <span className="font-mono text-[9px] text-danger font-bold shrink-0 px-1.5 py-0.5 rounded bg-danger/10 border border-danger/30 whitespace-nowrap self-center">FAILED (-25 XP)</span>
+                              <span className="font-mono text-[8px] font-bold text-rose-300 uppercase shrink-0 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 whitespace-nowrap self-center">FAILED (-25 XP)</span>
                             ) : (
-                              <span className="font-mono text-[9px] text-amber shrink-0 font-semibold whitespace-nowrap self-center">+25 XP</span>
+                              <span className="font-mono text-[8px] font-bold text-amber-300 uppercase shrink-0 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 whitespace-nowrap self-center">+25 XP</span>
                             )}
                           </div>
                         )
@@ -1874,9 +2033,9 @@ export default function MissionControl() {
                   )
                 })()
               ) : (
-                <div className="p-4 text-center rounded-sm bg-bg-primary border border-dashed border-border-color">
-                  <p className="font-mono text-[10px] text-muted mb-2">No priorities logged for this cycle.</p>
-                  <Link href="/journal" className="btn btn-secondary btn-sm font-mono text-[9px]">
+                <div className="p-5 text-center rounded-2xl bg-white/[0.02] border border-dashed border-white/10">
+                  <p className="font-mono text-[11px] text-slate-400 mb-2.5">No priorities logged for this cycle.</p>
+                  <Link href="/journal" className="btn btn-secondary btn-sm font-mono text-[9px] rounded-xl">
                     INITIALIZE WEEKLY DEBRIEF
                   </Link>
                 </div>
@@ -1884,17 +2043,20 @@ export default function MissionControl() {
             </div>
 
             {/* 30-DAY XP TRAJECTORY GRAPH */}
-            <div className="dashboard-card" style={{ paddingBottom: '8px' }}>
-              <div className="flex items-center gap-2 mb-3">
-                <BarChart2 size={10} color={arcColor} />
-                <span className="font-mono text-[8px] uppercase tracking-widest text-muted">30-Day Project Trajectory (XP)</span>
+            <div className="dashboard-card p-5 sm:p-6" style={{ borderLeft: `4px solid ${arcColor}` }}>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <BarChart2 size={14} style={{ color: arcColor }} />
+                  <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-300 font-bold">30-Day Project Trajectory (XP)</span>
+                </div>
+                <span className="font-mono text-[8px] text-slate-500 uppercase">XP Velocity</span>
               </div>
               <div style={{ width: '100%', height: '140px' }}>
                 <ResponsiveContainer>
                   <AreaChart data={xpTrajectory} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorXp" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={arcColor} stopOpacity={0.3}/>
+                        <stop offset="5%" stopColor={arcColor} stopOpacity={0.35}/>
                         <stop offset="95%" stopColor={arcColor} stopOpacity={0}/>
                       </linearGradient>
                     </defs>
@@ -1906,12 +2068,12 @@ export default function MissionControl() {
             </div>
 
             {/* DAILY CLASSIFIED BRIEFING */}
-            <div className="dashboard-card">
-              <div className="flex items-center gap-2 mb-2">
-                <Terminal size={10} color="var(--text-muted)" />
-                <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Daily Briefing // Intelligence</span>
+            <div className="dashboard-card p-5 sm:p-6 relative overflow-hidden" style={{ borderLeft: '4px solid rgba(168, 85, 247, 0.6)' }}>
+              <div className="flex items-center gap-2 mb-2.5">
+                <Sparkles size={14} className="text-purple-400" />
+                <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-purple-300 font-bold">Daily Briefing // Mindset</span>
               </div>
-              <p className="font-display text-primary" style={{ fontSize: '1.2rem', lineHeight: 1.3 }}>
+              <p className="font-display text-white text-base sm:text-lg leading-snug italic font-medium">
                 "{briefing}"
               </p>
             </div>
@@ -1921,42 +2083,106 @@ export default function MissionControl() {
           {/* RIGHT SIDEBAR (4 cols) */}
           <div className="col-4 flex flex-col gap-3 lg:gap-4">
 
-            {/* MOMENTUM & STREAK */}
-            <div 
-              className="dashboard-card cursor-pointer hover:border-primary transition-colors" 
-              onClick={() => setMomentumExpanded(!momentumExpanded)}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-1.5">
-                  <Activity size={10} color={momentumColor} />
-                  <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Momentum Engine</span>
+            {/* OPAL CIRCULAR MOMENTUM FOCUS RING */}
+            <div className="dashboard-card relative overflow-hidden flex flex-col items-center text-center p-5 sm:p-6" style={{ borderTop: `1px solid ${momentumColor}30` }}>
+              {/* Luminous atmospheric aura glow behind ring */}
+              <div 
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full pointer-events-none filter blur-3xl opacity-20 transition-all duration-700"
+                style={{ background: momentumColor }}
+              />
+
+              <div className="flex items-center justify-between w-full mb-3 relative z-10">
+                <div className="flex items-center gap-2">
+                  <Activity size={14} style={{ color: momentumColor }} />
+                  <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-300 font-bold">
+                    Momentum Focus
+                  </span>
                 </div>
-                <span className="font-mono text-[8px] font-bold" style={{ color: momentumColor }}>
+                <span 
+                  className="px-2.5 py-0.5 rounded-full font-mono text-[8px] font-black uppercase tracking-wider border shadow-sm"
+                  style={{
+                    color: momentumColor,
+                    borderColor: `${momentumColor}40`,
+                    background: `${momentumColor}15`
+                  }}
+                >
                   {dailyMomentum?.state || momentumText}
                 </span>
               </div>
-              
-              <div className="flex items-end justify-between mb-4">
-                <div>
-                  <div className="font-display font-bold tracking-tighter" style={{ fontSize: '2.8rem', color: momentumColor, lineHeight: 1 }}>
+
+              {/* Signature Opal SVG Circular Gauge */}
+              <div className="relative w-44 h-44 flex items-center justify-center my-1">
+                <svg className="w-full h-full transform -rotate-90">
+                  {/* Background Track Ring */}
+                  <circle
+                    cx="88"
+                    cy="88"
+                    r="68"
+                    fill="none"
+                    stroke="rgba(255, 255, 255, 0.06)"
+                    strokeWidth="9"
+                    strokeLinecap="round"
+                  />
+                  {/* Glowing Active Arc */}
+                  <circle
+                    cx="88"
+                    cy="88"
+                    r="68"
+                    fill="none"
+                    stroke={momentumColor}
+                    strokeWidth="9"
+                    strokeDasharray={2 * Math.PI * 68}
+                    strokeDashoffset={2 * Math.PI * 68 * (1 - Math.max(0.06, Math.min(1, ((momentumScore + 10) / 20))))}
+                    strokeLinecap="round"
+                    style={{
+                      transition: 'stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                      filter: `drop-shadow(0 0 8px ${momentumColor}80)`
+                    }}
+                  />
+                </svg>
+
+                {/* Ring Center Metrics */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-slate-400 font-semibold mb-0.5">
+                    Momentum
+                  </span>
+                  <div 
+                    className="font-display font-black tracking-tight leading-none"
+                    style={{ fontSize: '2.5rem', color: momentumColor }}
+                  >
                     {momentumScore > 0 ? '+' : ''}{momentumScore}
                   </div>
-                  <div className="font-mono text-[8px] text-muted uppercase">-10 to +10</div>
-                </div>
-                
-                <div className="text-right">
-                  <div className="flex items-center justify-end gap-1 mb-1.5">
-                    <Flame size={10} color={flameColor} />
-                    <span className="font-mono font-bold text-primary" style={{ fontSize: '1rem' }}>{currentStreak} <span className="text-[8px] text-muted font-normal">days</span></span>
-                  </div>
-                  <div className="font-mono font-bold text-primary" style={{ fontSize: '1rem' }}>{weeklyWinRate}% <span className="text-[8px] text-muted font-normal">win rate</span></div>
+                  <span className="font-mono text-[8px] text-slate-500 uppercase mt-1">
+                    -10 to +10 range
+                  </span>
                 </div>
               </div>
 
-              {/* Score bar */}
-              <div style={{ height: '2px', background: 'var(--bg-primary)', overflow: 'hidden', position: 'relative' }}>
-                <div style={{ height: '100%', width: `${((momentumScore + 10) / 20) * 100}%`, background: momentumColor, transition: 'width 1s ease' }} />
+              {/* Status Pills: Streak & Win Rate */}
+              <div className="grid grid-cols-2 gap-2 w-full mt-3.5 relative z-10">
+                <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-2xl bg-white/[0.03] border border-white/10">
+                  <Flame size={14} color={flameColor} className="animate-pulse" />
+                  <span className="font-mono font-bold text-white text-xs">
+                    {currentStreak} <span className="text-[9px] text-slate-400 font-normal">days streak</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-2xl bg-white/[0.03] border border-white/10">
+                  <Zap size={13} className="text-cyan-400" />
+                  <span className="font-mono font-bold text-white text-xs">
+                    {weeklyWinRate}% <span className="text-[9px] text-slate-400 font-normal">win rate</span>
+                  </span>
+                </div>
               </div>
+
+              {/* Interactive Breakdown Accordion Toggle */}
+              <button
+                type="button"
+                onClick={() => setMomentumExpanded(!momentumExpanded)}
+                className="w-full mt-3 py-2 px-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/10 flex items-center justify-between text-slate-400 hover:text-white transition-all text-[9px] font-mono uppercase tracking-wider active:scale-95"
+              >
+                <span>{momentumExpanded ? 'Hide Factors' : 'View Breakdown Factors'}</span>
+                <ChevronDown size={12} className={`transition-transform duration-300 ${momentumExpanded ? 'rotate-180' : ''}`} />
+              </button>
 
               {/* Momentum Breakdown */}
               <AnimatePresence>
@@ -1965,34 +2191,45 @@ export default function MissionControl() {
                     initial={{ opacity: 0, height: 0 }} 
                     animate={{ opacity: 1, height: 'auto' }} 
                     exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 pt-4 overflow-hidden"
-                    style={{ borderTop: '1px solid var(--border-color)' }}
+                    className="w-full mt-3 pt-3 overflow-hidden border-t border-white/10"
                   >
-                    <div className="flex flex-col gap-2 font-mono text-[9px] text-muted tracking-widest">
-                      <div className="flex justify-between">
-                        <span>HABITS TODAY ({habitsCompletedToday}/{habitsCompletedToday + habitsFailedToday})</span> 
-                        <span className="font-bold" style={{ color: habitComponent > 0 ? 'var(--success)' : habitComponent < 0 ? 'var(--danger)' : 'inherit' }}>{habitComponent > 0 ? '+' : ''}{habitComponent.toFixed(1)}</span>
+                    <div className="flex flex-col gap-2 font-mono text-[9px] text-slate-400 tracking-wider">
+                      <div className="flex justify-between items-center py-1 border-b border-white/5">
+                        <span>Habits Today ({habitsCompletedToday}/{habitsCompletedToday + habitsFailedToday})</span> 
+                        <span className="font-bold" style={{ color: habitComponent > 0 ? '#34d399' : habitComponent < 0 ? '#f87171' : 'inherit' }}>
+                          {habitComponent > 0 ? '+' : ''}{habitComponent.toFixed(1)}
+                        </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>OPERATIONS ({tasksCompletedToday} done / {tasksOverdue} overdue)</span> 
-                        <span className="font-bold" style={{ color: opsComponent > 0 ? 'var(--success)' : opsComponent < 0 ? 'var(--danger)' : 'inherit' }}>{opsComponent > 0 ? '+' : ''}{opsComponent.toFixed(1)}</span>
+                      <div className="flex justify-between items-center py-1 border-b border-white/5">
+                        <span>Operations ({tasksCompletedToday} done / {tasksOverdue} overdue)</span> 
+                        <span className="font-bold" style={{ color: opsComponent > 0 ? '#34d399' : opsComponent < 0 ? '#f87171' : 'inherit' }}>
+                          {opsComponent > 0 ? '+' : ''}{opsComponent.toFixed(1)}
+                        </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>MISSIONS ({missionsCompleted} done / {missionsStalled} stalled)</span> 
-                        <span className="font-bold" style={{ color: missionsComponent > 0 ? 'var(--success)' : missionsComponent < 0 ? 'var(--danger)' : 'inherit' }}>{missionsComponent > 0 ? '+' : ''}{missionsComponent.toFixed(1)}</span>
+                      <div className="flex justify-between items-center py-1 border-b border-white/5">
+                        <span>Missions ({missionsCompleted} done / {missionsStalled} stalled)</span> 
+                        <span className="font-bold" style={{ color: missionsComponent > 0 ? '#34d399' : missionsComponent < 0 ? '#f87171' : 'inherit' }}>
+                          {missionsComponent > 0 ? '+' : ''}{missionsComponent.toFixed(1)}
+                        </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>STREAK INERTIA ({currentStreak}d)</span> 
-                        <span className="font-bold" style={{ color: streakComponent > 0 ? 'var(--success)' : 'inherit' }}>{streakComponent > 0 ? '+' : ''}{streakComponent.toFixed(1)}</span>
+                      <div className="flex justify-between items-center py-1 border-b border-white/5">
+                        <span>Streak Inertia ({currentStreak}d)</span> 
+                        <span className="font-bold" style={{ color: streakComponent > 0 ? '#34d399' : 'inherit' }}>
+                          {streakComponent > 0 ? '+' : ''}{streakComponent.toFixed(1)}
+                        </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>WEEKLY WIN RATE ({weeklyWinRate}%)</span> 
-                        <span className="font-bold" style={{ color: winRateComponent > 0 ? 'var(--success)' : winRateComponent < 0 ? 'var(--danger)' : 'inherit' }}>{winRateComponent > 0 ? '+' : ''}{winRateComponent.toFixed(1)}</span>
+                      <div className="flex justify-between items-center py-1 border-b border-white/5">
+                        <span>Weekly Win Rate ({weeklyWinRate}%)</span> 
+                        <span className="font-bold" style={{ color: winRateComponent > 0 ? '#34d399' : winRateComponent < 0 ? '#f87171' : 'inherit' }}>
+                          {winRateComponent > 0 ? '+' : ''}{winRateComponent.toFixed(1)}
+                        </span>
                       </div>
                       {todayScreenTime && (
-                        <div className="flex justify-between">
-                          <span>SCREEN INTEL ({todayScreenTime.total_hours}h / {todayScreenTime.doom_scroll_minutes || 0}m doom)</span> 
-                          <span className="font-bold" style={{ color: screenComponent > 0 ? 'var(--success)' : screenComponent < 0 ? 'var(--danger)' : 'inherit' }}>{screenComponent > 0 ? '+' : ''}{screenComponent.toFixed(1)}</span>
+                        <div className="flex justify-between items-center py-1">
+                          <span>Screen Intel ({todayScreenTime.total_hours}h / {todayScreenTime.doom_scroll_minutes || 0}m doom)</span> 
+                          <span className="font-bold" style={{ color: screenComponent > 0 ? '#34d399' : screenComponent < 0 ? '#f87171' : 'inherit' }}>
+                            {screenComponent > 0 ? '+' : ''}{screenComponent.toFixed(1)}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -2001,30 +2238,33 @@ export default function MissionControl() {
               </AnimatePresence>
             </div>
 
-            {/* XP STAT CARD */}
-            <div className="dashboard-card" style={{ borderLeft: `3px solid ${arcColor}`, borderTop: `1px solid ${arcColor}20`, borderRight: `1px solid ${arcColor}20`, borderBottom: `1px solid ${arcColor}20` }}>
-              <div className="flex items-center gap-1.5 mb-3">
-                <Zap size={10} style={{ color: arcColor }} />
-                <span className="font-mono text-[8px] uppercase tracking-widest text-muted">XP Matrix</span>
+            {/* XP STAT MATRIX */}
+            <div className="dashboard-card p-5 sm:p-6" style={{ borderLeft: `4px solid ${arcColor}` }}>
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-2">
+                  <Zap size={14} style={{ color: arcColor }} />
+                  <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-300 font-bold">XP Matrix</span>
+                </div>
+                <span className="font-mono text-[8px] text-slate-500 uppercase font-semibold">LV.{currentLevel} DYNAMICS</span>
               </div>
-              <div className="grid grid-cols-3 gap-y-3 gap-x-2">
-                <div>
-                  <div className="font-display font-bold tracking-tighter leading-none text-info" style={{ fontSize: '1.4rem' }}>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <div className="font-display font-black tracking-tight leading-none text-cyan-400 text-lg sm:text-xl">
                     {xpNeeded >= 1000 ? `${(xpNeeded / 1000).toFixed(1)}k` : xpNeeded}
                   </div>
-                  <div className="font-mono text-[8px] text-muted uppercase mt-1">TO LV.{currentLevel + 1}</div>
+                  <div className="font-mono text-[8px] text-slate-400 uppercase mt-1.5">TO LV.{currentLevel + 1}</div>
                 </div>
-                <div>
-                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: (dailyMomentum?.todayNet ?? xpToday) > 0 ? 'var(--success)' : (dailyMomentum?.todayNet ?? xpToday) < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <div className="font-display font-black tracking-tight leading-none text-lg sm:text-xl" style={{ color: (dailyMomentum?.todayNet ?? xpToday) > 0 ? '#34d399' : (dailyMomentum?.todayNet ?? xpToday) < 0 ? '#f87171' : '#94a3b8' }}>
                     {dailyMomentum?.todayNet >= 0 ? '+' : ''}{dailyMomentum?.todayNet ?? xpToday}
                   </div>
-                  <div className="font-mono text-[8px] text-muted uppercase mt-1">TODAY</div>
+                  <div className="font-mono text-[8px] text-slate-400 uppercase mt-1.5">TODAY</div>
                 </div>
-                <div>
-                  <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.4rem', color: (dailyMomentum?.threeDayNet ?? xpThisWeek) > 0 ? 'var(--success)' : (dailyMomentum?.threeDayNet ?? xpThisWeek) < 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <div className="font-display font-black tracking-tight leading-none text-lg sm:text-xl" style={{ color: (dailyMomentum?.threeDayNet ?? xpThisWeek) > 0 ? '#34d399' : (dailyMomentum?.threeDayNet ?? xpThisWeek) < 0 ? '#f87171' : '#94a3b8' }}>
                     {dailyMomentum?.threeDayNet >= 0 ? '+' : ''}{dailyMomentum?.threeDayNet ?? xpThisWeek}
                   </div>
-                  <div className="font-mono text-[8px] text-muted uppercase mt-1">3-DAY NET</div>
+                  <div className="font-mono text-[8px] text-slate-400 uppercase mt-1.5">3-DAY NET</div>
                 </div>
               </div>
             </div>
@@ -2032,50 +2272,58 @@ export default function MissionControl() {
             {/* ── DIGITAL ADDICTION WIDGET ── */}
             {addictionData !== null && (
               <div
-                className="dashboard-card cursor-pointer transition-colors hover:border-primary"
-                style={{ borderLeft: `3px solid ${addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)'}` }}
+                className="dashboard-card p-5 sm:p-6 cursor-pointer transition-all hover:border-white/20"
+                style={{ borderLeft: `4px solid ${addictionData.addScore >= 55 ? '#ef4444' : addictionData.addScore >= 30 ? '#f59e0b' : '#10b981'}` }}
                 onClick={() => setExpandedWidget(expandedWidget === 'addiction' ? null : 'addiction')}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-1.5">
-                    <Smartphone size={10} style={{ color: addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)' }} />
-                    <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Digital Addiction</span>
+                <div className="flex items-center justify-between mb-3.5">
+                  <div className="flex items-center gap-2">
+                    <Smartphone size={14} style={{ color: addictionData.addScore >= 55 ? '#ef4444' : addictionData.addScore >= 30 ? '#f59e0b' : '#10b981' }} />
+                    <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-300 font-bold">Digital Discipline</span>
                   </div>
-                  <span className="font-mono text-[8px] font-bold" style={{ color: addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)' }}>
+                  <span className="font-mono text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider" style={{
+                    color: addictionData.addScore >= 55 ? '#ef4444' : addictionData.addScore >= 30 ? '#f59e0b' : '#10b981',
+                    background: addictionData.addScore >= 55 ? 'rgba(239,68,68,0.15)' : addictionData.addScore >= 30 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)',
+                    border: `1px solid ${addictionData.addScore >= 55 ? 'rgba(239,68,68,0.3)' : addictionData.addScore >= 30 ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}`
+                  }}>
                     {addictionData.addScore >= 55 ? '⚠ HOOKED' : addictionData.addScore >= 30 ? 'DRIFTING' : '✓ CLEAN'}
                   </span>
                 </div>
 
-                <div className="flex items-end justify-between mb-3">
+                <div className="flex items-end justify-between mb-3.5">
                   <div>
-                    <div className="font-display font-bold tracking-tighter leading-none" style={{ fontSize: '1.8rem', color: addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)' }}>
+                    <div className="font-display font-bold tracking-tight leading-none text-2xl sm:text-3xl" style={{ color: addictionData.addScore >= 55 ? '#ef4444' : addictionData.addScore >= 30 ? '#f59e0b' : '#10b981' }}>
                       {addictionData.addScore}
-                      <span className="font-mono text-[9px] text-muted ml-1">/ 100</span>
+                      <span className="font-mono text-[10px] text-slate-500 ml-1">/ 100</span>
                     </div>
-                    <div className="font-mono text-[8px] text-muted uppercase mt-1">Addiction Score</div>
+                    <div className="font-mono text-[8px] text-slate-400 uppercase mt-1">Discipline Index</div>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono text-[10px] font-bold text-primary">{addictionData.avgScreen}h <span className="text-muted font-normal">avg/day</span></div>
-                    <div className="font-mono text-[8px] text-muted mt-0.5">{addictionData.daysClean}d clean (7d)</div>
+                    <div className="font-mono text-[11px] font-bold text-white">{addictionData.avgScreen}h <span className="text-slate-400 font-normal">avg/day</span></div>
+                    <div className="font-mono text-[8px] text-slate-400 mt-0.5">{addictionData.daysClean}d clean (7d)</div>
                   </div>
                 </div>
 
                 {/* Addiction bar */}
-                <div style={{ height: '3px', background: 'var(--bg-primary)', overflow: 'hidden', marginBottom: '8px' }}>
+                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-3">
                   <motion.div
-                    style={{ height: '100%', background: addictionData.addScore >= 55 ? 'var(--danger)' : addictionData.addScore >= 30 ? 'var(--warning)' : 'var(--success)' }}
+                    className="h-full rounded-full"
+                    style={{ background: addictionData.addScore >= 55 ? '#ef4444' : addictionData.addScore >= 30 ? '#f59e0b' : '#10b981' }}
                     initial={{ width: 0 }} animate={{ width: `${addictionData.addScore}%` }} transition={{ duration: 1, ease: 'easeOut' }}
                   />
                 </div>
 
                 {/* Doomscroll meter */}
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[8px] text-muted">Doomscroll 7d avg:</span>
-                  <span className="font-mono text-[9px] font-bold" style={{ color: addictionData.avgDoom > 60 ? 'var(--danger)' : addictionData.avgDoom > 30 ? 'var(--warning)' : 'var(--success)' }}>
+                  <span className="font-mono text-[9px] text-slate-400">Doomscroll 7d:</span>
+                  <span className="font-mono text-[10px] font-bold" style={{ color: addictionData.avgDoom > 60 ? '#ef4444' : addictionData.avgDoom > 30 ? '#f59e0b' : '#10b981' }}>
                     {addictionData.avgDoom}m
                   </span>
                   {addictionData.todaySt && (
-                    <span className="ml-auto font-mono text-[8px] px-1.5 py-0.5" style={{ background: (parseFloat(addictionData.todaySt.total_hours) || 0) <= 4 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: (parseFloat(addictionData.todaySt.total_hours) || 0) <= 4 ? 'var(--success)' : 'var(--danger)' }}>
+                    <span className="ml-auto font-mono text-[8px] px-2 py-0.5 rounded-full" style={{
+                      background: (parseFloat(addictionData.todaySt.total_hours) || 0) <= 4 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                      color: (parseFloat(addictionData.todaySt.total_hours) || 0) <= 4 ? '#34d399' : '#f87171'
+                    }}>
                       Today: {addictionData.todaySt.total_hours || '?'}h
                     </span>
                   )}
@@ -2084,9 +2332,9 @@ export default function MissionControl() {
                 <AnimatePresence>
                   {expandedWidget === 'addiction' && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden mt-3 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-                      <div className="flex flex-col gap-1.5 font-mono text-[9px]">
-                        <div className="text-muted uppercase tracking-widest mb-1">INTEL BREAKDOWN</div>
+                      className="overflow-hidden mt-3.5 pt-3.5 border-t border-white/10">
+                      <div className="flex flex-col gap-2 font-mono text-[9px]">
+                        <div className="text-slate-400 uppercase tracking-widest mb-0.5">INTEL BREAKDOWN</div>
                         {[
                           { label: `7-day avg screen time: ${addictionData.avgScreen}h (target ≤4h)`, ok: parseFloat(addictionData.avgScreen) <= 4 },
                           { label: `7-day avg doomscroll: ${addictionData.avgDoom}m (target ≤30m)`, ok: addictionData.avgDoom <= 30 },
@@ -2095,12 +2343,12 @@ export default function MissionControl() {
                           { label: `Streaming avg: ${addictionData.avgStreaming || '0'}h (target ≤2h)`, ok: parseFloat(addictionData.avgStreaming || 0) <= 2 },
                         ].map((f, i) => (
                           <div key={i} className="flex items-center gap-2">
-                            <span style={{ color: f.ok ? 'var(--success)' : 'var(--danger)' }}>{f.ok ? '✓' : '✗'}</span>
-                            <span className="text-secondary">{f.label}</span>
+                            <span style={{ color: f.ok ? '#34d399' : '#f87171' }}>{f.ok ? '✓' : '✗'}</span>
+                            <span className="text-slate-300">{f.label}</span>
                           </div>
                         ))}
-                        <div className="mt-2 pt-2" style={{ borderTop: '1px dashed var(--border-color)' }}>
-                          <div className="text-muted">Today's directive: ≤4h screen · ≤30m doom · ≤2h streaming</div>
+                        <div className="mt-2 pt-2 border-t border-dashed border-white/10">
+                          <div className="text-slate-500">Today's directive: ≤4h screen · ≤30m doom · ≤2h streaming</div>
                         </div>
                       </div>
                     </motion.div>
@@ -2110,16 +2358,25 @@ export default function MissionControl() {
             )}
 
             {/* DAY PRESSURE CLOCK */}
-            <div className="dashboard-card">
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="font-mono text-[8px] uppercase tracking-widest text-muted">Time Remaining</span>
+            <div className="dashboard-card p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-slate-400" />
+                  <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-300 font-bold">Time Remaining</span>
+                </div>
+                <span className="font-mono text-[8px] font-bold px-2 py-0.5 rounded-full" style={{
+                  color: dayUrgency === 'danger' ? '#f87171' : dayUrgency === 'warning' ? '#fbbf24' : '#94a3b8',
+                  background: dayUrgency === 'danger' ? 'rgba(239,68,68,0.15)' : dayUrgency === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)'
+                }}>
+                  {dayUrgency === 'danger' ? '⚠ EXECUTE NOW' : dayUrgency === 'warning' ? 'WINDOW CLOSING' : 'TIME ON SIDE'}
+                </span>
               </div>
               <div className="flex items-center gap-4">
-                <div className="relative shrink-0" style={{ width: '48px', height: '48px' }}>
-                  <svg width="48" height="48" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="24" cy="24" r="20" fill="none" stroke="var(--bg-primary)" strokeWidth="4" />
+                <div className="relative shrink-0 w-12 h-12">
+                  <svg className="w-12 h-12 transform -rotate-90">
+                    <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
                     <circle cx="24" cy="24" r="20" fill="none"
-                      stroke={dayUrgency === 'danger' ? 'var(--danger)' : dayUrgency === 'warning' ? 'var(--warning)' : arcColor}
+                      stroke={dayUrgency === 'danger' ? '#ef4444' : dayUrgency === 'warning' ? '#f59e0b' : arcColor}
                       strokeWidth="4"
                       strokeDasharray={`${2 * Math.PI * 20}`}
                       strokeDashoffset={`${2 * Math.PI * 20 * (1 - dayPct / 100)}`}
@@ -2127,17 +2384,15 @@ export default function MissionControl() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="font-mono font-bold text-primary" style={{ fontSize: '8px' }}>{dayPct}%</span>
+                    <span className="font-mono font-bold text-white text-[9px]">{dayPct}%</span>
                   </div>
                 </div>
                 <div>
-                  <div className="font-display font-bold text-primary" style={{ fontSize: '1.4rem', lineHeight: 1 }}>
-                    {hoursLeft}<span className="font-mono text-xs text-muted">h</span>
+                  <div className="font-display font-black text-white text-2xl leading-none">
+                    {hoursLeft}<span className="font-mono text-xs text-slate-400 font-normal">h left today</span>
                   </div>
-                  <div className="font-mono text-[8px] mt-1.5" style={{
-                    color: dayUrgency === 'danger' ? 'var(--danger)' : dayUrgency === 'warning' ? 'var(--warning)' : 'var(--text-muted)'
-                  }}>
-                    {dayUrgency === 'danger' ? '⚠ EXECUTE NOW' : dayUrgency === 'warning' ? 'WINDOW CLOSING' : 'TIME ON SIDE'}
+                  <div className="font-mono text-[9px] text-slate-400 mt-1">
+                    Day cycle resets at midnight
                   </div>
                 </div>
               </div>
@@ -2161,13 +2416,13 @@ export default function MissionControl() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-md p-5 bg-bg-secondary border border-border-color rounded-xl shadow-2xl relative m-4"
+              className="w-full max-w-md p-6 bg-[#0a0d18]/95 border border-white/10 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.8)] backdrop-blur-3xl relative m-4"
             >
               <button 
                 onClick={() => setEodQuickLogModal(null)}
-                className="absolute top-4 right-4 text-muted hover:text-primary"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all absolute top-4 right-4"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
 
               {/* SCREEN INTEL QUICK LOG */}

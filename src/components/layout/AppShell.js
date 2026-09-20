@@ -102,33 +102,56 @@ export default function AppShell({ children }) {
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 flex-col px-6 overflow-y-auto"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            className="fixed inset-0 flex flex-col px-5 overflow-y-auto"
             style={{ 
               zIndex: 1100,
-              display: 'flex',
-              background: 'rgba(4, 5, 7, 0.98)', 
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              paddingTop: 'max(48px, env(safe-area-inset-top))',
+              background: 'rgba(5, 7, 15, 0.96)', 
+              backdropFilter: 'blur(36px)',
+              WebkitBackdropFilter: 'blur(36px)',
+              paddingTop: 'max(36px, env(safe-area-inset-top))',
               paddingBottom: 'calc(100px + env(safe-area-inset-bottom))' 
             }}
             onClick={(e) => { if(e.target === e.currentTarget) setMobileMenuOpen(false) }}
           >
-            <div className="flex-col gap-6 mt-4 mb-auto max-w-md mx-auto w-full">
-              <div className="font-display text-4xl tracking-widest uppercase text-primary mb-2 opacity-50">Systems</div>
-              <nav className="flex-col gap-3">
+            <div className="flex flex-col gap-5 mt-2 mb-auto max-w-md mx-auto w-full">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                <div>
+                  <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-indigo-400 font-bold block">
+                    NAVIGATION SYSTEM
+                  </span>
+                  <div className="font-display font-black text-2xl tracking-wider uppercase text-white">
+                    CHIRAG OS
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 active:scale-95"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <nav className="grid grid-cols-2 gap-2.5">
                 {NAV_ITEMS.map((item) => {
                   const isActive = pathname === item.href
                   const Icon = item.icon
                   return (
                     <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                      <div className={`flex items-center gap-4 p-4 rounded-xl transition-transform active:scale-95 ${isActive ? 'bg-amber text-bg-primary shadow-lg shadow-amber/20' : 'bg-tertiary text-primary border border-border-color'}`}>
-                        <Icon size={24} strokeWidth={isActive ? 2 : 1.5} />
-                        <span className="font-display text-xl uppercase tracking-wider">{item.label}</span>
+                      <div className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all active:scale-95 ${
+                        isActive 
+                          ? 'bg-gradient-to-br from-indigo-500/25 to-purple-600/20 text-white border-indigo-400/50 shadow-lg shadow-indigo-500/20' 
+                          : 'bg-white/[0.03] text-slate-300 border-white/[0.06] hover:bg-white/[0.06]'
+                      }`}>
+                        <div className={`p-1.5 rounded-xl ${isActive ? 'bg-indigo-500 text-white' : 'bg-white/5 text-slate-400'}`}>
+                          <Icon size={18} strokeWidth={isActive ? 2.2 : 1.6} />
+                        </div>
+                        <span className="font-display font-bold text-xs uppercase tracking-wider truncate">
+                          {item.label}
+                        </span>
                       </div>
                     </Link>
                   )
@@ -136,51 +159,41 @@ export default function AppShell({ children }) {
               </nav>
             </div>
             
-            <div className="mt-8 max-w-md mx-auto w-full flex flex-col gap-3">
-              <button 
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-3 p-4 bg-tertiary border border-border-color rounded-xl text-primary active:scale-95 transition-transform"
-              >
-                <X size={20} />
-                <span className="font-display tracking-wider uppercase text-sm">Close Menu</span>
-              </button>
-
-              <button 
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.location.reload();
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-3 p-4 bg-tertiary border border-border-color rounded-xl text-primary active:scale-95 transition-transform"
-              >
-                <RefreshCw size={20} />
-                <span className="font-display tracking-wider uppercase text-sm">Force Sync / Reload</span>
-              </button>
-
-              <button 
-                onClick={() => {
-                  if (confirm('Are you sure you want to sign out?')) {
-                    auth.signOut()
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-3 p-4 bg-tertiary border border-danger rounded-xl text-danger active:scale-95 transition-transform"
-              >
-                <LogOut size={20} />
-                <span className="font-display tracking-wider uppercase text-sm">Sign Out</span>
-              </button>
-
-              <div className="flex items-center justify-between p-4 bg-tertiary border border-border-color rounded-xl">
+            <div className="mt-6 max-w-md mx-auto w-full flex flex-col gap-2.5">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
                 <div className="flex items-center gap-3">
-                  <Shield size={24} color={profile ? getRankForXp(profile.total_xp || 0).colorHex : "var(--accent-primary)"} />
-                  <div className="flex-col">
-                    <span className="font-display uppercase text-xs tracking-wide text-muted" style={{ color: profile ? getRankForXp(profile.total_xp || 0).colorHex : 'inherit' }}>
+                  <Shield size={22} color={profile ? getRankForXp(profile.total_xp || 0).colorHex : "var(--accent-primary)"} />
+                  <div className="flex flex-col">
+                    <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: profile ? getRankForXp(profile.total_xp || 0).colorHex : 'inherit' }}>
                       {profile ? `${getRankForXp(profile.total_xp || 0).code}-RANK` : 'OPERATOR'}
                     </span>
-                    <span className="font-mono text-sm text-primary font-bold">LV.{profile ? calculateLevel(profile.total_xp || 0) : 1}</span>
-                    <span className="font-mono text-[9px] tracking-widest" style={{ color: dailyMomentum?.color || 'var(--text-muted)' }}>{dailyMomentum?.state || 'STEADY'}</span>
+                    <span className="font-display font-black text-sm text-white">LV.{profile ? calculateLevel(profile.total_xp || 0) : 1}</span>
                   </div>
                 </div>
+                <span className="px-2.5 py-1 rounded-full font-mono text-[9px] font-bold uppercase tracking-wider" style={{ background: `${dailyMomentum?.color || '#818cf8'}20`, color: dailyMomentum?.color || '#818cf8', border: `1px solid ${dailyMomentum?.color || '#818cf8'}40` }}>
+                  {dailyMomentum?.state || 'STEADY'}
+                </span>
               </div>
+
+              <button 
+                onClick={() => {
+                  if (typeof window !== 'undefined') window.location.reload()
+                }}
+                className="w-full flex items-center justify-center gap-2.5 p-3 bg-white/[0.03] border border-white/[0.08] rounded-xl text-slate-300 active:scale-95 transition-all text-xs font-mono uppercase tracking-wider"
+              >
+                <RefreshCw size={14} />
+                <span>Force Sync & Reload</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  if (confirm('Are you sure you want to sign out?')) auth.signOut()
+                }}
+                className="w-full flex items-center justify-center gap-2.5 p-3 bg-rose-950/20 border border-rose-500/30 rounded-xl text-rose-400 active:scale-95 transition-all text-xs font-mono uppercase tracking-wider"
+              >
+                <LogOut size={14} />
+                <span>Sign Out</span>
+              </button>
             </div>
           </motion.div>
         )}
@@ -206,7 +219,7 @@ export default function AppShell({ children }) {
                   whileHover={{ x: 4 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Icon size={18} strokeWidth={1.5} color={isActive ? 'var(--accent-primary)' : 'currentColor'} />
+                  <Icon size={18} strokeWidth={1.5} color={isActive ? '#ffffff' : 'currentColor'} />
                   {item.label}
                 </motion.div>
               </Link>
@@ -259,37 +272,39 @@ export default function AppShell({ children }) {
       />
       <XPToastStack events={feedbackEvents} onDismiss={dismissFeedback} />
 
-      {/* Mobile Bottom Nav */}
-      <nav className="mobile-nav" style={{ zIndex: 100 }}>
+      {/* Opal Mobile Floating Island Navigation */}
+      <nav className="mobile-nav">
         {mainItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
           return (
-            <Link key={item.href} href={item.href} style={{ flex: 1 }}>
+            <Link key={item.href} href={item.href} className="flex-1 flex justify-center py-1">
               <div 
-                className={`flex-col flex-center py-1 px-1 transition-all active:scale-90 ${isActive ? 'active-nav-item' : 'inactive-nav-item'}`} 
-                style={{ 
-                  color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
-                  height: '48px',
-                  position: 'relative',
-                  justifyContent: 'center',
-                }}
+                className={`flex flex-col items-center justify-center w-full py-1.5 px-1 rounded-full transition-all duration-300 active:scale-95 ${
+                  isActive 
+                    ? 'active-nav-item text-white' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
               >
-                {isActive && (
-                  <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
-                )}
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-                <span className="mt-0.5 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: isActive ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{item.label}</span>
+                <Icon size={18} strokeWidth={isActive ? 2.2 : 1.6} />
+                <span className="mt-0.5 font-display text-[9px] uppercase tracking-wider font-semibold">
+                  {item.label}
+                </span>
               </div>
             </Link>
           )
         })}
-        <button type="button" style={{ flex: 1, height: '48px', width: '20%', position: 'relative' }} className={`flex-col flex-center py-1 px-1 transition-all active:scale-90 ${mobileMenuOpen ? 'text-primary' : 'text-muted inactive-nav-item'}`} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen && (
-            <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 2, background: 'var(--accent-primary)', borderRadius: '0 0 2px 2px', boxShadow: '0 0 8px var(--amber-glow)' }} />
-          )}
-          {mobileMenuOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={1.5} />}
-          <span className="mt-0.5 font-display uppercase tracking-wide" style={{ fontSize: '9px', opacity: mobileMenuOpen ? 1 : 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>{mobileMenuOpen ? 'Close' : 'More'}</span>
+        <button 
+          type="button" 
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-full transition-all duration-300 active:scale-95 ${
+            mobileMenuOpen ? 'active-nav-item text-white' : 'text-slate-400 hover:text-slate-200'
+          }`}
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          {mobileMenuOpen ? <X size={18} strokeWidth={2.2} /> : <Menu size={18} strokeWidth={1.6} />}
+          <span className="mt-0.5 font-display text-[9px] uppercase tracking-wider font-semibold">
+            {mobileMenuOpen ? 'Close' : 'More'}
+          </span>
         </button>
       </nav>
 
