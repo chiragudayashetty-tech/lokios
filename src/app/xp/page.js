@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
-import { getLocalDateStr } from '@/lib/utils/dates'
+import { getLocalDateStr, formatDate, isToday, isYesterday } from '@/lib/utils/dates'
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, BarChart, Bar, Cell, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
-import { Activity, RefreshCw, RotateCcw, TrendingUp, TrendingDown, Calendar, Target, Trophy } from 'lucide-react'
+import { Activity, RefreshCw, RotateCcw, TrendingUp, TrendingDown, Calendar, Target, Trophy, ChevronLeft, ChevronRight } from 'lucide-react'
 import { RANK_CONFIG, SAGA_TITLES, SAGA_IMAGES } from '@/lib/constants'
 import { cleanupAllDuplicateXP, fetchAllXpHistory } from '@/lib/utils/xpFallback'
 
@@ -130,6 +130,8 @@ export default function XPDashboard() {
   const [chartViewMode, setChartViewMode] = useState('daily') // 'daily' | 'cumulative' | 'both'
   const [logFilterMode, setLogFilterMode] = useState('all') // 'all' | 'additions' | 'deductions'
   const [logSearch, setLogSearch] = useState('')
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateStr(new Date()))
+  const [isAllHistoryMode, setIsAllHistoryMode] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -328,22 +330,76 @@ export default function XPDashboard() {
     return net > 0 ? 70 + (net % 30) : 35
   })
 
-  const positiveCount = timeline.filter(t => t.amount > 0).length || 516
-  const deductionCount = timeline.filter(t => t.amount < 0).length || 243
+  const todayStr = getLocalDateStr(new Date())
 
-  // Filtered timeline logs
-  const filteredTimeline = timeline.slice().reverse().filter(item => {
-    if (logFilterMode === 'additions' && item.amount <= 0) return false
-    if (logFilterMode === 'deductions' && item.amount >= 0) return false
-    if (logSearch.trim()) {
-      const q = logSearch.toLowerCase()
-      const desc = (item.description || '').toLowerCase()
-      const cat = (item.stat_category || '').toLowerCase()
-      const src = (item.source_type || '').toLowerCase()
-      return desc.includes(q) || cat.includes(q) || src.includes(q)
-    }
-    return true
-  })
+  const handlePrevDay = () => {
+    setIsAllHistoryMode(false)
+    const [y, m, d] = selectedDate.split('-').map(Number)
+    const dt = new Date(y, m - 1, d)
+    dt.setDate(dt.getDate() - 1)
+    setSelectedDate(getLocalDateStr(dt))
+  }
+
+  const handleNextDay = () => {
+    setIsAllHistoryMode(false)
+    const [y, m, d] = selectedDate.split('-').map(Number)
+    const dt = new Date(y, m - 1, d)
+    dt.setDate(dt.getDate() + 1)
+    setSelectedDate(getLocalDateStr(dt))
+  }
+
+  const handleToday = () => {
+    setIsAllHistoryMode(false)
+    setSelectedDate(todayStr)
+  }
+
+  // Selected scope (Day vs All)
+  const scopedTimeline = useMemo(() => {
+    if (isAllHistoryMode) return timeline
+    return timeline.filter(item => {
+      if (!item.created_at) return false
+      const itemDate = getLocalDateStr(new Date(item.created_at))
+      return itemDate === selectedDate
+    })
+  }, [timeline, selectedDate, isAllHistoryMode])
+
+  const scopedPositive = useMemo(() => scopedTimeline.filter(t => t.amount > 0), [scopedTimeline])
+  const scopedNegative = useMemo(() => scopedTimeline.filter(t => t.amount < 0), [scopedTimeline])
+  const scopedNetXp = useMemo(() => scopedTimeline.reduce((sum, t) => sum + (t.amount || 0), 0), [scopedTimeline])
+  const positiveCount = scopedPositive.length
+  const deductionCount = scopedNegative.length
+  const totalCount = scopedTimeline.length
+
+  // Filtered timeline logs based on filter mode and search
+  const filteredTimeline = useMemo(() => {
+    const list = scopedTimeline.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    return list.filter(item => {
+      if (logFilterMode === 'additions' && item.amount <= 0) return false
+      if (logFilterMode === 'deductions' && item.amount >= 0) return false
+      if (logSearch.trim()) {
+        const q = logSearch.toLowerCase()
+        const desc = (item.description || '').toLowerCase()
+        const cat = (item.stat_category || '').toLowerCase()
+        const src = (item.source_type || '').toLowerCase()
+        return desc.includes(q) || cat.includes(q) || src.includes(q)
+      }
+      return true
+    })
+  }, [scopedTimeline, logFilterMode, logSearch])
+
+  const selectedDateObj = useMemo(() => {
+    if (!selectedDate) return new Date()
+    const [y, m, d] = selectedDate.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }, [selectedDate])
+
+  const isCurrentDayToday = selectedDate === todayStr
+  const isCurrentDayYesterday = isYesterday(selectedDateObj)
+  const friendlyDateLabel = isCurrentDayToday 
+    ? `Today • ${formatDate(selectedDateObj, 'ddd, MMM DD, YYYY')}` 
+    : isCurrentDayYesterday 
+    ? `Yesterday • ${formatDate(selectedDateObj, 'ddd, MMM DD, YYYY')}`
+    : formatDate(selectedDateObj, 'dddd, MMMM DD, YYYY')
 
   return (
     <AppShell>
@@ -718,56 +774,156 @@ export default function XPDashboard() {
         </div>
 
         {/* FULL MINUTE-TO-MINUTE ACTIVITY TIMELINE */}
+        {/* FULL MINUTE-TO-MINUTE ACTIVITY TIMELINE */}
         <div className="mt-8">
-          <HudPanel label="MINUTE-TO-MINUTE XP AUDIT LOG">
-            {/* Header Toolbar: Filters & Search */}
-            <div className="p-4 border-b border-border-color flex flex-wrap items-center justify-between gap-3 bg-bg-tertiary/50 rounded-t-xl">
-              {/* Filter Tabs */}
-              <div className="flex items-center gap-1 bg-black/40 p-1 border border-border-color rounded-lg font-mono text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setLogFilterMode('all')}
-                  className={`px-3 py-1 rounded font-bold transition-colors ${logFilterMode === 'all' ? 'bg-amber text-black' : 'text-muted hover:text-primary'}`}
-                >
-                  ALL ({timeline.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLogFilterMode('additions')}
-                  className={`px-3 py-1 rounded font-bold transition-colors ${logFilterMode === 'additions' ? 'bg-success text-black' : 'text-muted hover:text-primary'}`}
-                >
-                  + ADDITIONS ({positiveCount})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLogFilterMode('deductions')}
-                  className={`px-3 py-1 rounded font-bold transition-colors ${logFilterMode === 'deductions' ? 'bg-danger text-black' : 'text-muted hover:text-primary'}`}
-                >
-                  - SUBTRACTIONS ({deductionCount})
-                </button>
+          <HudPanel label={isAllHistoryMode ? "MINUTE-TO-MINUTE XP AUDIT LOG (ALL TIME)" : "MINUTE-TO-MINUTE XP AUDIT LOG (DAY VIEW)"}>
+            {/* Header Toolbar: Day-to-Day Navigation, Calendar, Filters & Search */}
+            <div className="p-4 border-b border-border-color flex flex-col gap-3 bg-bg-tertiary/50 rounded-t-xl">
+              
+              {/* Row 1: Day Navigation & Calendar Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* Day Navigation Controls */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center bg-black/50 border border-border-color rounded-lg p-0.5">
+                    <button
+                      type="button"
+                      onClick={handlePrevDay}
+                      title="Previous Day"
+                      className="p-1.5 hover:bg-white/10 text-muted hover:text-primary rounded transition-colors"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={handleToday}
+                      className={`px-3 py-1 text-xs font-mono font-bold uppercase transition-all rounded ${
+                        !isAllHistoryMode && isCurrentDayToday 
+                          ? 'bg-amber text-black shadow-sm' 
+                          : 'text-muted hover:text-primary'
+                      }`}
+                    >
+                      Today
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleNextDay}
+                      disabled={isCurrentDayToday}
+                      title="Next Day"
+                      className={`p-1.5 rounded transition-colors ${
+                        isCurrentDayToday 
+                          ? 'opacity-30 cursor-not-allowed text-muted' 
+                          : 'hover:bg-white/10 text-muted hover:text-primary'
+                      }`}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+
+                  {/* Calendar Input Selector */}
+                  <div className="flex items-center gap-1.5 bg-black/50 border border-border-color hover:border-amber focus-within:border-amber rounded-lg px-2.5 py-1 transition-colors">
+                    <Calendar size={13} className="text-amber shrink-0" />
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      max={todayStr}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setSelectedDate(e.target.value)
+                          setIsAllHistoryMode(false)
+                        }
+                      }}
+                      className="bg-transparent text-xs font-mono text-primary focus:outline-none cursor-pointer [color-scheme:dark]"
+                    />
+                  </div>
+
+                  {/* Date Label Badge */}
+                  {!isAllHistoryMode && (
+                    <span className="font-mono text-xs font-semibold text-slate-300 hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white/5 border border-white/10">
+                      <span>📅</span> {friendlyDateLabel}
+                    </span>
+                  )}
+                </div>
+
+                {/* Right Actions: Daily Net XP Pill + All-Time Toggle */}
+                <div className="flex items-center gap-2">
+                  {!isAllHistoryMode && (
+                    <div className={`px-3 py-1 rounded-lg border font-mono text-xs font-bold flex items-center gap-1.5 ${
+                      scopedNetXp > 0 
+                        ? 'bg-success/15 border-success/40 text-success' 
+                        : scopedNetXp < 0 
+                        ? 'bg-danger/15 border-danger/40 text-danger' 
+                        : 'bg-white/5 border-border-color text-muted'
+                    }`}>
+                      <span>Day Net: {scopedNetXp >= 0 ? `+${scopedNetXp}` : scopedNetXp} XP</span>
+                      <span className="text-[10px] opacity-75 font-normal">({totalCount} events)</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAllHistoryMode(!isAllHistoryMode)}
+                    className={`px-2.5 py-1 rounded-lg border font-mono text-xs font-bold uppercase transition-all ${
+                      isAllHistoryMode
+                        ? 'bg-amber text-black border-amber shadow-sm'
+                        : 'bg-black/50 text-muted border-border-color hover:text-primary hover:border-border-color'
+                    }`}
+                  >
+                    {isAllHistoryMode ? 'ALL TIME' : 'VIEW ALL'}
+                  </button>
+                </div>
               </div>
 
-              {/* Search Box */}
-              <div className="relative w-full sm:w-64">
-                <input
-                  type="text"
-                  placeholder="Filter by keyword..."
-                  value={logSearch}
-                  onChange={(e) => setLogSearch(e.target.value)}
-                  className="w-full bg-black/50 border border-border-color rounded-lg px-3 py-1.5 text-xs font-mono text-primary placeholder:text-muted focus:outline-none focus:border-amber transition-colors"
-                />
-                {logSearch && (
+              {/* Row 2: Filter Tabs & Search */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-color/40">
+                {/* Filter Tabs */}
+                <div className="flex items-center gap-1 bg-black/40 p-1 border border-border-color rounded-lg font-mono text-[11px]">
                   <button
-                    onClick={() => setLogSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-primary font-mono"
+                    type="button"
+                    onClick={() => setLogFilterMode('all')}
+                    className={`px-3 py-1 rounded font-bold transition-colors ${logFilterMode === 'all' ? 'bg-amber text-black' : 'text-muted hover:text-primary'}`}
                   >
-                    ×
+                    ALL ({totalCount})
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setLogFilterMode('additions')}
+                    className={`px-3 py-1 rounded font-bold transition-colors ${logFilterMode === 'additions' ? 'bg-success text-black' : 'text-muted hover:text-primary'}`}
+                  >
+                    + ADDITIONS ({positiveCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLogFilterMode('deductions')}
+                    className={`px-3 py-1 rounded font-bold transition-colors ${logFilterMode === 'deductions' ? 'bg-danger text-black' : 'text-muted hover:text-primary'}`}
+                  >
+                    - SUBTRACTIONS ({deductionCount})
+                  </button>
+                </div>
+
+                {/* Search Box */}
+                <div className="relative w-full sm:w-64">
+                  <input
+                    type="text"
+                    placeholder="Filter by keyword..."
+                    value={logSearch}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                    className="w-full bg-black/50 border border-border-color rounded-lg px-3 py-1.5 text-xs font-mono text-primary placeholder:text-muted focus:outline-none focus:border-amber transition-colors"
+                  />
+                  {logSearch && (
+                    <button
+                      onClick={() => setLogSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-primary font-mono"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Timeline Stream (Smooth natural scroll on phone, fixed container on desktop) */}
+            {/* Timeline Stream */}
             <div className="flex flex-col gap-0 sm:max-h-[650px] sm:overflow-y-auto touch-pan-y divide-y divide-border-color">
               {filteredTimeline.map((item) => {
                 const isPositive = item.amount > 0
@@ -842,8 +998,32 @@ export default function XPDashboard() {
               })}
 
               {filteredTimeline.length === 0 && (
-                <div className="font-mono text-xs text-muted py-12 text-center uppercase tracking-widest">
-                  {logSearch ? 'No XP events match your search query.' : 'No XP activity logs archived.'}
+                <div className="font-mono text-xs text-muted py-14 text-center flex flex-col items-center justify-center gap-3">
+                  <Calendar size={28} className="text-slate-600 stroke-[1.5]" />
+                  <div className="space-y-1">
+                    <p className="font-bold uppercase tracking-wider text-slate-400">
+                      {logSearch 
+                        ? 'No XP events match your search query.' 
+                        : !isAllHistoryMode 
+                        ? `No XP activity logged on ${formatDate(selectedDateObj, 'MMM DD, YYYY')}`
+                        : 'No XP activity logs archived.'
+                      }
+                    </p>
+                    {!isAllHistoryMode && !logSearch && (
+                      <p className="text-[11px] text-slate-500">
+                        Select another day from the calendar or jump to today.
+                      </p>
+                    )}
+                  </div>
+                  {!isAllHistoryMode && !isCurrentDayToday && (
+                    <button
+                      type="button"
+                      onClick={handleToday}
+                      className="mt-1 px-3 py-1.5 rounded-lg bg-white/5 border border-border-color hover:border-amber text-primary text-xs transition-colors"
+                    >
+                      Jump to Today
+                    </button>
+                  )}
                 </div>
               )}
             </div>
