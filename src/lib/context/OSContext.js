@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -116,7 +116,90 @@ export function OSProvider({ children }) {
     }
   }, [auth?.user?.id])
 
-  const osState = {
+  // Cross-Domain Orchestration Methods
+  const completeOperation = useCallback(async (taskId, proofUrl = null, completionNote = null) => {
+    // 1. Complete the underlying task
+    const updatedTask = await tasks.completeTask(taskId, proofUrl, completionNote)
+
+    // 2. If it belongs to a Mission (Goal), automate mission progress
+    const task = updatedTask || tasks.tasks.find(t => t.id === taskId)
+    if (task && task.goal_id) {
+      const goal = goals.goals.find(g => g.id === task.goal_id)
+      if (goal && goal.status !== 'completed') {
+        const goalTasks = tasks.tasks.filter(t => t.goal_id === task.goal_id)
+        const completedGoalTasks = goalTasks.filter(t => t.status === 'completed' || t.id === taskId).length
+        const totalGoalTasks = goalTasks.length || 1
+        
+        const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
+        await goals.updateProgress(goal.id, newProgress)
+      }
+    }
+    return updatedTask
+  }, [tasks, goals, xp])
+  
+  const deleteOperation = useCallback(async (taskId, revokeXp = true) => {
+    const task = tasks.tasks.find(t => t.id === taskId)
+    if (!task) return false
+    
+    const success = await tasks.deleteTask(taskId, revokeXp)
+    if (success && task.goal_id) {
+      const goal = goals.goals.find(g => g.id === task.goal_id)
+      if (goal && goal.status !== 'completed') {
+        const goalTasks = tasks.tasks.filter(t => t.goal_id === task.goal_id && t.id !== taskId)
+        const completedGoalTasks = goalTasks.filter(t => t.status === 'completed').length
+        const totalGoalTasks = goalTasks.length || 1
+        
+        const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
+        await goals.updateProgress(goal.id, newProgress)
+      }
+    }
+    if (success) {
+      await profile.fetchProfile() // Refresh XP immediately
+    }
+    return success
+  }, [tasks, goals, profile])
+
+  const failOperation = useCallback(async (taskId, failureReason = null) => {
+    const result = await tasks.failTask(taskId, failureReason)
+    if (result) {
+      await profile.fetchProfile() // Refresh XP immediately
+    }
+    return result
+  }, [tasks, profile])
+
+  const undoFailOperation = useCallback(async (taskId) => {
+    const result = await tasks.undoFailTask(taskId)
+    if (result) {
+      await profile.fetchProfile() // Refresh XP immediately
+    }
+    return result
+  }, [tasks, profile])
+
+  const failMission = useCallback(async (goalId) => {
+    const result = await goals.failGoal(goalId)
+    if (result) {
+      await profile.fetchProfile() // Refresh XP immediately
+    }
+    return result
+  }, [goals, profile])
+
+  const deleteMission = useCallback(async (goalId, revokeXp = true) => {
+    const result = await goals.deleteGoal(goalId, revokeXp)
+    if (result) {
+      await profile.fetchProfile() // Refresh XP immediately
+    }
+    return result
+  }, [goals, profile])
+
+  const undoFailMission = useCallback(async (goalId) => {
+    const result = await goals.undoFailGoal(goalId)
+    if (result) {
+      await profile.fetchProfile() // Refresh XP immediately
+    }
+    return result
+  }, [goals, profile])
+
+  const osState = useMemo(() => ({
     auth,
     habits,
     tasks,
@@ -128,90 +211,33 @@ export function OSProvider({ children }) {
     profile,
     calendar,
     characterStats,
-    
-    // Cross-Domain Orchestration Methods
-    completeOperation: useCallback(async (taskId, proofUrl = null, completionNote = null) => {
-      // 1. Complete the underlying task
-      const updatedTask = await tasks.completeTask(taskId, proofUrl, completionNote)
-
-      // 2. If it belongs to a Mission (Goal), automate mission progress
-      const task = updatedTask || tasks.tasks.find(t => t.id === taskId)
-      if (task && task.goal_id) {
-        const goal = goals.goals.find(g => g.id === task.goal_id)
-        if (goal && goal.status !== 'completed') {
-          const goalTasks = tasks.tasks.filter(t => t.goal_id === task.goal_id)
-          const completedGoalTasks = goalTasks.filter(t => t.status === 'completed' || t.id === taskId).length
-          const totalGoalTasks = goalTasks.length || 1
-          
-          const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
-          await goals.updateProgress(goal.id, newProgress)
-        }
-      }
-      return updatedTask
-    }, [tasks, goals, xp]),
-    
-    deleteOperation: useCallback(async (taskId, revokeXp = true) => {
-      const task = tasks.tasks.find(t => t.id === taskId)
-      if (!task) return false
-      
-      const success = await tasks.deleteTask(taskId, revokeXp)
-      if (success && task.goal_id) {
-        const goal = goals.goals.find(g => g.id === task.goal_id)
-        if (goal && goal.status !== 'completed') {
-          const goalTasks = tasks.tasks.filter(t => t.goal_id === task.goal_id && t.id !== taskId)
-          const completedGoalTasks = goalTasks.filter(t => t.status === 'completed').length
-          const totalGoalTasks = goalTasks.length || 1
-          
-          const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
-          await goals.updateProgress(goal.id, newProgress)
-        }
-      }
-      if (success) {
-        await profile.fetchProfile() // Refresh XP immediately
-      }
-      return success
-    }, [tasks, goals, profile]),
-
-    failOperation: useCallback(async (taskId, failureReason = null) => {
-      const result = await tasks.failTask(taskId, failureReason)
-      if (result) {
-        await profile.fetchProfile() // Refresh XP immediately
-      }
-      return result
-    }, [tasks, profile]),
-
-    undoFailOperation: useCallback(async (taskId) => {
-      const result = await tasks.undoFailTask(taskId)
-      if (result) {
-        await profile.fetchProfile() // Refresh XP immediately
-      }
-      return result
-    }, [tasks, profile]),
-
-    failMission: async (goalId) => {
-      const result = await goals.failGoal(goalId)
-      if (result) {
-        await profile.fetchProfile() // Refresh XP immediately
-      }
-      return result
-    },
-
-    deleteMission: async (goalId, revokeXp = true) => {
-      const result = await goals.deleteGoal(goalId, revokeXp)
-      if (result) {
-        await profile.fetchProfile() // Refresh XP immediately
-      }
-      return result
-    },
-
-    undoFailMission: async (goalId) => {
-      const result = await goals.undoFailGoal(goalId)
-      if (result) {
-        await profile.fetchProfile() // Refresh XP immediately
-      }
-      return result
-    }
-  }
+    completeOperation,
+    deleteOperation,
+    failOperation,
+    undoFailOperation,
+    failMission,
+    deleteMission,
+    undoFailMission,
+  }), [
+    auth,
+    habits,
+    tasks,
+    goals,
+    focus,
+    xp,
+    brainDump,
+    journal,
+    profile,
+    calendar,
+    characterStats,
+    completeOperation,
+    deleteOperation,
+    failOperation,
+    undoFailOperation,
+    failMission,
+    deleteMission,
+    undoFailMission,
+  ])
 
   if (booting) {
     return (

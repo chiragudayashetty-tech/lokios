@@ -79,9 +79,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export default function MissionControl() {
-  const { user } = useAuth()
-
+  const authHook = useAuth()
   const os = useOS() || {}
+  const user = os.auth?.user || authHook?.user || null
   const profileHook = os.profile || {}
   const profile = profileHook.profile || null
   const goalsObj = os.goals || {}
@@ -403,27 +403,6 @@ export default function MissionControl() {
     }, 10000)
     return () => clearInterval(quoteInterval)
   }, [SAGA_DISCIPLINE_QUOTES.length])
-
-  const updatePriorityStatus = (entries) => {
-    setPriorityStatusMap(prev => {
-      const next = { ...prev, ...entries }
-      if (typeof window !== 'undefined' && user) {
-        try {
-          localStorage.setItem(`lokios_priority_status_${user.id}`, JSON.stringify(next))
-        } catch (e) {}
-      }
-      return next
-    })
-  }
-
-  const toggleEventCompleted = (id) => {
-    setCompletedEventIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
 
   // Instant cache loader from localStorage for zero-delay initial widget status
   useEffect(() => {
@@ -772,6 +751,27 @@ export default function MissionControl() {
       document.removeEventListener('visibilitychange', handleResume)
     }
   }, [user, todayLogs])
+
+  const updatePriorityStatus = (entries) => {
+    setPriorityStatusMap(prev => {
+      const next = { ...prev, ...entries }
+      if (typeof window !== 'undefined' && user) {
+        try {
+          localStorage.setItem(`lokios_priority_status_${user.id}`, JSON.stringify(next))
+        } catch (e) {}
+      }
+      return next
+    })
+  }
+
+  const toggleEventCompleted = (id) => {
+    setCompletedEventIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   // ── Quick Log Submit Handlers for EOD Recon ──
   const submitEodScreen = async (e) => {
