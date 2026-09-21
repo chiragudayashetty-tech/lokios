@@ -17,6 +17,18 @@ html, body { overflow-x: hidden; }
   .saga-hero > .relative.z-10 { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(360px, .9fr); align-items: center; }
   .saga-hero > .relative.z-10 > div:last-child { width: 100% !important; max-width: none !important; }
   .saga-hero img { max-height: 560px; object-fit: cover; }
+  .saga-cover-frame { aspect-ratio: 2.35 / 1 !important; min-height: 340px !important; max-height: 420px !important; }
+  .saga-cover-content { padding: 24px 28px !important; }
+  .saga-selector { padding: 14px 18px 18px !important; }
+  .saga-selector > div:last-child > div { width: 78px !important; }
+  .saga-selector > div:last-child > div:first-child { width: 98px !important; }
+  .saga-selector > div:last-child > div > div:first-child { aspect-ratio: 1.15 / 1 !important; }
+  .time-remaining-card > .flex.items-center.gap-4 { display: grid !important; grid-template-columns: 72px minmax(0, 1fr); gap: 12px !important; align-items: center; }
+  .time-remaining-card > .flex.items-center.gap-4 > .relative { width: 64px !important; height: 64px !important; position: relative !important; }
+  .time-remaining-card > .flex.items-center.gap-4 > .relative > svg { width: 64px !important; height: 64px !important; }
+  .time-remaining-card > .flex.items-center.gap-4 > .relative > .absolute { position: absolute !important; inset: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+  .time-remaining-card > .flex.items-center.gap-4 > div:last-child { min-width: 0 !important; }
+  .time-remaining-card > .flex.items-center.gap-4 > div:last-child .text-2xl { font-size: 1.65rem !important; white-space: nowrap; }
   .quests-stopped-routines > div { max-width: 1100px; margin-inline: auto; }
 }
 
