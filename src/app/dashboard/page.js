@@ -1237,17 +1237,6 @@ export default function MissionControl() {
                 }}>
                   {currentArc?.name?.toUpperCase() || 'THE SPARK'}
                 </div>
-                <div style={{
-                  fontFamily: 'monospace',
-                  fontSize: '11px',
-                  color: 'rgba(255,255,255,0.5)',
-                  marginTop: '8px',
-                  fontStyle: 'italic',
-                  maxWidth: '420px',
-                  lineHeight: 1.5,
-                }}>
-                  "{currentArc?.flavor}"
-                </div>
               </div>
 
               {/* Progress bar */}
