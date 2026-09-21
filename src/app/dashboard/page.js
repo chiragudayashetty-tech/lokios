@@ -14,6 +14,7 @@ import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useOS } from '@/lib/context/OSContext'
+import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
@@ -78,8 +79,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export default function MissionControl() {
+  const authHook = useAuth()
   const os = useOS() || {}
-  const user = os.auth?.user || null
+  const user = os.auth?.user || authHook?.user || null
   const profileHook = os.profile || {}
   const profile = profileHook.profile || null
   const goalsObj = os.goals || {}
@@ -1093,386 +1095,357 @@ export default function MissionControl() {
 
 
         {/* ══════════════════════════════════════════════════════════════════
-            OPAL DYNAMIC ATMOSPHERIC HERO CANVAS (CHANGING IMAGERY & MOOD)
+            SAGA HERO — CURRENT SAGA FEATURED, ALL OTHERS LOCKED
         ══════════════════════════════════════════════════════════════════ */}
-        <div 
-          className="mb-6 rounded-3xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden transition-all relative"
+        <div
+          className="mb-6 overflow-hidden"
           style={{
-            background: 'rgba(10, 13, 24, 0.9)',
-            backdropFilter: 'blur(24px)',
             borderRadius: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            overflow: 'hidden'
+            border: `1px solid ${sagaAccentColor}30`,
+            boxShadow: `0 20px 60px rgba(0,0,0,0.7), 0 0 40px ${sagaAccentColor}10`,
+            background: 'rgba(5, 7, 15, 0.95)',
           }}
         >
-          
-          {/* Subtle Ambient Radial Aura behind Hero */}
-          <div 
-            className="absolute top-0 right-0 w-[450px] h-[450px] rounded-full pointer-events-none transition-all duration-1000"
+          {/* ── HERO IMAGE (full-width, tall on mobile, 2/3 on desktop) ── */}
+          <div
             style={{
-              background: `radial-gradient(circle, ${displayedSagaColor}25, transparent 70%)`,
-              transform: 'translate(20%, -20%)',
-              filter: 'blur(60px)'
+              position: 'relative',
+              width: '100%',
+              aspectRatio: '16/9',
+              minHeight: '220px',
+              maxHeight: '480px',
+              overflow: 'hidden',
             }}
-          />
+          >
+            {/* Full-bleed current saga image */}
+            <img
+              src={currentSagaImage}
+              alt={currentArc?.name || 'Current Saga'}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center top',
+                display: 'block',
+              }}
+              onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
+            />
 
-          <div className="relative z-10 flex flex-col-reverse lg:flex-row items-center justify-between gap-6 p-4 sm:p-6 lg:p-8">
-            
-            {/* ── LEFT SIDE (DESKTOP): INTELLIGENCE & PROGRESSION ── */}
-            <div className="flex-1 w-full min-w-0 flex flex-col justify-between space-y-4 sm:space-y-5">
-              
-              {/* Top Time-of-Day Atmosphere Pill */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div 
-                  className="px-3 py-1 rounded-full border text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0"
-                  style={{
-                    backgroundColor: `${timeAtmosphere.accent}15`,
-                    borderColor: `${timeAtmosphere.accent}35`,
-                    color: timeAtmosphere.accent,
-                    boxShadow: `0 0 14px ${timeAtmosphere.glow}`
-                  }}
-                >
-                  <timeAtmosphere.icon size={13} />
+            {/* Dark gradient overlay for text legibility */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: `linear-gradient(to top, rgba(5,7,15,0.97) 0%, rgba(5,7,15,0.65) 40%, rgba(5,7,15,0.1) 75%, transparent 100%)`,
+              pointerEvents: 'none',
+            }} />
+            {/* Left side fade for text on desktop */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: `linear-gradient(to right, rgba(5,7,15,0.85) 0%, transparent 55%)`,
+              pointerEvents: 'none',
+            }} />
+
+            {/* ── OVERLAY CONTENT ── */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+              padding: '20px 20px 20px 20px',
+            }}>
+              {/* Top badges row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'auto', paddingTop: '4px' }}>
+                <div style={{
+                  padding: '4px 10px',
+                  borderRadius: '100px',
+                  border: `1px solid ${sagaAccentColor}60`,
+                  background: `${sagaAccentColor}20`,
+                  color: sagaAccentColor,
+                  fontFamily: 'monospace',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                }}>
+                  YOUR SAGA
+                </div>
+                <div style={{
+                  padding: '4px 10px',
+                  borderRadius: '100px',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.07)',
+                  color: '#fff',
+                  fontFamily: 'monospace',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                }}>
+                  SAGA {currentArc?.rank}  •  LV.{currentLevel}
+                </div>
+
+                {/* Time pill */}
+                <div style={{
+                  marginLeft: 'auto',
+                  padding: '4px 10px',
+                  borderRadius: '100px',
+                  border: `1px solid ${timeAtmosphere.accent}35`,
+                  background: `${timeAtmosphere.accent}15`,
+                  color: timeAtmosphere.accent,
+                  fontFamily: 'monospace',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}>
+                  <timeAtmosphere.icon size={11} />
                   <span>{timeAtmosphere.label}</span>
                 </div>
-                <span className="font-mono text-[10px] text-slate-400 hidden sm:inline">
-                  {timeAtmosphere.timeDesc}
-                </span>
-
-                {/* Auto-cycle toggle pill */}
-                <button
-                  type="button"
-                  onClick={() => setIsAutoCycling(prev => !prev)}
-                  title={isAutoCycling ? "Auto-cycling imagery every 10s (Click to pause)" : "Auto-cycle paused (Click to resume)"}
-                  className="ml-auto px-2.5 py-0.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 font-mono text-[9px] uppercase tracking-wider flex items-center gap-1.5 transition-all"
-                >
-                  {isAutoCycling ? <Pause size={10} className="text-cyan-400" /> : <Play size={10} className="text-slate-400" />}
-                  <span>{isAutoCycling ? 'Auto' : 'Paused'}</span>
-                </button>
               </div>
 
-              {/* Header: SAGA Title & Switcher */}
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono text-xs uppercase tracking-[0.25em] font-bold text-indigo-400">
-                    SAGA {displayedArc.rank}
+              {/* Saga title */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{
+                  fontFamily: 'monospace',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  letterSpacing: '0.3em',
+                  color: sagaAccentColor,
+                  textTransform: 'uppercase',
+                  marginBottom: '4px',
+                  opacity: 0.9,
+                }}>
+                  {currentArc?.rank} — ACTIVE CHAPTER
+                </div>
+                <div style={{
+                  fontFamily: 'var(--font-display, sans-serif)',
+                  fontSize: 'clamp(2rem, 6vw, 3.5rem)',
+                  fontWeight: 900,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: '#ffffff',
+                  lineHeight: 0.95,
+                  textShadow: `0 2px 20px rgba(0,0,0,0.8), 0 0 40px ${sagaAccentColor}30`,
+                }}>
+                  {currentArc?.name?.toUpperCase() || 'THE SPARK'}
+                </div>
+                <div style={{
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  color: 'rgba(255,255,255,0.5)',
+                  marginTop: '8px',
+                  fontStyle: 'italic',
+                  maxWidth: '420px',
+                  lineHeight: 1.5,
+                }}>
+                  "{currentArc?.flavor}"
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ marginBottom: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '9px', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+                    SAGA PROGRESS
                   </span>
-                  {displayedSagaIndex !== currentArcIndex && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveArtworkIndex(currentArcIndex)}
-                      className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 font-mono text-[8px] uppercase tracking-wider hover:bg-indigo-500/30 transition-all"
-                    >
-                      Return to LV.{currentLevel} Saga ({currentRank.code})
-                    </button>
-                  )}
-                </div>
-                <h1 className="font-display font-black text-2xl sm:text-4xl text-white tracking-[0.12em] uppercase leading-tight">
-                  {splitTitle.primary}
-                </h1>
-                <h2 
-                  className="font-display font-black text-xl sm:text-3xl tracking-[0.18em] uppercase leading-none mt-1 transition-colors duration-500"
-                  style={{ color: displayedSagaColor }}
-                >
-                  {splitTitle.secondary}
-                </h2>
-              </div>
-
-              {/* Dynamic Rotating Motivational Quote Inset Pod */}
-              <div 
-                onClick={handleNextQuote}
-                title="Click to cycle next mindset quote"
-                className="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 flex items-center gap-4 hover:border-white/20 transition-all cursor-pointer group"
-              >
-                <div 
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105"
-                  style={{ 
-                    backgroundColor: `${displayedSagaColor}15`, 
-                    borderColor: `${displayedSagaColor}40`, 
-                    color: displayedSagaColor,
-                    boxShadow: `0 0 16px ${displayedSagaColor}25`
-                  }}
-                >
-                  <Sparkles size={20} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-mono text-xs sm:text-sm text-slate-200 leading-relaxed italic">
-                    "{SAGA_DISCIPLINE_QUOTES[quoteIndex % SAGA_DISCIPLINE_QUOTES.length]}"
-                  </p>
-                </div>
-              </div>
-
-              {/* Progress to Next Saga Pod */}
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 space-y-3">
-                <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px] text-slate-400 uppercase tracking-widest font-bold">
-                  <span>PROGRESS TO NEXT SAGA</span>
-                  <span>{sagaProgressPct}%</span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* Left: Huge Percentage & Bar */}
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-baseline justify-between">
-                      <span 
-                        className="font-display font-black text-3xl sm:text-4xl leading-none"
-                        style={{ color: sagaAccentColor }}
-                      >
-                        {sagaProgressPct}%
-                      </span>
-                      <span className="font-mono text-xs font-bold text-slate-400">
-                        {currentXpInSaga.toLocaleString()} / {totalXpInSaga.toLocaleString()} XP
-                      </span>
-                    </div>
-
-                    {/* Glowing Progress Track */}
-                    <div className="w-full h-2.5 rounded-full bg-slate-950 border border-white/10 p-[1px] relative overflow-hidden">
-                      <motion.div 
-                        className="h-full rounded-full transition-all duration-500 shadow-lg"
-                        style={{ 
-                          width: `${Math.max(4, Math.min(100, sagaProgressPct))}%`,
-                          backgroundColor: sagaAccentColor,
-                          boxShadow: `0 0 12px ${sagaAccentColor}`
-                        }}
-                      />
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>
+                      {currentXpInSaga.toLocaleString()} / {totalXpInSaga.toLocaleString()} XP
+                    </span>
+                    <span style={{
+                      fontFamily: 'var(--font-display, sans-serif)',
+                      fontSize: '14px',
+                      fontWeight: 900,
+                      color: sagaAccentColor,
+                    }}>
+                      {sagaProgressPct}%
+                    </span>
                   </div>
-
-                  {/* Right: Next Saga Inset Capsule */}
-                  {nextArc && (
-                    <div className="p-3 rounded-xl border border-white/10 bg-black/50 flex items-center gap-3 shrink-0">
-                      <div className="w-8 h-8 rounded-xl bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
-                        <Target size={15} />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="font-mono text-[9px] uppercase tracking-wider text-purple-400 font-bold block">
-                          NEXT SAGA
-                        </span>
-                        <span className="font-display font-bold text-xs text-white uppercase truncate block">
-                          SAGA {nextArc.rank} • {nextArc.name}
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
-
-              {/* Bottom Quick Saga Switcher Dots & Roster Toggle */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                {/* 8 Saga Quick Dot Pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-1">
-                  {ARC_CONFIG.map((s, idx) => {
-                    const isSelected = idx === displayedSagaIndex
-                    const isUserCurrent = s.rank === currentRank.code
-                    return (
-                      <button
-                        key={s.rank}
-                        type="button"
-                        onClick={() => {
-                          setActiveArtworkIndex(idx)
-                          setIsAutoCycling(false)
-                        }}
-                        title={`Saga ${s.rank}: ${s.name}`}
-                        className={`px-2 py-0.5 rounded-full font-mono text-[9px] font-bold uppercase transition-all ${
-                          isSelected
-                            ? 'bg-white text-black shadow-md shadow-white/20 scale-105'
-                            : isUserCurrent
-                            ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/40'
-                            : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
-                        }`}
-                      >
-                        {s.rank}
-                      </button>
-                    )
-                  })}
+                <div style={{
+                  width: '100%',
+                  height: '4px',
+                  borderRadius: '100px',
+                  background: 'rgba(255,255,255,0.1)',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    width: `${Math.max(2, Math.min(100, sagaProgressPct))}%`,
+                    height: '100%',
+                    borderRadius: '100px',
+                    background: sagaAccentColor,
+                    boxShadow: `0 0 10px ${sagaAccentColor}`,
+                    transition: 'width 1s ease',
+                  }} />
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setSagaRosterOpen(prev => !prev)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-mono text-[10px] font-bold uppercase tracking-wider transition-all shrink-0 ml-auto"
-                >
-                  <span>{sagaRosterOpen ? 'HIDE ROSTER' : 'VIEW ALL SAGAS'}</span>
-                  {sagaRosterOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                </button>
-              </div>
-
-            </div>
-
-            {/* ── RIGHT SIDE (DESKTOP): 1:1 SQUARE ARTWORK WITH SMOOTH CROSSFADE ── */}
-            <div className="w-full sm:w-[320px] md:w-[360px] lg:w-[380px] shrink-0 flex flex-col items-center">
-              <div 
-                onClick={() => {
-                  setActiveArtworkIndex(prev => {
-                    const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
-                    return (base + 1) % ARC_CONFIG.length
-                  })
-                }}
-                title="Click image to cycle next artwork"
-                className="rounded-3xl overflow-hidden relative border border-white/15 bg-slate-950 shadow-[0_0_40px_rgba(0,0,0,0.85)] group cursor-pointer w-full max-w-[380px] aspect-square"
-              >
-                {/* Crossfading Dynamic Image */}
-                <AnimatePresence mode="wait">
-                  <motion.img 
-                    key={displayedSagaImage}
-                    src={displayedSagaImage} 
-                    alt={displayedArc.name} 
-                    initial={{ opacity: 0, scale: 0.97 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.03 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                    className="w-full h-full object-cover aspect-square transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => { e.currentTarget.src = '/sagas/Awakening.png' }}
-                  />
-                </AnimatePresence>
-
-                {/* Subtle cyber border & caption overlay on hover */}
-                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
-                <div className="absolute bottom-2 inset-x-2 py-1 px-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-between text-[9px] font-mono text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span>{displayedArc.name}</span>
-                  <span className="text-indigo-300">Tap to cycle ↻</span>
-                </div>
-              </div>
-
-              {/* Prev / Next Chevrons below image */}
-              <div className="flex items-center justify-center gap-3 mt-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveArtworkIndex(prev => {
-                      const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
-                      return (base - 1 + ARC_CONFIG.length) % ARC_CONFIG.length
-                    })
-                    setIsAutoCycling(false)
-                  }}
-                  className="w-8 h-8 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 flex items-center justify-center text-slate-300 transition-all active:scale-95"
-                  title="Previous Saga Artwork"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-
-                <span className="font-mono text-[9px] text-slate-400 font-bold uppercase tracking-widest">
-                  {displayedSagaIndex + 1} / {ARC_CONFIG.length}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveArtworkIndex(prev => {
-                      const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
-                      return (base + 1) % ARC_CONFIG.length
-                    })
-                    setIsAutoCycling(false)
-                  }}
-                  className="w-8 h-8 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 flex items-center justify-center text-slate-300 transition-all active:scale-95"
-                  title="Next Saga Artwork"
-                >
-                  <ChevronRight size={16} />
-                </button>
               </div>
             </div>
-
           </div>
 
-          {/* ── EXPANDABLE 8-SAGA LOCKED/UNLOCKED ROSTER ── */}
-          <AnimatePresence>
-            {sagaRosterOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="border-t border-white/10 p-4 sm:p-6 bg-black/60"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8]" />
-                    <h3 className="font-mono text-xs font-bold text-white uppercase tracking-wider">
-                      SAGA PROGRESSION ROSTER
-                    </h3>
-                  </div>
-                  <span className="font-mono text-[10px] text-slate-400 uppercase font-bold">
-                    CURRENT LEVEL: LV.{currentLevel}
-                  </span>
-                </div>
+          {/* ── LOCKED SAGAS STRIP ── */}
+          <div style={{ padding: '14px 16px 16px', borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
+                ALL CHAPTERS
+              </span>
+              {nextArc && (
+                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: sagaAccentColor, opacity: 0.8 }}>
+                  NEXT: SAGA {nextArc.rank} — {nextArc.name?.toUpperCase()}
+                </span>
+              )}
+            </div>
 
-                <div 
-                  style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', 
-                    gap: '12px', 
-                    width: '100%' 
-                  }}
-                >
-                  {ARC_CONFIG.map((saga, sIdx) => {
-                    const isCurrent = saga.rank === currentRank.code
-                    const isSelected = sIdx === displayedSagaIndex
-                    const isUnlocked = currentLevel >= saga.minLvl
-                    const isCompleted = currentLevel > saga.maxLvl
-                    const sagaImg = SAGA_IMAGES[saga.rank] || '/sagas/the-spark.png'
+            {/* Horizontal scrollable strip */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              overflowX: 'auto',
+              paddingBottom: '4px',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}>
+              {ARC_CONFIG.map((saga, sIdx) => {
+                const isCurrent = saga.rank === currentRank.code
+                const isUnlocked = currentLevel >= saga.minLvl
+                const isCompleted = currentLevel > saga.maxLvl
+                const sagaImg = SAGA_IMAGES[saga.rank] || '/sagas/the-spark.png'
 
-                    return (
-                      <div 
-                        key={saga.rank}
-                        onClick={() => {
-                          setActiveArtworkIndex(sIdx)
-                          setIsAutoCycling(false)
+                return (
+                  <div
+                    key={saga.rank}
+                    style={{
+                      flexShrink: 0,
+                      width: isCurrent ? '90px' : '68px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'default',
+                      transition: 'width 0.3s ease',
+                    }}
+                  >
+                    {/* Thumbnail */}
+                    <div style={{
+                      width: '100%',
+                      aspectRatio: '1/1',
+                      borderRadius: '10px',
+                      overflow: 'hidden',
+                      position: 'relative',
+                      border: isCurrent
+                        ? `2px solid ${sagaAccentColor}`
+                        : '1px solid rgba(255,255,255,0.08)',
+                      boxShadow: isCurrent ? `0 0 16px ${sagaAccentColor}60` : 'none',
+                      background: '#0a0d18',
+                    }}>
+                      <img
+                        src={sagaImg}
+                        alt={saga.name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          filter: !isUnlocked ? 'grayscale(1) brightness(0.35)' : isCompleted ? 'brightness(0.7)' : isCurrent ? 'brightness(1)' : 'brightness(0.55)',
+                          transition: 'filter 0.3s ease',
                         }}
-                        className={`rounded-2xl border p-2.5 flex flex-col items-center text-center transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-indigo-950/50 border-indigo-400 shadow-[0_0_20px_rgba(129,140,248,0.4)] ring-2 ring-indigo-400/50'
-                            : isCurrent
-                            ? 'bg-indigo-950/30 border-indigo-400/50'
-                            : isUnlocked
-                            ? 'bg-black/40 border-white/10 hover:border-white/20'
-                            : 'bg-black/60 border-white/5 opacity-50'
-                        }`}
-                      >
-                        {/* 1:1 Square Thumbnail */}
-                        <div className="w-full aspect-square rounded-xl overflow-hidden relative mb-2 bg-slate-950 border border-white/10">
-                          <img 
-                            src={sagaImg} 
-                            alt={saga.name} 
-                            className={`w-full h-full object-cover aspect-square transition-all ${
-                              !isUnlocked ? 'grayscale contrast-125 brightness-50' : ''
-                            }`}
-                            onError={(e) => { e.currentTarget.src = '/sagas/the-spark.png' }}
-                          />
+                        onError={(e) => { e.currentTarget.src = '/sagas/the-spark.png' }}
+                      />
 
-                          {/* Lock / Active Badges */}
-                          {isCurrent ? (
-                            <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-indigo-500 text-black font-mono text-[8px] font-black uppercase shadow-md">
-                              ACTIVE
-                            </div>
-                          ) : !isUnlocked ? (
-                            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex flex-col items-center justify-center text-slate-300">
-                              <Lock size={16} className="text-slate-400 mb-0.5" />
-                              <span className="font-mono text-[8px] font-bold text-slate-300">LV.{saga.minLvl}+</span>
-                            </div>
-                          ) : isCompleted ? (
-                            <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-emerald-500/90 text-black font-mono text-[8px] font-black uppercase shadow-md">
-                              ✓ DONE
-                            </div>
-                          ) : null}
-                        </div>
+                      {/* Current saga glow frame */}
+                      {isCurrent && (
+                        <div style={{
+                          position: 'absolute',
+                          inset: 0,
+                          border: `2px solid ${sagaAccentColor}`,
+                          borderRadius: '10px',
+                          boxShadow: `inset 0 0 12px ${sagaAccentColor}40`,
+                          pointerEvents: 'none',
+                        }} />
+                      )}
 
-                        {/* Title & Level Range */}
-                        <div className="w-full min-w-0">
-                          <div className="font-mono text-[8px] uppercase tracking-wider text-slate-400 font-bold">
-                            SAGA {saga.rank}
-                          </div>
-                          <div className="font-display font-bold text-[11px] text-white uppercase tracking-tight truncate">
-                            {saga.name}
-                          </div>
-                          <div className="font-mono text-[9px] text-slate-400 mt-0.5">
-                            LV.{saga.minLvl} - {saga.maxLvl === 999 ? '∞' : saga.maxLvl}
-                          </div>
+                      {/* Lock overlay */}
+                      {!isUnlocked && (
+                        <div style={{
+                          position: 'absolute',
+                          inset: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(5,7,15,0.6)',
+                          backdropFilter: 'blur(2px)',
+                        }}>
+                          <Lock size={12} style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '2px' }} />
+                          <span style={{ fontFamily: 'monospace', fontSize: '7px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>
+                            LV.{saga.minLvl}
+                          </span>
                         </div>
+                      )}
+
+                      {/* Current badge */}
+                      {isCurrent && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '3px',
+                          right: '3px',
+                          padding: '1px 4px',
+                          borderRadius: '4px',
+                          background: sagaAccentColor,
+                          fontFamily: 'monospace',
+                          fontSize: '6px',
+                          fontWeight: 900,
+                          color: '#000',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                        }}>
+                          YOU
+                        </div>
+                      )}
+
+                      {/* Done badge */}
+                      {isCompleted && !isCurrent && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '3px',
+                          right: '3px',
+                          width: '14px',
+                          height: '14px',
+                          borderRadius: '50%',
+                          background: '#22c55e',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <Check size={8} color="#000" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Label */}
+                    <div style={{ textAlign: 'center', width: '100%' }}>
+                      <div style={{
+                        fontFamily: 'monospace',
+                        fontSize: '7px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                        color: isCurrent ? sagaAccentColor : 'rgba(255,255,255,0.3)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
+                        {saga.name}
                       </div>
-                    )
-                  })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
 
         </div>
 
