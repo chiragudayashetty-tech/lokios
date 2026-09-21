@@ -1698,58 +1698,56 @@ export default function MissionControl() {
                     return (
                       <div
                         key={task.id}
-                        className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all ${
+                        className={`flex items-center gap-3 p-3 rounded-2xl border transition-all overflow-hidden ${
                           isDone
                             ? 'bg-emerald-950/20 border-emerald-500/30 text-slate-400'
                             : 'bg-white/[0.02] border-white/10 hover:border-white/20 text-white'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (isDone) {
-                                if (undoCompleteTask) await undoCompleteTask(task.id)
-                              } else {
-                                if (completeTask) await completeTask(task.id)
-                              }
-                              if (fetchTasks) await fetchTasks()
-                              if (profileHook?.fetchProfile) await profileHook.fetchProfile()
-                            }}
-                            className={`w-6 h-6 rounded-xl flex items-center justify-center transition-all shrink-0 ${
-                              isDone
-                                ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.4)]'
-                                : 'border border-white/20 hover:border-emerald-400 hover:bg-emerald-500/10 text-transparent hover:text-emerald-400'
-                            }`}
-                            title={isDone ? 'Undo complete' : 'Mark complete'}
-                          >
-                            <Check size={13} strokeWidth={3} className={isDone ? 'opacity-100' : 'opacity-0 hover:opacity-100'} />
-                          </button>
-                          <div className="min-w-0 flex-1">
-                            <span className={`font-mono text-xs leading-snug break-words whitespace-normal block ${
-                              isDone ? 'line-through text-slate-500' : 'text-slate-200'
-                            }`}>
-                              {task.title}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (isDone) {
+                              if (undoCompleteTask) await undoCompleteTask(task.id)
+                            } else {
+                              if (completeTask) await completeTask(task.id)
+                            }
+                            if (fetchTasks) await fetchTasks()
+                            if (profileHook?.fetchProfile) await profileHook.fetchProfile()
+                          }}
+                          className={`w-6 h-6 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+                            isDone
+                              ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.4)]'
+                              : 'border border-white/20 hover:border-emerald-400 hover:bg-emerald-500/10 text-transparent hover:text-emerald-400'
+                          }`}
+                          title={isDone ? 'Undo complete' : 'Mark complete'}
+                        >
+                          <Check size={13} strokeWidth={3} className={isDone ? 'opacity-100' : 'opacity-0 hover:opacity-100'} />
+                        </button>
+                        <div className="min-w-0 flex-1 overflow-hidden">
+                          <span className={`font-mono text-xs leading-snug truncate block ${
+                            isDone ? 'line-through text-slate-500' : 'text-slate-200'
+                          }`}>
+                            {task.title}
+                          </span>
+                          {task.description && (
+                            <span className="font-mono text-[9px] text-slate-500 truncate block mt-0.5">
+                              {task.description}
                             </span>
-                            {task.description && (
-                              <span className="font-mono text-[9px] text-slate-500 truncate block mt-0.5">
-                                {task.description}
-                              </span>
-                            )}
-                          </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                           {task.due_time && (
                             <span className="font-mono text-[9px] text-slate-400">
                               {task.due_time}
                             </span>
                           )}
                           {isDone ? (
-                            <span className="font-mono text-[8px] font-bold text-emerald-300 uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40">
+                            <span className="font-mono text-[8px] font-bold text-emerald-300 uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 whitespace-nowrap">
                               DONE
                             </span>
                           ) : (
-                            <span className="font-mono text-[8px] font-bold text-amber-300 uppercase px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40">
+                            <span className="font-mono text-[8px] font-bold text-amber-300 uppercase px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 whitespace-nowrap">
                               +25 XP
                             </span>
                           )}
