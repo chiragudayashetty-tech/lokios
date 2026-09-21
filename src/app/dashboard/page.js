@@ -1349,7 +1349,7 @@ export default function MissionControl() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          filter: !isUnlocked ? 'grayscale(1) brightness(0.35)' : isCompleted ? 'brightness(0.7)' : isCurrent ? 'brightness(1)' : 'brightness(0.55)',
+                          filter: !isUnlocked ? 'grayscale(1) brightness(0.65)' : isCompleted ? 'brightness(0.85)' : isCurrent ? 'brightness(1)' : 'brightness(0.7)',
                           transition: 'filter 0.3s ease',
                         }}
                         onError={(e) => { e.currentTarget.src = '/sagas/the-spark.png' }}
@@ -1376,11 +1376,10 @@ export default function MissionControl() {
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          background: 'rgba(5,7,15,0.6)',
-                          backdropFilter: 'blur(2px)',
+                          background: 'rgba(5,7,15,0.40)',
                         }}>
-                          <Lock size={12} style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '2px' }} />
-                          <span style={{ fontFamily: 'monospace', fontSize: '7px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>
+                          <Lock size={12} style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '2px' }} />
+                          <span style={{ fontFamily: 'monospace', fontSize: '7px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
                             LV.{saga.minLvl}
                           </span>
                         </div>
