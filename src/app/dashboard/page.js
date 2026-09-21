@@ -1121,6 +1121,7 @@ export default function MissionControl() {
           >
             {/* Full-bleed current saga image */}
             <img
+              className="saga-cover-image"
               src={currentSagaImage}
               alt={currentArc?.name || 'Current Saga'}
               style={{
@@ -2444,7 +2445,7 @@ export default function MissionControl() {
                 </span>
               </div>
               <div className="flex items-center gap-4">
-                <div className="relative shrink-0 w-12 h-12">
+                <div className="time-remaining-ring relative shrink-0 w-12 h-12">
                   <svg className="w-12 h-12 transform -rotate-90">
                     <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
                     <circle cx="24" cy="24" r="20" fill="none"
@@ -2459,7 +2460,7 @@ export default function MissionControl() {
                     <span className="font-mono font-bold text-white text-[9px]">{dayPct}%</span>
                   </div>
                 </div>
-                <div>
+                <div className="time-remaining-info">
                   <div className="font-display font-black text-white text-2xl leading-none">
                     {hoursLeft}<span className="font-mono text-xs text-slate-400 font-normal">h left today</span>
                   </div>

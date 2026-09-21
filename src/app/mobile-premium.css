@@ -18,6 +18,7 @@ html, body { overflow-x: hidden; }
   .saga-hero > .relative.z-10 > div:last-child { width: 100% !important; max-width: none !important; }
   .saga-hero img { max-height: 560px; object-fit: cover; }
   .saga-cover-frame { aspect-ratio: 2.35 / 1 !important; min-height: 340px !important; max-height: 420px !important; }
+  .saga-cover-image { object-fit: contain !important; object-position: center !important; background: #05070f; }
   .saga-cover-content { padding: 24px 28px !important; }
   .saga-selector { padding: 14px 18px 18px !important; }
   .saga-selector > div:last-child > div { width: 78px !important; }
@@ -31,6 +32,12 @@ html, body { overflow-x: hidden; }
   .time-remaining-card > .flex.items-center.gap-4 > div:last-child .text-2xl { font-size: 1.35rem !important; white-space: nowrap; }
   .time-remaining-card > .flex.items-center.gap-4 > div:last-child .text-xs { font-size: 9px !important; }
   .time-remaining-card > .flex.items-center.gap-4 > div:last-child .text-2xl { font-size: 1.65rem !important; white-space: nowrap; }
+  .time-remaining-ring { width: 64px !important; height: 64px !important; position: relative !important; display: block !important; }
+  .time-remaining-ring > svg { width: 64px !important; height: 64px !important; display: block !important; }
+  .time-remaining-ring > .absolute { position: absolute !important; inset: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+  .time-remaining-ring > .absolute span { font-size: 12px !important; line-height: 1 !important; }
+  .time-remaining-info { min-width: 0 !important; }
+  .time-remaining-info .text-2xl { font-size: 1.65rem !important; white-space: nowrap; }
   .quests-stopped-routines > div { max-width: 1100px; margin-inline: auto; }
 }
 
