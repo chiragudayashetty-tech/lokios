@@ -133,6 +133,7 @@ export default function MissionControl() {
   const [todayScreenTime, setTodayScreenTime] = useState(null)
   const [addictionData, setAddictionData] = useState(null)
   const [expandedWidget, setExpandedWidget] = useState(null)
+  const [expandedTaskId, setExpandedTaskId] = useState(null)
 
   const [eodWorkData, setEodWorkData] = useState({ logged: false, hours: 0 })
   const [eodSpeakingData, setEodSpeakingData] = useState({ logged: false, detail: '' })
@@ -1694,63 +1695,160 @@ export default function MissionControl() {
                   {/* Scheduled Tasks */}
                   {todayTasksScheduled.map(task => {
                     const isDone = task.status === 'completed'
+                    const isExpanded = expandedTaskId === task.id
                     return (
                       <div
                         key={task.id}
-                        className={`flex items-center gap-3 p-3 rounded-2xl border transition-all overflow-hidden ${
-                          isDone
-                            ? 'bg-emerald-950/20 border-emerald-500/30 text-slate-400'
-                            : 'bg-white/[0.02] border-white/10 hover:border-white/20 text-white'
-                        }`}
+                        style={{ borderRadius: '16px', overflow: 'hidden', border: isDone ? '1px solid rgba(16,185,129,0.3)' : isExpanded ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)', transition: 'border-color 0.2s ease', background: isDone ? 'rgba(5,46,22,0.25)' : isExpanded ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.01)' }}
                       >
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (isDone) {
-                              if (undoCompleteTask) await undoCompleteTask(task.id)
-                            } else {
-                              if (completeTask) await completeTask(task.id)
-                            }
-                            if (fetchTasks) await fetchTasks()
-                            if (profileHook?.fetchProfile) await profileHook.fetchProfile()
-                          }}
-                          className={`w-6 h-6 rounded-xl flex items-center justify-center transition-all shrink-0 ${
-                            isDone
-                              ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.4)]'
-                              : 'border border-white/20 hover:border-emerald-400 hover:bg-emerald-500/10 text-transparent hover:text-emerald-400'
-                          }`}
-                          title={isDone ? 'Undo complete' : 'Mark complete'}
+                        {/* Collapsed row — always visible */}
+                        <div
+                          className="flex items-center gap-3 p-3 cursor-pointer"
+                          onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
                         >
-                          <Check size={13} strokeWidth={3} className={isDone ? 'opacity-100' : 'opacity-0 hover:opacity-100'} />
-                        </button>
-                        <div className="min-w-0 flex-1 overflow-hidden">
-                          <span className={`font-mono text-xs leading-snug truncate block ${
-                            isDone ? 'line-through text-slate-500' : 'text-slate-200'
-                          }`}>
-                            {task.title}
-                          </span>
-                          {task.description && (
-                            <span className="font-mono text-[9px] text-slate-500 truncate block mt-0.5">
-                              {task.description}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              ;(async () => {
+                                if (isDone) {
+                                  if (undoCompleteTask) await undoCompleteTask(task.id)
+                                } else {
+                                  if (completeTask) await completeTask(task.id)
+                                }
+                                if (fetchTasks) await fetchTasks()
+                                if (profileHook?.fetchProfile) await profileHook.fetchProfile()
+                              })()
+                            }}
+                            className={`w-6 h-6 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+                              isDone
+                                ? 'bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.4)]'
+                                : 'border border-white/20 hover:border-emerald-400 hover:bg-emerald-500/10 text-transparent hover:text-emerald-400'
+                            }`}
+                            title={isDone ? 'Undo complete' : 'Mark complete'}
+                          >
+                            <Check size={13} strokeWidth={3} className={isDone ? 'opacity-100' : 'opacity-0 hover:opacity-100'} />
+                          </button>
+                          <div className="min-w-0 flex-1 overflow-hidden">
+                            <span className={`font-mono text-xs leading-snug truncate block ${
+                              isDone ? 'line-through text-slate-500' : 'text-slate-200'
+                            }`}>
+                              {task.title}
                             </span>
-                          )}
+                            {!isExpanded && task.description && (
+                              <span className="font-mono text-[9px] text-slate-500 truncate block mt-0.5">
+                                {task.description}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                            {isDone ? (
+                              <span className="font-mono text-[8px] font-bold text-emerald-300 uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 whitespace-nowrap">
+                                DONE
+                              </span>
+                            ) : (
+                              <span className="font-mono text-[8px] font-bold text-amber-300 uppercase px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 whitespace-nowrap">
+                                +25 XP
+                              </span>
+                            )}
+                            <ChevronDown
+                              size={14}
+                              style={{
+                                color: 'rgba(255,255,255,0.3)',
+                                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s ease',
+                                flexShrink: 0,
+                              }}
+                            />
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                          {task.due_time && (
-                            <span className="font-mono text-[9px] text-slate-400">
-                              {task.due_time}
-                            </span>
-                          )}
-                          {isDone ? (
-                            <span className="font-mono text-[8px] font-bold text-emerald-300 uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 whitespace-nowrap">
-                              DONE
-                            </span>
-                          ) : (
-                            <span className="font-mono text-[8px] font-bold text-amber-300 uppercase px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 whitespace-nowrap">
-                              +25 XP
-                            </span>
-                          )}
-                        </div>
+
+                        {/* Expanded panel */}
+                        {isExpanded && (
+                          <div style={{
+                            padding: '0 12px 12px 12px',
+                            borderTop: '1px solid rgba(255,255,255,0.06)',
+                          }}>
+                            {/* Full description */}
+                            {task.description && (
+                              <p style={{
+                                fontFamily: 'monospace',
+                                fontSize: '11px',
+                                color: 'rgba(255,255,255,0.5)',
+                                lineHeight: 1.6,
+                                margin: '10px 0 10px',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                              }}>
+                                {task.description}
+                              </p>
+                            )}
+
+                            {/* Meta row */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', marginTop: task.description ? '0' : '10px' }}>
+                              {task.due_time && (
+                                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', padding: '2px 8px', borderRadius: '100px' }}>
+                                  ⏰ {task.due_time}
+                                </span>
+                              )}
+                              {task.due_date && (
+                                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px' }}>
+                                  📅 {task.due_date}
+                                </span>
+                              )}
+                              {task.category && (
+                                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: 'rgba(148,163,184,0.8)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>
+                                  {task.category.replace(/_/g, ' ')}
+                                </span>
+                              )}
+                              {task.priority && (
+                                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: task.priority === 'high' ? '#f87171' : task.priority === 'medium' ? '#fb923c' : 'rgba(148,163,184,0.8)', background: task.priority === 'high' ? 'rgba(248,113,113,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${task.priority === 'high' ? 'rgba(248,113,113,0.3)' : 'rgba(255,255,255,0.08)'}`, padding: '2px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>
+                                  {task.priority} priority
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Action button */}
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (isDone) {
+                                  if (undoCompleteTask) await undoCompleteTask(task.id)
+                                } else {
+                                  if (completeTask) await completeTask(task.id)
+                                  setExpandedTaskId(null)
+                                }
+                                if (fetchTasks) await fetchTasks()
+                                if (profileHook?.fetchProfile) await profileHook.fetchProfile()
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '9px 0',
+                                borderRadius: '10px',
+                                border: isDone ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(16,185,129,0.5)',
+                                background: isDone ? 'rgba(5,46,22,0.4)' : 'rgba(16,185,129,0.15)',
+                                color: isDone ? '#6ee7b7' : '#34d399',
+                                fontFamily: 'monospace',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.1em',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              {isDone ? (
+                                <><RotateCcw size={12} /> UNDO COMPLETE</>
+                              ) : (
+                                <><Check size={12} strokeWidth={3} /> MARK COMPLETE (+25 XP)</>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
