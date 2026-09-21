@@ -425,7 +425,7 @@ export default function XPDashboard() {
         {/* ══════════════════════════════════════════════════════════════════
             CARD 1: SAGA & LEVEL HERO CARD (FULLY CENTERED & ENLARGED)
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden text-center">
+        <div className="xp-saga-hero relative mb-6 rounded-3xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.7)] overflow-hidden text-center">
           
           {/* Subtle Ambient Glows */}
           <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/10 blur-[90px] pointer-events-none" />
@@ -435,7 +435,7 @@ export default function XPDashboard() {
             
             {/* Centered 1:1 Square Saga Artwork Emblem (15cm x 15cm) */}
             <div 
-              className="relative flex items-center justify-center shrink-0 mx-auto"
+              className="xp-saga-art relative flex items-center justify-center shrink-0 mx-auto"
               style={{ width: '15cm', height: '15cm', maxWidth: '100%', aspectRatio: '1 / 1' }}
             >
               <div className="absolute -inset-3 rounded-3xl border border-indigo-500/30 animate-[spin_24s_linear_infinite]" style={{ borderTopColor: 'transparent', borderBottomColor: 'transparent' }} />
@@ -456,12 +456,12 @@ export default function XPDashboard() {
             </div>
 
             {/* Centered Saga Title (Enlarged) */}
-            <div className="font-mono text-xs sm:text-sm md:text-base uppercase tracking-[0.3em] font-bold text-slate-300">
+            <div className="xp-saga-title font-mono text-xs sm:text-sm md:text-base uppercase tracking-[0.3em] font-bold text-slate-300">
               SAGA {currentRank.code} <span className="text-slate-600 mx-1.5">•</span> <span className="text-indigo-400">{rankTitle.toUpperCase()}</span>
             </div>
 
             {/* Centered Huge Level & XP */}
-            <div className="space-y-1">
+            <div className="xp-saga-level space-y-1">
               <div className="font-display font-black text-4xl sm:text-5xl md:text-6xl text-white tracking-tight leading-none">
                 LEVEL <span className="text-indigo-400">{currentLevel}</span>
               </div>
@@ -471,7 +471,7 @@ export default function XPDashboard() {
             </div>
 
             {/* Centered Progress Capsule Bar */}
-            <div className="w-full max-w-lg mt-2 flex flex-col gap-2">
+            <div className="xp-saga-progress w-full max-w-lg mt-2 flex flex-col gap-2">
               <div className="flex items-center justify-between font-mono text-xs uppercase tracking-widest text-slate-400 font-semibold px-1">
                 <span>NEXT LEVEL <span className="text-indigo-400 font-bold">{currentLevel + 1}</span></span>
                 <span className="font-display font-bold text-slate-200 text-sm">{xpToGo.toLocaleString()} <span className="font-mono text-[10px] font-bold text-slate-400">XP TO GO</span></span>

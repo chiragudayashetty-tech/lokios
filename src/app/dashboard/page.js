@@ -1250,7 +1250,7 @@ export default function MissionControl() {
               </div>
 
               {/* Progress bar */}
-              <div style={{ marginBottom: '4px' }}>
+              <div className="saga-cover-progress" style={{ marginBottom: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <span style={{ fontFamily: 'monospace', fontSize: '9px', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
                     SAGA PROGRESS

@@ -28,6 +28,8 @@ html, body { overflow-x: hidden; }
   .time-remaining-card > .flex.items-center.gap-4 > .relative > svg { width: 64px !important; height: 64px !important; }
   .time-remaining-card > .flex.items-center.gap-4 > .relative > .absolute { position: absolute !important; inset: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; }
   .time-remaining-card > .flex.items-center.gap-4 > div:last-child { min-width: 0 !important; }
+  .time-remaining-card > .flex.items-center.gap-4 > div:last-child .text-2xl { font-size: 1.35rem !important; white-space: nowrap; }
+  .time-remaining-card > .flex.items-center.gap-4 > div:last-child .text-xs { font-size: 9px !important; }
   .time-remaining-card > .flex.items-center.gap-4 > div:last-child .text-2xl { font-size: 1.65rem !important; white-space: nowrap; }
   .quests-stopped-routines > div { max-width: 1100px; margin-inline: auto; }
 }
@@ -70,6 +72,8 @@ html, body { overflow-x: hidden; }
   .saga-cover-content > div:first-child > div:last-child { display: none !important; }
   .saga-cover-content [style*="font-size: clamp"] { font-size: 1.45rem !important; line-height: 1 !important; letter-spacing: .05em !important; }
   .saga-cover-content [style*="font-style: italic"] { font-size: 10px !important; margin-top: 6px !important; }
+  .saga-cover-progress > div:first-child { display: none !important; }
+  .saga-cover-progress > div:last-child { height: 5px !important; }
   .saga-selector { padding: 10px 10px 12px !important; }
   .saga-selector > div:first-child { margin-bottom: 7px !important; }
   .saga-selector > div:first-child span:last-child { display: none !important; }
@@ -78,6 +82,15 @@ html, body { overflow-x: hidden; }
   .saga-selector > div:last-child > div:first-child { width: 70px !important; }
   .saga-selector > div:last-child > div > div:first-child { border-radius: 8px !important; }
   .saga-selector > div:last-child > div > div:last-child { font-size: 6px !important; }
+
+  /* Progress page: keep the cover compact and let the artwork carry the identity. */
+  .xp-saga-hero { padding: 12px !important; margin-bottom: 14px !important; }
+  .xp-saga-art { width: min(72vw, 300px) !important; height: min(72vw, 300px) !important; }
+  .xp-saga-art > div { border-radius: 18px !important; }
+  .xp-saga-title, .xp-saga-level { display: none !important; }
+  .xp-saga-progress { margin-top: 2px !important; gap: 0 !important; }
+  .xp-saga-progress > div:first-child, .xp-saga-progress > div:last-child { display: none !important; }
+  .xp-saga-progress > div:nth-child(2) { height: 6px !important; }
 
   .momentum-focus-card { padding: 16px !important; }
   .momentum-focus-card .relative.w-44.h-44 { width: 158px !important; height: 158px !important; margin: 6px auto 14px !important; }
