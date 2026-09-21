@@ -1099,7 +1099,7 @@ export default function MissionControl() {
             SAGA HERO — CURRENT SAGA FEATURED, ALL OTHERS LOCKED
         ══════════════════════════════════════════════════════════════════ */}
         <div
-          className="mb-6 overflow-hidden"
+          className="saga-hero mb-6 overflow-hidden"
           style={{
             borderRadius: '24px',
             border: `1px solid ${sagaAccentColor}30`,
@@ -1109,6 +1109,7 @@ export default function MissionControl() {
         >
           {/* ── HERO IMAGE (full-width, tall on mobile, 2/3 on desktop) ── */}
           <div
+            className="saga-cover-frame"
             style={{
               position: 'relative',
               width: '100%',
@@ -1133,7 +1134,7 @@ export default function MissionControl() {
             />
 
             {/* Dark gradient overlay for text legibility */}
-            <div style={{
+            <div className="saga-cover-content" style={{
               position: 'absolute',
               inset: 0,
               background: `linear-gradient(to top, rgba(5,7,15,0.97) 0%, rgba(5,7,15,0.65) 40%, rgba(5,7,15,0.1) 75%, transparent 100%)`,
@@ -1289,7 +1290,7 @@ export default function MissionControl() {
           </div>
 
           {/* ── LOCKED SAGAS STRIP ── */}
-          <div style={{ padding: '14px 16px 16px', borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+          <div className="saga-selector" style={{ padding: '14px 16px 16px', borderTop: `1px solid rgba(255,255,255,0.06)` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
                 ALL CHAPTERS
@@ -2429,7 +2430,7 @@ export default function MissionControl() {
             )}
 
             {/* DAY PRESSURE CLOCK */}
-            <div className="dashboard-card p-5 sm:p-6">
+            <div className="dashboard-card time-remaining-card p-5 sm:p-6">
               <div className="flex items-center justify-between mb-3.5">
                 <div className="flex items-center gap-2">
                   <Clock size={14} className="text-slate-400" />

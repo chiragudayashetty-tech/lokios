@@ -32,7 +32,7 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
   return (
     <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '0 4px', marginBottom: '20px', boxSizing: 'border-box' }}>
       <div 
-        className="loki-capsule-hud"
+        className="loki-capsule-hud premium-xp-hud"
         style={{
           width: '100%',
           maxWidth: '1280px',
