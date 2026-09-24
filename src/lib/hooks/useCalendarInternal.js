@@ -9,7 +9,7 @@ async function syncToGoogle(action, event, userId) {
     await fetch('/api/google/sync-event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, event, userId }),
+      body: JSON.stringify({ action, itemType: 'event', item: event, userId }),
     })
   } catch {
     // Silently fail — Google sync should never break the local app
@@ -133,5 +133,5 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
     }
   }, [user])
 
-  return { events, loading, addEvent, updateEvent, deleteEvent }
+  return { events, loading, fetchEvents, addEvent, updateEvent, deleteEvent }
 }

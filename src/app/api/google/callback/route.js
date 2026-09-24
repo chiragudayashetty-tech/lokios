@@ -5,7 +5,6 @@
  */
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { refreshAccessToken, createGoogleEvent } from '@/lib/utils/googleCalendar'
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
@@ -13,7 +12,8 @@ export async function GET(request) {
   const state = searchParams.get('state')   // user_id
   const error = searchParams.get('error')
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lokios.vercel.app'
+  const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lokios.vercel.app'
+  const appUrl = rawAppUrl.replace(/\/+$/, '')
 
   if (error || !code || !state) {
     return NextResponse.redirect(`${appUrl}/calendar?google_error=${error || 'missing_params'}`)
@@ -57,32 +57,6 @@ export async function GET(request) {
   if (dbError) {
     console.error('Failed to save Google tokens:', dbError)
     return NextResponse.redirect(`${appUrl}/calendar?google_error=db_save_failed`)
-  }
-
-  // Sync existing calendar_events to Google Calendar (non-fatal if it fails)
-  try {
-    const { data: existingEvents } = await supabase
-      .from('calendar_events')
-      .select('*')
-      .eq('user_id', state)
-
-    if (existingEvents?.length) {
-      const accessToken = await refreshAccessToken(tokens.refresh_token)
-      for (const evt of existingEvents) {
-        if (evt.google_event_id) continue
-        try {
-          const gEvt = await createGoogleEvent(accessToken, 'primary', evt)
-          await supabase
-            .from('calendar_events')
-            .update({ google_event_id: gEvt.id })
-            .eq('id', evt.id)
-        } catch (syncErr) {
-          console.warn(`Failed to sync event ${evt.id}:`, syncErr.message)
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('Initial sync failed (non-fatal):', e.message)
   }
 
   return NextResponse.redirect(`${appUrl}/calendar?google_connected=1`)
