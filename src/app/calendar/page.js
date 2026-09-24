@@ -277,16 +277,21 @@ export default function Calendar() {
                 {disconnecting ? 'DISCONNECTING...' : '✓ GOOGLE SYNCED'}
               </button>
             ) : (
-              <a
-                href={`/api/google/auth?userId=${profile?.id}`}
+              <button
+                onClick={() => {
+                  if (!profile?.id) return
+                  window.location.href = `/api/google/auth?userId=${profile.id}`
+                }}
+                disabled={!profile?.id}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '6px',
                   padding: '6px 12px', borderRadius: '8px',
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.15)',
-                  color: '#94a3b8', fontFamily: 'monospace',
+                  color: profile?.id ? '#94a3b8' : '#475569',
+                  fontFamily: 'monospace',
                   fontSize: '11px', fontWeight: 700,
-                  textDecoration: 'none',
+                  cursor: profile?.id ? 'pointer' : 'not-allowed',
                   transition: 'all 0.2s',
                 }}
               >
@@ -297,7 +302,7 @@ export default function Calendar() {
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
                 CONNECT GOOGLE
-              </a>
+              </button>
             )}
 
             {/* New Event Button */}
