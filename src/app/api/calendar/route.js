@@ -69,7 +69,7 @@ export async function GET(request) {
     ics.push(`UID:tsk-${t.id}@chiragos`)
     ics.push(`DTSTAMP:${formatDate(new Date())}`)
     ics.push(`DTSTART;VALUE=DATE:${formatDate(t.due_date, true)}`)
-    ics.push(`SUMMARY:[OPERATION] ${t.title}`)
+    ics.push(`SUMMARY:${t.title}`)
     ics.push('END:VEVENT')
   })
 
@@ -78,7 +78,7 @@ export async function GET(request) {
     ics.push(`UID:gol-${g.id}@chiragos`)
     ics.push(`DTSTAMP:${formatDate(new Date())}`)
     ics.push(`DTSTART:${formatDate(g.deadline)}`)
-    ics.push(`SUMMARY:[DEADLINE] ${g.title}`)
+    ics.push(`SUMMARY:${g.title}`)
     if (g.description) ics.push(`DESCRIPTION:${g.description.replace(/\n/g, '\\n')}`)
     ics.push('END:VEVENT')
   })

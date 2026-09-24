@@ -68,7 +68,7 @@ export function taskToGoogleBody(task) {
   const d = task.due_date ? task.due_date.split('T')[0] : new Date().toISOString().split('T')[0]
   const isDone = task.status === 'completed'
   return {
-    summary: `${isDone ? '✓ ' : ''}[OPERATION] ${task.title}`,
+    summary: `${isDone ? '✓ ' : ''}${task.title}`,
     description: [
       `Task: ${task.title}`,
       `Status: ${task.status?.toUpperCase()}`,
@@ -88,7 +88,7 @@ export function goalToGoogleBody(goal) {
   const d = goal.deadline ? goal.deadline.split('T')[0] : new Date().toISOString().split('T')[0]
   const isDone = goal.status === 'completed'
   return {
-    summary: `${isDone ? '✓ ' : ''}[DEADLINE] ${goal.title}`,
+    summary: `${isDone ? '✓ ' : ''}${goal.title}`,
     description: [
       `Strategic Goal: ${goal.title}`,
       `Status: ${goal.status?.toUpperCase()}`,
