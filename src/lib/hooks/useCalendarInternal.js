@@ -3,6 +3,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+// Fire-and-forget sync to Google Calendar (non-blocking, never throws)
+async function syncToGoogle(action, event, userId) {
+  try {
+    await fetch('/api/google/sync-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, event, userId }),
+    })
+  } catch {
+    // Silently fail — Google sync should never break the local app
+  }
+}
+
 export function useCalendarInternal(user, year = new Date().getFullYear(), month = new Date().getMonth()) {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,7 +32,6 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
     try {
       if (!initialized) setLoading(true)
 
-      // Build date range for the given month
       const startDate = new Date(year, month, 1).toISOString()
       const endDate = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
 
@@ -47,7 +59,6 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
 
   const addEvent = useCallback(async (data) => {
     if (!user) return null
-
     try {
       const { data: newEvent, error } = await supabase
         .from('calendar_events')
@@ -59,6 +70,8 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
       setEvents((prev) => [...prev, newEvent].sort(
         (a, b) => new Date(a.start_time) - new Date(b.start_time)
       ))
+      // Sync to Google Calendar (fire-and-forget)
+      syncToGoogle('create', newEvent, user.id)
       return newEvent
     } catch (error) {
       console.error('Error adding calendar event:', error)
@@ -68,7 +81,6 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
 
   const updateEvent = useCallback(async (id, data) => {
     if (!user) return null
-
     try {
       const { data: updated, error } = await supabase
         .from('calendar_events')
@@ -84,6 +96,8 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
           .map((e) => (e.id === id ? updated : e))
           .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
       )
+      // Sync to Google Calendar (fire-and-forget)
+      syncToGoogle('update', updated, user.id)
       return updated
     } catch (error) {
       console.error('Error updating calendar event:', error)
@@ -93,8 +107,15 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
 
   const deleteEvent = useCallback(async (id) => {
     if (!user) return false
-
     try {
+      // Fetch first to get google_event_id before deleting
+      const { data: toDelete } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single()
+
       const { error } = await supabase
         .from('calendar_events')
         .delete()
@@ -103,6 +124,8 @@ export function useCalendarInternal(user, year = new Date().getFullYear(), month
 
       if (error) throw error
       setEvents((prev) => prev.filter((e) => e.id !== id))
+      // Sync deletion to Google Calendar (fire-and-forget)
+      if (toDelete) syncToGoogle('delete', toDelete, user.id)
       return true
     } catch (error) {
       console.error('Error deleting calendar event:', error)
