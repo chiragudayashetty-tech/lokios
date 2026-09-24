@@ -1,41 +1,31 @@
 /**
  * POST /api/google/disconnect
- * Removes the stored Google tokens and disconnects Google Calendar sync.
+ * Body: { userId: string }
+ * Removes Google tokens from the user's profile.
  */
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 
-export async function POST() {
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        get(name) { return cookieStore.get(name)?.value },
-      },
-    }
-  )
+export async function POST(request) {
+  const { userId } = await request.json()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!userId) {
+    return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
+  }
 
-  // Use service role to clear tokens
-  const serviceSupabase = createClient(
+  const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
-  const { error } = await serviceSupabase
+  const { error } = await supabase
     .from('profiles')
     .update({
       google_refresh_token: null,
       google_calendar_id:   null,
       google_connected_at:  null,
     })
-    .eq('id', user.id)
+    .eq('id', userId)
 
   if (error) return NextResponse.json({ error: 'Failed to disconnect' }, { status: 500 })
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -70,7 +70,7 @@ export default function Calendar() {
   const isGoogleConnected = !!profile?.google_refresh_token
 
   // Show toast if redirected back from Google OAuth
-  useState(() => {
+  useEffect(() => {
     if (typeof window === 'undefined') return
     const p = new URLSearchParams(window.location.search)
     if (p.get('google_connected')) {
@@ -80,13 +80,17 @@ export default function Calendar() {
       setGoogleToast({ type: 'error', msg: `Google connection failed: ${p.get('google_error')}` })
       window.history.replaceState({}, '', '/calendar')
     }
-  })
+  }, [])
 
   const handleGoogleDisconnect = async () => {
     if (!window.confirm('Disconnect Google Calendar? Events will no longer sync automatically.')) return
     setDisconnecting(true)
     try {
-      const res = await fetch('/api/google/disconnect', { method: 'POST' })
+      const res = await fetch('/api/google/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: profile?.id }),
+      })
       if (res.ok) {
         setGoogleToast({ type: 'success', msg: 'Google Calendar disconnected.' })
         setTimeout(() => window.location.reload(), 1000)
@@ -274,7 +278,7 @@ export default function Calendar() {
               </button>
             ) : (
               <a
-                href="/api/google/auth"
+                href={`/api/google/auth?userId=${profile?.id}`}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '6px',
                   padding: '6px 12px', borderRadius: '8px',
