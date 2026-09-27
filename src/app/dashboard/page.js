@@ -1999,7 +1999,7 @@ export default function MissionControl() {
                           }
 
                           await updateDebriefWorkLog(goalTitleText, '[FAILED]')
-                          await robustAwardXP(user.id, -25, 'task_failed', stableSourceId, `Failed Priority Goal: ${goalTitleText}`, 'discipline')
+                          await robustAwardXP(user.id, -38, 'task_failed', stableSourceId, `Failed Priority Goal: ${goalTitleText} (-38 XP, -1.5x)`, 'discipline')
 
                           if (fetchTasks) await fetchTasks()
                           await profileHook?.fetchProfile?.()
@@ -2048,7 +2048,7 @@ export default function MissionControl() {
                                     <button
                                       type="button"
                                       onClick={handleMarkFailed}
-                                      title="Mark Failed (-25 XP)"
+                                      title="Mark Failed (-38 XP, -1.5x)"
                                       className="w-7 h-7 rounded-xl flex items-center justify-center border border-rose-500/40 hover:bg-rose-500 text-rose-400 hover:text-white transition-all shrink-0 active:scale-95"
                                     >
                                       <X size={14} strokeWidth={2.5} />
@@ -2071,7 +2071,7 @@ export default function MissionControl() {
                             {isDone ? (
                               <span className="font-mono text-[8px] font-bold text-emerald-300 uppercase shrink-0 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 whitespace-nowrap self-center">DONE (+25 XP)</span>
                             ) : isFailed ? (
-                              <span className="font-mono text-[8px] font-bold text-rose-300 uppercase shrink-0 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 whitespace-nowrap self-center">FAILED (-25 XP)</span>
+                              <span className="font-mono text-[8px] font-bold text-rose-300 uppercase shrink-0 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 whitespace-nowrap self-center">FAILED (-38 XP)</span>
                             ) : (
                               <span className="font-mono text-[8px] font-bold text-amber-300 uppercase shrink-0 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 whitespace-nowrap self-center">+25 XP</span>
                             )}

@@ -40,6 +40,22 @@ function getConsecutiveMisses(habitId, targetDateStr, allLogs, habit) {
   return consecutiveMisses
 }
 
+/**
+ * Calculates the escalating penalty multiplier based on consecutive missed days.
+ * - 1st day missed (0 prior misses): 1.5x (150%)
+ * - 2 days missed (1 prior miss):    2.0x (200%)
+ * - 3 days missed (2 prior misses):  3.0x (300%)
+ * - 4 days missed (3 prior misses):  4.0x (400%)
+ * - 5 days missed (4 prior misses):  5.0x (500%)
+ * Day on day escalation: missStreak === 1 ? 1.5 : missStreak
+ */
+function getEscalatingPenalty(baseXP, priorMisses) {
+  const missStreak = priorMisses + 1
+  const multiplier = missStreak === 1 ? 1.5 : missStreak
+  const penaltyMagnitude = Math.round(baseXP * multiplier)
+  return { missStreak, multiplier, penaltyMagnitude }
+}
+
 export function useHabitsInternal(user) {
   const [allHabits, setAllHabits] = useState([])
   const [monthLogs, setMonthLogs] = useState([])
@@ -228,12 +244,11 @@ export function useHabitsInternal(user) {
           )
         } else if (nextStatus === 'failed') {
           const priorMisses = getConsecutiveMisses(habitId, targetDate, monthLogs, habit)
-          const isDoublePenalty = priorMisses >= 1
-          const penaltyMagnitude = isDoublePenalty ? baseXP : Math.max(5, Math.round(baseXP * 0.5))
+          const { missStreak, multiplier, penaltyMagnitude } = getEscalatingPenalty(baseXP, priorMisses)
           const penaltyXP = isBlocked ? 0 : -penaltyMagnitude
-          const reason = isDoublePenalty 
-            ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP)` 
-            : `Failed routine: ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP)`
+          const reason = missStreak > 1 
+            ? `🚨 ESCALATING PENALTY (${missStreak} Days Missed): ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP, -${multiplier}x)` 
+            : `Failed routine: ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP, -1.5x)`
           await robustAwardXP(
             user.id,
             penaltyXP,
@@ -636,12 +651,11 @@ export function useHabitsInternal(user) {
               
               const baseXP = h.xp_per_completion ? Math.max(5, parseInt(h.xp_per_completion, 10)) : 25
               const priorMisses = getConsecutiveMisses(h.id, dateStr, recentLogs, h)
-              const isDoublePenalty = priorMisses >= 1
-              const penaltyMagnitude = isDoublePenalty ? baseXP : Math.max(5, Math.round(baseXP * 0.5))
+              const { missStreak, multiplier, penaltyMagnitude } = getEscalatingPenalty(baseXP, priorMisses)
               const penaltyXP = -penaltyMagnitude
-              const reason = isDoublePenalty 
-                ? `🚨 DOUBLE PENALTY (2+ Consecutive Misses): ${h.title} (-${penaltyMagnitude} XP)` 
-                : `Missed routine: ${h.title} (-${penaltyMagnitude} XP)`
+              const reason = missStreak > 1 
+                ? `🚨 ESCALATING PENALTY (${missStreak} Days Missed): ${h.title} (-${penaltyMagnitude} XP, -${multiplier}x)` 
+                : `Missed routine: ${h.title} (-${penaltyMagnitude} XP, -1.5x)`
 
               const stableSourceId = `habit_${h.id}_${dateStr}`
               const createdAt = `${dateStr}T12:00:00.000Z`

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
 
 export const PRESETS = [
   { label: '15 MIN', mins: 15 },
@@ -101,6 +102,14 @@ export function useFocusInternal(user, initialized) {
           duration: durationHours.toFixed(2),
           duration_unit: 'hours',
         }])
+        await robustAwardXP(
+          user.id,
+          xpEarned,
+          'focus_session',
+          `focus_${Date.now()}`,
+          `Completed Deep Focus: ${category.label} (${elapsedMins} min)`,
+          category.stat || 'discipline'
+        )
         setSessionXp(xpEarned)
       }
       setAborted(false)
@@ -114,12 +123,23 @@ export function useFocusInternal(user, initialized) {
 
   // ── Abort Session (early quit with penalty) ──
   const handleAbort = useCallback(async () => {
-    if (!confirm('Abort focus session? You will lose this session\'s progress.')) return
+    if (!confirm('Abort focus session? You will lose this session\'s progress and receive a -15 XP penalty.')) return
     setSaving(true)
     setIsActive(false)
     clearInterval(intervalRef.current)
 
     try {
+      if (user?.id) {
+        // Base focus session is 10 XP -> 150% (-1.5x) penalty = -15 XP
+        await robustAwardXP(
+          user.id,
+          -15,
+          'focus_aborted',
+          `focus_abort_${Date.now()}`,
+          `Aborted Focus Session (-15 XP, -1.5x penalty)`,
+          'discipline'
+        )
+      }
       setAborted(true)
       setPhase('done')
     } catch (err) {

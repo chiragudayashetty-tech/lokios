@@ -313,19 +313,40 @@ export function useTasksInternal(user) {
 
       if (error) throw error
 
-      // Dynamic XP Penalty based on Difficulty (or -25 XP for weekly goals)
+      // Dynamic XP Penalty based on Difficulty / set XP (150% = 1.5x for day 1, 2x, 3x, 4x, 5x day on day)
       const isWeeklyGoal = task?.category === 'weekly_goal' || (task?.description || '').includes('[Weekly Goal]')
       const diffKey = (task?.difficulty || 'MEDIUM').toUpperCase()
       const difficultyData = DIFFICULTY_LEVELS[diffKey] || DIFFICULTY_LEVELS.MEDIUM
-      const penalty = isWeeklyGoal ? 25 : difficultyData.penalty
+      const baseXP = isWeeklyGoal ? 25 : (task?.xp_reward || difficultyData.xp || 30)
+
+      // Calculate overdue days if task had a due date
+      let overdueDays = 0
+      if (task?.due_date) {
+        const todayStr = getLocalDateStr()
+        const cleanDueDate = task.due_date.substring(0, 10)
+        if (cleanDueDate < todayStr) {
+          const [tY, tM, tD] = todayStr.split('-').map(Number)
+          const [dY, dM, dD] = cleanDueDate.split('-').map(Number)
+          const todayUtc = Date.UTC(tY, tM - 1, tD)
+          const dueUtc = Date.UTC(dY, dM - 1, dD)
+          overdueDays = Math.max(1, Math.round((todayUtc - dueUtc) / (1000 * 60 * 60 * 24)))
+        }
+      }
+
+      const missStreak = overdueDays > 0 ? overdueDays : 1
+      const multiplier = missStreak === 1 ? 1.5 : missStreak
+      const penalty = Math.round(baseXP * multiplier)
 
       if (penalty > 0) {
+        const reason = missStreak > 1
+          ? `🚨 ESCALATING PENALTY (${missStreak} Days Overdue): ${task?.title || 'Unknown'} (-${penalty} XP, -${multiplier}x)`
+          : `Failed task: ${task?.title || 'Unknown'} (-${penalty} XP, -1.5x)`
         await robustAwardXP(
           user.id,
           -penalty,
           'task_failed',
           id,
-          `Failed task: ${task?.title || 'Unknown'}`,
+          reason,
           toStatCat(task?.category)
         )
       }
