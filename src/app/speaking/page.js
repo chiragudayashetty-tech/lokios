@@ -1,71 +1,140 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { useOS } from '@/lib/context/OSContext'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { getSpeakingRestDays, setSpeakingRestDays, isSpeakingRestDay } from '@/lib/utils/restDays'
 import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Mic, Play, Pause, RotateCcw, Shuffle, Video, Link as LinkIcon,
-  CheckCircle2, Clock, Calendar, Sparkles, Award, ExternalLink,
-  BookOpen, Star, Search
+  Mic, Shuffle, Video, Link as LinkIcon,
+  CheckCircle2, Calendar, Sparkles, Award, ExternalLink,
+  BookOpen, Star, Search, List, LayoutGrid, Copy, Check,
+  Edit3, Compass, Flame, ArrowRight
 } from 'lucide-react'
 
-// Pre-loaded 30 Topics Pool
-const DEFAULT_30_TOPICS = [
-  { id: 1, topic: 'Explain quantum computing to a 12-year-old.', category: 'Tech & Science' },
-  { id: 2, topic: 'Why do countries have inflation?', category: 'Economics' },
-  { id: 3, topic: 'How does CRISPR gene editing work?', category: 'BioTech & Science' },
-  { id: 4, topic: 'Why do airplanes fly?', category: 'Engineering' },
-  { id: 5, topic: 'How does GPS know your location?', category: 'Technology' },
-  { id: 6, topic: 'Explain the Internet from scratch.', category: 'Technology' },
-  { id: 7, topic: 'Why did the Roman Empire collapse?', category: 'History' },
-  { id: 8, topic: 'How does a nuclear power plant work?', category: 'Physics & Energy' },
-  { id: 9, topic: 'What makes a great teacher?', category: 'Education & Human' },
-  { id: 10, topic: 'Why do humans procrastinate?', category: 'Psychology' },
-  { id: 11, topic: 'How does Bitcoin actually work?', category: 'Finance & Crypto' },
-  { id: 12, topic: 'Why do startups fail?', category: 'Business & Entrepreneurship' },
-  { id: 13, topic: 'Explain machine learning without using the words "AI" or "computer."', category: 'Technology' },
-  { id: 14, topic: 'How do vaccines train the immune system?', category: 'Biology & Health' },
-  { id: 15, topic: 'Why do tsunamis happen?', category: 'Earth Science' },
-  { id: 16, topic: 'What is game theory?', category: 'Strategy & Math' },
-  { id: 17, topic: 'How does Formula 1 make a pit stop in under 2 seconds?', category: 'Engineering & Operations' },
-  { id: 18, topic: 'Why do people trust brands?', category: 'Marketing & Psychology' },
-  { id: 19, topic: 'Explain evolution without mentioning monkeys.', category: 'Biology' },
-  { id: 20, topic: 'How does the stock market work?', category: 'Finance' },
-  { id: 21, topic: 'Why do black holes exist?', category: 'Astrophysics' },
-  { id: 22, topic: 'What makes ideas go viral?', category: 'Media & Marketing' },
-  { id: 23, topic: 'How do Pixar movies tell stories so well?', category: 'Storytelling & Art' },
-  { id: 24, topic: 'Explain cloud computing to your grandparents.', category: 'Technology' },
-  { id: 25, topic: 'Why do civilizations rise and fall?', category: 'History & Philosophy' },
-  { id: 26, topic: 'How does Google Search find answers in milliseconds?', category: 'Computer Science' },
-  { id: 27, topic: 'What makes a speech memorable?', category: 'Communication & Oratory' },
-  { id: 28, topic: 'Explain the greenhouse effect simply.', category: 'Environment & Climate' },
-  { id: 29, topic: 'How does SpaceX land rockets?', category: 'Aerospace Engineering' },
-  { id: 30, topic: 'What is leverage, and why is it Naval Ravikant\'s favorite concept?', category: 'Mental Models & Wealth' }
+// Known Speaking Practice habit ID in database
+const SPEAKING_HABIT_ID = '479ec4f0-01e5-4df9-8d1b-2b7b5dd56153'
+
+// 90 Curated High-Impact Topics across 3 Mastery Seasons
+const CURATED_TOPICS = [
+  // ── PHASE 1: FOUNDATION & CONCEPTUAL CLARITY (DAYS 1–30) ──
+  { id: 1, phase: 1, topic: 'Explain quantum computing to a 12-year-old.', category: 'Tech & Science' },
+  { id: 2, phase: 1, topic: 'Why do countries have inflation?', category: 'Economics' },
+  { id: 3, phase: 1, topic: 'How does CRISPR gene editing work?', category: 'BioTech & Science' },
+  { id: 4, phase: 1, topic: 'Why do airplanes fly?', category: 'Engineering' },
+  { id: 5, phase: 1, topic: 'How does GPS know your location?', category: 'Technology' },
+  { id: 6, phase: 1, topic: 'Explain the Internet from scratch.', category: 'Technology' },
+  { id: 7, phase: 1, topic: 'Why did the Roman Empire collapse?', category: 'History' },
+  { id: 8, phase: 1, topic: 'How does a nuclear power plant work?', category: 'Physics & Energy' },
+  { id: 9, phase: 1, topic: 'What makes a great teacher?', category: 'Education & Human' },
+  { id: 10, phase: 1, topic: 'Why do humans procrastinate?', category: 'Psychology' },
+  { id: 11, phase: 1, topic: 'How does Bitcoin actually work?', category: 'Finance & Crypto' },
+  { id: 12, phase: 1, topic: 'Why do startups fail?', category: 'Business & Entrepreneurship' },
+  { id: 13, phase: 1, topic: 'Explain machine learning without using the words "AI" or "computer."', category: 'Technology' },
+  { id: 14, phase: 1, topic: 'How do vaccines train the immune system?', category: 'Biology & Health' },
+  { id: 15, phase: 1, topic: 'Why do tsunamis happen?', category: 'Earth Science' },
+  { id: 16, phase: 1, topic: 'What is game theory?', category: 'Strategy & Math' },
+  { id: 17, phase: 1, topic: 'How does Formula 1 make a pit stop in under 2 seconds?', category: 'Engineering & Operations' },
+  { id: 18, phase: 1, topic: 'Why do people trust brands?', category: 'Marketing & Psychology' },
+  { id: 19, phase: 1, topic: 'Explain evolution without mentioning monkeys.', category: 'Biology' },
+  { id: 20, phase: 1, topic: 'How does the stock market work?', category: 'Finance' },
+  { id: 21, phase: 1, topic: 'Why do black holes exist?', category: 'Astrophysics' },
+  { id: 22, phase: 1, topic: 'What makes ideas go viral?', category: 'Media & Marketing' },
+  { id: 23, phase: 1, topic: 'How do Pixar movies tell stories so well?', category: 'Storytelling & Art' },
+  { id: 24, phase: 1, topic: 'Explain cloud computing to your grandparents.', category: 'Technology' },
+  { id: 25, phase: 1, topic: 'Why do civilizations rise and fall?', category: 'History & Philosophy' },
+  { id: 26, phase: 1, topic: 'How does Google Search find answers in milliseconds?', category: 'Computer Science' },
+  { id: 27, phase: 1, topic: 'What makes a speech memorable?', category: 'Communication & Oratory' },
+  { id: 28, phase: 1, topic: 'Explain the greenhouse effect simply.', category: 'Environment & Climate' },
+  { id: 29, phase: 1, topic: 'How does SpaceX land rockets?', category: 'Aerospace Engineering' },
+  { id: 30, phase: 1, topic: 'What is leverage, and why is it Naval Ravikant\'s favorite concept?', category: 'Mental Models & Wealth' },
+
+  // ── PHASE 2: PERSUASION, STORYTELLING & EXECUTIVE PRESENCE (DAYS 31–60) ──
+  { id: 31, phase: 2, topic: 'Pitch a subscription service for clean drinking water to an angel investor.', category: 'Pitch & Persuasion' },
+  { id: 32, phase: 2, topic: 'How would you deliver bad news to a team of 50 people without destroying morale?', category: 'Leadership & Crisis' },
+  { id: 33, phase: 2, topic: 'Will humanoid robots be net-positive or net-negative for human dignity?', category: 'Philosophy & AI' },
+  { id: 34, phase: 2, topic: 'The Lindy Effect: Why the oldest ideas are the most resilient.', category: 'Mental Models' },
+  { id: 35, phase: 2, topic: 'Why does modern architecture feel sterile compared to classical craftsmanship?', category: 'Culture & Design' },
+  { id: 36, phase: 2, topic: 'How the "Door-in-the-Face" psychological technique persuades people.', category: 'Behavioral Psychology' },
+  { id: 37, phase: 2, topic: 'The Cobra Effect: How well-intentioned regulations cause catastrophic backfires.', category: 'Economics & Systems' },
+  { id: 38, phase: 2, topic: 'Tell the story of a failure that fundamentally reshaped your worldview in 3 minutes.', category: 'Storytelling & Character' },
+  { id: 39, phase: 2, topic: 'Why do monopolies eventually stagnate and get disrupted?', category: 'Business Strategy' },
+  { id: 40, phase: 2, topic: 'Explain the concept of zero-knowledge proofs to a curious non-coder.', category: 'Cryptography & Math' },
+  { id: 41, phase: 2, topic: 'What makes an exceptional conversation partner?', category: 'Interpersonal Dynamics' },
+  { id: 42, phase: 2, topic: 'How does the human eye perceive color and contrast?', category: 'Neuroscience & Biology' },
+  { id: 43, phase: 2, topic: 'Why do people fear public speaking more than financial loss?', category: 'Psychology & Human Nature' },
+  { id: 44, phase: 2, topic: 'Explain Occam’s Razor and give an example of when it fails.', category: 'Epistemology & Logic' },
+  { id: 45, phase: 2, topic: 'The psychology of pricing: Why $99 feels drastically cheaper than $100.', category: 'Marketing & Behavioral Econ' },
+  { id: 46, phase: 2, topic: 'How do standard shipping containers quietly power 90% of global trade?', category: 'Global Logistics' },
+  { id: 47, phase: 2, topic: 'What is survivorship bias and how does it distort startup advice?', category: 'Mental Models' },
+  { id: 48, phase: 2, topic: 'Explain the difference between being smart and being wise.', category: 'Philosophy' },
+  { id: 49, phase: 2, topic: 'How did antibiotics change the course of human longevity?', category: 'Medicine & History' },
+  { id: 50, phase: 2, topic: 'Why is first-principles thinking harder than reasoning by analogy?', category: 'Problem Solving' },
+  { id: 51, phase: 2, topic: 'How does nuclear fusion differ from fission, and why is it so hard to achieve?', category: 'Physics & Clean Energy' },
+  { id: 52, phase: 2, topic: 'What makes an argument convincing: logic, emotion, or speaker credibility?', category: 'Classical Rhetoric' },
+  { id: 53, phase: 2, topic: 'Why do empires overextend militarily?', category: 'Geopolitics & History' },
+  { id: 54, phase: 2, topic: 'Explain compound interest as if explaining a snowball rolling down a mountain.', category: 'Finance' },
+  { id: 55, phase: 2, topic: 'How do algorithmic recommendation feeds shape public sentiment?', category: 'Algorithms & Society' },
+  { id: 56, phase: 2, topic: 'What is the Pareto Principle (80/20 Rule) and how can it be misapplied?', category: 'Productivity & Systems' },
+  { id: 57, phase: 2, topic: 'Why is silence one of the most lethal tools in a negotiation?', category: 'Communication & Negotiation' },
+  { id: 58, phase: 2, topic: 'How does deep sleep physically cleanse the brain of metabolic toxins?', category: 'Neuroscience & Health' },
+  { id: 59, phase: 2, topic: 'What separates a memorable consumer product from a forgettable one?', category: 'Design & Product Strategy' },
+  { id: 60, phase: 2, topic: 'If you had 3 minutes to address 10 million university graduates, what is your message?', category: 'Visionary Oratory' },
+
+  // ── PHASE 3: HIGH-STAKES VISION, DEEP DEBATE & MASTERY (DAYS 61–90) ──
+  { id: 61, phase: 3, topic: 'What is an economic moat, and how do modern tech companies construct them?', category: 'Business & Moats' },
+  { id: 62, phase: 3, topic: 'Can artificial intelligence ever possess authentic subjective consciousness?', category: 'Cognitive Science & AI' },
+  { id: 63, phase: 3, topic: 'How did the Gutenberg printing press spark both enlightenment and 100 years of war?', category: 'History & Media' },
+  { id: 64, phase: 3, topic: 'Explain second-order thinking and why most people only react to first-order effects.', category: 'Mental Models' },
+  { id: 65, phase: 3, topic: 'How does the adaptive immune system store memory for viruses decades later?', category: 'Immunology & Health' },
+  { id: 66, phase: 3, topic: 'What is the tragedy of the commons, and how can governance solve it?', category: 'Economics & Governance' },
+  { id: 67, phase: 3, topic: 'Why do high-performers suffer catastrophic burnout, and how is it prevented?', category: 'Peak Performance' },
+  { id: 68, phase: 3, topic: 'Explain entropy and the arrow of time to someone with no physics background.', category: 'Thermodynamics' },
+  { id: 69, phase: 3, topic: 'How does central banking use interest rates to steer an entire nation\'s economy?', category: 'Macroeconomics' },
+  { id: 70, phase: 3, topic: 'What makes Steve Jobs\' 2005 Stanford commencement address so timeless?', category: 'Oratory Analysis' },
+  { id: 71, phase: 3, topic: 'The Dunbar Number: Why humans can only maintain 150 stable relationships.', category: 'Anthropology & Sociology' },
+  { id: 72, phase: 3, topic: 'What is asymmetry of risk and reward, and how do you position for positive black swans?', category: 'Risk & Wealth' },
+  { id: 73, phase: 3, topic: 'How does utility-scale grid battery storage balance solar and wind intermittency?', category: 'Clean Energy' },
+  { id: 74, phase: 3, topic: 'Why is clarity of speech impossible without clarity of thought?', category: 'Cognition & Writing' },
+  { id: 75, phase: 3, topic: 'Explain the bystander effect and how an individual leader breaks the paralysis.', category: 'Social Psychology' },
+  { id: 76, phase: 3, topic: 'How do satellite constellations like Starlink achieve low-latency global broadband?', category: 'Aerospace & Networks' },
+  { id: 77, phase: 3, topic: 'Goodhart\'s Law: "When a metric becomes the target, it ceases to be a good metric."', category: 'Systems Dynamics' },
+  { id: 78, phase: 3, topic: 'How can ancient Stoic principles cure modern digital overwhelm and anxiety?', category: 'Practical Philosophy' },
+  { id: 79, phase: 3, topic: 'Why do lean startups frequently defeat incumbents with 100x more capital?', category: 'Disruptive Innovation' },
+  { id: 80, phase: 3, topic: 'Explain the Doppler effect using sounds we hear on a city street.', category: 'Physics' },
+  { id: 81, phase: 3, topic: 'What is the strategic power of vulnerability in high-stakes executive leadership?', category: 'Executive Leadership' },
+  { id: 82, phase: 3, topic: 'How does the human gut microbiome directly regulate mood and neurotransmitters?', category: 'Biology & Brain' },
+  { id: 83, phase: 3, topic: 'Why do sovereign nations run trillion-dollar debts, and when does it become dangerous?', category: 'Public Finance' },
+  { id: 84, phase: 3, topic: 'How does the Socratic method systematically dismantle dogmatic assumptions?', category: 'Philosophy & Debate' },
+  { id: 85, phase: 3, topic: 'What is the distinction between a missionary founder and a mercenary founder?', category: 'Company Culture' },
+  { id: 86, phase: 3, topic: 'How do deep-sea creatures survive under thousands of atmospheres of pressure?', category: 'Oceanography' },
+  { id: 87, phase: 3, topic: 'Parkinson\'s Law: "Work expands to fill the time available for its completion."', category: 'Execution & Time' },
+  { id: 88, phase: 3, topic: 'Why is emotional regulation under public scrutiny the ultimate executive skill?', category: 'Emotional Mastery' },
+  { id: 89, phase: 3, topic: 'How do semiconductor photolithography machines turn pure silicon into intelligence?', category: 'Hardware Engineering' },
+  { id: 90, phase: 3, topic: 'Day 90 Capstone: Reflect on your speaking evolution from Day 1 to Day 90.', category: 'Mastery Capstone' }
 ]
 
 export default function SpeakingPracticePage() {
   const { user } = useAuth()
-  const { xp: { awardXP } = {} } = useOS() || {}
+  const { xp: { awardXP, fetchMomentum } = {}, habits: { toggleHabitForDate, habits: osHabits } = {} } = useOS() || {}
 
-
-  // State Management
-  const [topics] = useState(DEFAULT_30_TOPICS)
-  const [selectedTopic, setSelectedTopic] = useState(DEFAULT_30_TOPICS[0])
+  // Topics & Active State
+  const [topics] = useState(CURATED_TOPICS)
+  const [selectedTopic, setSelectedTopic] = useState(CURATED_TOPICS[0])
+  const [isCustomTopic, setIsCustomTopic] = useState(false)
+  const [customTopicInput, setCustomTopicInput] = useState('')
+  const [customCategoryInput, setCustomCategoryInput] = useState('')
   const [isShuffling, setIsShuffling] = useState(false)
+  
+  // Data State
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [restDays, setRestDaysState] = useState(getSpeakingRestDays())
-
-  // 10-Min Timer State (10 mins = 600 seconds)
-  const [timerSeconds, setTimerSeconds] = useState(600)
-  const [isTimerRunning, setIsTimerRunning] = useState(false)
-  const timerRef = useRef(null)
 
   // Form State
   const [driveLink, setDriveLink] = useState('')
@@ -74,8 +143,11 @@ export default function SpeakingPracticePage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  // Search
+  // View & Filter State
+  const [activeTab, setActiveTab] = useState('directory') // 'directory' | 'cards'
   const [searchQuery, setSearchQuery] = useState('')
+  const [topicBankPhase, setTopicBankPhase] = useState('all') // 'all' | 1 | 2 | 3
+  const [copiedAll, setCopiedAll] = useState(false)
 
   const todayStr = getLocalDateStr(new Date())
   const todayIsRestDay = isSpeakingRestDay()
@@ -116,12 +188,17 @@ export default function SpeakingPracticePage() {
         const speakingData = speakingRes.data || []
         const workData = workRes.data || []
 
-        // Build a date-keyed map (date is the canonical dedup key — UUIDs differ per device)
+        // Build a date-keyed map (date is the canonical dedup key)
         const mapByDate = new Map()
 
         // 1. Add speaking_logs (indexed by date)
         speakingData.forEach(item => {
-          if (item.date) mapByDate.set(item.date, item)
+          if (item.date) {
+            // Keep the best version if duplicate date exists
+            if (!mapByDate.has(item.date) || (!mapByDate.get(item.date).drive_link && item.drive_link)) {
+              mapByDate.set(item.date, item)
+            }
+          }
         })
 
         // 2. Add speaking entries from work_logs (only if date not already in map)
@@ -134,7 +211,6 @@ export default function SpeakingPracticePage() {
               topic: w.title ? w.title.replace(/^Speaking Practice:\s*/i, '') : 'Speaking Practice',
               category: 'General',
               day_number: 1,
-              prep_duration_minutes: 10,
               drive_link: (w.media_urls && w.media_urls[0]) || '',
               notes: w.description || '',
               rating: 5,
@@ -143,16 +219,13 @@ export default function SpeakingPracticePage() {
           }
         })
 
-        // 3. For each local log: only push to DB if that DATE is not already in the cloud
-        // This prevents duplicate inserts on every refresh
+        // 3. Sync any genuinely missing local logs
         const cloudDates = new Set(speakingData.map(s => s.date).filter(Boolean))
         for (const item of localLogs) {
           if (!item.date) continue
           if (cloudDates.has(item.date)) {
-            // Already in cloud — just merge into map if missing (prefer cloud version)
             if (!mapByDate.has(item.date)) mapByDate.set(item.date, item)
           } else {
-            // Genuinely missing from cloud — push once
             mapByDate.set(item.date, item)
             const { error: pushErr } = await sb.from('speaking_logs').insert({
               user_id: userId,
@@ -160,16 +233,14 @@ export default function SpeakingPracticePage() {
               topic: item.topic || 'Speaking Practice',
               category: item.category || 'General',
               day_number: item.day_number || 1,
-              prep_duration_minutes: item.prep_duration_minutes || 10,
+              prep_duration_minutes: 0,
               drive_link: item.drive_link || '',
               notes: item.notes || '',
               rating: item.rating || 5,
               created_at: item.created_at || new Date().toISOString()
             })
-            if (pushErr) console.error('[Speaking Sync] Push failed:', pushErr?.message, item.date)
-            else {
-              console.log('[Speaking Sync] ✅ Pushed to cloud:', item.date, item.topic)
-              cloudDates.add(item.date) // prevent double-push if duplicate in localLogs
+            if (!pushErr) {
+              cloudDates.add(item.date)
             }
           }
         }
@@ -180,6 +251,13 @@ export default function SpeakingPracticePage() {
 
         setHistory(merged)
         localStorage.setItem(`lokios_speaking_logs_${userId}`, JSON.stringify(merged))
+
+        // Set default next topic based on uncompleted topics
+        const completedTopicTitles = new Set(merged.map(h => h.topic))
+        const nextTopic = CURATED_TOPICS.find(t => !completedTopicTitles.has(t.topic))
+        if (nextTopic) {
+          setSelectedTopic(nextTopic)
+        }
       } catch (err) {
         console.warn('Fallback loading speaking logs', err)
         const localRaw = localStorage.getItem(`lokios_speaking_logs_${userId}`)
@@ -191,7 +269,7 @@ export default function SpeakingPracticePage() {
 
     loadData()
 
-    // Real-Time Listener & Window Focus Listener for 100% Cross-Device Phone/Desktop Sync
+    // Real-Time Sync Listener
     const sb = createClient()
     const channel = sb.channel(`speaking_sync_hub_${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'speaking_logs', filter: `user_id=eq.${userId}` }, () => loadData())
@@ -207,41 +285,21 @@ export default function SpeakingPracticePage() {
     }
   }, [user?.id])
 
-  // Timer Effect
-  useEffect(() => {
-    if (isTimerRunning && timerSeconds > 0) {
-      timerRef.current = setInterval(() => {
-        setTimerSeconds(prev => prev - 1)
-      }, 1000)
-    } else if (timerSeconds === 0) {
-      setIsTimerRunning(false)
-      clearInterval(timerRef.current)
-    }
-    return () => clearInterval(timerRef.current)
-  }, [isTimerRunning, timerSeconds])
-
-  // Timer Formatter
-  const formatTime = (secs) => {
-    const m = Math.floor(secs / 60)
-    const s = secs % 60
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-  }
-
-  const handleStartTimer = () => setIsTimerRunning(true)
-  const handlePauseTimer = () => setIsTimerRunning(false)
-  const handleResetTimer = () => {
-    setIsTimerRunning(false)
-    setTimerSeconds(600)
-  }
-
-  // Pick Today's Topic / Random Topic
+  // Pick Next / Random Topic (prioritizes uncompleted)
   const handleSelectTodaysTopic = () => {
     setIsShuffling(true)
+    setIsCustomTopic(false)
     let count = 0
-    // Try to pick from uncompleted topics first
     const completedTopicTitles = new Set(history.map(h => h.topic))
-    const uncompletedTopics = topics.filter(t => !completedTopicTitles.has(t.topic))
-    const pool = uncompletedTopics.length > 0 ? uncompletedTopics : topics
+    
+    // Filter pool based on active topicBankPhase if specified, or current user phase
+    const currentPhase = history.length < 30 ? 1 : history.length < 60 ? 2 : 3
+    const phasePool = topicBankPhase !== 'all' 
+      ? topics.filter(t => t.phase === topicBankPhase)
+      : topics.filter(t => t.phase === currentPhase)
+
+    const uncompletedInPhase = phasePool.filter(t => !completedTopicTitles.has(t.topic))
+    const pool = uncompletedInPhase.length > 0 ? uncompletedInPhase : topics.filter(t => !completedTopicTitles.has(t.topic)) || topics
 
     const interval = setInterval(() => {
       const randomIndex = Math.floor(Math.random() * pool.length)
@@ -250,19 +308,30 @@ export default function SpeakingPracticePage() {
       if (count > 10) {
         clearInterval(interval)
         setIsShuffling(false)
-        handleResetTimer()
       }
     }, 80)
   }
 
-  // Submit Practice Session
+  // Apply Custom Topic
+  const handleApplyCustomTopic = (e) => {
+    if (e && e.preventDefault) e.preventDefault()
+    if (!customTopicInput.trim()) return
+    setSelectedTopic({
+      id: 999,
+      topic: customTopicInput.trim(),
+      category: customCategoryInput.trim() || 'Custom Topic',
+      phase: history.length < 30 ? 1 : 2
+    })
+    setIsCustomTopic(false)
+  }
+
+  // Submit Practice Session with 100% Reliable XP & Habit Sync
   const handleSubmitSession = async (e) => {
     if (e && e.preventDefault) e.preventDefault()
     if (!user || !selectedTopic) return
     setSubmitting(true)
 
     const sb = createClient()
-    const prepDurationMinutes = Math.round((600 - timerSeconds) / 60)
     const currentDayNumber = history.length + 1
 
     let formattedLink = driveLink.trim()
@@ -276,7 +345,7 @@ export default function SpeakingPracticePage() {
       topic: selectedTopic.topic,
       category: selectedTopic.category || 'General',
       day_number: currentDayNumber,
-      prep_duration_minutes: prepDurationMinutes > 0 ? prepDurationMinutes : 10,
+      prep_duration_minutes: 0,
       drive_link: formattedLink,
       notes: notes.trim(),
       rating: parseInt(rating) || 5,
@@ -286,73 +355,200 @@ export default function SpeakingPracticePage() {
     // 1. Optimistic Local Storage Save
     const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
     const localLogs = localRaw ? JSON.parse(localRaw) : []
-    const updatedLocal = [newLog, ...localLogs.filter(l => l.date !== todayStr || l.topic !== newLog.topic)]
+    const updatedLocal = [newLog, ...localLogs.filter(l => l.date !== todayStr)]
     localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updatedLocal))
     setHistory(updatedLocal)
 
     // 2. Save to speaking_logs (authoritative table)
     try {
       const { error: spErr } = await sb.from('speaking_logs').insert(newLog)
-      if (spErr) console.error('[Speaking Submit] speaking_logs insert FAILED:', spErr, newLog)
-      else console.log('[Speaking Submit] ✅ speaking_logs saved successfully:', newLog.date, newLog.topic)
+      if (spErr) console.error('[Speaking Submit] speaking_logs insert error:', spErr)
     } catch (spEx) {
       console.error('[Speaking Submit] speaking_logs exception:', spEx)
+    }
+
+    // 3. FIX XP GLITCH & AUTOMATIC HABIT COMPLETION
+    try {
+      // Find habit ID if loaded
+      const speakingHabit = (osHabits || []).find(h => h.id === SPEAKING_HABIT_ID || h.title?.toLowerCase().includes('speaking')) || { id: SPEAKING_HABIT_ID }
+      const habitId = speakingHabit.id
+
+      // A. Award 25 XP cleanly to xp_history and profiles
+      await robustAwardXP(
+        user.id,
+        25,
+        'habit_complete',
+        `habit_${habitId}_${todayStr}`,
+        `Completed routine: Speaking Practice - Day ${currentDayNumber}`,
+        'founder',
+        new Date().toISOString()
+      )
+
+      // B. Upsert habit_logs to ensure "Speaking Practice" is checked off & auto-fail penalty prevented
+      await sb.from('habit_logs').upsert({
+        user_id: user.id,
+        habit_id: habitId,
+        date: todayStr,
+        status: 'completed',
+        completed: true
+      }, { onConflict: 'habit_id,date' })
+
+      // C. Trigger context habit state if available
+      if (toggleHabitForDate) {
+        try {
+          await toggleHabitForDate(habitId, todayStr, 'completed')
+        } catch (ctxErr) {
+          console.warn('[Speaking Submit] Context habit toggle fallback:', ctxErr)
+        }
+      }
+
+      // D. Refresh XP momentum
+      if (fetchMomentum) {
+        await fetchMomentum()
+      }
+    } catch (xpErr) {
+      console.error('[Speaking Submit] Error awarding XP / syncing habit:', xpErr)
     }
 
     setSubmitSuccess(true)
     setDriveLink('')
     setNotes('')
     setSubmitting(false)
-    setTimeout(() => setSubmitSuccess(false), 4000)
+    setTimeout(() => setSubmitSuccess(false), 5000)
   }
 
-  // Calculate stats
+  // Calculate statistics
   const totalSessions = history.length
   const uniqueTopicsCompleted = new Set(history.map(h => h.topic)).size
-  const avgRating = totalSessions > 0 ? (history.reduce((acc, h) => acc + (h.rating || 5), 0) / totalSessions).toFixed(1) : '5.0'
+  const avgRating = totalSessions > 0
+    ? (history.reduce((acc, h) => acc + (h.rating || 5), 0) / totalSessions).toFixed(1)
+    : '5.0'
+
+  // Chronological Completed Topics (Day 1 -> Day N)
+  const completedTopicsChronological = useMemo(() => {
+    return [...history].sort((a, b) => {
+      const dayA = a.day_number || 0
+      const dayB = b.day_number || 0
+      if (dayA !== dayB) return dayA - dayB
+      return new Date(a.date).getTime() - new Date(b.date).getTime()
+    })
+  }, [history])
+
+  // Filtered Completed Topics for Search
+  const filteredCompletedTopics = useMemo(() => {
+    if (!searchQuery.trim()) return completedTopicsChronological
+    const q = searchQuery.toLowerCase()
+    return completedTopicsChronological.filter(item =>
+      (item.topic && item.topic.toLowerCase().includes(q)) ||
+      (item.category && item.category.toLowerCase().includes(q)) ||
+      (item.notes && item.notes.toLowerCase().includes(q)) ||
+      String(item.day_number).includes(q)
+    )
+  }, [completedTopicsChronological, searchQuery])
+
+  // Copy Completed Topics List to Clipboard
+  const handleCopyCompletedList = () => {
+    const lines = [
+      `# Loki OS — Speaking Practice Completed Topics (${completedTopicsChronological.length} Sessions)`,
+      `Average Rating: ${avgRating} / 5.0 ⭐`,
+      '',
+      ...completedTopicsChronological.map((item, idx) => {
+        const dayNum = item.day_number || idx + 1
+        const video = item.drive_link ? ` | [Video Recording](${item.drive_link})` : ''
+        const ratingStr = item.rating ? ` | ${item.rating}★` : ''
+        return `Day ${dayNum} (${item.date}): "${item.topic}" [${item.category || 'General'}]${ratingStr}${video}`
+      })
+    ]
+    navigator.clipboard.writeText(lines.join('\n'))
+    setCopiedAll(true)
+    setTimeout(() => setCopiedAll(false), 3000)
+  }
+
+  // Current Season / Phase calculation
+  const currentPhaseNumber = totalSessions < 30 ? 1 : totalSessions < 60 ? 2 : 3
+  const phaseTarget = currentPhaseNumber * 30
+  const phaseProgress = Math.min(100, Math.round(((totalSessions % 30) || (totalSessions >= 30 ? 30 : totalSessions)) / 30 * 100))
 
   return (
     <AppShell>
-      <div className="max-w-6xl mx-auto space-y-6 pb-12">
-        {/* Header Banner */}
+      <div className="max-w-6xl mx-auto space-y-6 pb-16">
+        
+        {/* EXECUTIVE HEADER BANNER */}
         <div className="p-6 rounded-2xl border border-amber/30 bg-gradient-to-r from-amber-950/40 via-black to-amber-950/20 backdrop-blur-md shadow-2xl relative overflow-hidden">
-          <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-amber/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-amber/10 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber/20 border border-amber/40 text-amber uppercase tracking-wider flex items-center gap-1">
-                  <Mic size={12} /> 30-DAY CAMERA SPEAKING CHALLENGE
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber/20 border border-amber/40 text-amber uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                  <Mic size={12} /> CAMERA SPEAKING PROTOCOL
                 </span>
-                <span className="font-mono text-xs text-muted">Level Up Your Oratory</span>
+                <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 font-bold uppercase tracking-wider">
+                  {currentPhaseNumber === 1 ? 'SEASON 1: FOUNDATION' : currentPhaseNumber === 2 ? 'SEASON 2: PERSUASION & STORYTELLING' : 'SEASON 3: HIGH-STAKES MASTERY'}
+                </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-mono font-black text-primary uppercase tracking-tight flex items-center gap-2">
                 SPEAKING PRACTICE HUB <Sparkles className="text-amber animate-pulse" size={24} />
               </h1>
+              <p className="font-mono text-xs text-muted mt-1 max-w-xl">
+                Daily impromptu camera delivery. 90 curated master topics, instant XP reward, and automated routine completion.
+              </p>
             </div>
 
             {/* Quick Metrics */}
             <div className="flex items-center gap-3 shrink-0">
-              <div className="p-3 rounded-xl bg-black/50 border border-white/10 text-center min-w-[100px]">
-                <div className="font-mono text-xl font-bold text-amber">{totalSessions}/30</div>
-                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Days Done</div>
+              <div className="p-3.5 rounded-xl bg-black/60 border border-amber/30 text-center min-w-[105px] shadow-lg">
+                <div className="font-mono text-2xl font-black text-amber flex items-center justify-center gap-1">
+                  <span>{totalSessions}</span>
+                  <span className="text-xs text-muted font-normal">/ 90</span>
+                </div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Total Days</div>
               </div>
-              <div className="p-3 rounded-xl bg-black/50 border border-white/10 text-center min-w-[100px]">
-                <div className="font-mono text-xl font-bold text-success">{totalSessions}</div>
-                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Videos</div>
+              <div className="p-3.5 rounded-xl bg-black/60 border border-white/10 text-center min-w-[105px] shadow-lg">
+                <div className="font-mono text-2xl font-black text-success">
+                  {uniqueTopicsCompleted}
+                </div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Topics Done</div>
               </div>
-              <div className="p-3 rounded-xl bg-black/50 border border-white/10 text-center min-w-[100px]">
-                <div className="font-mono text-xl font-bold text-purple-400">⭐ {avgRating}</div>
+              <div className="p-3.5 rounded-xl bg-black/60 border border-white/10 text-center min-w-[105px] shadow-lg">
+                <div className="font-mono text-2xl font-black text-purple-300 flex items-center justify-center gap-1">
+                  <Star size={16} className="fill-amber text-amber" />
+                  <span>{avgRating}</span>
+                </div>
                 <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Avg Rating</div>
               </div>
             </div>
           </div>
 
+          {/* Phase Progress Bar */}
+          <div className="mt-5 pt-4 border-t border-white/10 relative z-10">
+            <div className="flex items-center justify-between font-mono text-[10px] uppercase font-bold text-muted mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-amber">PHASE {currentPhaseNumber} PROGRESS:</span>
+                <span className="text-primary font-bold">{totalSessions} / {phaseTarget} Days</span>
+                {totalSessions >= 29 && totalSessions < 31 && (
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] animate-pulse">
+                    🔥 30-DAY MILESTONE UNLOCKING!
+                  </span>
+                )}
+              </div>
+              <span className="text-amber font-mono">{phaseProgress}%</span>
+            </div>
+            <div className="w-full h-2 bg-black/70 rounded-full overflow-hidden border border-white/10">
+              <motion.div 
+                className="h-full bg-gradient-to-r from-amber via-yellow-400 to-emerald-400 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, Math.max(3, (totalSessions / 30) * 100))}%` }}
+                transition={{ duration: 0.8 }}
+              />
+            </div>
+          </div>
+
           {/* Rest Day Config Bar */}
-          <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 font-mono text-xs relative z-10">
+          <div className="mt-4 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 font-mono text-xs relative z-10">
             <div className="flex items-center gap-2">
               <span className="text-muted uppercase tracking-wider font-bold text-[10px]">SPEAKING REST DAYS:</span>
-              <div className="flex items-center gap-1 bg-black/50 p-1 border border-border-color rounded-lg">
+              <div className="flex items-center gap-1 bg-black/60 p-1 border border-border-color rounded-lg">
                 {[
                   { day: 0, label: 'SUN' },
                   { day: 1, label: 'MON' },
@@ -390,148 +586,215 @@ export default function SpeakingPracticePage() {
           </div>
         </div>
 
-        {/* MAIN WORKFLOW GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* WORKFLOW GRID: TOPIC GENERATOR (LEFT) + VIDEO PROOF FORM (RIGHT) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* LEFT 7 COLS: TOPIC SELECTOR & PREP TIMER */}
+          {/* LEFT 7 COLS: TOPIC GENERATOR & BANK */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* TOPIC SELECTOR CARD */}
-            <div className="p-5 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl relative overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+            {/* TOPIC SELECTOR HERO CARD */}
+            <div className="p-6 rounded-2xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl relative overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-5">
                 <div className="flex items-center gap-2">
                   <BookOpen size={18} className="text-amber" />
                   <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                    TOPIC SELECTOR
+                    TODAY'S PROMPT GENERATOR
                   </span>
                 </div>
-                <div className="font-mono text-xs font-bold text-amber bg-amber/15 border border-amber/30 px-2.5 py-0.5 rounded-full">
-                  DAY {history.length + 1}
-                </div>
-              </div>
-
-              {/* ACTIVE TOPIC DISPLAY WITH TODAY'S TOPIC BUTTON IN THE MIDDLE */}
-              <motion.div 
-                key={selectedTopic.id || selectedTopic.topic}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-6 rounded-xl bg-black/60 border border-amber/30 text-center relative overflow-hidden space-y-4"
-              >
-                <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-amber/15 text-amber border border-amber/30 font-bold inline-block">
-                  {selectedTopic.category || 'General'}
-                </span>
-                
-                <h2 className="text-xl sm:text-2xl font-mono font-bold text-primary leading-snug">
-                  "{selectedTopic.topic}"
-                </h2>
-
-                {/* TODAY'S TOPIC BUTTON IN CENTER */}
-                <div className="pt-2 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={handleSelectTodaysTopic}
-                    disabled={isShuffling}
-                    className="btn btn-primary btn-md font-mono text-xs flex items-center gap-2 font-black tracking-wider uppercase shadow-2xl px-6 py-2.5 bg-amber text-black hover:bg-amber-hover border border-amber-hover transition-all transform hover:scale-105 active:scale-95"
-                  >
-                    <Shuffle size={16} className={isShuffling ? 'animate-spin' : ''} />
-                    <span>{isShuffling ? 'SELECTING...' : '🎯 SELECT TODAY\'S TOPIC'}</span>
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* TOPIC QUICK PICK DIAL */}
-              <div className="mt-4 pt-3 border-t border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-[10px] text-muted uppercase tracking-wider font-bold">Topic Bank:</span>
-                  <span className="font-mono text-[10px] text-amber">{topics.length} available</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
-                  {topics.map((t, idx) => {
-                    const isDone = history.some(h => h.topic === t.topic)
-                    const isSelected = selectedTopic.topic === t.topic
-                    const topicNum = t.id || idx + 1
-                    return (
-                      <button
-                        key={topicNum}
-                        onClick={() => {
-                          setSelectedTopic(t)
-                          handleResetTimer()
-                        }}
-                        className={`w-7 h-7 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center ${
-                          isSelected
-                            ? 'bg-amber text-black scale-110 shadow-md ring-2 ring-amber/50'
-                            : isDone
-                              ? 'bg-success/20 text-success border border-success/40'
-                              : 'bg-bg-tertiary text-muted hover:text-primary hover:border-amber/50 border border-border-color'
-                        }`}
-                        title={`Topic ${topicNum}: ${t.topic}`}
-                      >
-                        {topicNum}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* 10-MINUTE PREP TIMER CARD */}
-            <div className="p-5 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
                 <div className="flex items-center gap-2">
-                  <Clock size={18} className="text-info" />
-                  <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                    PREPARATION TIMER
+                  <span className="font-mono text-[10px] font-bold text-muted uppercase">
+                    NEXT UP:
                   </span>
+                  <div className="font-mono text-xs font-black text-amber bg-amber/15 border border-amber/30 px-3 py-0.5 rounded-full shadow-sm">
+                    DAY {history.length + 1}
+                  </div>
                 </div>
-                <span className={`font-mono text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                  isTimerRunning ? 'bg-success/20 text-success border border-success/30 animate-pulse' : 'bg-white/10 text-muted'
-                }`}>
-                  {isTimerRunning ? 'IN PROGRESS' : 'READY'}
-                </span>
               </div>
 
-              {/* TIMER DISPLAY */}
-              <div className="flex flex-col items-center justify-center p-6 bg-black/60 rounded-xl border border-white/10 text-center">
-                <div className="font-mono text-5xl sm:text-6xl font-black tracking-wider text-primary mb-2 font-mono">
-                  {formatTime(timerSeconds)}
-                </div>
+              {/* ACTIVE TOPIC DISPLAY */}
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={selectedTopic?.id || selectedTopic?.topic}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  className="p-6 sm:p-8 rounded-xl bg-black/60 border border-amber/30 text-center relative overflow-hidden space-y-4 shadow-2xl"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="font-mono text-[10px] uppercase tracking-widest px-3 py-1 rounded-full bg-amber/15 text-amber border border-amber/30 font-bold">
+                      {selectedTopic?.category || 'General'}
+                    </span>
+                    {selectedTopic?.phase && (
+                      <span className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-white/5 text-muted border border-white/10 font-bold">
+                        Phase {selectedTopic.phase}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-mono font-black text-primary leading-tight px-2">
+                    "{selectedTopic?.topic}"
+                  </h2>
 
-                {/* Progress bar */}
-                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-4">
-                  <motion.div 
-                    className="h-full bg-gradient-to-r from-amber to-success rounded-full"
-                    animate={{ width: `${(timerSeconds / 600) * 100}%` }}
-                    transition={{ duration: 0.5 }}
-                  />
-                </div>
-
-                {/* CONTROLS */}
-                <div className="flex items-center gap-3">
-                  {!isTimerRunning ? (
+                  {/* ACTION CONTROLS */}
+                  <div className="pt-3 flex flex-wrap items-center justify-center gap-3">
                     <button
                       type="button"
-                      onClick={handleStartTimer}
-                      className="btn btn-primary btn-md font-mono text-xs font-bold px-6 flex items-center gap-2"
+                      onClick={handleSelectTodaysTopic}
+                      disabled={isShuffling}
+                      className="btn font-mono text-xs flex items-center gap-2 font-black tracking-wider uppercase shadow-xl px-6 py-2.5 bg-amber text-black hover:bg-amber-hover border border-amber-hover transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50"
                     >
-                      <Play size={16} /> START PREP
+                      <Shuffle size={15} className={isShuffling ? 'animate-spin' : ''} />
+                      <span>{isShuffling ? 'SHUFFLING...' : '🎲 SHUFFLE TOPIC'}</span>
                     </button>
-                  ) : (
+
                     <button
                       type="button"
-                      onClick={handlePauseTimer}
-                      className="btn btn-warning btn-md font-mono text-xs font-bold px-6 flex items-center gap-2"
+                      onClick={() => setIsCustomTopic(!isCustomTopic)}
+                      className={`btn font-mono text-xs flex items-center gap-2 font-bold px-4 py-2.5 rounded-xl border transition-all ${
+                        isCustomTopic
+                          ? 'bg-purple-500/20 text-purple-300 border-purple-400'
+                          : 'bg-black/50 text-muted hover:text-primary border-white/10 hover:border-white/20'
+                      }`}
                     >
-                      <Pause size={16} /> PAUSE
+                      <Edit3 size={14} />
+                      <span>{isCustomTopic ? 'CANCEL CUSTOM' : '✏️ WRITE CUSTOM'}</span>
                     </button>
-                  )}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
 
-                  <button
-                    type="button"
-                    onClick={handleResetTimer}
-                    className="btn btn-ghost btn-md font-mono text-xs text-muted hover:text-primary flex items-center gap-1.5"
-                  >
-                    <RotateCcw size={14} /> RESET
-                  </button>
+              {/* CUSTOM TOPIC INPUT DRAWER */}
+              {isCustomTopic && (
+                <motion.form
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  onSubmit={handleApplyCustomTopic}
+                  className="mt-4 p-4 rounded-xl bg-purple-950/20 border border-purple-500/30 space-y-3"
+                >
+                  <div className="font-mono text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                    <Edit3 size={14} /> CUSTOM TOPIC ENTRY
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="e.g. Why we pivoted our business model in Q3..."
+                      value={customTopicInput}
+                      onChange={e => setCustomTopicInput(e.target.value)}
+                      className="w-full bg-black/60 border border-purple-400/40 rounded-xl px-3.5 py-2 font-mono text-xs text-primary focus:outline-none focus:border-purple-400"
+                      style={{ color: '#fff' }}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      placeholder="Category (e.g. Business Strategy, Impromptu, Pitch)"
+                      value={customCategoryInput}
+                      onChange={e => setCustomCategoryInput(e.target.value)}
+                      className="flex-1 bg-black/60 border border-white/10 rounded-xl px-3 py-1.5 font-mono text-xs text-primary focus:outline-none focus:border-purple-400"
+                      style={{ color: '#fff' }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!customTopicInput.trim()}
+                      className="btn font-mono text-xs font-bold px-4 py-1.5 bg-purple-500 text-black hover:bg-purple-400 rounded-xl transition-all disabled:opacity-50"
+                    >
+                      SET TOPIC
+                    </button>
+                  </div>
+                </motion.form>
+              )}
+
+              {/* TOPIC BANK DIAL WITH PHASE SELECTOR */}
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-primary uppercase tracking-wider font-bold">
+                      Topic Bank:
+                    </span>
+                    <span className="font-mono text-[11px] text-amber font-bold">
+                      {topics.length} Prompts
+                    </span>
+                  </div>
+
+                  {/* Phase Filter Tabs */}
+                  <div className="flex items-center gap-1 bg-black/60 p-1 border border-white/10 rounded-lg font-mono text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => setTopicBankPhase('all')}
+                      className={`px-2.5 py-0.5 rounded font-bold transition-all ${
+                        topicBankPhase === 'all'
+                          ? 'bg-amber text-black shadow-sm'
+                          : 'text-muted hover:text-primary'
+                      }`}
+                    >
+                      ALL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTopicBankPhase(1)}
+                      className={`px-2.5 py-0.5 rounded font-bold transition-all ${
+                        topicBankPhase === 1
+                          ? 'bg-amber text-black shadow-sm'
+                          : 'text-muted hover:text-primary'
+                      }`}
+                    >
+                      PHASE 1 (1–30)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTopicBankPhase(2)}
+                      className={`px-2.5 py-0.5 rounded font-bold transition-all ${
+                        topicBankPhase === 2
+                          ? 'bg-amber text-black shadow-sm'
+                          : 'text-muted hover:text-primary'
+                      }`}
+                    >
+                      PHASE 2 (31–60)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTopicBankPhase(3)}
+                      className={`px-2.5 py-0.5 rounded font-bold transition-all ${
+                        topicBankPhase === 3
+                          ? 'bg-amber text-black shadow-sm'
+                          : 'text-muted hover:text-primary'
+                      }`}
+                    >
+                      PHASE 3 (61–90)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Numbered Topic Dial */}
+                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                  {topics
+                    .filter(t => topicBankPhase === 'all' || t.phase === topicBankPhase)
+                    .map((t, idx) => {
+                      const isDone = history.some(h => h.topic === t.topic)
+                      const isSelected = selectedTopic?.topic === t.topic
+                      const topicNum = t.id || idx + 1
+                      return (
+                        <button
+                          key={topicNum}
+                          onClick={() => {
+                            setSelectedTopic(t)
+                            setIsCustomTopic(false)
+                          }}
+                          className={`w-7 h-7 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center relative ${
+                            isSelected
+                              ? 'bg-amber text-black scale-110 shadow-md ring-2 ring-amber/50 font-black z-10'
+                              : isDone
+                                ? 'bg-success/20 text-success border border-success/40'
+                                : 'bg-bg-tertiary text-muted hover:text-primary hover:border-amber/50 border border-border-color'
+                          }`}
+                          title={`#${topicNum} [Phase ${t.phase}]: ${t.topic}`}
+                        >
+                          {topicNum}
+                        </button>
+                      )
+                    })}
                 </div>
               </div>
             </div>
@@ -540,11 +803,16 @@ export default function SpeakingPracticePage() {
 
           {/* RIGHT 5 COLS: PROOF & LOG SUBMISSION FORM */}
           <div className="lg:col-span-5">
-            <div className="p-5 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl sticky top-20">
-              <div className="flex items-center gap-2 border-b border-white/10 pb-3 mb-4 text-purple-400">
-                <Video size={18} />
-                <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                  LOG VIDEO PROOF
+            <div className="p-6 rounded-2xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl sticky top-20 space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2 text-purple-400">
+                  <Video size={18} />
+                  <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
+                    LOG VIDEO PROOF
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-amber/20 text-amber border border-amber/30">
+                  +25 XP REWARD
                 </span>
               </div>
 
@@ -552,34 +820,40 @@ export default function SpeakingPracticePage() {
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 p-3 rounded-lg bg-success/20 border border-success/40 text-success font-mono text-xs flex items-center gap-2"
+                  className="p-3.5 rounded-xl bg-success/20 border border-success/40 text-success font-mono text-xs flex flex-col gap-1 shadow-lg"
                 >
-                  <CheckCircle2 size={16} />
-                  <span>Session Logged! +25 XP Awarded! 🎉</span>
+                  <div className="flex items-center gap-2 font-bold">
+                    <CheckCircle2 size={16} />
+                    <span>Session Logged! +25 XP Awarded! 🎉</span>
+                  </div>
+                  <span className="text-[10px] opacity-90 pl-6">
+                    Speaking Practice routine marked complete for today. Auto-fail prevented!
+                  </span>
                 </motion.div>
               )}
 
               <form onSubmit={handleSubmitSession} className="space-y-4">
                 <div>
-                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">ACTIVE TOPIC (DAY {history.length + 1})</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={`Day ${history.length + 1}: ${selectedTopic.topic}`}
-                    className="w-full font-mono text-xs bg-black/60 text-muted border border-white/10 rounded-xl px-3 py-2.5 cursor-not-allowed"
-                    style={{ color: 'var(--text-muted)' }}
-                  />
+                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
+                    ACTIVE TOPIC (DAY {history.length + 1})
+                  </label>
+                  <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 font-mono text-xs text-primary leading-snug">
+                    <span className="text-amber font-bold mr-1">Day {history.length + 1}:</span>
+                    <span>{selectedTopic?.topic || 'Select a topic'}</span>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">VIDEO URL (OPTIONAL)</label>
+                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
+                    VIDEO URL (GOOGLE DRIVE / YOUTUBE)
+                  </label>
                   <div className="relative">
                     <input
                       type="text"
                       placeholder="https://drive.google.com/file/d/..."
                       value={driveLink}
                       onChange={e => setDriveLink(e.target.value)}
-                      className="w-full font-mono text-xs bg-black/50 text-primary border border-white/10 rounded-xl px-3 py-2.5 pl-9 focus:outline-none focus:border-amber transition-colors"
+                      className="w-full font-mono text-xs bg-black/60 text-primary border border-white/10 rounded-xl px-3.5 py-2.5 pl-9 focus:outline-none focus:border-amber transition-colors"
                       style={{ color: '#fff' }}
                     />
                     <LinkIcon size={14} className="absolute left-3 top-3 text-muted" />
@@ -587,19 +861,23 @@ export default function SpeakingPracticePage() {
                 </div>
 
                 <div>
-                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">NOTES</label>
+                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
+                    SESSION REFLECTIONS & DEBRIEF NOTES
+                  </label>
                   <textarea
-                    rows={3}
-                    placeholder="Session reflections & feedback..."
+                    rows={4}
+                    placeholder="Key takeaways, pacing, vocal clarity, eye contact, articulation..."
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
-                    className="w-full font-mono text-xs bg-black/50 text-primary border border-white/10 rounded-xl p-3 focus:outline-none focus:border-amber transition-colors"
+                    className="w-full font-mono text-xs bg-black/60 text-primary border border-white/10 rounded-xl p-3 focus:outline-none focus:border-amber transition-colors leading-relaxed"
                     style={{ color: '#fff' }}
                   />
                 </div>
 
                 <div>
-                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">SELF RATING (1 TO 5)</label>
+                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
+                    SELF RATING (1 TO 5)
+                  </label>
                   <div className="flex items-center gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
@@ -612,7 +890,7 @@ export default function SpeakingPracticePage() {
                             : 'bg-black/40 border-white/10 text-muted hover:text-primary'
                         }`}
                       >
-                        <Star size={12} className={rating >= star ? 'fill-amber' : ''} />
+                        <Star size={12} className={rating >= star ? 'fill-amber text-amber' : ''} />
                         <span>{star}</span>
                       </button>
                     ))}
@@ -622,102 +900,237 @@ export default function SpeakingPracticePage() {
                 <button
                   type="submit"
                   disabled={submitting || !driveLink.trim()}
-                  className="w-full font-mono text-xs font-bold py-3 flex items-center justify-center gap-2 rounded-xl bg-amber hover:bg-amber-hover text-black shadow-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full font-mono text-xs font-black py-3.5 flex items-center justify-center gap-2 rounded-xl bg-amber hover:bg-amber-hover text-black shadow-xl transition-all transform hover:scale-[1.01] active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Award size={16} />
-                  <span>{submitting ? 'RECORDING...' : 'LOG PRACTICE SESSION'}</span>
+                  <span>{submitting ? 'RECORDING & AWARDING XP...' : 'LOG PRACTICE (+25 XP)'}</span>
                 </button>
               </form>
             </div>
           </div>
         </div>
 
-        {/* SESSION HISTORY SECTION */}
-        <div className="p-5 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4 mb-4">
-            <div className="flex items-center gap-2">
-              <Calendar size={18} className="text-success" />
-              <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                PRACTICE HISTORY ({history.length})
-              </span>
+        {/* COMPLETED TOPICS DIRECTORY & PRACTICE ARCHIVE */}
+        <div className="p-6 rounded-2xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl space-y-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Calendar size={18} className="text-amber" />
+                <h2 className="font-mono text-sm uppercase tracking-widest text-primary font-black">
+                  COMPLETED TOPICS ARCHIVE ({completedTopicsChronological.length})
+                </h2>
+              </div>
+              <p className="font-mono text-[11px] text-muted mt-0.5">
+                Comprehensive directory of every speech, prompt, date, rating, and video proof link.
+              </p>
             </div>
 
-            {/* Search Filter */}
-            <div className="relative w-full sm:w-64">
-              <input
-                type="text"
-                placeholder="Search history..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-black/50 text-primary border border-white/10 rounded-xl px-3 py-1.5 pl-8 font-mono text-xs focus:outline-none focus:border-amber transition-colors"
-                style={{ color: '#fff' }}
-              />
-              <Search size={13} className="absolute left-2.5 top-2.5 text-muted" />
+            {/* Controls: Search, View Mode, Copy List */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Search */}
+              <div className="relative w-full sm:w-56">
+                <input
+                  type="text"
+                  placeholder="Search topics or notes..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full bg-black/60 text-primary border border-white/10 rounded-xl px-3 py-1.5 pl-8 font-mono text-xs focus:outline-none focus:border-amber transition-colors"
+                  style={{ color: '#fff' }}
+                />
+                <Search size={13} className="absolute left-2.5 top-2.5 text-muted" />
+              </div>
+
+              {/* View Toggle */}
+              <div className="flex items-center bg-black/60 p-1 border border-white/10 rounded-xl font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('directory')}
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 font-bold transition-all ${
+                    activeTab === 'directory'
+                      ? 'bg-amber text-black shadow-sm'
+                      : 'text-muted hover:text-primary'
+                  }`}
+                  title="Directory List View"
+                >
+                  <List size={13} />
+                  <span>List View</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('cards')}
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 font-bold transition-all ${
+                    activeTab === 'cards'
+                      ? 'bg-amber text-black shadow-sm'
+                      : 'text-muted hover:text-primary'
+                  }`}
+                  title="Cards Grid View"
+                >
+                  <LayoutGrid size={13} />
+                  <span>Cards</span>
+                </button>
+              </div>
+
+              {/* Copy List Button */}
+              <button
+                type="button"
+                onClick={handleCopyCompletedList}
+                className="btn btn-ghost font-mono text-xs px-3 py-1.5 rounded-xl border border-white/10 hover:border-amber/50 text-muted hover:text-amber flex items-center gap-1.5 font-bold transition-all"
+                title="Copy all completed topics to clipboard as Markdown"
+              >
+                {copiedAll ? <Check size={13} className="text-success" /> : <Copy size={13} />}
+                <span>{copiedAll ? 'COPIED!' : 'COPY LIST'}</span>
+              </button>
             </div>
           </div>
 
           {loading ? (
-            <div className="p-8 text-center font-mono text-xs text-muted">Loading history...</div>
-          ) : history.length === 0 ? (
-            <div className="p-8 text-center rounded-xl bg-black/40 border border-dashed border-white/10">
-              <Mic size={24} className="mx-auto text-muted mb-2 opacity-50" />
-              <div className="font-mono text-xs text-primary font-bold">NO PRACTICE SESSIONS LOGGED YET</div>
+            <div className="p-12 text-center font-mono text-xs text-muted">
+              Loading speaking logs...
+            </div>
+          ) : filteredCompletedTopics.length === 0 ? (
+            <div className="p-12 text-center rounded-xl bg-black/40 border border-dashed border-white/10 space-y-2">
+              <Mic size={28} className="mx-auto text-muted opacity-40" />
+              <div className="font-mono text-xs text-primary font-bold">NO PRACTICE SESSIONS FOUND</div>
+              <p className="font-mono text-[10px] text-muted">
+                {searchQuery ? 'Try a different search query.' : 'Complete your first camera practice session above!'}
+              </p>
+            </div>
+          ) : activeTab === 'directory' ? (
+            /* TAB 1: STRUCTURED DIRECTORY LIST TABLE */
+            <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/40">
+              <table className="w-full text-left font-mono text-xs">
+                <thead>
+                  <tr className="border-b border-white/10 bg-white/5 text-[10px] uppercase font-bold text-muted tracking-wider">
+                    <th className="py-3 px-4 w-20">DAY #</th>
+                    <th className="py-3 px-4 w-28">DATE</th>
+                    <th className="py-3 px-4">TOPIC / PROMPT</th>
+                    <th className="py-3 px-4 w-36">CATEGORY</th>
+                    <th className="py-3 px-4 w-24">RATING</th>
+                    <th className="py-3 px-4 w-28 text-right">PROOF</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredCompletedTopics.map((session, idx) => {
+                    const dayNum = session.day_number || idx + 1
+                    return (
+                      <tr 
+                        key={session.id || idx}
+                        className="hover:bg-white/[0.03] transition-colors group"
+                      >
+                        <td className="py-3 px-4 font-bold text-amber">
+                          <span className="px-2 py-0.5 rounded bg-amber/15 border border-amber/30 text-[10px]">
+                            DAY {dayNum}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-muted text-[11px] whitespace-nowrap">
+                          {session.date}
+                        </td>
+                        <td className="py-3 px-4 font-medium text-primary">
+                          <div className="leading-snug">
+                            "{session.topic}"
+                          </div>
+                          {session.notes && (
+                            <div className="text-[10px] text-muted mt-1 font-normal line-clamp-1 group-hover:line-clamp-none transition-all">
+                              {session.notes}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-muted uppercase font-bold whitespace-nowrap">
+                            {session.category || 'General'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1 text-amber font-bold text-[11px]">
+                            <Star size={12} className="fill-amber" />
+                            <span>{session.rating || 5}/5</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          {session.drive_link ? (
+                            <a
+                              href={session.drive_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 font-mono text-[10px] font-bold px-2.5 py-1 rounded-lg bg-amber/15 hover:bg-amber text-amber hover:text-black border border-amber/30 transition-all shadow-sm"
+                            >
+                              <span>VIDEO</span>
+                              <ExternalLink size={10} />
+                            </a>
+                          ) : (
+                            <span className="text-muted text-[10px]">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           ) : (
+            /* TAB 2: VISUAL CARDS GRID VIEW */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {history
-                .filter(h => h.topic.toLowerCase().includes(searchQuery.toLowerCase()) || (h.notes && h.notes.toLowerCase().includes(searchQuery.toLowerCase())))
-                .map((session, idx) => (
-                  <div key={session.id || idx} className="p-4 rounded-xl bg-black/40 border border-border-color hover:border-amber/40 transition-all flex flex-col justify-between gap-3">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-amber/20 border border-amber/40 text-amber font-bold uppercase">
-                            DAY {session.day_number || (history.length - idx)}
-                          </span>
-                          <span className="font-mono text-[9px] text-muted font-semibold">
-                            {session.date}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-0.5 text-amber">
-                          <Star size={11} className="fill-amber" />
-                          <span className="font-mono text-[10px] font-bold">{session.rating || 5}/5</span>
-                        </div>
+              {filteredCompletedTopics.map((session, idx) => (
+                <div 
+                  key={session.id || idx} 
+                  className="p-4 rounded-xl bg-black/50 border border-border-color hover:border-amber/40 transition-all flex flex-col justify-between gap-3 shadow-md"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-amber/20 border border-amber/40 text-amber font-bold uppercase">
+                          DAY {session.day_number || (history.length - idx)}
+                        </span>
+                        <span className="font-mono text-[9px] text-muted font-semibold">
+                          {session.date}
+                        </span>
                       </div>
-                      
-                      <h3 className="font-mono text-xs font-bold text-primary leading-snug line-clamp-2">
-                        "{session.topic}"
-                      </h3>
-
-                      {session.notes && (
-                        <p className="font-mono text-[10px] text-muted mt-2 line-clamp-3 leading-relaxed">
-                          {session.notes}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-0.5 text-amber">
+                        <Star size={11} className="fill-amber" />
+                        <span className="font-mono text-[10px] font-bold">{session.rating || 5}/5</span>
+                      </div>
                     </div>
+                    
+                    <h3 className="font-mono text-xs font-bold text-primary leading-snug">
+                      "{session.topic}"
+                    </h3>
 
-                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                      <span className="font-mono text-[9px] text-muted">
-                        Prep: {session.prep_duration_minutes || 10}m
+                    <div className="mt-2">
+                      <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-muted uppercase font-bold">
+                        {session.category || 'General'}
                       </span>
-
-                      {session.drive_link && (
-                        <a
-                          href={session.drive_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-ghost btn-xs font-mono text-[10px] text-amber hover:text-amber-hover flex items-center gap-1 font-bold"
-                        >
-                          <span>VIEW VIDEO</span>
-                          <ExternalLink size={10} />
-                        </a>
-                      )}
                     </div>
+
+                    {session.notes && (
+                      <p className="font-mono text-[10px] text-muted mt-2.5 line-clamp-3 leading-relaxed border-t border-white/5 pt-2">
+                        {session.notes}
+                      </p>
+                    )}
                   </div>
-                ))}
+
+                  <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                    <span className="font-mono text-[9px] text-success font-bold flex items-center gap-1">
+                      <CheckCircle2 size={11} /> COMPLETED
+                    </span>
+
+                    {session.drive_link && (
+                      <a
+                        href={session.drive_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-ghost btn-xs font-mono text-[10px] text-amber hover:text-amber-hover flex items-center gap-1 font-bold"
+                      >
+                        <span>VIEW VIDEO</span>
+                        <ExternalLink size={10} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
+
       </div>
     </AppShell>
   )

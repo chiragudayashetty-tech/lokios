@@ -728,13 +728,13 @@ export default function IntelExportModal({ isOpen, onClose }) {
               <span class="badge badge-warning">${speakingLogs.length} Sessions</span>
             </h2>
             <table>
-              <thead><tr><th>Date</th><th>Topic / Session</th><th>Prep Time</th><th>Recording Link</th><th>Debrief Notes</th></tr></thead>
+              <thead><tr><th>Date</th><th>Topic / Session</th><th>Rating</th><th>Recording Link</th><th>Debrief Notes</th></tr></thead>
               <tbody>
                 ${speakingLogs.length === 0 ? '<tr><td colspan="5" class="text-muted" style="text-align:center;">No speaking sessions logged in this range.</td></tr>' : speakingLogs.map(l => `
                   <tr>
                     <td class="font-mono font-bold">${l.date}</td>
                     <td><strong>${l.day_number ? `Day ${l.day_number}: ` : ''}${l.topic || 'Speaking Practice'}</strong></td>
-                    <td class="font-mono">${l.prep_duration_minutes || 10} min</td>
+                    <td class="font-mono font-bold text-accent">${l.rating ? `${l.rating}/5 ⭐` : '—'}</td>
                     <td>${l.drive_link ? `<a href="${l.drive_link}" target="_blank" class="text-blue" style="text-decoration:underline;word-break:break-all;font-size:11px;">${l.drive_link}</a>` : '<span class="text-muted">—</span>'}</td>
                     <td style="color:#334155;font-size:11.5px;">${l.notes || '—'}</td>
                   </tr>
