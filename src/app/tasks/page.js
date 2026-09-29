@@ -58,10 +58,27 @@ export default function Operations() {
   }, [])
 
   const today = getLocalDateStr()
+  const cleanDue = (t) => t.due_date ? t.due_date.substring(0, 10) : null
   const pending = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled' && t.status !== 'failed')
-  const overdue = pending.filter(t => t.due_date && t.due_date < today)
-  const dueToday = pending.filter(t => t.due_date === today)
-  const upcoming = pending.filter(t => !t.due_date || t.due_date > today)
+  const overdue = pending.filter(t => {
+    const d = cleanDue(t)
+    return d && d < today
+  })
+  const dueToday = pending.filter(t => cleanDue(t) === today)
+  const upcoming = pending
+    .filter(t => {
+      const d = cleanDue(t)
+      return !d || d > today
+    })
+    .sort((a, b) => {
+      const dateA = cleanDue(a)
+      const dateB = cleanDue(b)
+      if (!dateA && !dateB) return 0
+      if (!dateA) return 1
+      if (!dateB) return -1
+      if (dateA !== dateB) return dateA.localeCompare(dateB)
+      return (a.title || '').localeCompare(b.title || '')
+    })
   const completed = tasks.filter(t => t.status === 'completed')
   const failedOps = tasks.filter(t => t.status === 'cancelled' || t.status === 'failed')
 
