@@ -426,54 +426,89 @@ export function useHabitsInternal(user) {
     if (!user) return null
     try {
       const stoppedAt = new Date().toISOString()
+      const currentHabit = allHabits.find((h) => h.id === habitId)
+      const cleanDesc = (currentHabit?.description || '').replace(/\[STOPPED(?:_AT)?:[^\]]+\]/gi, '').trim()
+      const newDesc = cleanDesc ? `${cleanDesc} [STOPPED:${stoppedAt}]` : `[STOPPED:${stoppedAt}]`
+
       const { error } = await supabase
         .from('habits')
-        .update({ is_active: false, stopped_at: stoppedAt })
+        .update({ is_active: false, stopped_at: stoppedAt, description: newDesc, updated_at: stoppedAt })
         .eq('id', habitId)
         .eq('user_id', user.id)
 
       if (error) {
+        // Fallback without stopped_at column if column does not exist
         const { error: err2 } = await supabase
           .from('habits')
-          .update({ is_active: false })
+          .update({ is_active: false, description: newDesc, updated_at: stoppedAt })
           .eq('id', habitId)
           .eq('user_id', user.id)
-        if (err2) throw err2
+        if (err2) {
+          await supabase.from('habits').update({ is_active: false }).eq('id', habitId).eq('user_id', user.id)
+        }
       }
 
-      setAllHabits((prev) => prev.map((h) => (h.id === habitId ? { ...h, is_active: false, stopped_at: stoppedAt } : h)))
+      setAllHabits((prev) => prev.map((h) => (h.id === habitId ? { ...h, is_active: false, stopped_at: stoppedAt, description: newDesc, updated_at: stoppedAt } : h)))
+
+      if (typeof window !== 'undefined' && user?.id) {
+        try {
+          const raw = localStorage.getItem(`lokios_stopped_habits_${user.id}`)
+          const map = raw ? JSON.parse(raw) : {}
+          map[habitId] = stoppedAt
+          localStorage.setItem(`lokios_stopped_habits_${user.id}`, JSON.stringify(map))
+        } catch (e) {}
+      }
+
       return true
     } catch (error) {
       console.error('Error stopping habit:', error)
       return null
     }
-  }, [user])
+  }, [user, allHabits])
 
   const resumeHabit = useCallback(async (habitId) => {
     if (!user) return null
     try {
+      const currentHabit = allHabits.find((h) => h.id === habitId)
+      const cleanDesc = (currentHabit?.description || '').replace(/\[STOPPED(?:_AT)?:[^\]]+\]/gi, '').trim() || null
+      const nowIso = new Date().toISOString()
+
       const { error } = await supabase
         .from('habits')
-        .update({ is_active: true, stopped_at: null })
+        .update({ is_active: true, stopped_at: null, description: cleanDesc, updated_at: nowIso })
         .eq('id', habitId)
         .eq('user_id', user.id)
 
       if (error) {
         const { error: err2 } = await supabase
           .from('habits')
-          .update({ is_active: true })
+          .update({ is_active: true, description: cleanDesc, updated_at: nowIso })
           .eq('id', habitId)
           .eq('user_id', user.id)
-        if (err2) throw err2
+        if (err2) {
+          await supabase.from('habits').update({ is_active: true }).eq('id', habitId).eq('user_id', user.id)
+        }
       }
 
-      setAllHabits((prev) => prev.map((h) => (h.id === habitId ? { ...h, is_active: true, stopped_at: null } : h)))
+      setAllHabits((prev) => prev.map((h) => (h.id === habitId ? { ...h, is_active: true, stopped_at: null, description: cleanDesc, updated_at: nowIso } : h)))
+
+      if (typeof window !== 'undefined' && user?.id) {
+        try {
+          const raw = localStorage.getItem(`lokios_stopped_habits_${user.id}`)
+          if (raw) {
+            const map = JSON.parse(raw)
+            delete map[habitId]
+            localStorage.setItem(`lokios_stopped_habits_${user.id}`, JSON.stringify(map))
+          }
+        } catch (e) {}
+      }
+
       return true
     } catch (error) {
       console.error('Error resuming habit:', error)
       return null
     }
-  }, [user])
+  }, [user, allHabits])
 
   const archiveHabit = useCallback(async (habitId) => {
     return stopHabit(habitId)

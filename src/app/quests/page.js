@@ -242,10 +242,25 @@ export default function DailyOps() {
     }
 
     // 3. Automatically lock days after habit was stopped
+    let stoppedDateStr = null
     if (habit.stopped_at) {
-      const stoppedDateStr = getLocalDateStr(new Date(habit.stopped_at))
-      if (dateStr > stoppedDateStr) return 'locked'
-    } else if (habit.is_active === false) {
+      const p = new Date(habit.stopped_at)
+      if (!isNaN(p.getTime())) stoppedDateStr = getLocalDateStr(p)
+    }
+    if (!stoppedDateStr && habit.description) {
+      const m = habit.description.match(/\[STOPPED(?:_AT)?:([^\]]+)\]/i)
+      if (m && m[1]) {
+        const p = new Date(m[1].trim())
+        if (!isNaN(p.getTime())) stoppedDateStr = getLocalDateStr(p)
+        else if (/^\d{4}-\d{2}-\d{2}$/.test(m[1].trim())) stoppedDateStr = m[1].trim()
+      }
+    }
+    if (!stoppedDateStr && habit.is_active === false && habit.updated_at) {
+      const p = new Date(habit.updated_at)
+      if (!isNaN(p.getTime())) stoppedDateStr = getLocalDateStr(p)
+    }
+
+    if (stoppedDateStr && dateStr > stoppedDateStr) {
       return 'locked'
     }
 

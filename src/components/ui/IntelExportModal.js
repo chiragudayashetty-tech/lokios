@@ -72,7 +72,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const [
         screenRes,
         workHoursRes, workRes, contentRes,
-        habitLogsRes, journalRes, brainDumpRes, speakingRes, xpHistoryRes
+        habitLogsRes, journalRes, brainDumpRes, speakingRes, xpHistoryRes,
+        habitsRes
       ] = await Promise.all([
         supabase.from('screen_time_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('work_hours_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
@@ -82,7 +83,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
         supabase.from('journal_entries').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
         supabase.from('brain_dump').select('*').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate + 'T23:59:59.999Z').order('created_at', { ascending: false }),
         supabase.from('speaking_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
-        supabase.from('xp_history').select('*').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate + 'T23:59:59.999Z').order('created_at', { ascending: false })
+        supabase.from('xp_history').select('*').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate + 'T23:59:59.999Z').order('created_at', { ascending: false }),
+        supabase.from('habits').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
       ])
 
       let workLogs = (workHoursRes.data && workHoursRes.data.length > 0) ? workHoursRes.data : []
@@ -116,6 +118,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
         }
       }
       const fetchedHabitLogs = (habitLogsRes.data && habitLogsRes.data.length > 0) ? habitLogsRes.data : (monthLogs || [])
+      const fetchedHabits = (habitsRes?.data && habitsRes.data.length > 0) ? habitsRes.data : (allHabits && allHabits.length > 0 ? allHabits : habits)
       const journalEntries = journalRes.data || []
       const brainDumps = brainDumpRes.data || []
 
@@ -405,6 +408,47 @@ export default function IntelExportModal({ isOpen, onClose }) {
         const chunks = []
         if (dateList.length > 35) { for (let i = 0; i < dateList.length; i += 31) chunks.push(dateList.slice(i, i + 31)) }
         else chunks.push(dateList)
+        // Filter habits: Include active habits + stopped habits that were active during this period (or have logs in this period)
+        const matrixHabits = (fetchedHabits && fetchedHabits.length > 0 ? fetchedHabits : (allHabits && allHabits.length > 0 ? allHabits : habits)).filter(h => {
+          if (h.is_active !== false) return true
+
+          // Check if stopped habit has logs in this date range
+          const hasLogsInRange = filteredHabitLogs.some(l => l.habit_id === h.id && l.date >= startDate && l.date <= endDate)
+          if (hasLogsInRange) return true
+
+          // Determine stopped date
+          let stoppedDateStr = null
+          if (h.stopped_at) {
+            const p = new Date(h.stopped_at)
+            if (!isNaN(p.getTime())) stoppedDateStr = getLocalDateStr(p)
+          }
+          if (!stoppedDateStr && h.description) {
+            const m = h.description.match(/\[STOPPED(?:_AT)?:([^\]]+)\]/i)
+            if (m && m[1]) {
+              const p = new Date(m[1].trim())
+              if (!isNaN(p.getTime())) stoppedDateStr = getLocalDateStr(p)
+              else if (/^\d{4}-\d{2}-\d{2}$/.test(m[1].trim())) stoppedDateStr = m[1].trim()
+            }
+          }
+          if (!stoppedDateStr) {
+            const logsForHabit = filteredHabitLogs.filter(l => l.habit_id === h.id && l.date)
+            if (logsForHabit.length > 0) {
+              const sorted = [...logsForHabit].sort((a, b) => b.date.localeCompare(a.date))
+              stoppedDateStr = sorted[0].date
+            } else if (h.updated_at) {
+              stoppedDateStr = getLocalDateStr(new Date(h.updated_at))
+            }
+          }
+
+          // If stopped on or after startDate, it was active during this period!
+          if (stoppedDateStr && stoppedDateStr >= startDate) return true
+
+          // If all-time export, include all stopped habits
+          if (startDate <= '2026-01-02') return true
+
+          return false
+        })
+
         let habitTablesHTML = ''
         chunks.forEach((chunk, chunkIdx) => {
           const chunkStart = chunk[0].dateStr; const chunkEnd = chunk[chunk.length - 1].dateStr
@@ -423,7 +467,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                   </tr>
                 </thead>
                 <tbody>
-                  ${(allHabits && allHabits.length > 0 ? allHabits : habits).map(h => {
+                  ${matrixHabits.map(h => {
                     let doneCount = 0; let goalCount = 0
                     const rawCreatedAt = h.created_at || h.created_date
                     let createdDateStr = null
@@ -434,7 +478,29 @@ export default function IntelExportModal({ isOpen, onClose }) {
                     } else if (rawCreatedAt) { const p = new Date(rawCreatedAt); if (!isNaN(p.getTime())) createdDateStr = getLocalDateStr(p) }
                     else createdDateStr = getLocalDateStr()
 
-                    const stoppedDateStr = h.stopped_at ? getLocalDateStr(new Date(h.stopped_at)) : null
+                    let stoppedDateStr = null
+                    if (h.stopped_at) {
+                      const p = new Date(h.stopped_at)
+                      if (!isNaN(p.getTime())) stoppedDateStr = getLocalDateStr(p)
+                    }
+                    if (!stoppedDateStr && h.description) {
+                      const m = h.description.match(/\[STOPPED(?:_AT)?:([^\]]+)\]/i)
+                      if (m && m[1]) {
+                        const p = new Date(m[1].trim())
+                        if (!isNaN(p.getTime())) stoppedDateStr = getLocalDateStr(p)
+                        else if (/^\d{4}-\d{2}-\d{2}$/.test(m[1].trim())) stoppedDateStr = m[1].trim()
+                      }
+                    }
+                    if (!stoppedDateStr && h.is_active === false) {
+                      const logsForHabit = filteredHabitLogs.filter(l => l.habit_id === h.id && l.date)
+                      if (logsForHabit.length > 0) {
+                        const sorted = [...logsForHabit].sort((a, b) => b.date.localeCompare(a.date))
+                        stoppedDateStr = sorted[0].date
+                      } else if (h.updated_at) {
+                        stoppedDateStr = getLocalDateStr(new Date(h.updated_at))
+                      }
+                    }
+
                     const freqDays = h.frequency_days || [0, 1, 2, 3, 4, 5, 6]
 
                     const dayCellsHTML = chunk.map(dItem => {
@@ -445,28 +511,38 @@ export default function IntelExportModal({ isOpen, onClose }) {
                       if (createdDateStr && dateStr < createdDateStr) {
                         status = 'blocked'
                       } else if (stoppedDateStr && dateStr > stoppedDateStr) {
-                        status = 'blocked'
+                        // After routine was stopped -> locked/stopped, does NOT count toward goal
+                        status = 'stopped'
                       } else if (!freqDays.includes(dayOfWeek)) {
-                        status = 'blocked'
+                        status = 'rest'
                       } else if (explicitStatus) {
                         status = explicitStatus
                       }
 
+                      // ONLY count towards goal if scheduled AND active (UNTIL IT WAS STOPPED)
                       if (freqDays.includes(dayOfWeek) && (!createdDateStr || dateStr >= createdDateStr) && (!stoppedDateStr || dateStr <= stoppedDateStr)) {
                         goalCount++
                       }
 
-                      if (status === 'completed') { doneCount++; return `<td class="cell cell-done">✓</td>` }
-                      else if (status === 'failed') return `<td class="cell cell-fail">✗</td>`
-                      else if (status === 'blocked') { return `<td class="cell cell-blocked" title="Pre-creation / Stopped / Off-day">▨</td>` }
+                      if (status === 'completed') { doneCount++; return `<td class="cell cell-done" title="${dItem.monthShort} ${dItem.dayNum}: Completed">✓</td>` }
+                      else if (status === 'failed') return `<td class="cell cell-fail" title="${dItem.monthShort} ${dItem.dayNum}: Failed">✗</td>`
+                      else if (status === 'stopped') return `<td class="cell cell-blocked" style="background:#F1F5F9;color:#94A3B8;" title="Stopped on ${stoppedDateStr}">▨</td>`
+                      else if (status === 'rest') return `<td class="cell cell-blocked" style="background:#F8FAFC;color:#CBD5E1;" title="Off-day">▨</td>`
+                      else if (status === 'blocked') return `<td class="cell cell-blocked" style="background:#F8FAFC;color:#CBD5E1;" title="Pre-creation">▨</td>`
                       return `<td class="cell cell-empty"></td>`
                     }).join('')
+
                     const safeGoal = Math.max(0, goalCount)
                     const pct = safeGoal === 0 ? 0 : Math.round((doneCount / safeGoal) * 100)
+                    const cleanTitle = (h.title || '').replace(/\[STOPPED(?:_AT)?:[^\]]+\]/gi, '').trim()
+                    const stoppedBadge = h.is_active === false 
+                      ? `<span class="badge badge-warning" style="font-size:8.5px;padding:1px 5px;margin-left:4px;">STOPPED ${stoppedDateStr ? `(${stoppedDateStr})` : ''}</span>`
+                      : ''
+
                     return `<tr>
                       <td style="text-align:left;">
-                        <strong>${h.title}</strong>
-                        ${h.is_active === false ? '<span style="font-size:9px;color:#EF4444;margin-left:4px;font-family:monospace;">[STOPPED]</span>' : ''}
+                        <strong>${cleanTitle}</strong>
+                        ${stoppedBadge}
                       </td>
                       <td style="text-align:center;" class="text-accent font-mono font-bold">${h.xp_per_completion || 25}</td>
                       ${dayCellsHTML}
@@ -484,7 +560,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
           <div class="section">
             <h2 class="section-title">
               <span>🔥 HABITS & DAILY OPS MATRIX</span>
-              <span class="badge badge-danger">${(allHabits && allHabits.length > 0 ? allHabits : habits).length} Routines • ${startDate} TO ${endDate}</span>
+              <span class="badge badge-danger">${matrixHabits.length} Routines (${matrixHabits.filter(h => h.is_active !== false).length} Active, ${matrixHabits.filter(h => h.is_active === false).length} Preserved) • ${startDate} TO ${endDate}</span>
             </h2>
             ${habitTablesHTML}
           </div>
