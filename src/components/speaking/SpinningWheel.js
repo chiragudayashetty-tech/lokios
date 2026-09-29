@@ -193,7 +193,7 @@ export default function SpinningWheel({
             >
               <option value={1} className="bg-zinc-950 text-white">Phase 1 (Days 1–30)</option>
               <option value={2} className="bg-zinc-950 text-white">Phase 2 (Days 31–60)</option>
-              <option value={3} className="bg-zinc-950 text-white">Phase 3 (Days 61–90)</option>
+              <option value={3} disabled className="bg-zinc-950 text-muted/60">🔒 Phase 3 (Locked)</option>
             </select>
           </div>
 

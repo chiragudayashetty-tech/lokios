@@ -382,13 +382,14 @@ export default function SpeakingPracticePage() {
     }
   }, [user?.id])
 
-  // Switch Phase Dropdown Handler
+  // Switch Phase Dropdown Handler (Locks Phase 3)
   const handlePhaseChange = (newPhase) => {
+    if (newPhase === 3 && history.length < 60) return // Phase 3 is locked!
     setActivePhase(newPhase)
     setTopicBankPhase(newPhase)
-    const completedTopicTitles = new Set(history.map(h => h.topic))
+    const completedSet = new Set(history.map(h => h.topic))
     const phaseTopics = topics.filter(t => t.phase === newPhase)
-    const uncompleted = phaseTopics.filter(t => !completedTopicTitles.has(t.topic))
+    const uncompleted = phaseTopics.filter(t => !completedSet.has(t.topic))
     const nextPick = uncompleted.length > 0 ? uncompleted[0] : phaseTopics[0]
     if (nextPick) {
       setSelectedTopic(nextPick)
@@ -396,16 +397,21 @@ export default function SpeakingPracticePage() {
     }
   }
 
-  // Pick Next / Random Topic (prioritizes uncompleted in activePhase)
+  // Pick Next / Random Topic (Picks ONLY from uncompleted topics in activePhase)
   const handleSelectTodaysTopic = () => {
     setIsShuffling(true)
     setIsCustomTopic(false)
     let count = 0
-    const completedTopicTitles = new Set(history.map(h => h.topic))
-    
-    const phasePool = topics.filter(t => t.phase === activePhase)
-    const uncompletedInPhase = phasePool.filter(t => !completedTopicTitles.has(t.topic))
-    const pool = uncompletedInPhase.length > 0 ? uncompletedInPhase : (phasePool.length > 0 ? phasePool : topics)
+    const completedSet = new Set(history.map(h => h.topic))
+    const uncompletedInPhase = topics.filter(t => t.phase === activePhase && !completedSet.has(t.topic))
+    const pool = uncompletedInPhase.length > 0 
+      ? uncompletedInPhase 
+      : topics.filter(t => !completedSet.has(t.topic))
+
+    if (pool.length === 0) {
+      setIsShuffling(false)
+      return
+    }
 
     const interval = setInterval(() => {
       const randomIndex = Math.floor(Math.random() * pool.length)
@@ -532,6 +538,14 @@ export default function SpeakingPracticePage() {
   const avgRating = totalSessions > 0
     ? (history.reduce((acc, h) => acc + (h.rating || 5), 0) / totalSessions).toFixed(1)
     : '5.0'
+
+  // Completed Topics Set
+  const completedTopicTitles = useMemo(() => new Set(history.map(h => h.topic)), [history])
+
+  // Available Topics in Active Phase (Excludes Completed Topics!)
+  const availableTopicsInPhase = useMemo(() => {
+    return topics.filter(t => t.phase === activePhase && !completedTopicTitles.has(t.topic))
+  }, [topics, activePhase, completedTopicTitles])
 
   // Chronological Completed Topics (Day 1 -> Day N)
   const completedTopicsChronological = useMemo(() => {
@@ -714,7 +728,7 @@ export default function SpeakingPracticePage() {
         {showWheelSection && (
           <SpinningWheel
             challenges={SITUATION_CHALLENGES}
-            topics={topics.filter(t => t.phase === activePhase)}
+            topics={availableTopicsInPhase}
             selectedTopic={selectedTopic}
             selectedSituation={selectedSituation}
             activePhase={activePhase}
@@ -751,7 +765,7 @@ export default function SpeakingPracticePage() {
                     >
                       <option value={1} className="bg-zinc-950 text-white">Phase 1 (Days 1–30)</option>
                       <option value={2} className="bg-zinc-950 text-white">Phase 2 (Days 31–60)</option>
-                      <option value={3} className="bg-zinc-950 text-white">Phase 3 (Days 61–90)</option>
+                      <option value={3} disabled className="bg-zinc-950 text-muted/60">🔒 Phase 3 (Locked)</option>
                     </select>
                   </div>
 
@@ -904,19 +918,21 @@ export default function SpeakingPracticePage() {
                     >
                       <option value={1} className="bg-zinc-950 text-white">Phase 1: Foundation (1–30)</option>
                       <option value={2} className="bg-zinc-950 text-white">Phase 2: Persuasion & Arguments (31–60)</option>
-                      <option value={3} className="bg-zinc-950 text-white">Phase 3: High-Stakes Mastery (61–90)</option>
+                      <option value={3} disabled className="bg-zinc-950 text-muted/60">🔒 Phase 3: High-Stakes Mastery (Locked)</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Numbered Topic Dial */}
+                {/* Numbered Topic Dial (Completed topics do not appear) */}
                 <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
-                  {topics
-                    .filter(t => t.phase === activePhase)
-                    .map((t, idx) => {
-                      const isDone = history.some(h => h.topic === t.topic)
+                  {availableTopicsInPhase.length === 0 ? (
+                    <div className="p-4 text-center font-mono text-xs text-success font-bold w-full bg-success/10 rounded-xl border border-success/30">
+                      🎉 ALL TOPICS IN PHASE {activePhase} COMPLETED!
+                    </div>
+                  ) : (
+                    availableTopicsInPhase.map((t) => {
                       const isSelected = selectedTopic?.topic === t.topic
-                      const topicNum = t.id || idx + 1
+                      const topicNum = t.id
                       return (
                         <button
                           key={topicNum}
@@ -927,16 +943,15 @@ export default function SpeakingPracticePage() {
                           className={`w-7 h-7 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center relative ${
                             isSelected
                               ? 'bg-amber text-black scale-110 shadow-md ring-2 ring-amber/50 font-black z-10'
-                              : isDone
-                                ? 'bg-success/20 text-success border border-success/40'
-                                : 'bg-bg-tertiary text-muted hover:text-primary hover:border-amber/50 border border-border-color'
+                              : 'bg-bg-tertiary text-muted hover:text-primary hover:border-amber/50 border border-border-color'
                           }`}
                           title={`#${topicNum} [Phase ${t.phase}]: ${t.topic}`}
                         >
                           {topicNum}
                         </button>
                       )
-                    })}
+                    })
+                  )}
                 </div>
               </div>
             </div>
