@@ -1421,12 +1421,87 @@ tbody tr:hover { background: rgba(244, 201, 107, 0.045); }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
-/* Printable PDF Styling for Resume */
+/* ══════════════════════════════════════════════════════════════════
+   PRINTABLE PDF STYLING (Executive Dossier & Reports)
+══════════════════════════════════════════════════════════════════ */
 @media print {
-  body { background: #000 !important; color: #fff !important; }
-  header, nav, .sidebar, .bottom-nav, .mobile-nav, .app-header, .pwa-install-banner, .print\:hidden { display: none !important; }
-  .page-container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
-  .hud-panel { border: 1px solid #333 !important; background: #080a0f !important; box-shadow: none !important; }
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  body {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 12px !important;
+  }
+
+  /* Hide app chrome, navigations, sidebars, interactive controls */
+  header, nav, .sidebar, .bottom-nav, .mobile-nav, .app-header,
+  .pwa-install-banner, .loki-capsule-hud, .toast-container, .modal-overlay,
+  .hud-actions, .tab-list, button, .btn, .print\:hidden {
+    display: none !important;
+  }
+
+  .app-shell, .page-container, .main-content {
+    display: block !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  /* Executive card styling on paper */
+  .hud-panel {
+    border: 1px solid #CBD5E1 !important;
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+  }
+
+  /* High contrast colors for print text */
+  .text-primary { color: #0F172A !important; }
+  .text-secondary { color: #334155 !important; }
+  .text-muted { color: #64748B !important; }
+  .border-border-color, .border-border-subtle { border-color: #E2E8F0 !important; }
+  
+  /* Tinted backgrounds for readability */
+  .bg-bg-primary { background: #FFFFFF !important; }
+  .bg-secondary, .bg-tertiary {
+    background: #F8FAFC !important;
+    border-color: #E2E8F0 !important;
+  }
+
+  /* Maintain tactical accents */
+  .text-amber { color: #B45309 !important; }
+  .text-cyan { color: #0284C7 !important; }
+  .text-info { color: #0369A1 !important; }
+  .text-success { color: #15803D !important; }
+  .text-danger { color: #B91C1C !important; }
+
+  /* Page break rules: prevent cards from tearing across pages */
+  .hud-panel, .grid > div, .space-y-3 > div, .space-y-4 > div, tr, .journal-entry {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════

@@ -185,64 +185,84 @@ export default function IntelExportModal({ isOpen, onClose }) {
       // ──────────────────────────────────────────────────────────────
       // BUILD HTML REPORT
       // ──────────────────────────────────────────────────────────────
+      const totalWorkHours = workLogs.reduce((acc, l) => acc + (parseFloat(l.total_hours_worked) || 0), 0).toFixed(1)
+      const totalFocusedHours = workLogs.reduce((acc, l) => acc + (parseFloat(l.focused_hours) || 0), 0).toFixed(1)
+      const completedTasksCount = filteredTasks.filter(t => t.status === 'completed').length
+      const totalTasksCount = filteredTasks.length
+      const taskSuccessRate = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0
+      const completedGoalsCount = filteredGoals.filter(g => g.status === 'completed').length
+      const totalGoalsCount = filteredGoals.length
+      const habitCompletedLogsCount = filteredHabitLogs.filter(l => l.status === 'completed').length
+
       let sectionsHTML = ''
 
       // 0. WORK & CONTENT INTELLIGENCE
       if (selectedModules.work_intel) {
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">💼 WORK & CONTENT INTELLIGENCE LOGS</h2>
-            <h3 style="font-size: 13px; color: #D4AF37; margin-top: 10px; margin-bottom: 8px;">⏱️ WORK LOGS (${workLogs.length})</h3>
+            <h2 class="section-title">
+              <span>💼 WORK & CONTENT INTELLIGENCE</span>
+              <span class="badge badge-warning">${workLogs.length} Work Logs • ${contentLogs.length} Content Ops</span>
+            </h2>
+            <div class="sub-heading">⏱️ WORK SESSIONS & FOCUS LOGS</div>
             <table>
               <thead>
                 <tr>
                   <th>Date</th>
                   <th>Total Worked</th>
                   <th>Beyond Tatva</th>
-                  <th>Focused</th>
-                  <th>Unfocused</th>
-                  <th style="color: #A78BFA;">Type of Work</th>
-                  <th>Notes</th>
+                  <th>Focused Exec</th>
+                  <th>Unfocused / Other</th>
+                  <th>Type of Work</th>
+                  <th>Notes / Deliverables</th>
                 </tr>
               </thead>
               <tbody>
-                ${workLogs.map(l => {
+                ${workLogs.length === 0 ? '<tr><td colspan="7" class="text-muted" style="text-align:center;">No work sessions logged in this range.</td></tr>' : workLogs.map(l => {
                   const typeTagsHTML = l.work_type
                     ? l.work_type.split(',').map(t => t.trim()).filter(Boolean)
                         .map(t => `<span class="work-tag">${t}</span>`).join(' ')
                     : '—'
                   return `
                     <tr>
-                      <td>${l.date}</td>
-                      <td><strong style="color: #D4AF37;">${l.total_hours_worked || 0}h</strong></td>
-                      <td style="color: #00F0FF;">${l.beyond_tatva_hours || 0}h</td>
-                      <td style="color: #10B981;">${l.focused_hours || 0}h</td>
-                      <td style="color: #EF4444;">${(l.unfocused_hours ?? l.deep_execution_hours) || 0}h</td>
+                      <td class="font-mono font-bold">${l.date}</td>
+                      <td><strong class="text-accent font-mono">${l.total_hours_worked || 0}h</strong></td>
+                      <td><span class="text-blue font-mono">${l.beyond_tatva_hours || 0}h</span></td>
+                      <td><strong class="text-green font-mono">${l.focused_hours || 0}h</strong></td>
+                      <td><span class="text-red font-mono">${(l.unfocused_hours ?? l.deep_execution_hours) || 0}h</span></td>
                       <td>${typeTagsHTML}</td>
-                      <td>${l.notes || '—'}</td>
+                      <td style="max-width:240px;color:#334155;">${l.notes || '—'}</td>
                     </tr>
                   `
                 }).join('')}
               </tbody>
             </table>
 
-            <h3 style="font-size: 13px; color: #00F0FF; margin-top: 18px; margin-bottom: 8px;">🎬 CONTENT OPERATIONS LOGS (${contentLogs.length})</h3>
+            <div class="sub-heading">🎬 CONTENT PRODUCTION & POST-OPERATIONS</div>
             <table>
               <thead>
-                <tr><th>Date</th><th>Shoot Hrs</th><th>Raw Footage</th><th>Edit Hrs</th><th>Finished Output</th><th>Edit Speed</th><th>Notes</th></tr>
+                <tr>
+                  <th>Date</th>
+                  <th>Shoot Duration</th>
+                  <th>Raw Footage</th>
+                  <th>Editing Time</th>
+                  <th>Finished Output</th>
+                  <th>Production Ratio</th>
+                  <th>Operational Notes</th>
+                </tr>
               </thead>
               <tbody>
-                ${contentLogs.map(l => {
+                ${contentLogs.length === 0 ? '<tr><td colspan="7" class="text-muted" style="text-align:center;">No content operations logged in this range.</td></tr>' : contentLogs.map(l => {
                   const ratio = l.edit_finished_minutes > 0 ? ((l.edit_hours * 60) / l.edit_finished_minutes).toFixed(1) : '—'
                   return `
                     <tr>
-                      <td>${l.date}</td>
-                      <td>${l.shoot_hours || 0}h</td>
-                      <td>${l.shoot_raw_minutes || 0}m</td>
-                      <td><strong style="color: #D4AF37;">${l.edit_hours || 0}h</strong></td>
-                      <td><strong style="color: #10B981;">${l.edit_finished_minutes || 0}m</strong></td>
-                      <td>${ratio}m per fin. min</td>
-                      <td>${l.notes || '—'}</td>
+                      <td class="font-mono font-bold">${l.date}</td>
+                      <td class="font-mono">${l.shoot_hours || 0}h</td>
+                      <td class="font-mono">${l.shoot_raw_minutes || 0}m</td>
+                      <td><strong class="text-accent font-mono">${l.edit_hours || 0}h</strong></td>
+                      <td><strong class="text-green font-mono">${l.edit_finished_minutes || 0}m</strong></td>
+                      <td class="font-mono text-muted">${ratio !== '—' ? `${ratio}m per fin. min` : '—'}</td>
+                      <td style="max-width:240px;color:#334155;">${l.notes || '—'}</td>
                     </tr>
                   `
                 }).join('')}
@@ -256,20 +276,27 @@ export default function IntelExportModal({ isOpen, onClose }) {
       if (selectedModules.missions) {
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">🎯 MISSIONS & QUESTS (${filteredGoals.length})</h2>
+            <h2 class="section-title">
+              <span>🎯 MISSIONS & STRATEGIC QUESTS</span>
+              <span class="badge badge-info">${filteredGoals.length} Tracked • ${completedGoalsCount} Completed</span>
+            </h2>
             <table>
               <thead>
                 <tr>
-                  <th>Mission Title</th><th>Type</th><th>Category</th>
-                  <th style="color:#60A5FA;">Deployed On</th>
+                  <th>Mission Title</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th>Deployed On</th>
                   <th>Deadline</th>
-                  <th style="color:#10B981;">Completed On</th>
+                  <th>Completed On</th>
                   <th>Accomplishment / Notes</th>
-                  <th>Progress</th><th>Reward</th><th>Status</th>
+                  <th>Progress</th>
+                  <th>Reward</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                ${filteredGoals.map(g => {
+                ${filteredGoals.length === 0 ? '<tr><td colspan="10" class="text-muted" style="text-align:center;">No missions logged in this range.</td></tr>' : filteredGoals.map(g => {
                   const deployedStr = g.created_at ? getLocalDateStr(new Date(g.created_at)) : '—'
                   const dueDateStr = g.deadline || g.due_date || 'None'
                   const completedStr = g.completed_at ? getLocalDateStr(new Date(g.completed_at)) : (g.status === 'completed' ? 'Done' : '—')
@@ -279,16 +306,16 @@ export default function IntelExportModal({ isOpen, onClose }) {
                     <tr>
                       <td><strong>${g.title}</strong></td>
                       <td><span class="badge badge-info">${g.type || 'Side Quest'}</span></td>
-                      <td>${g.category ? String(g.category).toUpperCase().replace('_', ' ') : 'GENERAL'}</td>
-                      <td><strong style="color:#60A5FA;">${deployedStr}</strong></td>
-                      <td>${dueDateStr}</td>
-                      <td><span style="${g.status === 'completed' ? 'color:#10B981;font-weight:bold;' : 'color:#9CA3AF;'}">${completedStr}</span></td>
-                      <td style="max-width:200px;font-size:11px;">${noteText}</td>
+                      <td style="text-transform:uppercase;font-size:10.5px;">${g.category ? String(g.category).toUpperCase().replace('_', ' ') : 'GENERAL'}</td>
+                      <td><span class="text-blue font-mono font-bold">${deployedStr}</span></td>
+                      <td class="font-mono text-muted">${dueDateStr}</td>
+                      <td><strong class="${g.status === 'completed' ? 'text-green' : 'text-muted'} font-mono">${completedStr}</strong></td>
+                      <td style="max-width:200px;font-size:11px;color:#334155;">${noteText}</td>
                       <td>
                         <div class="progress-bar"><div class="progress-fill" style="width:${g.progress || 0}%"></div></div>
-                        <small>${g.progress || 0}%</small>
+                        <small class="font-mono font-bold">${g.progress || 0}%</small>
                       </td>
-                      <td class="text-amber">+${g.xp_reward || 100} XP</td>
+                      <td><strong class="text-accent font-mono">+${g.xp_reward || 100} XP</strong></td>
                       <td><span class="badge ${g.status === 'completed' ? 'badge-success' : 'badge-warning'}">${(g.status || 'active').toUpperCase()}</span></td>
                     </tr>
                   `
@@ -303,47 +330,53 @@ export default function IntelExportModal({ isOpen, onClose }) {
       if (selectedModules.operations) {
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">⚡ OPERATIONS / TASKS (${filteredTasks.length})</h2>
+            <h2 class="section-title">
+              <span>⚡ OPERATIONS & TACTICAL TASKS</span>
+              <span class="badge badge-success">${filteredTasks.length} Total • ${completedTasksCount} Completed (${taskSuccessRate}%)</span>
+            </h2>
             <table>
               <thead>
                 <tr>
-                  <th>Operation Title</th><th>Difficulty</th><th>Category</th>
-                  <th style="color:#60A5FA;">Deployed On</th>
+                  <th>Operation Title</th>
+                  <th>Difficulty</th>
+                  <th>Category</th>
+                  <th>Deployed On</th>
                   <th>Due Date</th>
-                  <th style="color:#10B981;">Completed On</th>
-                  <th>Completion / Failure Notes</th>
-                  <th>Reward</th><th>Status</th>
+                  <th>Completed On</th>
+                  <th>Debrief / Notes</th>
+                  <th>Reward</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                ${filteredTasks.map(t => {
+                ${filteredTasks.length === 0 ? '<tr><td colspan="9" class="text-muted" style="text-align:center;">No operations logged in this range.</td></tr>' : filteredTasks.map(t => {
                   const deployedStr = t.created_at ? getLocalDateStr(new Date(t.created_at)) : '—'
                   const dueDateStr = t.due_date || 'None'
                   const completedStr = t.completed_at ? getLocalDateStr(new Date(t.completed_at)) : (t.status === 'completed' ? 'Done' : '—')
                   const diffLabel = (t.difficulty || t.priority || 'MEDIUM').toUpperCase()
                   const { completionNote, failureNote } = parseTaskNotes(t.description)
                   const noteHtml = completionNote 
-                    ? `<span style="color:#10B981;">${completionNote}</span>` 
+                    ? `<span class="text-green font-bold">${completionNote}</span>` 
                     : failureNote 
-                    ? `<span style="color:#EF4444;">${failureNote}</span>` 
-                    : '—'
+                    ? `<span class="text-red font-bold">${failureNote}</span>` 
+                    : '<span class="text-muted">—</span>'
 
                   const isTaskFailed = t.status === 'failed' || t.status === 'cancelled'
                   const isWeeklyGoal = t.category === 'weekly_goal' || (t.description || '').includes('[Weekly Goal]')
                   const xpAmount = isWeeklyGoal ? 25 : (t.xp_reward || 30)
                   const xpDisplay = isTaskFailed ? `-${xpAmount} XP` : `+${xpAmount} XP`
-                  const xpColorStyle = isTaskFailed ? 'color:#EF4444;font-weight:bold;' : 'color:#D4AF37;font-weight:bold;'
+                  const xpClass = isTaskFailed ? 'text-red' : 'text-accent'
 
                   return `
                     <tr>
                       <td><strong>${t.title}</strong></td>
                       <td><span class="badge ${t.difficulty === 'HARD' || t.difficulty === 'EXTREME' ? 'badge-danger' : t.difficulty === 'EASY' ? 'badge-info' : 'badge-warning'}">${diffLabel}</span></td>
-                      <td>${t.category ? String(t.category).toUpperCase().replace('_', ' ') : (t.stat_category || 'GENERAL')}</td>
-                      <td><strong style="color:#60A5FA;">${deployedStr}</strong></td>
-                      <td>${dueDateStr}</td>
-                      <td><span style="${t.status === 'completed' ? 'color:#10B981;font-weight:bold;' : 'color:#9CA3AF;'}">${completedStr}</span></td>
-                      <td style="max-width:200px;font-size:11px;">${noteHtml}</td>
-                      <td><span style="${xpColorStyle}">${xpDisplay}</span></td>
+                      <td style="text-transform:uppercase;font-size:10.5px;">${t.category ? String(t.category).toUpperCase().replace('_', ' ') : (t.stat_category || 'GENERAL')}</td>
+                      <td><span class="text-blue font-mono font-bold">${deployedStr}</span></td>
+                      <td class="font-mono text-muted">${dueDateStr}</td>
+                      <td><strong class="${t.status === 'completed' ? 'text-green' : 'text-muted'} font-mono">${completedStr}</strong></td>
+                      <td style="max-width:210px;font-size:11px;">${noteHtml}</td>
+                      <td><strong class="${xpClass} font-mono">${xpDisplay}</strong></td>
                       <td><span class="badge ${t.status === 'completed' ? 'badge-success' : isTaskFailed ? 'badge-danger' : 'badge-warning'}">${(t.status || 'pending').toUpperCase()}</span></td>
                     </tr>
                   `
@@ -435,11 +468,11 @@ export default function IntelExportModal({ isOpen, onClose }) {
                         <strong>${h.title}</strong>
                         ${h.is_active === false ? '<span style="font-size:9px;color:#EF4444;margin-left:4px;font-family:monospace;">[STOPPED]</span>' : ''}
                       </td>
-                      <td style="text-align:center;" class="text-amber">${h.xp_per_completion || 25}</td>
+                      <td style="text-align:center;" class="text-accent font-mono font-bold">${h.xp_per_completion || 25}</td>
                       ${dayCellsHTML}
-                      <td style="text-align:center;color:var(--green);font-weight:bold;">${doneCount}</td>
-                      <td style="text-align:center;color:var(--muted);">${safeGoal}</td>
-                      <td style="text-align:center;font-weight:bold;color:${pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--accent)' : 'var(--red)'}">${pct}%</td>
+                      <td style="text-align:center;" class="text-green font-bold font-mono">${doneCount}</td>
+                      <td style="text-align:center;" class="text-muted font-mono">${safeGoal}</td>
+                      <td style="text-align:center;" class="${pct >= 80 ? 'text-green' : pct >= 50 ? 'text-accent' : 'text-red'} font-bold font-mono">${pct}%</td>
                     </tr>`
                   }).join('')}
                 </tbody>
@@ -449,7 +482,10 @@ export default function IntelExportModal({ isOpen, onClose }) {
         })
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">🔥 HABITS & DAILY OPS MATRIX (${(allHabits && allHabits.length > 0 ? allHabits : habits).length} Routines) · ${startDate} TO ${endDate}</h2>
+            <h2 class="section-title">
+              <span>🔥 HABITS & DAILY OPS MATRIX</span>
+              <span class="badge badge-danger">${(allHabits && allHabits.length > 0 ? allHabits : habits).length} Routines • ${startDate} TO ${endDate}</span>
+            </h2>
             ${habitTablesHTML}
           </div>
         `
@@ -460,8 +496,11 @@ export default function IntelExportModal({ isOpen, onClose }) {
         const moodEmoji = { great: '🟢 GREAT', good: '🟡 GOOD', okay: '🟠 OKAY', bad: '🔴 BAD', terrible: '⚫ TERRIBLE' }
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">📓 JOURNAL ENTRIES (${journalEntries.length})</h2>
-            ${journalEntries.length === 0 ? '<p style="color:var(--muted);font-size:13px;">No journal entries in this range.</p>' : `
+            <h2 class="section-title">
+              <span>📓 DAILY REFLECTIONS & JOURNAL LOGS</span>
+              <span class="badge badge-success">${journalEntries.length} Entries</span>
+            </h2>
+            ${journalEntries.length === 0 ? '<p class="text-muted" style="text-align:center;padding:12px 0;">No journal entries logged in this range.</p>' : `
               <div class="journal-entries">
                 ${journalEntries.map(e => {
                   const content = e.content || e.what_did_i_do || e.reflection || e.description || ''
@@ -470,7 +509,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
                   return `
                     <div class="journal-entry">
                       <div class="journal-header">
-                        <span class="journal-date">${e.date}</span>
+                        <span class="journal-date">📅 ${e.date}</span>
                         <span class="journal-mood">${moodLabel}</span>
                         <span class="journal-meta">${words} words</span>
                       </div>
@@ -488,16 +527,19 @@ export default function IntelExportModal({ isOpen, onClose }) {
       if (selectedModules.weekly_debrief) {
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">📋 WEEKLY DEBRIEFS (${weeklyDebriefs.length})</h2>
-            ${weeklyDebriefs.length === 0 ? '<p style="color:var(--muted);font-size:13px;">No weekly debriefs in this range.</p>' : `
+            <h2 class="section-title">
+              <span>📋 WEEKLY OPERATIONAL DEBRIEFS</span>
+              <span class="badge badge-purple">${weeklyDebriefs.length} Debriefs</span>
+            </h2>
+            ${weeklyDebriefs.length === 0 ? '<p class="text-muted" style="text-align:center;padding:12px 0;">No weekly debriefs logged in this range.</p>' : `
               <div class="journal-entries">
                 ${weeklyDebriefs.map(d => {
                   const content = d.description || d.notes || d.content || ''
                   return `
-                    <div class="journal-entry" style="border-left-color:#A78BFA;">
+                    <div class="journal-entry debrief">
                       <div class="journal-header">
-                        <span class="journal-date" style="color:#A78BFA;">${d.date}</span>
-                        <span class="journal-mood" style="color:#A78BFA;">${d.title}</span>
+                        <span class="journal-date text-purple">🗓️ ${d.date}</span>
+                        <span class="journal-mood text-purple font-bold">${d.title}</span>
                       </div>
                       <div class="journal-body">${content.replace(/\n/g, '<br>')}</div>
                     </div>
@@ -513,23 +555,29 @@ export default function IntelExportModal({ isOpen, onClose }) {
       if (selectedModules.proof_of_work) {
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">🏆 PROOF OF WORK / PORTFOLIO LOG (${proofLogs.length} entries)</h2>
-            ${proofLogs.length === 0 ? '<p style="color:var(--muted);font-size:13px;">No proof of work entries in this range.</p>' : `
+            <h2 class="section-title">
+              <span>🏆 PROOF OF WORK & ARTIFACT LOG</span>
+              <span class="badge badge-warning">${proofLogs.length} Verified Entries</span>
+            </h2>
+            ${proofLogs.length === 0 ? '<p class="text-muted" style="text-align:center;padding:12px 0;">No proof of work entries logged in this range.</p>' : `
               <table>
                 <thead>
                   <tr>
-                    <th>Date</th><th>Title</th><th>Description</th><th>Proof Links</th>
+                    <th>Date</th>
+                    <th>Project / Work Title</th>
+                    <th>Executive Summary / Description</th>
+                    <th>Artifact / Proof Links</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${proofLogs.map(l => `
                     <tr>
-                      <td>${l.date || '—'}</td>
+                      <td class="font-mono font-bold">${l.date || '—'}</td>
                       <td><strong>${l.title || '—'}</strong></td>
-                      <td>${l.description || l.notes || '—'}</td>
+                      <td style="color:#334155;font-size:11.5px;">${l.description || l.notes || '—'}</td>
                       <td>
                         ${(l.media_urls || []).map((url, i) => `
-                          <a href="${url}" style="color:#D4AF37;display:block;font-size:11px;" target="_blank">🔗 Proof #${i + 1}</a>
+                          <a href="${url}" class="text-accent" style="display:inline-block;margin-right:8px;font-family:monospace;font-size:11px;text-decoration:underline;" target="_blank">🔗 Proof #${i + 1}</a>
                         `).join('')}
                       </td>
                     </tr>
@@ -545,18 +593,21 @@ export default function IntelExportModal({ isOpen, onClose }) {
       if (selectedModules.brain_dump) {
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">🧠 BRAIN DUMP LOG (${brainDumps.length})</h2>
-            ${brainDumps.length === 0 ? '<p style="color:var(--muted);font-size:13px;">No brain dump entries in this range.</p>' : `
+            <h2 class="section-title">
+              <span>🧠 BRAIN DUMP ARCHIVE</span>
+              <span class="badge badge-info">${brainDumps.length} Captured Items</span>
+            </h2>
+            ${brainDumps.length === 0 ? '<p class="text-muted" style="text-align:center;padding:12px 0;">No brain dump entries in this range.</p>' : `
               <table>
                 <thead>
-                  <tr><th>Date</th><th>Type</th><th>Content</th></tr>
+                  <tr><th>Date</th><th>Type</th><th>Thought / Concept Content</th></tr>
                 </thead>
                 <tbody>
                   ${brainDumps.map(b => `
                     <tr>
-                      <td>${b.created_at ? b.created_at.slice(0, 10) : '—'}</td>
-                      <td><span class="badge badge-info">${b.type || 'thought'}</span></td>
-                      <td>${(b.content || '').replace(/\n/g, ' ')}</td>
+                      <td class="font-mono font-bold">${b.created_at ? b.created_at.slice(0, 10) : '—'}</td>
+                      <td><span class="badge badge-info">${(b.type || 'thought').toUpperCase()}</span></td>
+                      <td style="color:#334155;">${(b.content || '').replace(/\n/g, ' ')}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -570,17 +621,20 @@ export default function IntelExportModal({ isOpen, onClose }) {
       if (selectedModules.screen_intel) {
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">📱 SCREEN INTEL LOGS (${screenLogs.length})</h2>
+            <h2 class="section-title">
+              <span>📱 SCREEN DISCIPLINE INTEL</span>
+              <span class="badge badge-info">${screenLogs.length} Daily Records</span>
+            </h2>
             <table>
-              <thead><tr><th>Date</th><th>Screen Time</th><th>Doomscroll</th><th>Streaming</th><th>Status</th></tr></thead>
+              <thead><tr><th>Date</th><th>Screen Time</th><th>Doomscroll</th><th>Streaming</th><th>Discipline Status</th></tr></thead>
               <tbody>
-                ${screenLogs.map(l => `
+                ${screenLogs.length === 0 ? '<tr><td colspan="5" class="text-muted" style="text-align:center;">No screen intel logged in this range.</td></tr>' : screenLogs.map(l => `
                   <tr>
-                    <td>${l.date}</td>
-                    <td><strong>${l.total_hours || 0}hrs</strong></td>
-                    <td>${l.doom_scroll_minutes || l.doomscroll_minutes || 0}m</td>
-                    <td>${l.streaming_hours || 0}hrs</td>
-                    <td><span class="badge ${parseFloat(l.total_hours) < 6 ? 'badge-success' : 'badge-danger'}">${parseFloat(l.total_hours) < 6 ? 'CLEAN' : 'OVER LIMIT'}</span></td>
+                    <td class="font-mono font-bold">${l.date}</td>
+                    <td><strong class="font-mono">${l.total_hours || 0} hrs</strong></td>
+                    <td class="font-mono text-muted">${l.doom_scroll_minutes || l.doomscroll_minutes || 0}m</td>
+                    <td class="font-mono text-muted">${l.streaming_hours || 0} hrs</td>
+                    <td><span class="badge ${parseFloat(l.total_hours) < 6 ? 'badge-success' : 'badge-danger'}">${parseFloat(l.total_hours) < 6 ? '✓ CLEAN DISCIPLINE' : '⚠ OVER THRESHOLD'}</span></td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -593,17 +647,20 @@ export default function IntelExportModal({ isOpen, onClose }) {
       if (selectedModules.speaking_intel) {
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">🎙️ SPEAKING PRACTICE & CAMERA CHALLENGE (${speakingLogs.length})</h2>
+            <h2 class="section-title">
+              <span>🎙️ SPEAKING PRACTICE & CAMERA CONFIDENCE</span>
+              <span class="badge badge-warning">${speakingLogs.length} Sessions</span>
+            </h2>
             <table>
-              <thead><tr><th>Date</th><th>Topic / Title</th><th>Prep Time</th><th>Drive Link / Video Proof</th><th>Notes</th></tr></thead>
+              <thead><tr><th>Date</th><th>Topic / Session</th><th>Prep Time</th><th>Recording Link</th><th>Debrief Notes</th></tr></thead>
               <tbody>
-                ${speakingLogs.map(l => `
+                ${speakingLogs.length === 0 ? '<tr><td colspan="5" class="text-muted" style="text-align:center;">No speaking sessions logged in this range.</td></tr>' : speakingLogs.map(l => `
                   <tr>
-                    <td>${l.date}</td>
+                    <td class="font-mono font-bold">${l.date}</td>
                     <td><strong>${l.day_number ? `Day ${l.day_number}: ` : ''}${l.topic || 'Speaking Practice'}</strong></td>
-                    <td>${l.prep_duration_minutes || 10} min</td>
-                    <td>${l.drive_link ? `<a href="${l.drive_link}" target="_blank" style="color: var(--cyan); text-decoration: underline;">${l.drive_link}</a>` : '—'}</td>
-                    <td>${l.notes || '—'}</td>
+                    <td class="font-mono">${l.prep_duration_minutes || 10} min</td>
+                    <td>${l.drive_link ? `<a href="${l.drive_link}" target="_blank" class="text-blue" style="text-decoration:underline;word-break:break-all;font-size:11px;">${l.drive_link}</a>` : '<span class="text-muted">—</span>'}</td>
+                    <td style="color:#334155;font-size:11.5px;">${l.notes || '—'}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -618,23 +675,26 @@ export default function IntelExportModal({ isOpen, onClose }) {
       if (selectedModules.xp_timeline) {
         sectionsHTML += `
           <div class="section">
-            <h2 class="section-title">⚡ XP TIMELINE AUDIT TRAIL (${xpHistoryLogs.length} Events)</h2>
+            <h2 class="section-title">
+              <span>⚡ XP TIMELINE AUDIT TRAIL</span>
+              <span class="badge badge-warning">${xpHistoryLogs.length} Events</span>
+            </h2>
             <table>
               <thead><tr><th>Timestamp</th><th>Description</th><th>Stat Category</th><th>Source</th><th>XP Amount</th></tr></thead>
               <tbody>
-                ${xpHistoryLogs.map(x => {
+                ${xpHistoryLogs.length === 0 ? '<tr><td colspan="5" class="text-muted" style="text-align:center;">No XP events logged in this range.</td></tr>' : xpHistoryLogs.map(x => {
                   const isPos = (x.amount || 0) > 0
                   const isNeg = (x.amount || 0) < 0
                   const dtStr = x.created_at ? new Date(x.created_at).toLocaleString() : '—'
-                  const color = isPos ? 'var(--green)' : isNeg ? 'var(--red)' : 'var(--muted)'
+                  const colorClass = isPos ? 'text-green' : isNeg ? 'text-red' : 'text-muted'
                   const sign = isPos ? '+' : ''
                   return `
                     <tr>
-                      <td style="font-family:monospace;font-size:11px;color:var(--muted);">${dtStr}</td>
+                      <td class="font-mono text-muted" style="font-size:11px;">${dtStr}</td>
                       <td><strong>${x.description || 'XP Event'}</strong></td>
                       <td><span class="badge badge-warning">${(x.stat_category || 'GENERAL').toUpperCase()}</span></td>
-                      <td style="font-family:monospace;font-size:11px;">${x.source_type || 'system'}</td>
-                      <td><strong style="color:${color};font-family:monospace;">${sign}${x.amount || 0} XP</strong></td>
+                      <td class="font-mono text-muted" style="font-size:11px;">${x.source_type || 'system'}</td>
+                      <td><strong class="${colorClass} font-mono">${sign}${x.amount || 0} XP</strong></td>
                     </tr>
                   `
                 }).join('')}
@@ -650,67 +710,531 @@ export default function IntelExportModal({ isOpen, onClose }) {
         <html>
         <head>
           <meta charset="utf-8">
-          <title>Loki OS — Tactical Performance Report</title>
+          <title>Loki OS — Tactical Performance Report (${startDate} to ${endDate})</title>
           <style>
-            :root {
-              --bg: #090A0F; --card: #12151E; --border: #262B3D;
-              --text: #F3F4F6; --muted: #9CA3AF; --accent: #D4AF37;
-              --cyan: #00F0FF; --green: #10B981; --red: #EF4444; --amber: #D4AF37;
+            @page {
+              size: A4 portrait;
+              margin: 12mm 14mm;
             }
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: var(--bg); color: var(--text); padding: 40px; margin: 0; }
-            .header { border-bottom: 2px solid var(--accent); padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
-            .title { font-size: 28px; font-weight: 800; letter-spacing: 2px; color: var(--accent); margin: 0; }
-            .subtitle { color: var(--muted); font-size: 13px; margin-top: 5px; }
-            .section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 25px; }
-            .section-title { font-size: 16px; letter-spacing: 1px; color: var(--cyan); margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; font-size: 13px; }
-            th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-            th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; }
-            .matrix-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-            .matrix-table th, .matrix-table td { padding: 6px 4px; border: 1px solid var(--border); text-align: center; }
-            .cell-done { background: rgba(16,185,129,0.25); color: #10B981; font-weight: bold; }
-            .cell-fail { background: rgba(239,68,68,0.25); color: #EF4444; font-weight: bold; }
-            .cell-blocked { color: #6B7280; opacity: 0.5; }
-            .cell-empty { background: rgba(255,255,255,0.02); }
-            .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
-            .badge-success { background: rgba(16,185,129,0.2); color: var(--green); border: 1px solid var(--green); }
-            .badge-warning { background: rgba(212,175,55,0.2); color: var(--accent); border: 1px solid var(--accent); }
-            .badge-danger { background: rgba(239,68,68,0.2); color: var(--red); border: 1px solid var(--red); }
-            .badge-info { background: rgba(0,240,255,0.2); color: var(--cyan); border: 1px solid var(--cyan); }
-            .text-amber { color: var(--accent); font-weight: bold; }
-            .progress-bar { width: 80px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; }
-            .progress-fill { height: 100%; background: var(--accent); }
-            .work-tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; background: rgba(167,139,250,0.2); color: #A78BFA; border: 1px solid rgba(167,139,250,0.4); margin: 1px 2px; }
-            /* Journal Styles */
-            .journal-entries { display: flex; flex-direction: column; gap: 14px; }
-            .journal-entry { border-left: 3px solid var(--accent); padding: 12px 16px; background: rgba(255,255,255,0.03); border-radius: 0 8px 8px 0; }
-            .journal-header { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; flex-wrap: wrap; }
-            .journal-date { font-weight: 700; font-size: 12px; color: var(--accent); letter-spacing: 1px; }
-            .journal-mood { font-size: 12px; color: var(--cyan); }
-            .journal-meta { font-size: 11px; color: var(--muted); }
-            .journal-body { font-size: 13px; color: var(--text); line-height: 1.7; white-space: pre-wrap; }
+
+            *, *::before, *::after {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+
+            :root {
+              --bg: #F8FAFC;
+              --card: #FFFFFF;
+              --border: #E2E8F0;
+              --border-strong: #CBD5E1;
+              --text: #0F172A;
+              --text-muted: #64748B;
+              --accent: #B45309;
+              --accent-light: #FEF3C7;
+              --blue: #0284C7;
+              --blue-light: #E0F2FE;
+              --green: #15803D;
+              --green-light: #DCFCE7;
+              --red: #B91C1C;
+              --red-light: #FEE2E2;
+              --purple: #6D28D9;
+              --purple-light: #F3E8FF;
+            }
+
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              background: var(--bg);
+              color: var(--text);
+              padding: 24px;
+              margin: 0;
+              line-height: 1.5;
+              -webkit-font-smoothing: antialiased;
+            }
+
             @media print {
-              body { background: #fff; color: #000; padding: 20px; }
-              .section { background: #fff; border: 1px solid #ccc; color: #000; }
-              .section-title { color: #000; border-bottom-color: #ccc; }
-              th, td { border-bottom-color: #eee; } th { color: #555; }
-              .badge { border: 1px solid #999; }
-              .journal-entry { border-left: 3px solid #999; background: #f9f9f9; }
+              body {
+                background: #FFFFFF !important;
+                padding: 0 !important;
+              }
+            }
+
+            /* Report Header Card */
+            .report-header {
+              background: #FFFFFF;
+              border: 1px solid var(--border);
+              border-top: 4px solid var(--accent);
+              border-radius: 12px;
+              padding: 20px 24px;
+              margin-bottom: 22px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            }
+
+            .header-top {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              gap: 20px;
+              border-bottom: 1px solid var(--border);
+              padding-bottom: 16px;
+              margin-bottom: 16px;
+            }
+
+            .tagline {
+              font-family: monospace;
+              font-size: 10.5px;
+              font-weight: 700;
+              letter-spacing: 1.5px;
+              color: var(--accent);
+              text-transform: uppercase;
+              margin-bottom: 4px;
+            }
+
+            .report-title {
+              font-size: 24px;
+              font-weight: 800;
+              letter-spacing: 0.5px;
+              color: var(--text);
+              margin: 0 0 6px 0;
+            }
+
+            .meta-row {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: center;
+              gap: 8px;
+              font-size: 11.5px;
+              color: var(--text-muted);
+            }
+
+            .meta-item strong {
+              color: var(--text);
+            }
+
+            .meta-sep {
+              color: var(--border-strong);
+            }
+
+            .header-right {
+              text-align: right;
+              flex-shrink: 0;
+            }
+
+            .badge-status {
+              display: inline-block;
+              background: #FEF3C7;
+              color: #92400E;
+              border: 1px solid #FCD34D;
+              padding: 3px 8px;
+              border-radius: 6px;
+              font-family: monospace;
+              font-size: 10px;
+              font-weight: 700;
+              letter-spacing: 1px;
+              margin-bottom: 6px;
+            }
+
+            .timestamp-label {
+              font-size: 9.5px;
+              text-transform: uppercase;
+              letter-spacing: 0.8px;
+              color: var(--text-muted);
+            }
+
+            .timestamp-val {
+              font-family: monospace;
+              font-weight: 700;
+              font-size: 12px;
+              color: var(--text);
+            }
+
+            /* KPI Summary Cards Grid */
+            .kpi-grid {
+              display: grid;
+              grid-template-columns: repeat(5, 1fr);
+              gap: 10px;
+            }
+
+            @media (max-width: 768px) {
+              .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+              }
+            }
+
+            .kpi-card {
+              background: #F8FAFC;
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              padding: 10px 12px;
+              text-align: center;
+            }
+
+            .kpi-label {
+              font-size: 9.5px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.8px;
+              color: var(--text-muted);
+              margin-bottom: 3px;
+            }
+
+            .kpi-val {
+              font-size: 18px;
+              font-weight: 800;
+              font-family: monospace;
+              line-height: 1.1;
+              margin-bottom: 2px;
+            }
+
+            .kpi-denom {
+              font-size: 11px;
+              font-weight: 600;
+              color: var(--text-muted);
+            }
+
+            .kpi-sub {
+              font-size: 9.5px;
+              color: var(--text-muted);
+              font-weight: 500;
+            }
+
+            /* Sections */
+            .section {
+              background: var(--card);
+              border: 1px solid var(--border);
+              border-radius: 12px;
+              padding: 18px 22px;
+              margin-bottom: 20px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+              page-break-inside: auto;
+            }
+
+            .section-title {
+              font-size: 13.5px;
+              font-weight: 800;
+              letter-spacing: 0.8px;
+              color: var(--text);
+              margin-top: 0;
+              margin-bottom: 12px;
+              border-bottom: 2px solid var(--border);
+              padding-bottom: 8px;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              page-break-after: avoid;
+              break-after: avoid;
+            }
+
+            .sub-heading {
+              font-size: 11.5px;
+              font-weight: 700;
+              letter-spacing: 0.5px;
+              color: var(--accent);
+              margin-top: 14px;
+              margin-bottom: 8px;
+              page-break-after: avoid;
+              break-after: avoid;
+            }
+
+            /* Tables */
+            table {
+              width: 100%;
+              border-collapse: separate;
+              border-spacing: 0;
+              font-size: 11px;
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              overflow: hidden;
+              margin-bottom: 12px;
+            }
+
+            thead {
+              display: table-header-group;
+            }
+
+            tr {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+
+            th {
+              background: #F8FAFC;
+              color: #475569;
+              font-weight: 700;
+              text-transform: uppercase;
+              font-size: 10px;
+              letter-spacing: 0.5px;
+              padding: 8px 10px;
+              border-bottom: 2px solid var(--border);
+              border-right: 1px solid var(--border);
+              text-align: left;
+            }
+
+            th:last-child {
+              border-right: none;
+            }
+
+            td {
+              padding: 7px 10px;
+              border-bottom: 1px solid #F1F5F9;
+              border-right: 1px solid #F1F5F9;
+              vertical-align: middle;
+              color: #1E293B;
+            }
+
+            td:last-child {
+              border-right: none;
+            }
+
+            tbody tr:nth-child(even) {
+              background: #FAFAFC;
+            }
+
+            tbody tr:last-child td {
+              border-bottom: none;
+            }
+
+            /* Habits Matrix Table */
+            .matrix-table {
+              width: 100%;
+              border-collapse: separate;
+              border-spacing: 0;
+              font-size: 9.5px;
+              border: 1px solid var(--border);
+              border-radius: 8px;
+              overflow: hidden;
+            }
+
+            .matrix-table th {
+              padding: 5px 2px;
+              text-align: center;
+              font-size: 8.5px;
+              border-right: 1px solid var(--border);
+              border-bottom: 2px solid var(--border);
+            }
+
+            .matrix-table td {
+              padding: 4px 2px;
+              border-right: 1px solid #E2E8F0;
+              border-bottom: 1px solid #E2E8F0;
+              text-align: center;
+            }
+
+            .cell-done {
+              background: #DCFCE7 !important;
+              color: #15803D !important;
+              font-weight: 800;
+              font-size: 11px;
+            }
+
+            .cell-fail {
+              background: #FEE2E2 !important;
+              color: #B91C1C !important;
+              font-weight: 800;
+              font-size: 11px;
+            }
+
+            .cell-blocked {
+              background: #F1F5F9 !important;
+              color: #94A3B8 !important;
+              font-size: 8.5px;
+            }
+
+            .cell-empty {
+              background: #FFFFFF;
+            }
+
+            /* Badges */
+            .badge {
+              display: inline-block;
+              padding: 2px 7px;
+              border-radius: 9999px;
+              font-size: 9.5px;
+              font-weight: 700;
+              font-family: monospace;
+              letter-spacing: 0.3px;
+              white-space: nowrap;
+            }
+
+            .badge-success { background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; }
+            .badge-warning { background: #FEF3C7; color: #B45309; border: 1px solid #FCD34D; }
+            .badge-danger  { background: #FEE2E2; color: #B91C1C; border: 1px solid #FCA5A5; }
+            .badge-info    { background: #E0F2FE; color: #0369A1; border: 1px solid #7DD3FC; }
+            .badge-purple  { background: #F3E8FF; color: #6D28D9; border: 1px solid #D8B4FE; }
+
+            /* Progress bar */
+            .progress-bar {
+              width: 55px;
+              height: 6px;
+              background: #E2E8F0;
+              border-radius: 3px;
+              overflow: hidden;
+              display: inline-block;
+              vertical-align: middle;
+              margin-right: 4px;
+            }
+
+            .progress-fill {
+              height: 100%;
+              background: #B45309;
+              border-radius: 3px;
+            }
+
+            /* Tags & Typography Utilities */
+            .work-tag {
+              display: inline-block;
+              padding: 1px 6px;
+              border-radius: 4px;
+              font-size: 9.5px;
+              background: #F3E8FF;
+              color: #6D28D9;
+              border: 1px solid #D8B4FE;
+              margin: 1px 2px;
+              font-weight: 600;
+            }
+
+            .text-accent { color: #B45309; }
+            .text-green  { color: #15803D; }
+            .text-red    { color: #B91C1C; }
+            .text-blue   { color: #0369A1; }
+            .text-purple { color: #6D28D9; }
+            .text-muted  { color: #64748B; }
+            .font-mono   { font-family: monospace; }
+            .font-bold   { font-weight: 700; }
+
+            /* Journal & Debriefs */
+            .journal-entries {
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+            }
+
+            .journal-entry {
+              border: 1px solid var(--border);
+              border-left: 4px solid var(--accent);
+              padding: 12px 16px;
+              background: #F8FAFC;
+              border-radius: 0 8px 8px 0;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+
+            .journal-entry.debrief {
+              border-left-color: #6D28D9;
+            }
+
+            .journal-header {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 8px;
+              padding-bottom: 6px;
+              border-bottom: 1px solid #E2E8F0;
+              flex-wrap: wrap;
+              gap: 8px;
+            }
+
+            .journal-date {
+              font-weight: 800;
+              font-size: 11px;
+              font-family: monospace;
+              color: var(--accent);
+              letter-spacing: 0.5px;
+            }
+
+            .journal-mood {
+              font-size: 11px;
+              font-weight: 700;
+            }
+
+            .journal-meta {
+              font-size: 10px;
+              font-family: monospace;
+              color: var(--text-muted);
+            }
+
+            .journal-body {
+              font-size: 12px;
+              color: #334155;
+              line-height: 1.65;
+              white-space: pre-wrap;
+              word-break: break-word;
+            }
+
+            /* Report Footer */
+            .report-footer {
+              border-top: 1px solid var(--border);
+              padding-top: 14px;
+              margin-top: 20px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 10px;
+              font-family: monospace;
+              color: var(--text-muted);
+              page-break-inside: avoid;
+              break-inside: avoid;
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div>
-              <h1 class="title">LOKI OS // TACTICAL PERFORMANCE REPORT</h1>
-              <div class="subtitle">OPERATOR: ${profile?.full_name || 'CHIRAG'} | PERIOD: ${startDate} → ${endDate}</div>
+          <div class="report-header">
+            <div class="header-top">
+              <div>
+                <div class="tagline">LOKI OS // EXECUTIVE INTELLIGENCE & AUDIT ENGINE</div>
+                <h1 class="report-title">TACTICAL PERFORMANCE REPORT</h1>
+                <div class="meta-row">
+                  <span class="meta-item"><strong>OPERATOR:</strong> ${profile?.full_name || 'CHIRAG SHETTY'}</span>
+                  <span class="meta-sep">•</span>
+                  <span class="meta-item"><strong>AUDIT PERIOD:</strong> ${startDate} → ${endDate}</span>
+                  <span class="meta-sep">•</span>
+                  <span class="meta-item"><strong>SECURITY LEVEL:</strong> SAGA DOSSIER</span>
+                </div>
+              </div>
+              <div class="header-right">
+                <div class="badge-status">AUTHENTICATED AUDIT</div>
+                <div class="timestamp-label">GENERATED ON</div>
+                <div class="timestamp-val">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+              </div>
             </div>
-            <div style="text-align:right;">
-              <div style="font-size:12px;color:var(--muted);">GENERATED ON</div>
-              <div style="font-weight:bold;font-size:14px;color:var(--cyan);">${new Date().toLocaleString()}</div>
+
+            <!-- Executive KPI Summary Banner -->
+            <div class="kpi-grid">
+              <div class="kpi-card">
+                <div class="kpi-label">Work Logged</div>
+                <div class="kpi-val text-accent">${totalWorkHours}h</div>
+                <div class="kpi-sub">${totalFocusedHours}h Focused Exec</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Tasks / Ops</div>
+                <div class="kpi-val text-green">${completedTasksCount} <span class="kpi-denom">/ ${totalTasksCount}</span></div>
+                <div class="kpi-sub">${taskSuccessRate}% Completion Rate</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Missions / Quests</div>
+                <div class="kpi-val text-blue">${completedGoalsCount} <span class="kpi-denom">/ ${totalGoalsCount}</span></div>
+                <div class="kpi-sub">${totalGoalsCount - completedGoalsCount} In Progress</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Habits Matrix</div>
+                <div class="kpi-val text-green">${habitCompletedLogsCount}</div>
+                <div class="kpi-sub">Executions Logged</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Intel Records</div>
+                <div class="kpi-val text-purple">${journalEntries.length + weeklyDebriefs.length}</div>
+                <div class="kpi-sub">${journalEntries.length} Journals • ${weeklyDebriefs.length} Debriefs</div>
+              </div>
             </div>
           </div>
-          ${sectionsHTML || '<p style="color:var(--muted);text-align:center;">No modules selected.</p>'}
+
+          ${sectionsHTML || '<p style="color:var(--text-muted);text-align:center;padding:40px;">No modules selected for export.</p>'}
+
+          <div class="report-footer">
+            <div>AUTHENTICATED DOSSIER • GENERATED BY LOKI OS EXECUTIVE INTELLIGENCE ENGINE</div>
+            <div>STRICTLY CONFIDENTIAL • RECORD ID: ${Date.now().toString(36).toUpperCase()}</div>
+          </div>
         </body>
         </html>
       `
