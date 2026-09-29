@@ -9,16 +9,111 @@ import { useOS } from '@/lib/context/OSContext'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { getSpeakingRestDays, setSpeakingRestDays, isSpeakingRestDay } from '@/lib/utils/restDays'
 import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
+import SpinningWheel from '@/components/speaking/SpinningWheel'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Mic, Shuffle, Video, Link as LinkIcon,
   CheckCircle2, Calendar, Sparkles, Award, ExternalLink,
   BookOpen, Star, Search, List, LayoutGrid, Copy, Check,
-  Edit3, Compass, Flame, ArrowRight
+  Edit3, Compass, Flame, ArrowRight, Zap, Target, X
 } from 'lucide-react'
 
 // Known Speaking Practice habit ID in database
 const SPEAKING_HABIT_ID = '479ec4f0-01e5-4df9-8d1b-2b7b5dd56153'
+
+// 10 Situation Challenges (Topic-Independent Modifiers)
+export const SITUATION_CHALLENGES = [
+  {
+    id: 1,
+    title: 'The 30-Second Clock',
+    short: '30s Clock',
+    icon: 'Clock',
+    color: '#f59e0b',
+    description: 'You have 30 seconds to explain your topic.',
+    rules: 'No rushing. You need to decide what matters.'
+  },
+  {
+    id: 2,
+    title: 'Explain It to a 12-Year-Old',
+    short: '12-Year-Old',
+    icon: 'Smile',
+    color: '#3b82f6',
+    description: 'You have to explain the topic so a 12-year-old understands it.',
+    rules: 'No jargon. Use simple analogies and zero buzzwords.'
+  },
+  {
+    id: 3,
+    title: 'The Skeptic',
+    short: 'The Skeptic',
+    icon: 'AlertTriangle',
+    color: '#ef4444',
+    description: 'Imagine the person listening says: "I don\'t think that\'s true."',
+    rules: 'Continue for another 90 seconds, addressing the skepticism.'
+  },
+  {
+    id: 4,
+    title: "You're Wrong",
+    short: "You're Wrong",
+    icon: 'RotateCcw',
+    color: '#8b5cf6',
+    description: 'Halfway through your explanation, stop and say: "Actually, I might be wrong about this."',
+    rules: 'Then reconsider your argument and continue. Intellectual flexibility, not pretending uncertainty.'
+  },
+  {
+    id: 5,
+    title: 'The Unexpected Question',
+    short: 'Unexpected Q',
+    icon: 'HelpCircle',
+    color: '#ec4899',
+    description: 'Stop your explanation halfway and ask yourself a completely unrelated question.',
+    rules: 'Example: "How would this change if everyone suddenly had ₹10 crore?" Answer it for 30s, then return.'
+  },
+  {
+    id: 6,
+    title: 'Make It Interesting',
+    short: 'Killer Hook',
+    icon: 'Sparkles',
+    color: '#10b981',
+    description: 'You are allowed 30 seconds to create an opening hook.',
+    rules: 'You CANNOT start with: "Today I\'m going to talk about...". Make someone want to keep listening.'
+  },
+  {
+    id: 7,
+    title: 'The Extreme Example',
+    short: 'Extreme Ex',
+    icon: 'Flame',
+    color: '#f97316',
+    description: 'Explain the topic using an extreme hypothetical situation.',
+    rules: 'Example: "Imagine this happened to every person in India tomorrow..." Then build the explanation around it.'
+  },
+  {
+    id: 8,
+    title: 'Change Your Position',
+    short: 'Change Position',
+    icon: 'Repeat',
+    color: '#06b6d4',
+    description: 'Explain your initial position for two minutes.',
+    rules: 'Then deliberately argue against your own position for one minute. Painful in exactly the useful way.'
+  },
+  {
+    id: 9,
+    title: 'No Restart',
+    short: 'No Restart',
+    icon: 'Video',
+    color: '#eab308',
+    description: 'You get one take.',
+    rules: 'If you forget a word, lose structure, repeat yourself or make a mistake: recover and continue. No editing fairy.'
+  },
+  {
+    id: 10,
+    title: 'Real-World Mode',
+    short: 'Real-World',
+    icon: 'Compass',
+    color: '#84cc16',
+    description: 'You cannot use your normal desk setup.',
+    rules: 'Record outside, standing, walking slowly, somewhere unfamiliar or in a different room. Poise under uncontrolled variables.'
+  }
+]
 
 // 90 Curated High-Impact Topics across 3 Mastery Seasons
 const CURATED_TOPICS = [
@@ -54,37 +149,37 @@ const CURATED_TOPICS = [
   { id: 29, phase: 1, topic: 'How does SpaceX land rockets?', category: 'Aerospace Engineering' },
   { id: 30, phase: 1, topic: 'What is leverage, and why is it Naval Ravikant\'s favorite concept?', category: 'Mental Models & Wealth' },
 
-  // ── PHASE 2: PERSUASION, STORYTELLING & EXECUTIVE PRESENCE (DAYS 31–60) ──
-  { id: 31, phase: 2, topic: 'Pitch a subscription service for clean drinking water to an angel investor.', category: 'Pitch & Persuasion' },
-  { id: 32, phase: 2, topic: 'How would you deliver bad news to a team of 50 people without destroying morale?', category: 'Leadership & Crisis' },
-  { id: 33, phase: 2, topic: 'Will humanoid robots be net-positive or net-negative for human dignity?', category: 'Philosophy & AI' },
-  { id: 34, phase: 2, topic: 'The Lindy Effect: Why the oldest ideas are the most resilient.', category: 'Mental Models' },
-  { id: 35, phase: 2, topic: 'Why does modern architecture feel sterile compared to classical craftsmanship?', category: 'Culture & Design' },
-  { id: 36, phase: 2, topic: 'How the "Door-in-the-Face" psychological technique persuades people.', category: 'Behavioral Psychology' },
-  { id: 37, phase: 2, topic: 'The Cobra Effect: How well-intentioned regulations cause catastrophic backfires.', category: 'Economics & Systems' },
-  { id: 38, phase: 2, topic: 'Tell the story of a failure that fundamentally reshaped your worldview in 3 minutes.', category: 'Storytelling & Character' },
-  { id: 39, phase: 2, topic: 'Why do monopolies eventually stagnate and get disrupted?', category: 'Business Strategy' },
-  { id: 40, phase: 2, topic: 'Explain the concept of zero-knowledge proofs to a curious non-coder.', category: 'Cryptography & Math' },
-  { id: 41, phase: 2, topic: 'What makes an exceptional conversation partner?', category: 'Interpersonal Dynamics' },
-  { id: 42, phase: 2, topic: 'How does the human eye perceive color and contrast?', category: 'Neuroscience & Biology' },
-  { id: 43, phase: 2, topic: 'Why do people fear public speaking more than financial loss?', category: 'Psychology & Human Nature' },
-  { id: 44, phase: 2, topic: 'Explain Occam’s Razor and give an example of when it fails.', category: 'Epistemology & Logic' },
-  { id: 45, phase: 2, topic: 'The psychology of pricing: Why $99 feels drastically cheaper than $100.', category: 'Marketing & Behavioral Econ' },
-  { id: 46, phase: 2, topic: 'How do standard shipping containers quietly power 90% of global trade?', category: 'Global Logistics' },
-  { id: 47, phase: 2, topic: 'What is survivorship bias and how does it distort startup advice?', category: 'Mental Models' },
-  { id: 48, phase: 2, topic: 'Explain the difference between being smart and being wise.', category: 'Philosophy' },
-  { id: 49, phase: 2, topic: 'How did antibiotics change the course of human longevity?', category: 'Medicine & History' },
-  { id: 50, phase: 2, topic: 'Why is first-principles thinking harder than reasoning by analogy?', category: 'Problem Solving' },
-  { id: 51, phase: 2, topic: 'How does nuclear fusion differ from fission, and why is it so hard to achieve?', category: 'Physics & Clean Energy' },
-  { id: 52, phase: 2, topic: 'What makes an argument convincing: logic, emotion, or speaker credibility?', category: 'Classical Rhetoric' },
-  { id: 53, phase: 2, topic: 'Why do empires overextend militarily?', category: 'Geopolitics & History' },
-  { id: 54, phase: 2, topic: 'Explain compound interest as if explaining a snowball rolling down a mountain.', category: 'Finance' },
-  { id: 55, phase: 2, topic: 'How do algorithmic recommendation feeds shape public sentiment?', category: 'Algorithms & Society' },
-  { id: 56, phase: 2, topic: 'What is the Pareto Principle (80/20 Rule) and how can it be misapplied?', category: 'Productivity & Systems' },
-  { id: 57, phase: 2, topic: 'Why is silence one of the most lethal tools in a negotiation?', category: 'Communication & Negotiation' },
-  { id: 58, phase: 2, topic: 'How does deep sleep physically cleanse the brain of metabolic toxins?', category: 'Neuroscience & Health' },
-  { id: 59, phase: 2, topic: 'What separates a memorable consumer product from a forgettable one?', category: 'Design & Product Strategy' },
-  { id: 60, phase: 2, topic: 'If you had 3 minutes to address 10 million university graduates, what is your message?', category: 'Visionary Oratory' },
+  // ── PHASE 2: PERSUASION, ARGUMENT STRUCTURE & CRITICAL REASONING (DAYS 31–60) ──
+  { id: 31, phase: 2, topic: 'Why do people pay for convenience?', category: 'Business & Psychology' },
+  { id: 32, phase: 2, topic: 'What makes an AI product genuinely useful?', category: 'AI & Product Utility' },
+  { id: 33, phase: 2, topic: 'Why do some businesses grow while others stay small?', category: 'Business Strategy' },
+  { id: 34, phase: 2, topic: 'Will AI make creativity more valuable or less valuable?', category: 'Creativity & AI' },
+  { id: 35, phase: 2, topic: 'Why do people buy something they don\'t actually need?', category: 'Consumer Psychology' },
+  { id: 36, phase: 2, topic: 'How does a company decide what NOT to build?', category: 'Product Strategy' },
+  { id: 37, phase: 2, topic: 'Why is distribution so difficult?', category: 'Go-To-Market & Sales' },
+  { id: 38, phase: 2, topic: 'Can education become a product?', category: 'Education & Markets' },
+  { id: 39, phase: 2, topic: 'Why do people abandon products after initially liking them?', category: 'Product Retention' },
+  { id: 40, phase: 2, topic: 'What makes an idea commercially valuable?', category: 'Economics & Wealth' },
+  { id: 41, phase: 2, topic: 'Will AI reduce the value of memorization?', category: 'Cognition & Learning' },
+  { id: 42, phase: 2, topic: 'Why do people trust experts?', category: 'Social Psychology' },
+  { id: 43, phase: 2, topic: 'What makes a customer switch from one product to another?', category: 'Customer Behavior' },
+  { id: 44, phase: 2, topic: 'Why do free products sometimes make more money than paid products?', category: 'Business Models' },
+  { id: 45, phase: 2, topic: 'What happens when technology moves faster than education?', category: 'Future & Society' },
+  { id: 46, phase: 2, topic: 'Why is attention becoming an economic resource?', category: 'Attention Economy' },
+  { id: 47, phase: 2, topic: 'How would you build a business around a problem nobody thinks is important?', category: 'Contrarian Innovation' },
+  { id: 48, phase: 2, topic: 'Why do people confuse popularity with quality?', category: 'Critical Thinking' },
+  { id: 49, phase: 2, topic: 'What makes a product addictive without being harmful?', category: 'Product Design & Ethics' },
+  { id: 50, phase: 2, topic: 'Should every teenager learn how to use AI?', category: 'AI & Education' },
+  { id: 51, phase: 2, topic: 'Why can having too many features make a product worse?', category: 'Product Simplicity' },
+  { id: 52, phase: 2, topic: 'How do you know whether a problem is worth solving?', category: 'Problem Selection' },
+  { id: 53, phase: 2, topic: 'Why do some people learn faster than others?', category: 'Learning & Cognition' },
+  { id: 54, phase: 2, topic: 'What happens when everyone has access to the same AI tools?', category: 'AI & Competition' },
+  { id: 55, phase: 2, topic: 'Why does pricing change how people perceive value?', category: 'Pricing Psychology' },
+  { id: 56, phase: 2, topic: 'What makes someone good at selling without being pushy?', category: 'Sales & Influence' },
+  { id: 57, phase: 2, topic: 'Can a small company compete with a much larger company?', category: 'Strategy & Agility' },
+  { id: 58, phase: 2, topic: 'What would make an AI education business difficult to scale?', category: 'EdTech & Scaling' },
+  { id: 59, phase: 2, topic: 'Why do people resist learning things that could benefit them?', category: 'Human Psychology' },
+  { id: 60, phase: 2, topic: 'If you had ₹1 crore to build a company, what would you do first?', category: 'Capital Allocation' },
 
   // ── PHASE 3: HIGH-STAKES VISION, DEEP DEBATE & MASTERY (DAYS 61–90) ──
   { id: 61, phase: 3, topic: 'What is an economic moat, and how do modern tech companies construct them?', category: 'Business & Moats' },
@@ -126,6 +221,8 @@ export default function SpeakingPracticePage() {
   // Topics & Active State
   const [topics] = useState(CURATED_TOPICS)
   const [selectedTopic, setSelectedTopic] = useState(CURATED_TOPICS[0])
+  const [selectedSituation, setSelectedSituation] = useState(null)
+  const [showWheelSection, setShowWheelSection] = useState(true)
   const [isCustomTopic, setIsCustomTopic] = useState(false)
   const [customTopicInput, setCustomTopicInput] = useState('')
   const [customCategoryInput, setCustomCategoryInput] = useState('')
@@ -194,7 +291,6 @@ export default function SpeakingPracticePage() {
         // 1. Add speaking_logs (indexed by date)
         speakingData.forEach(item => {
           if (item.date) {
-            // Keep the best version if duplicate date exists
             if (!mapByDate.has(item.date) || (!mapByDate.get(item.date).drive_link && item.drive_link)) {
               mapByDate.set(item.date, item)
             }
@@ -292,7 +388,7 @@ export default function SpeakingPracticePage() {
     let count = 0
     const completedTopicTitles = new Set(history.map(h => h.topic))
     
-    // Filter pool based on active topicBankPhase if specified, or current user phase
+    // Determine active phase based on completion or filter
     const currentPhase = history.length < 30 ? 1 : history.length < 60 ? 2 : 3
     const phasePool = topicBankPhase !== 'all' 
       ? topics.filter(t => t.phase === topicBankPhase)
@@ -339,6 +435,10 @@ export default function SpeakingPracticePage() {
       formattedLink = `https://${formattedLink}`
     }
 
+    // Attach Situation Challenge to notes if selected
+    const situationPrefix = selectedSituation ? `[Challenge: ${selectedSituation.title}] ` : ''
+    const combinedNotes = (situationPrefix + notes.trim()).trim()
+
     const newLog = {
       user_id: user.id,
       date: todayStr,
@@ -347,7 +447,7 @@ export default function SpeakingPracticePage() {
       day_number: currentDayNumber,
       prep_duration_minutes: 0,
       drive_link: formattedLink,
-      notes: notes.trim(),
+      notes: combinedNotes,
       rating: parseInt(rating) || 5,
       created_at: new Date().toISOString()
     }
@@ -369,7 +469,6 @@ export default function SpeakingPracticePage() {
 
     // 3. FIX XP GLITCH & AUTOMATIC HABIT COMPLETION
     try {
-      // Find habit ID if loaded
       const speakingHabit = (osHabits || []).find(h => h.id === SPEAKING_HABIT_ID || h.title?.toLowerCase().includes('speaking')) || { id: SPEAKING_HABIT_ID }
       const habitId = speakingHabit.id
 
@@ -446,6 +545,19 @@ export default function SpeakingPracticePage() {
     )
   }, [completedTopicsChronological, searchQuery])
 
+  // Helper to extract challenge title from notes if present
+  const extractChallengeFromNotes = (notesText = '') => {
+    if (!notesText) return null
+    const match = notesText.match(/\[Challenge:\s*([^\]]+)\]/i)
+    return match ? match[1] : null
+  }
+
+  // Clean notes without the [Challenge: ...] prefix for display
+  const cleanNotesDisplay = (notesText = '') => {
+    if (!notesText) return ''
+    return notesText.replace(/\[Challenge:\s*[^\]]+\]\s*/i, '')
+  }
+
   // Copy Completed Topics List to Clipboard
   const handleCopyCompletedList = () => {
     const lines = [
@@ -454,9 +566,11 @@ export default function SpeakingPracticePage() {
       '',
       ...completedTopicsChronological.map((item, idx) => {
         const dayNum = item.day_number || idx + 1
+        const challenge = extractChallengeFromNotes(item.notes)
+        const challengeStr = challenge ? ` | Challenge: ${challenge}` : ''
         const video = item.drive_link ? ` | [Video Recording](${item.drive_link})` : ''
         const ratingStr = item.rating ? ` | ${item.rating}★` : ''
-        return `Day ${dayNum} (${item.date}): "${item.topic}" [${item.category || 'General'}]${ratingStr}${video}`
+        return `Day ${dayNum} (${item.date}): "${item.topic}" [${item.category || 'General'}]${challengeStr}${ratingStr}${video}`
       })
     ]
     navigator.clipboard.writeText(lines.join('\n'))
@@ -484,14 +598,14 @@ export default function SpeakingPracticePage() {
                   <Mic size={12} /> CAMERA SPEAKING PROTOCOL
                 </span>
                 <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 font-bold uppercase tracking-wider">
-                  {currentPhaseNumber === 1 ? 'SEASON 1: FOUNDATION' : currentPhaseNumber === 2 ? 'SEASON 2: PERSUASION & STORYTELLING' : 'SEASON 3: HIGH-STAKES MASTERY'}
+                  {currentPhaseNumber === 1 ? 'SEASON 1: FOUNDATION' : currentPhaseNumber === 2 ? 'SEASON 2: PERSUASION & ARGUMENTS' : 'SEASON 3: HIGH-STAKES MASTERY'}
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-mono font-black text-primary uppercase tracking-tight flex items-center gap-2">
                 SPEAKING PRACTICE HUB <Sparkles className="text-amber animate-pulse" size={24} />
               </h1>
               <p className="font-mono text-xs text-muted mt-1 max-w-xl">
-                Daily impromptu camera delivery. 90 curated master topics, instant XP reward, and automated routine completion.
+                Impromptu camera delivery with 10 Situation Challenges & 90 curated master prompts. Spin the topic first, then spin the situation!
               </p>
             </div>
 
@@ -528,7 +642,7 @@ export default function SpeakingPracticePage() {
                 <span className="text-primary font-bold">{totalSessions} / {phaseTarget} Days</span>
                 {totalSessions >= 29 && totalSessions < 31 && (
                   <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] animate-pulse">
-                    🔥 30-DAY MILESTONE UNLOCKING!
+                    🔥 DAY {totalSessions}/30 COMPLETE — PHASE 2 UNLOCKED!
                   </span>
                 )}
               </div>
@@ -586,6 +700,19 @@ export default function SpeakingPracticePage() {
           </div>
         </div>
 
+        {/* 🎡 SITUATION CHALLENGE SPINNING WHEEL ARENA */}
+        {showWheelSection && (
+          <SpinningWheel
+            challenges={SITUATION_CHALLENGES}
+            topics={topics.filter(t => t.phase === (history.length < 30 ? 1 : 2))}
+            selectedTopic={selectedTopic}
+            selectedSituation={selectedSituation}
+            onSelectSituation={(sit) => setSelectedSituation(sit)}
+            onSelectTopic={(top) => setSelectedTopic(top)}
+            onClearSituation={() => setSelectedSituation(null)}
+          />
+        )}
+
         {/* WORKFLOW GRID: TOPIC GENERATOR (LEFT) + VIDEO PROOF FORM (RIGHT) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
@@ -598,7 +725,7 @@ export default function SpeakingPracticePage() {
                 <div className="flex items-center gap-2">
                   <BookOpen size={18} className="text-amber" />
                   <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                    TODAY'S PROMPT GENERATOR
+                    ACTIVE PROMPT
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -611,16 +738,17 @@ export default function SpeakingPracticePage() {
                 </div>
               </div>
 
-              {/* ACTIVE TOPIC DISPLAY */}
+              {/* ACTIVE TOPIC & SITUATION DISPLAY */}
               <AnimatePresence mode="wait">
                 <motion.div 
-                  key={selectedTopic?.id || selectedTopic?.topic}
+                  key={(selectedTopic?.id || selectedTopic?.topic) + (selectedSituation?.id || '')}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
                   className="p-6 sm:p-8 rounded-xl bg-black/60 border border-amber/30 text-center relative overflow-hidden space-y-4 shadow-2xl"
                 >
-                  <div className="flex items-center justify-center gap-2">
+                  {/* Badges */}
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <span className="font-mono text-[10px] uppercase tracking-widest px-3 py-1 rounded-full bg-amber/15 text-amber border border-amber/30 font-bold">
                       {selectedTopic?.category || 'General'}
                     </span>
@@ -629,11 +757,36 @@ export default function SpeakingPracticePage() {
                         Phase {selectedTopic.phase}
                       </span>
                     )}
+                    {selectedSituation && (
+                      <span className="font-mono text-[10px] uppercase tracking-widest px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/40 font-black flex items-center gap-1">
+                        <Zap size={10} /> {selectedSituation.title}
+                      </span>
+                    )}
                   </div>
                   
+                  {/* Main Topic Question */}
                   <h2 className="text-xl sm:text-2xl md:text-3xl font-mono font-black text-primary leading-tight px-2">
                     "{selectedTopic?.topic}"
                   </h2>
+
+                  {/* Situation Constraint Banner inside Active Prompt if Spun */}
+                  {selectedSituation && (
+                    <motion.div
+                      initial={{ scale: 0.95 }}
+                      animate={{ scale: 1 }}
+                      className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/30 max-w-lg mx-auto text-left flex items-start gap-2.5"
+                    >
+                      <Zap size={16} className="text-purple-400 mt-0.5 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-mono text-[10px] font-black uppercase text-purple-300">
+                          SITUATION CHALLENGE #{selectedSituation.id}: {selectedSituation.title}
+                        </div>
+                        <div className="font-mono text-xs text-primary/90 mt-0.5 font-medium leading-snug">
+                          {selectedSituation.rules}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
 
                   {/* ACTION CONTROLS */}
                   <div className="pt-3 flex flex-wrap items-center justify-center gap-3">
@@ -768,7 +921,7 @@ export default function SpeakingPracticePage() {
                 </div>
 
                 {/* Numbered Topic Dial */}
-                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
                   {topics
                     .filter(t => topicBankPhase === 'all' || t.phase === topicBankPhase)
                     .map((t, idx) => {
@@ -843,6 +996,31 @@ export default function SpeakingPracticePage() {
                   </div>
                 </div>
 
+                {/* Active Situation indicator in form */}
+                {selectedSituation && (
+                  <div>
+                    <label className="font-mono text-[10px] uppercase font-bold text-purple-300 mb-1 flex items-center justify-between">
+                      <span>ACTIVE SITUATION CHALLENGE</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSituation(null)}
+                        className="text-muted hover:text-red-400 text-[9px] font-bold"
+                      >
+                        REMOVE
+                      </button>
+                    </label>
+                    <div className="p-2.5 rounded-xl bg-purple-950/20 border border-purple-400/30 font-mono text-xs text-purple-200">
+                      <div className="font-bold flex items-center gap-1.5">
+                        <Zap size={12} className="text-purple-400" />
+                        <span>#{selectedSituation.id} — {selectedSituation.title}</span>
+                      </div>
+                      <div className="text-[10px] text-muted mt-0.5">
+                        {selectedSituation.rules}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
                     VIDEO URL (GOOGLE DRIVE / YOUTUBE)
@@ -866,7 +1044,7 @@ export default function SpeakingPracticePage() {
                   </label>
                   <textarea
                     rows={4}
-                    placeholder="Key takeaways, pacing, vocal clarity, eye contact, articulation..."
+                    placeholder="Key takeaways, pacing, vocal clarity, eye contact, articulation, how the situation challenge went..."
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
                     className="w-full font-mono text-xs bg-black/60 text-primary border border-white/10 rounded-xl p-3 focus:outline-none focus:border-amber transition-colors leading-relaxed"
@@ -921,7 +1099,7 @@ export default function SpeakingPracticePage() {
                 </h2>
               </div>
               <p className="font-mono text-[11px] text-muted mt-0.5">
-                Comprehensive directory of every speech, prompt, date, rating, and video proof link.
+                Comprehensive directory of every speech, prompt, date, rating, challenge modifier, and video proof link.
               </p>
             </div>
 
@@ -931,7 +1109,7 @@ export default function SpeakingPracticePage() {
               <div className="relative w-full sm:w-56">
                 <input
                   type="text"
-                  placeholder="Search topics or notes..."
+                  placeholder="Search topics, challenges..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full bg-black/60 text-primary border border-white/10 rounded-xl px-3 py-1.5 pl-8 font-mono text-xs focus:outline-none focus:border-amber transition-colors"
@@ -1004,7 +1182,7 @@ export default function SpeakingPracticePage() {
                     <th className="py-3 px-4 w-20">DAY #</th>
                     <th className="py-3 px-4 w-28">DATE</th>
                     <th className="py-3 px-4">TOPIC / PROMPT</th>
-                    <th className="py-3 px-4 w-36">CATEGORY</th>
+                    <th className="py-3 px-4 w-40">MODIFIER / CATEGORY</th>
                     <th className="py-3 px-4 w-24">RATING</th>
                     <th className="py-3 px-4 w-28 text-right">PROOF</th>
                   </tr>
@@ -1012,6 +1190,9 @@ export default function SpeakingPracticePage() {
                 <tbody className="divide-y divide-white/5">
                   {filteredCompletedTopics.map((session, idx) => {
                     const dayNum = session.day_number || idx + 1
+                    const challenge = extractChallengeFromNotes(session.notes)
+                    const cleanNotes = cleanNotesDisplay(session.notes)
+
                     return (
                       <tr 
                         key={session.id || idx}
@@ -1029,16 +1210,23 @@ export default function SpeakingPracticePage() {
                           <div className="leading-snug">
                             "{session.topic}"
                           </div>
-                          {session.notes && (
+                          {cleanNotes && (
                             <div className="text-[10px] text-muted mt-1 font-normal line-clamp-1 group-hover:line-clamp-none transition-all">
-                              {session.notes}
+                              {cleanNotes}
                             </div>
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-muted uppercase font-bold whitespace-nowrap">
-                            {session.category || 'General'}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            {challenge && (
+                              <span className="text-[9px] px-2 py-0.5 rounded bg-purple-500/20 border border-purple-400/40 text-purple-300 font-bold whitespace-nowrap w-fit">
+                                ⚡ {challenge}
+                              </span>
+                            )}
+                            <span className="text-[9px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-muted uppercase font-bold whitespace-nowrap w-fit">
+                              {session.category || 'General'}
+                            </span>
+                          </div>
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap">
                           <div className="flex items-center gap-1 text-amber font-bold text-[11px]">
@@ -1070,63 +1258,73 @@ export default function SpeakingPracticePage() {
           ) : (
             /* TAB 2: VISUAL CARDS GRID VIEW */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCompletedTopics.map((session, idx) => (
-                <div 
-                  key={session.id || idx} 
-                  className="p-4 rounded-xl bg-black/50 border border-border-color hover:border-amber/40 transition-all flex flex-col justify-between gap-3 shadow-md"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-amber/20 border border-amber/40 text-amber font-bold uppercase">
-                          DAY {session.day_number || (history.length - idx)}
-                        </span>
-                        <span className="font-mono text-[9px] text-muted font-semibold">
-                          {session.date}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-0.5 text-amber">
-                        <Star size={11} className="fill-amber" />
-                        <span className="font-mono text-[10px] font-bold">{session.rating || 5}/5</span>
-                      </div>
-                    </div>
-                    
-                    <h3 className="font-mono text-xs font-bold text-primary leading-snug">
-                      "{session.topic}"
-                    </h3>
+              {filteredCompletedTopics.map((session, idx) => {
+                const challenge = extractChallengeFromNotes(session.notes)
+                const cleanNotes = cleanNotesDisplay(session.notes)
 
-                    <div className="mt-2">
-                      <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-muted uppercase font-bold">
-                        {session.category || 'General'}
+                return (
+                  <div 
+                    key={session.id || idx} 
+                    className="p-4 rounded-xl bg-black/50 border border-border-color hover:border-amber/40 transition-all flex flex-col justify-between gap-3 shadow-md"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-amber/20 border border-amber/40 text-amber font-bold uppercase">
+                            DAY {session.day_number || (history.length - idx)}
+                          </span>
+                          <span className="font-mono text-[9px] text-muted font-semibold">
+                            {session.date}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-0.5 text-amber">
+                          <Star size={11} className="fill-amber" />
+                          <span className="font-mono text-[10px] font-bold">{session.rating || 5}/5</span>
+                        </div>
+                      </div>
+                      
+                      <h3 className="font-mono text-xs font-bold text-primary leading-snug">
+                        "{session.topic}"
+                      </h3>
+
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {challenge && (
+                          <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-purple-500/20 border border-purple-400/40 text-purple-300 font-bold">
+                            ⚡ {challenge}
+                          </span>
+                        )}
+                        <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-muted uppercase font-bold">
+                          {session.category || 'General'}
+                        </span>
+                      </div>
+
+                      {cleanNotes && (
+                        <p className="font-mono text-[10px] text-muted mt-2.5 line-clamp-3 leading-relaxed border-t border-white/5 pt-2">
+                          {cleanNotes}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                      <span className="font-mono text-[9px] text-success font-bold flex items-center gap-1">
+                        <CheckCircle2 size={11} /> COMPLETED
                       </span>
+
+                      {session.drive_link && (
+                        <a
+                          href={session.drive_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-ghost btn-xs font-mono text-[10px] text-amber hover:text-amber-hover flex items-center gap-1 font-bold"
+                        >
+                          <span>VIEW VIDEO</span>
+                          <ExternalLink size={10} />
+                        </a>
+                      )}
                     </div>
-
-                    {session.notes && (
-                      <p className="font-mono text-[10px] text-muted mt-2.5 line-clamp-3 leading-relaxed border-t border-white/5 pt-2">
-                        {session.notes}
-                      </p>
-                    )}
                   </div>
-
-                  <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                    <span className="font-mono text-[9px] text-success font-bold flex items-center gap-1">
-                      <CheckCircle2 size={11} /> COMPLETED
-                    </span>
-
-                    {session.drive_link && (
-                      <a
-                        href={session.drive_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-ghost btn-xs font-mono text-[10px] text-amber hover:text-amber-hover flex items-center gap-1 font-bold"
-                      >
-                        <span>VIEW VIDEO</span>
-                        <ExternalLink size={10} />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

@@ -615,6 +615,7 @@ body > * {
   html, body {
     overscroll-behavior-y: none;
   }
+}
 
 .auth-metric-label {
   display: block;
@@ -1225,6 +1226,7 @@ tbody tr:hover { background: rgba(244, 201, 107, 0.045); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+@media (max-width: 768px) {
   /* Goals page: add/create first, list second, progress last */
   .goals-add-row      { order: 1; }
   .goals-list         { order: 2; }
