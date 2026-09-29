@@ -27,6 +27,8 @@ export default function SpinningWheel({
   topics = [],
   selectedTopic = null,
   selectedSituation = null,
+  activePhase = 2,
+  onPhaseChange = () => {},
   onSelectSituation = () => {},
   onSelectTopic = () => {},
   onClearSituation = () => {}
@@ -180,16 +182,32 @@ export default function SpinningWheel({
           </p>
         </div>
 
-        {/* Master Spin Both Button */}
-        <button
-          type="button"
-          onClick={handleSpinBoth}
-          disabled={isSpinning || isTopicSpinning}
-          className="btn font-mono text-xs px-5 py-2.5 bg-gradient-to-r from-amber via-yellow-400 to-amber-hover text-black font-black tracking-wider uppercase rounded-xl shadow-xl flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shrink-0"
-        >
-          <Sparkles size={16} className={isSpinning || isTopicSpinning ? 'animate-spin' : ''} />
-          <span>{isSpinning || isTopicSpinning ? 'SPINNING COMBO...' : '🎰 SPIN BOTH (TOPIC + SITUATION)'}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          {/* Phase Dropdown */}
+          <div className="flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-xl border border-amber/30">
+            <span className="font-mono text-[10px] text-muted uppercase font-bold">PHASE:</span>
+            <select
+              value={activePhase}
+              onChange={(e) => onPhaseChange(Number(e.target.value))}
+              className="bg-transparent text-amber font-mono text-xs font-bold focus:outline-none cursor-pointer"
+            >
+              <option value={1} className="bg-zinc-950 text-white">Phase 1 (Days 1–30)</option>
+              <option value={2} className="bg-zinc-950 text-white">Phase 2 (Days 31–60)</option>
+              <option value={3} className="bg-zinc-950 text-white">Phase 3 (Days 61–90)</option>
+            </select>
+          </div>
+
+          {/* Master Spin Both Button */}
+          <button
+            type="button"
+            onClick={handleSpinBoth}
+            disabled={isSpinning || isTopicSpinning}
+            className="btn font-mono text-xs px-5 py-2.5 bg-gradient-to-r from-amber via-yellow-400 to-amber-hover text-black font-black tracking-wider uppercase rounded-xl shadow-xl flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shrink-0"
+          >
+            <Sparkles size={16} className={isSpinning || isTopicSpinning ? 'animate-spin' : ''} />
+            <span>{isSpinning || isTopicSpinning ? 'SPINNING COMBO...' : '🎰 SPIN BOTH (TOPIC + SITUATION)'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Active Selection Banner if situation is active */}
@@ -318,20 +336,21 @@ export default function SpinningWheel({
                       strokeOpacity="0.8"
                     />
 
-                    {/* Radial text label */}
+                    {/* Radial text label: ONLY NUMBERS */}
                     <text
                       x={textX}
                       y={textY}
                       fill="#ffffff"
-                      fontSize="10"
+                      fontSize="17"
                       fontFamily="monospace"
-                      fontWeight="bold"
+                      fontWeight="900"
                       textAnchor="middle"
                       dominantBaseline="middle"
                       transform={`rotate(${textRot}, ${textX}, ${textY})`}
-                      className="select-none pointer-events-none uppercase tracking-tighter"
+                      className="select-none pointer-events-none"
+                      style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.9))' }}
                     >
-                      #{c.id} {c.short}
+                      {c.id}
                     </text>
                   </g>
                 )

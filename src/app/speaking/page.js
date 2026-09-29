@@ -220,7 +220,8 @@ export default function SpeakingPracticePage() {
 
   // Topics & Active State
   const [topics] = useState(CURATED_TOPICS)
-  const [selectedTopic, setSelectedTopic] = useState(CURATED_TOPICS[0])
+  const [selectedTopic, setSelectedTopic] = useState(CURATED_TOPICS[30] || CURATED_TOPICS[0]) // Default to Phase 2 (Day 31)
+  const [activePhase, setActivePhase] = useState(2) // Default to Phase 2
   const [selectedSituation, setSelectedSituation] = useState(null)
   const [showWheelSection, setShowWheelSection] = useState(true)
   const [isCustomTopic, setIsCustomTopic] = useState(false)
@@ -243,7 +244,7 @@ export default function SpeakingPracticePage() {
   // View & Filter State
   const [activeTab, setActiveTab] = useState('directory') // 'directory' | 'cards'
   const [searchQuery, setSearchQuery] = useState('')
-  const [topicBankPhase, setTopicBankPhase] = useState('all') // 'all' | 1 | 2 | 3
+  const [topicBankPhase, setTopicBankPhase] = useState(2)
   const [copiedAll, setCopiedAll] = useState(false)
 
   const todayStr = getLocalDateStr(new Date())
@@ -381,21 +382,30 @@ export default function SpeakingPracticePage() {
     }
   }, [user?.id])
 
-  // Pick Next / Random Topic (prioritizes uncompleted)
+  // Switch Phase Dropdown Handler
+  const handlePhaseChange = (newPhase) => {
+    setActivePhase(newPhase)
+    setTopicBankPhase(newPhase)
+    const completedTopicTitles = new Set(history.map(h => h.topic))
+    const phaseTopics = topics.filter(t => t.phase === newPhase)
+    const uncompleted = phaseTopics.filter(t => !completedTopicTitles.has(t.topic))
+    const nextPick = uncompleted.length > 0 ? uncompleted[0] : phaseTopics[0]
+    if (nextPick) {
+      setSelectedTopic(nextPick)
+      setIsCustomTopic(false)
+    }
+  }
+
+  // Pick Next / Random Topic (prioritizes uncompleted in activePhase)
   const handleSelectTodaysTopic = () => {
     setIsShuffling(true)
     setIsCustomTopic(false)
     let count = 0
     const completedTopicTitles = new Set(history.map(h => h.topic))
     
-    // Determine active phase based on completion or filter
-    const currentPhase = history.length < 30 ? 1 : history.length < 60 ? 2 : 3
-    const phasePool = topicBankPhase !== 'all' 
-      ? topics.filter(t => t.phase === topicBankPhase)
-      : topics.filter(t => t.phase === currentPhase)
-
+    const phasePool = topics.filter(t => t.phase === activePhase)
     const uncompletedInPhase = phasePool.filter(t => !completedTopicTitles.has(t.topic))
-    const pool = uncompletedInPhase.length > 0 ? uncompletedInPhase : topics.filter(t => !completedTopicTitles.has(t.topic)) || topics
+    const pool = uncompletedInPhase.length > 0 ? uncompletedInPhase : (phasePool.length > 0 ? phasePool : topics)
 
     const interval = setInterval(() => {
       const randomIndex = Math.floor(Math.random() * pool.length)
@@ -704,9 +714,11 @@ export default function SpeakingPracticePage() {
         {showWheelSection && (
           <SpinningWheel
             challenges={SITUATION_CHALLENGES}
-            topics={topics.filter(t => t.phase === (history.length < 30 ? 1 : 2))}
+            topics={topics.filter(t => t.phase === activePhase)}
             selectedTopic={selectedTopic}
             selectedSituation={selectedSituation}
+            activePhase={activePhase}
+            onPhaseChange={handlePhaseChange}
             onSelectSituation={(sit) => setSelectedSituation(sit)}
             onSelectTopic={(top) => setSelectedTopic(top)}
             onClearSituation={() => setSelectedSituation(null)}
@@ -721,17 +733,28 @@ export default function SpeakingPracticePage() {
             
             {/* TOPIC SELECTOR HERO CARD */}
             <div className="p-6 rounded-2xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl relative overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-5">
+              <div className="flex flex-wrap items-center justify-between border-b border-white/10 pb-3 mb-5 gap-3">
                 <div className="flex items-center gap-2">
                   <BookOpen size={18} className="text-amber" />
                   <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
                     ACTIVE PROMPT
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] font-bold text-muted uppercase">
-                    NEXT UP:
-                  </span>
+                <div className="flex items-center gap-2.5">
+                  {/* Phase Dropdown */}
+                  <div className="flex items-center gap-1.5 bg-black/60 px-2.5 py-1 rounded-xl border border-amber/30">
+                    <span className="font-mono text-[9px] text-muted uppercase font-bold">PHASE:</span>
+                    <select
+                      value={activePhase}
+                      onChange={(e) => handlePhaseChange(Number(e.target.value))}
+                      className="bg-transparent text-amber font-mono text-xs font-bold focus:outline-none cursor-pointer"
+                    >
+                      <option value={1} className="bg-zinc-950 text-white">Phase 1 (Days 1–30)</option>
+                      <option value={2} className="bg-zinc-950 text-white">Phase 2 (Days 31–60)</option>
+                      <option value={3} className="bg-zinc-950 text-white">Phase 3 (Days 61–90)</option>
+                    </select>
+                  </div>
+
                   <div className="font-mono text-xs font-black text-amber bg-amber/15 border border-amber/30 px-3 py-0.5 rounded-full shadow-sm">
                     DAY {history.length + 1}
                   </div>
@@ -859,7 +882,7 @@ export default function SpeakingPracticePage() {
                 </motion.form>
               )}
 
-              {/* TOPIC BANK DIAL WITH PHASE SELECTOR */}
+              {/* TOPIC BANK DIAL WITH PHASE DROPDOWN */}
               <div className="mt-6 pt-4 border-t border-white/10">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
@@ -867,63 +890,29 @@ export default function SpeakingPracticePage() {
                       Topic Bank:
                     </span>
                     <span className="font-mono text-[11px] text-amber font-bold">
-                      {topics.length} Prompts
+                      {topics.filter(t => t.phase === activePhase).length} Prompts
                     </span>
                   </div>
 
-                  {/* Phase Filter Tabs */}
-                  <div className="flex items-center gap-1 bg-black/60 p-1 border border-white/10 rounded-lg font-mono text-[10px]">
-                    <button
-                      type="button"
-                      onClick={() => setTopicBankPhase('all')}
-                      className={`px-2.5 py-0.5 rounded font-bold transition-all ${
-                        topicBankPhase === 'all'
-                          ? 'bg-amber text-black shadow-sm'
-                          : 'text-muted hover:text-primary'
-                      }`}
+                  {/* Phase Filter Dropdown */}
+                  <div className="flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-xl border border-white/10 font-mono text-xs">
+                    <span className="text-[10px] text-muted uppercase font-bold">SELECT PHASE:</span>
+                    <select
+                      value={activePhase}
+                      onChange={(e) => handlePhaseChange(Number(e.target.value))}
+                      className="bg-transparent text-amber font-bold focus:outline-none cursor-pointer text-xs"
                     >
-                      ALL
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTopicBankPhase(1)}
-                      className={`px-2.5 py-0.5 rounded font-bold transition-all ${
-                        topicBankPhase === 1
-                          ? 'bg-amber text-black shadow-sm'
-                          : 'text-muted hover:text-primary'
-                      }`}
-                    >
-                      PHASE 1 (1–30)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTopicBankPhase(2)}
-                      className={`px-2.5 py-0.5 rounded font-bold transition-all ${
-                        topicBankPhase === 2
-                          ? 'bg-amber text-black shadow-sm'
-                          : 'text-muted hover:text-primary'
-                      }`}
-                    >
-                      PHASE 2 (31–60)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTopicBankPhase(3)}
-                      className={`px-2.5 py-0.5 rounded font-bold transition-all ${
-                        topicBankPhase === 3
-                          ? 'bg-amber text-black shadow-sm'
-                          : 'text-muted hover:text-primary'
-                      }`}
-                    >
-                      PHASE 3 (61–90)
-                    </button>
+                      <option value={1} className="bg-zinc-950 text-white">Phase 1: Foundation (1–30)</option>
+                      <option value={2} className="bg-zinc-950 text-white">Phase 2: Persuasion & Arguments (31–60)</option>
+                      <option value={3} className="bg-zinc-950 text-white">Phase 3: High-Stakes Mastery (61–90)</option>
+                    </select>
                   </div>
                 </div>
 
                 {/* Numbered Topic Dial */}
                 <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
                   {topics
-                    .filter(t => topicBankPhase === 'all' || t.phase === topicBankPhase)
+                    .filter(t => t.phase === activePhase)
                     .map((t, idx) => {
                       const isDone = history.some(h => h.topic === t.topic)
                       const isSelected = selectedTopic?.topic === t.topic
