@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+const escapeIcsText = (value) => String(value ?? '')
+  .replace(/\\/g, '\\\\')
+  .replace(/\r\n|\r|\n/g, '\\n')
+  .replace(/([,;])/g, '\\$1')
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const token = searchParams.get('token')
@@ -58,9 +63,9 @@ export async function GET(request) {
     ics.push(`DTSTAMP:${formatDate(new Date())}`)
     ics.push(`DTSTART:${formatDate(e.start_time)}`)
     if (e.end_time) ics.push(`DTEND:${formatDate(e.end_time)}`)
-    ics.push(`SUMMARY:${e.title}`)
-    if (e.description) ics.push(`DESCRIPTION:${e.description.replace(/\n/g, '\\n')}`)
-    if (e.location) ics.push(`LOCATION:${e.location}`)
+    ics.push(`SUMMARY:${escapeIcsText(e.title)}`)
+    if (e.description) ics.push(`DESCRIPTION:${escapeIcsText(e.description)}`)
+    if (e.location) ics.push(`LOCATION:${escapeIcsText(e.location)}`)
     ics.push('END:VEVENT')
   })
 
@@ -69,7 +74,7 @@ export async function GET(request) {
     ics.push(`UID:tsk-${t.id}@chiragos`)
     ics.push(`DTSTAMP:${formatDate(new Date())}`)
     ics.push(`DTSTART;VALUE=DATE:${formatDate(t.due_date, true)}`)
-    ics.push(`SUMMARY:${t.title}`)
+    ics.push(`SUMMARY:${escapeIcsText(t.title)}`)
     ics.push('END:VEVENT')
   })
 
@@ -78,8 +83,8 @@ export async function GET(request) {
     ics.push(`UID:gol-${g.id}@chiragos`)
     ics.push(`DTSTAMP:${formatDate(new Date())}`)
     ics.push(`DTSTART:${formatDate(g.deadline)}`)
-    ics.push(`SUMMARY:${g.title}`)
-    if (g.description) ics.push(`DESCRIPTION:${g.description.replace(/\n/g, '\\n')}`)
+    ics.push(`SUMMARY:${escapeIcsText(g.title)}`)
+    if (g.description) ics.push(`DESCRIPTION:${escapeIcsText(g.description)}`)
     ics.push('END:VEVENT')
   })
 

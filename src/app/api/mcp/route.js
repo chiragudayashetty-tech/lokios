@@ -158,7 +158,7 @@ function register(server, client) {
 
 function authorized(request) {
   const token = process.env.LOKIOS_MCP_TOKEN;
-  if (!token) return true;
+  if (!token) return false;
   const expected = Buffer.from(token);
   const authHeader = request.headers.get('authorization') || '';
   const provided = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
@@ -178,6 +178,10 @@ export async function OPTIONS() {
 }
 
 export async function POST(request) {
+  if (!process.env.LOKIOS_MCP_TOKEN) {
+    return NextResponse.json({ error: 'MCP is not configured' }, { status: 503 });
+  }
+
   if (!authorized(request)) {
     return new Response('Unauthorized', {
       status: 401,

@@ -5,12 +5,18 @@
  */
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getRequestUser } from '@/lib/supabase/requireUser'
 
 export async function POST(request) {
-  const { userId } = await request.json()
+  const { userId: requestedUserId } = await request.json()
+  const { user } = await getRequestUser()
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (requestedUserId && requestedUserId !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const supabase = createClient(
@@ -25,7 +31,7 @@ export async function POST(request) {
       google_calendar_id:   null,
       google_connected_at:  null,
     })
-    .eq('id', userId)
+    .eq('id', user.id)
 
   if (error) return NextResponse.json({ error: 'Failed to disconnect' }, { status: 500 })
 

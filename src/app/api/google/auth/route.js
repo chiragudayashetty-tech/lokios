@@ -4,13 +4,19 @@
  * userId is passed as a query param from the frontend (already available via profile).
  */
 import { NextResponse } from 'next/server'
+import { getRequestUser } from '@/lib/supabase/requireUser'
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
-  const userId = searchParams.get('userId')
+  const requestedUserId = searchParams.get('userId')
+  const { user } = await getRequestUser()
 
-  if (!userId) {
-    return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (requestedUserId && requestedUserId !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lokios.vercel.app'
@@ -25,7 +31,7 @@ export async function GET(request) {
     ].join(' '),
     access_type:   'offline',
     prompt:        'consent',
-    state:         userId,
+    state:         user.id,
   })
 
   return NextResponse.redirect(

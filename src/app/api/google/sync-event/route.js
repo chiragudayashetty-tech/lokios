@@ -12,6 +12,7 @@
  */
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getRequestUser } from '@/lib/supabase/requireUser'
 import {
   refreshAccessToken,
   upsertGoogleEvent,
@@ -24,11 +25,22 @@ import {
 
 export async function POST(request) {
   try {
-    const { action, itemType = 'event', item, userId } = await request.json()
+    const { action, itemType = 'event', item, userId: requestedUserId } = await request.json()
+    const { user } = await getRequestUser()
 
-    if (!action || !item || !userId) {
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!action || !item) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    if (requestedUserId && requestedUserId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const userId = user.id
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,

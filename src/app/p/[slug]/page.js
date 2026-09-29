@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getRankForXp, calculateLevel } from '@/lib/utils/xp'
 
 export async function generateMetadata({ params }) {
+  const { slug } = await params
   const supabase = await createClient()
-  const { data: profile } = await supabase.from('portfolio_summary').select('*').eq('public_portfolio_slug', params.slug).single()
+  const { data: profile } = await supabase.from('portfolio_summary').select('*').eq('public_portfolio_slug', slug).single()
   
   if (!profile) return { title: 'Not Found' }
   
@@ -15,8 +16,9 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function PublicPortfolio({ params }) {
+  const { slug } = await params
   const supabase = await createClient()
-  const { data: profile } = await supabase.from('portfolio_summary').select('*').eq('public_portfolio_slug', params.slug).single()
+  const { data: profile } = await supabase.from('portfolio_summary').select('*').eq('public_portfolio_slug', slug).single()
   
   if (!profile) {
     notFound()

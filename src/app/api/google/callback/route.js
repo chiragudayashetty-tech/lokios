@@ -5,6 +5,7 @@
  */
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getRequestUser } from '@/lib/supabase/requireUser'
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
@@ -17,6 +18,11 @@ export async function GET(request) {
 
   if (error || !code || !state) {
     return NextResponse.redirect(`${appUrl}/calendar?google_error=${error || 'missing_params'}`)
+  }
+
+  const { user } = await getRequestUser()
+  if (!user || user.id !== state) {
+    return NextResponse.redirect(`${appUrl}/calendar?google_error=unauthorized_callback`)
   }
 
   // Exchange code for tokens
@@ -52,7 +58,7 @@ export async function GET(request) {
       google_calendar_id:    'primary',
       google_connected_at:   new Date().toISOString(),
     })
-    .eq('id', state)
+    .eq('id', user.id)
 
   if (dbError) {
     console.error('Failed to save Google tokens:', dbError)
