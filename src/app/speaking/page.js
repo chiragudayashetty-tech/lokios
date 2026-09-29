@@ -725,19 +725,52 @@ export default function SpeakingPracticePage() {
         </div>
 
         {/* 🎡 SITUATION CHALLENGE SPINNING WHEEL ARENA */}
-        {showWheelSection && (
-          <SpinningWheel
-            challenges={SITUATION_CHALLENGES}
-            topics={availableTopicsInPhase}
-            selectedTopic={selectedTopic}
-            selectedSituation={selectedSituation}
-            activePhase={activePhase}
-            onPhaseChange={handlePhaseChange}
-            onSelectSituation={(sit) => setSelectedSituation(sit)}
-            onSelectTopic={(top) => setSelectedTopic(top)}
-            onClearSituation={() => setSelectedSituation(null)}
-          />
-        )}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-amber" />
+              <span className="font-mono text-xs font-black uppercase tracking-wider text-primary">
+                SITUATION CHALLENGE ARENA
+              </span>
+              {selectedSituation && (
+                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-400/40 flex items-center gap-1">
+                  <Zap size={10} /> #{selectedSituation.id} {selectedSituation.title}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowWheelSection(!showWheelSection)}
+              className="font-mono text-xs text-muted hover:text-amber font-bold flex items-center gap-1.5 px-3 py-1 rounded-lg bg-black/40 border border-white/10 hover:border-amber/40 transition-all cursor-pointer"
+            >
+              <span>{showWheelSection ? 'COLLAPSE WHEEL' : 'OPEN WHEEL ARENA'}</span>
+              <span className="text-[10px]">{showWheelSection ? '▲' : '▼'}</span>
+            </button>
+          </div>
+
+          <AnimatePresence>
+            {showWheelSection && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <SpinningWheel
+                  challenges={SITUATION_CHALLENGES}
+                  topics={availableTopicsInPhase}
+                  selectedTopic={selectedTopic}
+                  selectedSituation={selectedSituation}
+                  activePhase={activePhase}
+                  onPhaseChange={handlePhaseChange}
+                  onSelectSituation={(sit) => setSelectedSituation(sit)}
+                  onSelectTopic={(top) => setSelectedTopic(top)}
+                  onClearSituation={() => setSelectedSituation(null)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* WORKFLOW GRID: TOPIC GENERATOR (LEFT) + VIDEO PROOF FORM (RIGHT) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -896,31 +929,20 @@ export default function SpeakingPracticePage() {
                 </motion.form>
               )}
 
-              {/* TOPIC BANK DIAL WITH PHASE DROPDOWN */}
+              {/* TOPIC BANK DIAL */}
               <div className="mt-6 pt-4 border-t border-white/10">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div className="flex items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs text-primary uppercase tracking-wider font-bold">
-                      Topic Bank:
+                      Phase {activePhase} Topic Bank:
                     </span>
                     <span className="font-mono text-[11px] text-amber font-bold">
-                      {topics.filter(t => t.phase === activePhase).length} Prompts
+                      {availableTopicsInPhase.length} Available
                     </span>
                   </div>
-
-                  {/* Phase Filter Dropdown */}
-                  <div className="flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-xl border border-white/10 font-mono text-xs">
-                    <span className="text-[10px] text-muted uppercase font-bold">SELECT PHASE:</span>
-                    <select
-                      value={activePhase}
-                      onChange={(e) => handlePhaseChange(Number(e.target.value))}
-                      className="bg-transparent text-amber font-bold focus:outline-none cursor-pointer text-xs"
-                    >
-                      <option value={1} className="bg-zinc-950 text-white">Phase 1: Foundation (1–30)</option>
-                      <option value={2} className="bg-zinc-950 text-white">Phase 2: Persuasion & Arguments (31–60)</option>
-                      <option value={3} disabled className="bg-zinc-950 text-muted/60">🔒 Phase 3: High-Stakes Mastery (Locked)</option>
-                    </select>
-                  </div>
+                  <span className="font-mono text-[10px] text-muted">
+                    Click number to load prompt
+                  </span>
                 </div>
 
                 {/* Numbered Topic Dial (Completed topics do not appear) */}
@@ -960,7 +982,7 @@ export default function SpeakingPracticePage() {
 
           {/* RIGHT 5 COLS: PROOF & LOG SUBMISSION FORM */}
           <div className="lg:col-span-5">
-            <div className="p-6 rounded-2xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl sticky top-20 space-y-4">
+            <div className="p-6 rounded-2xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-xl space-y-4">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2 text-purple-400">
                   <Video size={18} />
@@ -990,40 +1012,34 @@ export default function SpeakingPracticePage() {
               )}
 
               <form onSubmit={handleSubmitSession} className="space-y-4">
-                <div>
-                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
-                    ACTIVE TOPIC (DAY {history.length + 1})
-                  </label>
-                  <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 font-mono text-xs text-primary leading-snug">
-                    <span className="text-amber font-bold mr-1">Day {history.length + 1}:</span>
-                    <span>{selectedTopic?.topic || 'Select a topic'}</span>
-                  </div>
-                </div>
-
-                {/* Active Situation indicator in form */}
-                {selectedSituation && (
-                  <div>
-                    <label className="font-mono text-[10px] uppercase font-bold text-purple-300 mb-1 flex items-center justify-between">
-                      <span>ACTIVE SITUATION CHALLENGE</span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSituation(null)}
-                        className="text-muted hover:text-red-400 text-[9px] font-bold"
-                      >
-                        REMOVE
-                      </button>
-                    </label>
-                    <div className="p-2.5 rounded-xl bg-purple-950/20 border border-purple-400/30 font-mono text-xs text-purple-200">
-                      <div className="font-bold flex items-center gap-1.5">
-                        <Zap size={12} className="text-purple-400" />
-                        <span>#{selectedSituation.id} — {selectedSituation.title}</span>
-                      </div>
-                      <div className="text-[10px] text-muted mt-0.5">
-                        {selectedSituation.rules}
-                      </div>
+                {/* Active Session Context Pill */}
+                <div className="p-3 rounded-xl bg-black/60 border border-white/10 flex items-center justify-between gap-2.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-mono text-[9px] font-black text-amber bg-amber/15 px-2 py-0.5 rounded border border-amber/30 shrink-0">
+                        DAY {history.length + 1}
+                      </span>
+                      {selectedSituation && (
+                        <span className="font-mono text-[9px] font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded border border-purple-400/30 shrink-0 flex items-center gap-1">
+                          <Zap size={10} /> #{selectedSituation.id} {selectedSituation.title}
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-mono text-xs text-primary font-bold truncate" title={selectedTopic?.topic}>
+                      {selectedTopic?.topic || 'Select a topic from the left'}
                     </div>
                   </div>
-                )}
+                  {selectedSituation && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSituation(null)}
+                      className="text-muted hover:text-red-400 text-xs font-mono font-bold shrink-0 p-1 rounded hover:bg-white/5 cursor-pointer"
+                      title="Remove Situation Modifier"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
 
                 <div>
                   <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
@@ -1047,32 +1063,37 @@ export default function SpeakingPracticePage() {
                     SESSION REFLECTIONS & DEBRIEF NOTES
                   </label>
                   <textarea
-                    rows={4}
+                    rows={3}
                     placeholder="Key takeaways, pacing, vocal clarity, eye contact, articulation, how the situation challenge went..."
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
-                    className="w-full font-mono text-xs bg-black/60 text-primary border border-white/10 rounded-xl p-3 focus:outline-none focus:border-amber transition-colors leading-relaxed"
+                    className="w-full font-mono text-xs bg-black/60 text-primary border border-white/10 rounded-xl p-3 focus:outline-none focus:border-amber transition-colors leading-relaxed resize-y"
                     style={{ color: '#fff' }}
                   />
                 </div>
 
                 <div>
-                  <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
-                    SELF RATING (1 TO 5)
-                  </label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="font-mono text-[10px] uppercase font-bold text-muted">
+                      SELF RATING (1 TO 5)
+                    </label>
+                    <span className="font-mono text-xs font-bold text-amber">
+                      {rating ? `${rating} / 5 Stars` : 'Tap to rate'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
                         onClick={() => setRating(star)}
-                        className={`p-2 rounded-xl font-mono text-xs font-bold flex-1 border transition-all flex items-center justify-center gap-1 ${
+                        className={`py-2 rounded-xl font-mono text-xs font-black border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           rating >= star
-                            ? 'bg-amber/20 border-amber text-amber shadow-sm'
-                            : 'bg-black/40 border-white/10 text-muted hover:text-primary'
+                            ? 'bg-amber text-black border-amber shadow-md shadow-amber/20 scale-[1.02]'
+                            : 'bg-black/50 border-white/10 text-muted hover:text-primary hover:border-amber/40'
                         }`}
                       >
-                        <Star size={12} className={rating >= star ? 'fill-amber text-amber' : ''} />
+                        <Star size={13} className={rating >= star ? 'fill-black' : ''} />
                         <span>{star}</span>
                       </button>
                     ))}
@@ -1082,7 +1103,7 @@ export default function SpeakingPracticePage() {
                 <button
                   type="submit"
                   disabled={submitting || !driveLink.trim()}
-                  className="w-full font-mono text-xs font-black py-3.5 flex items-center justify-center gap-2 rounded-xl bg-amber hover:bg-amber-hover text-black shadow-xl transition-all transform hover:scale-[1.01] active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full font-mono text-xs font-black py-3.5 flex items-center justify-center gap-2 rounded-xl bg-amber hover:bg-amber-hover text-black shadow-xl transition-all transform hover:scale-[1.01] active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed mt-2"
                 >
                   <Award size={16} />
                   <span>{submitting ? 'RECORDING & AWARDING XP...' : 'LOG PRACTICE (+25 XP)'}</span>
