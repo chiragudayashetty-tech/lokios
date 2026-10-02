@@ -9,7 +9,6 @@ import { useOS } from '@/lib/context/OSContext'
 import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { getSpeakingRestDays, setSpeakingRestDays, isSpeakingRestDay } from '@/lib/utils/restDays'
 import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
-import SpinningWheel from '@/components/speaking/SpinningWheel'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Mic, Shuffle, Video, Link as LinkIcon,
@@ -223,7 +222,6 @@ export default function SpeakingPracticePage() {
   const [selectedTopic, setSelectedTopic] = useState(CURATED_TOPICS[30] || CURATED_TOPICS[0]) // Default to Phase 2 (Day 31)
   const [activePhase, setActivePhase] = useState(2) // Default to Phase 2
   const [selectedSituation, setSelectedSituation] = useState(null)
-  const [showWheelSection, setShowWheelSection] = useState(true)
   const [isCustomTopic, setIsCustomTopic] = useState(false)
   const [customTopicInput, setCustomTopicInput] = useState('')
   const [customCategoryInput, setCustomCategoryInput] = useState('')
@@ -708,54 +706,6 @@ export default function SpeakingPracticePage() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* 🎡 SITUATION CHALLENGE SPINNING WHEEL ARENA */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-amber" />
-              <span className="font-mono text-xs font-black uppercase tracking-wider text-primary">
-                SITUATION CHALLENGE ARENA
-              </span>
-              {selectedSituation && (
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-400/40 flex items-center gap-1">
-                  <Zap size={10} /> #{selectedSituation.id} {selectedSituation.title}
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowWheelSection(!showWheelSection)}
-              className="font-mono text-xs text-muted hover:text-amber font-bold flex items-center gap-1.5 px-3 py-1 rounded-lg bg-black/40 border border-white/10 hover:border-amber/40 transition-all cursor-pointer"
-            >
-              <span>{showWheelSection ? 'COLLAPSE WHEEL' : 'OPEN WHEEL ARENA'}</span>
-              <span className="text-[10px]">{showWheelSection ? '▲' : '▼'}</span>
-            </button>
-          </div>
-
-          <AnimatePresence>
-            {showWheelSection && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-              >
-                <SpinningWheel
-                  challenges={SITUATION_CHALLENGES}
-                  topics={availableTopicsInPhase}
-                  selectedTopic={selectedTopic}
-                  selectedSituation={selectedSituation}
-                  activePhase={activePhase}
-                  onPhaseChange={handlePhaseChange}
-                  onSelectSituation={(sit) => setSelectedSituation(sit)}
-                  onSelectTopic={(top) => setSelectedTopic(top)}
-                  onClearSituation={() => setSelectedSituation(null)}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         {/* WORKFLOW GRID: TOPIC GENERATOR (LEFT) + VIDEO PROOF FORM (RIGHT) */}
