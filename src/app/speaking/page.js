@@ -14,7 +14,7 @@ import {
   Mic, Shuffle, Video, Link as LinkIcon,
   CheckCircle2, Calendar, Sparkles, Award, ExternalLink,
   BookOpen, Star, Search, List, LayoutGrid, Copy, Check,
-  Edit3, Compass, Flame, ArrowRight, Zap, Target, X
+  Edit3, Compass, Flame, ArrowRight, Zap, Target, X, ArrowDown, ArrowUp
 } from 'lucide-react'
 
 // Known Speaking Practice habit ID in database
@@ -242,6 +242,7 @@ export default function SpeakingPracticePage() {
   // View & Filter State
   const [activeTab, setActiveTab] = useState('directory') // 'directory' | 'cards'
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortOrder, setSortOrder] = useState('desc') // 'desc' (New to Old) | 'asc' (Old to New)
   const [topicBankPhase, setTopicBankPhase] = useState(2)
   const [copiedAll, setCopiedAll] = useState(false)
 
@@ -531,27 +532,52 @@ export default function SpeakingPracticePage() {
     return topics.filter(t => t.phase === activePhase && !completedTopicTitles.has(t.topic))
   }, [topics, activePhase, completedTopicTitles])
 
-  // Chronological Completed Topics (Day 1 -> Day N)
+  // Chronological Completed Topics (Day 1 -> Day N) with persistent computed_day
   const completedTopicsChronological = useMemo(() => {
-    return [...history].sort((a, b) => {
+    const sorted = [...history].sort((a, b) => {
       const dayA = a.day_number || 0
       const dayB = b.day_number || 0
-      if (dayA !== dayB) return dayA - dayB
+      if (dayA !== 0 && dayB !== 0 && dayA !== dayB) return dayA - dayB
       return new Date(a.date).getTime() - new Date(b.date).getTime()
     })
+    return sorted.map((item, idx) => ({
+      ...item,
+      computed_day: item.day_number || idx + 1
+    }))
   }, [history])
 
-  // Filtered Completed Topics for Search
+  // Filtered and Sorted Completed Topics (Search + New-to-Old / Old-to-New)
   const filteredCompletedTopics = useMemo(() => {
-    if (!searchQuery.trim()) return completedTopicsChronological
-    const q = searchQuery.toLowerCase()
-    return completedTopicsChronological.filter(item =>
-      (item.topic && item.topic.toLowerCase().includes(q)) ||
-      (item.category && item.category.toLowerCase().includes(q)) ||
-      (item.notes && item.notes.toLowerCase().includes(q)) ||
-      String(item.day_number).includes(q)
-    )
-  }, [completedTopicsChronological, searchQuery])
+    let list = completedTopicsChronological
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      list = list.filter(item =>
+        (item.topic && item.topic.toLowerCase().includes(q)) ||
+        (item.category && item.category.toLowerCase().includes(q)) ||
+        (item.notes && item.notes.toLowerCase().includes(q)) ||
+        String(item.computed_day || item.day_number).includes(q)
+      )
+    }
+
+    if (sortOrder === 'desc') {
+      // New to Old (Latest date / highest day first)
+      return [...list].sort((a, b) => {
+        const timeA = new Date(a.date).getTime()
+        const timeB = new Date(b.date).getTime()
+        if (timeA !== timeB) return timeB - timeA
+        return (b.computed_day || b.day_number || 0) - (a.computed_day || a.day_number || 0)
+      })
+    } else {
+      // Old to New (Earliest date / lowest day first)
+      return [...list].sort((a, b) => {
+        const timeA = new Date(a.date).getTime()
+        const timeB = new Date(b.date).getTime()
+        if (timeA !== timeB) return timeA - timeB
+        return (a.computed_day || a.day_number || 0) - (b.computed_day || b.day_number || 0)
+      })
+    }
+  }, [completedTopicsChronological, searchQuery, sortOrder])
 
   // Helper to extract challenge title from notes if present
   const extractChallengeFromNotes = (notesText = '') => {
@@ -569,11 +595,11 @@ export default function SpeakingPracticePage() {
   // Copy Completed Topics List to Clipboard
   const handleCopyCompletedList = () => {
     const lines = [
-      `# Loki OS — Speaking Practice Completed Topics (${completedTopicsChronological.length} Sessions)`,
-      `Average Rating: ${avgRating} / 5.0 ⭐`,
+      `# Loki OS — Speaking Practice Completed Topics (${filteredCompletedTopics.length} Sessions)`,
+      `Average Rating: ${avgRating} / 5.0 ⭐ | Order: ${sortOrder === 'desc' ? 'Newest to Oldest' : 'Oldest to Newest'}`,
       '',
-      ...completedTopicsChronological.map((item, idx) => {
-        const dayNum = item.day_number || idx + 1
+      ...filteredCompletedTopics.map((item, idx) => {
+        const dayNum = item.computed_day || item.day_number || idx + 1
         const challenge = extractChallengeFromNotes(item.notes)
         const challengeStr = challenge ? ` | Challenge: ${challenge}` : ''
         const video = item.drive_link ? ` | [Video Recording](${item.drive_link})` : ''
@@ -1076,6 +1102,36 @@ export default function SpeakingPracticePage() {
                 <Search size={13} className="absolute left-2.5 top-2.5 text-muted" />
               </div>
 
+              {/* Sort Order Filter: New to Old vs Old to New */}
+              <div className="flex items-center bg-black/60 p-1 border border-white/10 rounded-xl font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSortOrder('desc')}
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 font-bold transition-all ${
+                    sortOrder === 'desc'
+                      ? 'bg-amber text-black shadow-sm'
+                      : 'text-muted hover:text-primary'
+                  }`}
+                  title="Filter New to Old (Newest First)"
+                >
+                  <ArrowDown size={13} />
+                  <span>New → Old</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortOrder('asc')}
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 font-bold transition-all ${
+                    sortOrder === 'asc'
+                      ? 'bg-amber text-black shadow-sm'
+                      : 'text-muted hover:text-primary'
+                  }`}
+                  title="Filter Old to New (Oldest First)"
+                >
+                  <ArrowUp size={13} />
+                  <span>Old → New</span>
+                </button>
+              </div>
+
               {/* View Toggle */}
               <div className="flex items-center bg-black/60 p-1 border border-white/10 rounded-xl font-mono text-xs">
                 <button
@@ -1147,7 +1203,7 @@ export default function SpeakingPracticePage() {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {filteredCompletedTopics.map((session, idx) => {
-                    const dayNum = session.day_number || idx + 1
+                    const dayNum = session.computed_day || session.day_number || idx + 1
                     const challenge = extractChallengeFromNotes(session.notes)
                     const cleanNotes = cleanNotesDisplay(session.notes)
 
@@ -1229,7 +1285,7 @@ export default function SpeakingPracticePage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-amber/20 border border-amber/40 text-amber font-bold uppercase">
-                            DAY {session.day_number || (history.length - idx)}
+                            DAY {session.computed_day || session.day_number || (idx + 1)}
                           </span>
                           <span className="font-mono text-[9px] text-muted font-semibold">
                             {session.date}
