@@ -33,36 +33,12 @@ export function OSProvider({ children }) {
   const characterStats = useCharacterStatsInternal(auth.user)
   const focus = useFocusInternal(auth.user, true)
 
-  const [booting, setBooting] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const cachedProfile = localStorage.getItem('lokios_cached_profile')
-      const cachedUser = localStorage.getItem('lokios_cached_user')
-      if (cachedUser && cachedProfile) return false
-    }
-    return true
-  })
-
-  // Fast boot safety timer: never freeze or buffer more than 500ms
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setBooting(false)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [])
-
   // Apply rank-derived visual tokens only. XP remains owned by existing profile/RPC flows.
   useEffect(() => {
     if (typeof document === 'undefined') return
     const theme = getThemeForXP(profile?.profile?.total_xp || 0)
     Object.entries(theme.cssVars).forEach(([name, value]) => document.documentElement.style.setProperty(name, value))
   }, [profile?.profile?.total_xp])
-
-  // Dismiss booting as soon as auth and profile are resolved
-  useEffect(() => {
-    if (!auth.loading && (!profile.loading || profile?.profile)) {
-      setBooting(false)
-    }
-  }, [auth.loading, profile.loading, profile?.profile])
 
   // Stable refs so the sync callback always calls the latest functions
   // without causing the useEffect to re-run (infinite loop fix)
@@ -259,17 +235,6 @@ export function OSProvider({ children }) {
   return (
     <OSContext.Provider value={osState}>
       {children}
-      {booting && (
-        <div className="winter-boot-screen" role="status" aria-live="polite">
-          <div className="winter-boot-grid" aria-hidden="true" />
-          <div className="winter-boot-mark">
-            <img src="/icons/winter-warrior-logo.png" alt="Winter Arc warrior" />
-          </div>
-          <div className="winter-boot-kicker">LOKI OS // WINTER ARC</div>
-          <div className="winter-boot-title">THE FROST FORGE</div>
-          <div className="winter-boot-status"><span /> INITIALIZING FIELD SYSTEMS</div>
-        </div>
-      )}
     </OSContext.Provider>
   )
 }

@@ -588,7 +588,7 @@ export default function WorkPage() {
               <Briefcase size={22} />
             </div>
             <h1 className="font-display text-xl sm:text-2xl tracking-wider text-white font-extrabold uppercase flex items-center gap-2">
-              WORK INTELLIGENCE
+              WORK LOG
             </h1>
           </div>
 
@@ -598,11 +598,11 @@ export default function WorkPage() {
             className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] hover:opacity-90 text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg transition-all active:scale-95 shrink-0"
           >
             <Download size={14} />
-            <span>Export Intel</span>
+            <span>Export</span>
           </button>
         </div>
 
-        {/* 3 MAIN SUBPAGE TABS */}
+        {/* 2 MAIN SUBPAGE TABS */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           <button
             type="button"
@@ -614,7 +614,7 @@ export default function WorkPage() {
             }`}
           >
             <Clock size={14} />
-            <span>-01. WORK LOG</span>
+            <span>LOG</span>
             <RotateCcw size={11} className="opacity-70" />
           </button>
 
@@ -628,7 +628,7 @@ export default function WorkPage() {
             }`}
           >
             <TrendingUp size={14} />
-            <span>-02. ANALYTICS</span>
+            <span>ANALYTICS</span>
           </button>
         </div>
 
@@ -636,7 +636,7 @@ export default function WorkPage() {
         <div className="flex items-center justify-between gap-3 p-3.5 bg-black/60 border border-white/10 rounded-2xl backdrop-blur-md flex-wrap">
           <div className="flex items-center gap-3">
             <span className="font-mono text-xs text-[#D4AF37] uppercase font-bold tracking-widest flex items-center gap-1.5">
-              LOG DATE:
+              DATE:
             </span>
             <div className="relative flex items-center">
               <input
@@ -684,7 +684,7 @@ export default function WorkPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-base">📝</span>
                     <h3 className="font-display text-xs uppercase tracking-widest text-white font-extrabold">
-                      LOG YOUR WORK
+                      LOG WORK
                     </h3>
                   </div>
                   <span className="font-mono text-[10px] text-muted uppercase font-bold">DATE: {selectedDate}</span>
@@ -797,7 +797,7 @@ export default function WorkPage() {
                   <div className="flex items-center justify-between">
                     <label className="font-mono text-[10px] sm:text-[11px] text-slate-300 uppercase font-bold tracking-wider flex items-center gap-1.5">
                       <Zap size={13} className="text-amber-400" />
-                      <span>FOCUS STATE & ENERGY</span>
+                      <span>FOCUS LEVEL</span>
                     </label>
                     <span 
                       className="font-mono text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md uppercase"
@@ -843,7 +843,7 @@ export default function WorkPage() {
                 {/* TYPE OF WORK TAG PILLS */}
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2.5">
                   <label className="font-mono text-[11px] text-slate-300 uppercase font-bold tracking-wider block">
-                    TYPE OF WORK
+                    TAGS
                   </label>
                   <div className="flex flex-wrap gap-2 items-center">
                     {WORK_TYPE_OPTIONS.map(opt => {
@@ -874,7 +874,7 @@ export default function WorkPage() {
 
                     <input 
                       type="text"
-                      placeholder="+ Custom type..."
+                      placeholder="+ Add tag..."
                       value={customWorkType}
                       onChange={e => setCustomWorkType(e.target.value)}
                       onKeyDown={e => {
@@ -893,11 +893,11 @@ export default function WorkPage() {
                 {/* WORK SESSION NOTES */}
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2">
                   <label className="font-mono text-[11px] text-slate-300 uppercase font-bold tracking-wider block">
-                    WORK SESSION NOTES
+                    NOTES
                   </label>
                   <textarea
                     rows={3}
-                    placeholder="Describe what you worked on, key wins, learnings, or challenges..."
+                    placeholder="Notes or summary..."
                     value={workNotes}
                     onChange={(e) => setWorkNotes(e.target.value)}
                     className="w-full bg-black/60 border border-white/15 rounded-xl p-3 font-mono text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400 transition-colors leading-relaxed"
@@ -911,7 +911,7 @@ export default function WorkPage() {
                   className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:opacity-95 text-black font-mono text-xs font-black uppercase tracking-wider rounded-2xl shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all active:scale-98 disabled:opacity-50"
                 >
                   <Save size={16} />
-                  <span>{savingWork ? 'RECORDING INTEL...' : 'SAVE WORK LOG'}</span>
+                  <span>{savingWork ? 'SAVING...' : 'SAVE LOG'}</span>
                 </button>
 
               </form>
@@ -940,10 +940,10 @@ export default function WorkPage() {
                     <div className="flex items-center gap-3">
                       <h3 className="font-display text-xs uppercase tracking-widest text-[#D4AF37] font-extrabold flex items-center gap-2">
                         <Clock size={15} />
-                        WORK HISTORY
+                        HISTORY
                       </h3>
                       <span className="font-mono text-xs text-muted uppercase font-bold">
-                        ({visibleLogs.length} LOGS)
+                        ({visibleLogs.length})
                       </span>
                     </div>
 
@@ -956,7 +956,7 @@ export default function WorkPage() {
                           : 'bg-black/40 border-white/10 text-muted hover:text-white'
                       }`}
                     >
-                      {showAllWorkHistory ? 'SHOW WEEKLY VIEW' : `SHOW ALL (${nonEmptyWorkLogs.length})`}
+                      {showAllWorkHistory ? 'WEEKLY' : `ALL (${nonEmptyWorkLogs.length})`}
                     </button>
                   </div>
 
@@ -1099,7 +1099,7 @@ export default function WorkPage() {
             
             {/* RANGE SELECTOR */}
             <div className="flex items-center justify-between p-3.5 bg-black/60 border border-white/10 rounded-2xl">
-              <span className="font-mono text-xs text-muted uppercase font-bold tracking-wider">Analytics Period:</span>
+              <span className="font-mono text-xs text-muted uppercase font-bold tracking-wider">PERIOD:</span>
               <div className="flex items-center bg-black border border-white/10 rounded-xl p-1">
                 {['7days', '30days', 'all'].map(rangeKey => (
                   <button
@@ -1126,9 +1126,6 @@ export default function WorkPage() {
                 <div className="font-display text-2xl text-white font-extrabold">
                   {totals.totWork.toFixed(1)} h
                 </div>
-                <div className="font-mono text-[10px] text-muted truncate">
-                  Across all sessions
-                </div>
               </HudPanel>
 
               <HudPanel className="p-4 space-y-1">
@@ -1140,7 +1137,7 @@ export default function WorkPage() {
                   {totals.focusRatio}%
                 </div>
                 <div className="font-mono text-[10px] text-muted truncate">
-                  Focused: {totals.totFocus.toFixed(1)} h
+                  {totals.totFocus.toFixed(1)} h focused
                 </div>
               </HudPanel>
 
@@ -1153,26 +1150,23 @@ export default function WorkPage() {
                   {totals.totBeyond.toFixed(1)} h
                 </div>
                 <div className="font-mono text-[10px] text-muted truncate">
-                  Ratio: {totals.beyondRatio}%
+                  {totals.beyondRatio}% ratio
                 </div>
               </HudPanel>
 
               <HudPanel className="p-4 space-y-1">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
-                  <span>UNFOCUSED TIME</span>
+                  <span>UNFOCUSED</span>
                   <AlertTriangle size={14} className="text-[#ef4444]" />
                 </div>
                 <div className="font-display text-2xl text-[#ef4444] font-extrabold">
                   {totals.totUnfocused.toFixed(1)} h
                 </div>
-                <div className="font-mono text-[10px] text-muted truncate">
-                  Distraction / Drift
-                </div>
               </HudPanel>
             </div>
 
             {/* WORK RECHARTS VISUALIZATION */}
-            <HudPanel label="WORK EXECUTION TRENDS" glow>
+            <HudPanel label="TRENDS" glow>
               <div className="h-72 w-full pt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData}>

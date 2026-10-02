@@ -629,18 +629,15 @@ export default function SpeakingPracticePage() {
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
                 <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber/20 border border-amber/40 text-amber uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                  <Mic size={12} /> CAMERA SPEAKING PROTOCOL
+                  <Mic size={12} /> SPEAKING
                 </span>
                 <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 font-bold uppercase tracking-wider">
-                  {currentPhaseNumber === 1 ? 'SEASON 1: FOUNDATION' : currentPhaseNumber === 2 ? 'SEASON 2: PERSUASION & ARGUMENTS' : 'SEASON 3: HIGH-STAKES MASTERY'}
+                  {currentPhaseNumber === 1 ? 'SEASON 1' : currentPhaseNumber === 2 ? 'SEASON 2' : 'SEASON 3'}
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-mono font-black text-primary uppercase tracking-tight flex items-center gap-2">
-                SPEAKING PRACTICE HUB <Sparkles className="text-amber animate-pulse" size={24} />
+                SPEAKING PRACTICE
               </h1>
-              <p className="font-mono text-xs text-muted mt-1 max-w-xl">
-                Impromptu camera delivery with 10 Situation Challenges & 90 curated master prompts. Spin the topic first, then spin the situation!
-              </p>
             </div>
 
             {/* Quick Metrics */}
@@ -650,20 +647,20 @@ export default function SpeakingPracticePage() {
                   <span>{totalSessions}</span>
                   <span className="text-xs text-muted font-normal">/ 90</span>
                 </div>
-                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Total Days</div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">DAYS</div>
               </div>
               <div className="p-3.5 rounded-xl bg-black/60 border border-white/10 text-center min-w-[105px] shadow-lg">
                 <div className="font-mono text-2xl font-black text-success">
                   {uniqueTopicsCompleted}
                 </div>
-                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Topics Done</div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">COMPLETED</div>
               </div>
               <div className="p-3.5 rounded-xl bg-black/60 border border-white/10 text-center min-w-[105px] shadow-lg">
                 <div className="font-mono text-2xl font-black text-purple-300 flex items-center justify-center gap-1">
                   <Star size={16} className="fill-amber text-amber" />
                   <span>{avgRating}</span>
                 </div>
-                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Avg Rating</div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">RATING</div>
               </div>
             </div>
           </div>
@@ -672,11 +669,11 @@ export default function SpeakingPracticePage() {
           <div className="mt-5 pt-4 border-t border-white/10 relative z-10">
             <div className="flex items-center justify-between font-mono text-[10px] uppercase font-bold text-muted mb-1.5">
               <div className="flex items-center gap-2">
-                <span className="text-amber">PHASE {currentPhaseNumber} PROGRESS:</span>
+                <span className="text-amber">PHASE {currentPhaseNumber}:</span>
                 <span className="text-primary font-bold">{totalSessions} / {phaseTarget} Days</span>
                 {totalSessions >= 29 && totalSessions < 31 && (
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] animate-pulse">
-                    🔥 DAY {totalSessions}/30 COMPLETE — PHASE 2 UNLOCKED!
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px]">
+                    🔥 DAY {totalSessions}/30 COMPLETE — PHASE 2 UNLOCKED
                   </span>
                 )}
               </div>
@@ -695,7 +692,7 @@ export default function SpeakingPracticePage() {
           {/* Rest Day Config Bar */}
           <div className="mt-4 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 font-mono text-xs relative z-10">
             <div className="flex items-center gap-2">
-              <span className="text-muted uppercase tracking-wider font-bold text-[10px]">SPEAKING REST DAYS:</span>
+              <span className="text-muted uppercase tracking-wider font-bold text-[10px]">REST DAYS:</span>
               <div className="flex items-center gap-1 bg-black/60 p-1 border border-border-color rounded-lg">
                 {[
                   { day: 0, label: 'SUN' },
@@ -717,7 +714,7 @@ export default function SpeakingPracticePage() {
                           ? 'bg-purple-500/20 text-purple-300 border border-purple-400/50 shadow-sm'
                           : 'text-muted hover:text-primary hover:bg-white/5'
                       }`}
-                      title={`Toggle ${dObj.label} as Rest Day`}
+                      title={`Toggle ${dObj.label}`}
                     >
                       {dObj.label}
                     </button>
@@ -727,8 +724,8 @@ export default function SpeakingPracticePage() {
             </div>
 
             {todayIsRestDay && (
-              <div className="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/50 text-purple-300 text-[10px] font-bold flex items-center gap-1.5 animate-pulse">
-                <span>☕ TODAY IS A REST DAY (NO PENALTY IF SKIPPED)</span>
+              <div className="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/50 text-purple-300 text-[10px] font-bold flex items-center gap-1.5">
+                <span>REST DAY</span>
               </div>
             )}
           </div>
@@ -746,7 +743,7 @@ export default function SpeakingPracticePage() {
                 <div className="flex items-center gap-2">
                   <BookOpen size={18} className="text-amber" />
                   <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                    ACTIVE PROMPT
+                    TOPIC
                   </span>
                 </div>
                 <div className="flex items-center gap-2.5">
@@ -760,7 +757,7 @@ export default function SpeakingPracticePage() {
                     >
                       <option value={1} className="bg-zinc-950 text-white">Phase 1 (Days 1–30)</option>
                       <option value={2} className="bg-zinc-950 text-white">Phase 2 (Days 31–60)</option>
-                      <option value={3} disabled className="bg-zinc-950 text-muted/60">🔒 Phase 3 (Locked)</option>
+                      <option value={3} disabled className="bg-zinc-950 text-muted/60">Phase 3 (Locked)</option>
                     </select>
                   </div>
 
@@ -811,7 +808,7 @@ export default function SpeakingPracticePage() {
                       <Zap size={16} className="text-purple-400 mt-0.5 shrink-0" />
                       <div className="text-left">
                         <div className="font-mono text-[10px] font-black uppercase text-purple-300">
-                          SITUATION CHALLENGE #{selectedSituation.id}: {selectedSituation.title}
+                          CHALLENGE: {selectedSituation.title}
                         </div>
                         <div className="font-mono text-xs text-primary/90 mt-0.5 font-medium leading-snug">
                           {selectedSituation.rules}
@@ -829,7 +826,7 @@ export default function SpeakingPracticePage() {
                       className="btn font-mono text-xs flex items-center gap-2 font-black tracking-wider uppercase shadow-xl px-6 py-2.5 bg-amber text-black hover:bg-amber-hover border border-amber-hover transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50"
                     >
                       <Shuffle size={15} className={isShuffling ? 'animate-spin' : ''} />
-                      <span>{isShuffling ? 'SHUFFLING...' : '🎲 SHUFFLE TOPIC'}</span>
+                      <span>{isShuffling ? 'SHUFFLING...' : 'SHUFFLE'}</span>
                     </button>
 
                     <button
@@ -842,7 +839,7 @@ export default function SpeakingPracticePage() {
                       }`}
                     >
                       <Edit3 size={14} />
-                      <span>{isCustomTopic ? 'CANCEL CUSTOM' : '✏️ WRITE CUSTOM'}</span>
+                      <span>{isCustomTopic ? 'CANCEL' : 'CUSTOM'}</span>
                     </button>
                   </div>
                 </motion.div>
@@ -949,7 +946,7 @@ export default function SpeakingPracticePage() {
                 <div className="flex items-center gap-2 text-purple-400">
                   <Video size={18} />
                   <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">
-                    LOG VIDEO PROOF
+                    LOG PROOF
                   </span>
                 </div>
               </div>
@@ -958,15 +955,10 @@ export default function SpeakingPracticePage() {
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-3.5 rounded-xl bg-success/20 border border-success/40 text-success font-mono text-xs flex flex-col gap-1 shadow-lg"
+                  className="p-3 rounded-xl bg-success/20 border border-success/40 text-success font-mono text-xs flex items-center gap-2 shadow-lg"
                 >
-                  <div className="flex items-center gap-2 font-bold">
-                    <CheckCircle2 size={16} />
-                    <span>Session Logged Successfully! 🎉</span>
-                  </div>
-                  <span className="text-[10px] opacity-90 pl-6">
-                    Speaking Practice routine marked complete for today. Auto-fail prevented!
-                  </span>
+                  <CheckCircle2 size={16} />
+                  <span>Session logged.</span>
                 </motion.div>
               )}
 
@@ -985,7 +977,7 @@ export default function SpeakingPracticePage() {
                       )}
                     </div>
                     <div className="font-mono text-xs text-primary font-bold truncate" title={selectedTopic?.topic}>
-                      {selectedTopic?.topic || 'Select a topic from the left'}
+                      {selectedTopic?.topic || 'Select a topic'}
                     </div>
                   </div>
                   {selectedSituation && (
@@ -993,7 +985,7 @@ export default function SpeakingPracticePage() {
                       type="button"
                       onClick={() => setSelectedSituation(null)}
                       className="text-muted hover:text-red-400 text-xs font-mono font-bold shrink-0 p-1 rounded hover:bg-white/5 cursor-pointer"
-                      title="Remove Situation Modifier"
+                      title="Remove Challenge"
                     >
                       <X size={14} />
                     </button>
@@ -1002,7 +994,7 @@ export default function SpeakingPracticePage() {
 
                 <div>
                   <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
-                    VIDEO URL (GOOGLE DRIVE / YOUTUBE)
+                    VIDEO URL
                   </label>
                   <div className="relative">
                     <input
@@ -1019,11 +1011,11 @@ export default function SpeakingPracticePage() {
 
                 <div>
                   <label className="font-mono text-[10px] uppercase font-bold text-muted mb-1 block">
-                    SESSION REFLECTIONS & DEBRIEF NOTES
+                    NOTES
                   </label>
                   <textarea
                     rows={3}
-                    placeholder="Key takeaways, pacing, vocal clarity, eye contact, articulation, how the situation challenge went..."
+                    placeholder="Notes, takeaways, delivery..."
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
                     className="w-full font-mono text-xs bg-black/60 text-primary border border-white/10 rounded-xl p-3 focus:outline-none focus:border-amber transition-colors leading-relaxed resize-y"
@@ -1034,10 +1026,10 @@ export default function SpeakingPracticePage() {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="font-mono text-[10px] uppercase font-bold text-muted">
-                      SELF RATING (1 TO 5)
+                      RATING
                     </label>
                     <span className="font-mono text-xs font-bold text-amber">
-                      {rating ? `${rating} / 5 Stars` : 'Tap to rate'}
+                      {rating ? `${rating} / 5` : 'Rate'}
                     </span>
                   </div>
                   <div className="grid grid-cols-5 gap-2">
@@ -1065,7 +1057,7 @@ export default function SpeakingPracticePage() {
                   className="w-full font-mono text-xs font-black py-3.5 flex items-center justify-center gap-2 rounded-xl bg-amber hover:bg-amber-hover text-black shadow-xl transition-all transform hover:scale-[1.01] active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed mt-2"
                 >
                   <Award size={16} />
-                  <span>{submitting ? 'RECORDING...' : 'LOG PRACTICE'}</span>
+                  <span>{submitting ? 'SAVING...' : 'LOG PRACTICE'}</span>
                 </button>
               </form>
             </div>
@@ -1079,12 +1071,9 @@ export default function SpeakingPracticePage() {
               <div className="flex items-center gap-2">
                 <Calendar size={18} className="text-amber" />
                 <h2 className="font-mono text-sm uppercase tracking-widest text-primary font-black">
-                  COMPLETED TOPICS ARCHIVE ({completedTopicsChronological.length})
+                  COMPLETED ARCHIVE ({completedTopicsChronological.length})
                 </h2>
               </div>
-              <p className="font-mono text-[11px] text-muted mt-0.5">
-                Comprehensive directory of every speech, prompt, date, rating, challenge modifier, and video proof link.
-              </p>
             </div>
 
             {/* Controls: Search, View Mode, Copy List */}
@@ -1093,7 +1082,7 @@ export default function SpeakingPracticePage() {
               <div className="relative w-full sm:w-56">
                 <input
                   type="text"
-                  placeholder="Search topics, challenges..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full bg-black/60 text-primary border border-white/10 rounded-xl px-3 py-1.5 pl-8 font-mono text-xs focus:outline-none focus:border-amber transition-colors"
@@ -1331,7 +1320,7 @@ export default function SpeakingPracticePage() {
                           rel="noopener noreferrer"
                           className="btn btn-ghost btn-xs font-mono text-[10px] text-amber hover:text-amber-hover flex items-center gap-1 font-bold"
                         >
-                          <span>VIEW VIDEO</span>
+                          <span>VIDEO</span>
                           <ExternalLink size={10} />
                         </a>
                       )}
