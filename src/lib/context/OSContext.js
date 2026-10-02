@@ -33,7 +33,22 @@ export function OSProvider({ children }) {
   const characterStats = useCharacterStatsInternal(auth.user)
   const focus = useFocusInternal(auth.user, true)
 
-  const [booting, setBooting] = useState(true)
+  const [booting, setBooting] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const cachedProfile = localStorage.getItem('lokios_cached_profile')
+      const cachedUser = localStorage.getItem('lokios_cached_user')
+      if (cachedUser && cachedProfile) return false
+    }
+    return true
+  })
+
+  // Fast boot safety timer: never freeze or buffer more than 500ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBooting(false)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Apply rank-derived visual tokens only. XP remains owned by existing profile/RPC flows.
   useEffect(() => {
@@ -42,12 +57,12 @@ export function OSProvider({ children }) {
     Object.entries(theme.cssVars).forEach(([name, value]) => document.documentElement.style.setProperty(name, value))
   }, [profile?.profile?.total_xp])
 
-  // Wait for critical systems to load before rendering the OS
+  // Dismiss booting as soon as auth and profile are resolved
   useEffect(() => {
-    if (!auth.loading && !profile.loading && !habits.loading && !tasks.loading) {
+    if (!auth.loading && (!profile.loading || profile?.profile)) {
       setBooting(false)
     }
-  }, [auth.loading, profile.loading, habits.loading, tasks.loading])
+  }, [auth.loading, profile.loading, profile?.profile])
 
   // Stable refs so the sync callback always calls the latest functions
   // without causing the useEffect to re-run (infinite loop fix)

@@ -69,7 +69,14 @@ export default function AppShell({ children }) {
     setShowPwaInstall(false)
   }
 
-  const totalXp = profile?.total_xp || 0
+  let effectiveProfile = profile
+  if (!effectiveProfile && typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('lokios_cached_profile')
+      if (raw) effectiveProfile = JSON.parse(raw)
+    } catch (e) {}
+  }
+  const totalXp = effectiveProfile?.total_xp || 0
   const rank = getRankForXp(totalXp)
   const todayNet = dailyMomentum?.todayNet || 0
   const trend3Day = dailyMomentum?.threeDayNet || 0

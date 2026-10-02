@@ -8,7 +8,14 @@ import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { SAGA_TITLES } from '@/lib/constants'
 
 export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
-  const totalXp = profile?.total_xp || 0
+  let effectiveProfile = profile
+  if (!effectiveProfile && typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('lokios_cached_profile')
+      if (raw) effectiveProfile = JSON.parse(raw)
+    } catch (e) {}
+  }
+  const totalXp = effectiveProfile?.total_xp || 0
   const level = calculateLevel(totalXp)
   const xpProgress = xpToNextLevel(totalXp)
   const rank = getRankForXp(totalXp)

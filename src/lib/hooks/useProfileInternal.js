@@ -4,8 +4,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export function useProfileInternal(user) {
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('lokios_cached_profile')
+        if (cached) return JSON.parse(cached)
+      } catch (e) {}
+    }
+    return null
+  })
+  const [loading, setLoading] = useState(!profile)
   const [initialized, setInitialized] = useState(false)
   const supabase = createClient()
 
@@ -17,7 +25,7 @@ export function useProfileInternal(user) {
     }
 
     try {
-      if (!initialized) setLoading(true)
+      if (!initialized && !profile) setLoading(true)
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -26,14 +34,16 @@ export function useProfileInternal(user) {
 
       if (error) throw error
       setProfile(data)
+      if (typeof window !== 'undefined' && data) {
+        localStorage.setItem('lokios_cached_profile', JSON.stringify(data))
+      }
     } catch (error) {
       console.error('Error fetching profile:', error)
-      setProfile(null)
     } finally {
       setLoading(false)
       setInitialized(true)
     }
-  }, [user, initialized])
+  }, [user, initialized, profile])
 
   useEffect(() => {
     fetchProfile()
@@ -52,6 +62,9 @@ export function useProfileInternal(user) {
 
       if (error) throw error
       setProfile(updated)
+      if (typeof window !== 'undefined' && updated) {
+        localStorage.setItem('lokios_cached_profile', JSON.stringify(updated))
+      }
       return updated
     } catch (error) {
       console.error('Error updating profile:', error)

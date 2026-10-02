@@ -22,17 +22,26 @@ export default function Login() {
   const router = useRouter()
 
   useEffect(() => {
+    // Instant check for cached user to avoid showing login UI on mobile
+    try {
+      const cached = localStorage.getItem('lokios_cached_user')
+      if (cached) {
+        router.replace('/dashboard')
+        return
+      }
+    } catch (e) {}
+
     // Check for auth error in URL
     const params = new URLSearchParams(window.location.search)
     if (params.get('error')) {
       setError('Authentication failed. Please try again.')
     }
 
-    // Check if already logged in
+    // Check if already logged in via Supabase
     const checkUser = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) router.push('/dashboard')
+      if (user) router.replace('/dashboard')
     }
     checkUser()
   }, [router])

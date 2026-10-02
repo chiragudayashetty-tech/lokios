@@ -5,8 +5,21 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export function useAuth() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('lokios_cached_user')
+        if (cached) return JSON.parse(cached)
+      } catch (e) {}
+    }
+    return null
+  })
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('lokios_cached_user')
+    }
+    return true
+  })
   const router = useRouter()
   const supabase = createClient()
 

@@ -108,7 +108,19 @@ export default function MissionControl() {
   const undoFailOperation = os.undoFailOperation
 
   const todayStr = getLocalDateStr()
-  const totalXp = profile?.total_xp || 0
+
+  // Use profile with instant synchronous localStorage fallback to avoid Saga 0 / Rank I loading glitch
+  const cachedProfile = useMemo(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = localStorage.getItem('lokios_cached_profile')
+      return raw ? JSON.parse(raw) : null
+    } catch (e) {
+      return null
+    }
+  }, [])
+  const effectiveProfile = profile || cachedProfile
+  const totalXp = effectiveProfile?.total_xp ?? 0
   const currentRank = getRankForXp(totalXp)
   const currentArc = ARC_CONFIG.find(a => a.rank === currentRank.code) || ARC_CONFIG[0]
   const currentArcIndex = ARC_CONFIG.findIndex(a => a.rank === currentRank.code)
