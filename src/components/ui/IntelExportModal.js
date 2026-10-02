@@ -28,11 +28,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
     habits: true,
     journal: true,
     weekly_debrief: true,
-    proof_of_work: true,
-    brain_dump: false,
     screen_intel: true,
     speaking_intel: true,
-    xp_timeline: true,
   })
 
   const [isExporting, setIsExporting] = useState(false)
@@ -72,7 +69,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const [
         screenRes,
         workHoursRes, workRes, contentRes,
-        habitLogsRes, journalRes, brainDumpRes, speakingRes, xpHistoryRes,
+        habitLogsRes, journalRes, speakingRes,
         habitsRes
       ] = await Promise.all([
         supabase.from('screen_time_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
@@ -81,9 +78,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
         supabase.from('content_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('journal_entries').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
-        supabase.from('brain_dump').select('*').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate + 'T23:59:59.999Z').order('created_at', { ascending: false }),
         supabase.from('speaking_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
-        supabase.from('xp_history').select('*').eq('user_id', user.id).gte('created_at', startDate).lte('created_at', endDate + 'T23:59:59.999Z').order('created_at', { ascending: false }),
         supabase.from('habits').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
       ])
 
@@ -120,19 +115,10 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const fetchedHabitLogs = (habitLogsRes.data && habitLogsRes.data.length > 0) ? habitLogsRes.data : (monthLogs || [])
       const fetchedHabits = (habitsRes?.data && habitsRes.data.length > 0) ? habitsRes.data : (allHabits && allHabits.length > 0 ? allHabits : habits)
       const journalEntries = journalRes.data || []
-      const brainDumps = brainDumpRes.data || []
 
       // Weekly debriefs from work_logs
       const weeklyDebriefs = allWorkLogs.filter(l =>
         l.title && l.title.toLowerCase().startsWith('weekly debrief') &&
-        l.date >= startDate && l.date <= endDate
-      )
-
-      const xpAuditLogs = xpHistoryRes.data || []
-
-      // Proof of work — work_logs with media_urls
-      const proofLogs = allWorkLogs.filter(l =>
-        Array.isArray(l.media_urls) && l.media_urls.length > 0 &&
         l.date >= startDate && l.date <= endDate
       )
 
@@ -168,9 +154,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
           habits: selectedModules.habits ? { habits, logs: filteredHabitLogs } : undefined,
           journal: selectedModules.journal ? journalEntries : undefined,
           weekly_debrief: selectedModules.weekly_debrief ? weeklyDebriefs : undefined,
-          proof_of_work: selectedModules.proof_of_work ? proofLogs : undefined,
-          brain_dump: selectedModules.brain_dump ? brainDumps : undefined,
           screen_intel: selectedModules.screen_intel ? screenLogs : undefined,
+          speaking_intel: selectedModules.speaking_intel ? speakingLogs : undefined,
           weight_recon: selectedModules.weight_recon ? weightLogs : undefined,
           sleep_intel: selectedModules.sleep_intel ? sleepLogs : undefined,
         }
@@ -627,71 +612,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
         `
       }
 
-      // 6. PROOF OF WORK / PORTFOLIO LOG
-      if (selectedModules.proof_of_work) {
-        sectionsHTML += `
-          <div class="section">
-            <h2 class="section-title">
-              <span>🏆 PROOF OF WORK & ARTIFACT LOG</span>
-              <span class="badge badge-warning">${proofLogs.length} Verified Entries</span>
-            </h2>
-            ${proofLogs.length === 0 ? '<p class="text-muted" style="text-align:center;padding:12px 0;">No proof of work entries logged in this range.</p>' : `
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Project / Work Title</th>
-                    <th>Executive Summary / Description</th>
-                    <th>Artifact / Proof Links</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${proofLogs.map(l => `
-                    <tr>
-                      <td class="font-mono font-bold">${l.date || '—'}</td>
-                      <td><strong>${l.title || '—'}</strong></td>
-                      <td style="color:#334155;font-size:11.5px;">${l.description || l.notes || '—'}</td>
-                      <td>
-                        ${(l.media_urls || []).map((url, i) => `
-                          <a href="${url}" class="text-accent" style="display:inline-block;margin-right:8px;font-family:monospace;font-size:11px;text-decoration:underline;" target="_blank">🔗 Proof #${i + 1}</a>
-                        `).join('')}
-                      </td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            `}
-          </div>
-        `
-      }
 
-      // 7. BRAIN DUMP (optional)
-      if (selectedModules.brain_dump) {
-        sectionsHTML += `
-          <div class="section">
-            <h2 class="section-title">
-              <span>🧠 BRAIN DUMP ARCHIVE</span>
-              <span class="badge badge-info">${brainDumps.length} Captured Items</span>
-            </h2>
-            ${brainDumps.length === 0 ? '<p class="text-muted" style="text-align:center;padding:12px 0;">No brain dump entries in this range.</p>' : `
-              <table>
-                <thead>
-                  <tr><th>Date</th><th>Type</th><th>Thought / Concept Content</th></tr>
-                </thead>
-                <tbody>
-                  ${brainDumps.map(b => `
-                    <tr>
-                      <td class="font-mono font-bold">${b.created_at ? b.created_at.slice(0, 10) : '—'}</td>
-                      <td><span class="badge badge-info">${(b.type || 'thought').toUpperCase()}</span></td>
-                      <td style="color:#334155;">${(b.content || '').replace(/\n/g, ' ')}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            `}
-          </div>
-        `
-      }
 
       // 8. SCREEN INTEL
       if (selectedModules.screen_intel) {
@@ -745,40 +666,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
         `
       }
 
-      const xpHistoryLogs = xpHistoryRes?.data || []
 
-      // 12. XP TIMELINE AUDIT TRAIL
-      if (selectedModules.xp_timeline) {
-        sectionsHTML += `
-          <div class="section">
-            <h2 class="section-title">
-              <span>⚡ XP TIMELINE AUDIT TRAIL</span>
-              <span class="badge badge-warning">${xpHistoryLogs.length} Events</span>
-            </h2>
-            <table>
-              <thead><tr><th>Timestamp</th><th>Description</th><th>Stat Category</th><th>Source</th><th>XP Amount</th></tr></thead>
-              <tbody>
-                ${xpHistoryLogs.length === 0 ? '<tr><td colspan="5" class="text-muted" style="text-align:center;">No XP events logged in this range.</td></tr>' : xpHistoryLogs.map(x => {
-                  const isPos = (x.amount || 0) > 0
-                  const isNeg = (x.amount || 0) < 0
-                  const dtStr = x.created_at ? new Date(x.created_at).toLocaleString() : '—'
-                  const colorClass = isPos ? 'text-green' : isNeg ? 'text-red' : 'text-muted'
-                  const sign = isPos ? '+' : ''
-                  return `
-                    <tr>
-                      <td class="font-mono text-muted" style="font-size:11px;">${dtStr}</td>
-                      <td><strong>${x.description || 'XP Event'}</strong></td>
-                      <td><span class="badge badge-warning">${(x.stat_category || 'GENERAL').toUpperCase()}</span></td>
-                      <td class="font-mono text-muted" style="font-size:11px;">${x.source_type || 'system'}</td>
-                      <td><strong class="${colorClass} font-mono">${sign}${x.amount || 0} XP</strong></td>
-                    </tr>
-                  `
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        `
-      }
 
       // ── Full HTML Document ──
       const fullHTML = `
@@ -1344,11 +1232,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
     { key: 'habits',          icon: Crosshair,       label: 'Habits Matrix',            color: 'text-danger',  desc: 'Daily ops completion grid' },
     { key: 'journal',         icon: BookOpen,        label: 'Journal Entries',          color: 'text-success', desc: 'Daily reflections & mood' },
     { key: 'weekly_debrief',  icon: ClipboardList,   label: 'Weekly Debriefs',          color: 'text-purple-400', desc: 'Wins, fails, next week goals' },
-    { key: 'proof_of_work',   icon: Camera,          label: 'Proof of Work / Portfolio',color: 'text-amber',   desc: 'Portfolio log with media links' },
-    { key: 'brain_dump',      icon: Brain,           label: 'Brain Dump Log',           color: 'text-info',    desc: 'Raw thoughts & ideas' },
     { key: 'screen_intel',    icon: Monitor,         label: 'Screen Intel',             color: 'text-success', desc: 'Screen time logs' },
     { key: 'speaking_intel',  icon: Mic,             label: 'Speaking Practice',        color: 'text-amber',   desc: '30-day camera challenge & video links' },
-    { key: 'xp_timeline',     icon: Zap,             label: 'XP Timeline Audit Log',    color: 'text-amber',   desc: 'Minute-to-minute XP additions, deductions & auto-penalties' },
   ]
 
   return (
