@@ -1,12 +1,73 @@
 import { createClient } from '@/lib/supabase/client'
-import { getLocalDateStr } from '@/lib/utils/dates'
+import { getLocalDateStr, getStartOfWeek } from '@/lib/utils/dates'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
+
+/**
+ * Strips trailing XP notation like `(-38 XP, -1.5x)`, `(+25 XP)`, `(-10 XP)`
+ */
+export function cleanDescription(desc) {
+  if (!desc || typeof desc !== 'string') return ''
+  return desc.replace(/\s*\([-+]?\d+\s*xp[^)]*\)\s*$/i, '').trim()
+}
+
+/**
+ * Extracts normalized routine name from habit description
+ * Handles:
+ * "Completed routine: 10k steps"
+ * "Failed routine: 10k steps (-38 XP, -1.5x)"
+ * "🚨 ESCALATING PENALTY (2 Days Missed): 10k steps (-38 XP, -1.5x)"
+ * "Missed routine: 10k steps"
+ */
+export function extractRoutineName(desc) {
+  if (!desc || typeof desc !== 'string') return null
+  const cleaned = cleanDescription(desc)
+  const m = cleaned.match(/^(?:🚨\s*)?(?:escalating penalty.*?|completed routine|failed routine|missed routine|completed habit|failed habit|routine|habit):\s*(.+)$/i)
+  if (m && m[1]) {
+    return m[1].trim().toLowerCase()
+  }
+  return null
+}
+
+/**
+ * Extracts normalized goal title from priority goal description
+ * Handles:
+ * "Completed Priority Goal: Restore meditation, speaking..."
+ * "Failed Priority Goal: Restore meditation, speaking... (-38 XP, -1.5x)"
+ */
+export function extractPriorityGoalName(desc) {
+  if (!desc || typeof desc !== 'string') return null
+  const cleaned = cleanDescription(desc)
+  const m = cleaned.match(/^(?:completed priority goal|failed priority goal|priority goal completed|priority goal failed|priority goal #\d+|priority goal):\s*(.+)$/i)
+  if (m && m[1]) {
+    return m[1].trim().toLowerCase()
+  }
+  return null
+}
+
+/**
+ * Extracts normalized task title from task description
+ * Handles:
+ * "Completed task: Finish shoot + start editing"
+ * "Failed task: Finish shoot + start editing (-15 XP, -1.5x)"
+ * "Procrastination: Pushed Finish shoot + start editing to tomorrow (-10 XP)"
+ */
+export function extractTaskName(desc) {
+  if (!desc || typeof desc !== 'string') return null
+  const cleaned = cleanDescription(desc)
+  const m = cleaned.match(/^(?:🚨\s*)?(?:escalating penalty.*?|completed task|failed task|procrastination:\s*pushed|task):\s*(.+)$/i)
+  if (m && m[1]) {
+    let t = m[1].trim()
+    t = t.replace(/\s+to tomorrow\s*$/i, '').trim()
+    return t.toLowerCase()
+  }
+  return null
+}
 
 /**
  * Award XP with entity-level deduplication.
  * 
  * For habits, sourceId = `habit_${habitId}_${targetDate}` (e.g. `habit_abc123_2026-08-22`).
- * If a previous XP entry exists for the same source_id (or same user_id, source_type, source_id),
+ * If a previous XP entry exists for the same entity or action on that date,
  * it is deleted and its amount deducted from profiles.total_xp BEFORE
  * the new entry is inserted. This ensures exactly 1 XP record per habit per day.
  */
@@ -22,55 +83,84 @@ export async function robustAwardXP(
   const supabase = createClient()
   if (!userId) return false
 
-  // Step 1: Find and remove previous XP entries for this exact entity / action
-  if (sourceId) {
-    try {
-      let query = supabase.from('xp_history')
+  // Step 1: Find and remove previous / conflicting XP entries for this exact entity or action
+  try {
+    let matchedIds = []
+    let oldXpTotal = 0
+
+    // A. Match by sourceId across all source_types
+    if (sourceId) {
+      const { data: exact } = await supabase.from('xp_history')
         .select('id, amount')
         .eq('user_id', userId)
+        .eq('source_id', sourceId)
 
-      // If sourceId is entity-specific (starts with habit_, task_, goal_, debrief_, daily_all_, streak_), match by source_id
-      if (
-        sourceId.startsWith('habit_') ||
-        sourceId.startsWith('task_') ||
-        sourceId.startsWith('goal_') ||
-        sourceId.startsWith('debrief_') ||
-        sourceId.startsWith('daily_all_') ||
-        sourceId.startsWith('streak_') ||
-        sourceId.startsWith('screen_time_')
-      ) {
-        query = query.eq('source_id', sourceId)
-      } else if (sourceType) {
-        query = query.eq('source_type', sourceType).eq('source_id', sourceId)
-      } else {
-        query = query.eq('source_id', sourceId)
+      if (exact && exact.length > 0) {
+        matchedIds.push(...exact.map(r => r.id))
+        oldXpTotal += exact.reduce((sum, r) => sum + (r.amount || 0), 0)
       }
+    }
 
-      const { data: exact, error: exactErr } = await query
+    // B. Match by normalized routine / goal / task description on the same date
+    const routineName = extractRoutineName(description)
+    const priorityGoalName = extractPriorityGoalName(description)
+    const taskName = extractTaskName(description)
 
-      if (!exactErr && exact && exact.length > 0) {
-        const uniqueIds = exact.map(r => r.id)
-        const oldXpTotal = exact.reduce((sum, r) => sum + (r.amount || 0), 0)
-        await supabase.from('xp_history').delete().in('id', uniqueIds)
+    let entryDateStr = customCreatedAt ? getLocalDateStr(new Date(customCreatedAt)) : null
+    if (!entryDateStr && sourceId) {
+      const match = sourceId.match(/(\d{4}-\d{2}-\d{2})/)
+      if (match) entryDateStr = match[1]
+    }
+    if (!entryDateStr) entryDateStr = getLocalDateStr(new Date())
 
-        // Deduct old XP from profile before adding new amount
-        if (oldXpTotal !== 0) {
-          const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
-          if (prof) {
-            await supabase.from('profiles').update({
-              total_xp: Math.max(0, (prof.total_xp || 0) - oldXpTotal)
-            }).eq('id', userId)
+    if (routineName || priorityGoalName || taskName) {
+      const { data: dateRows } = await supabase.from('xp_history')
+        .select('id, amount, description')
+        .eq('user_id', userId)
+        .gte('created_at', `${entryDateStr}T00:00:00.000Z`)
+        .lte('created_at', `${entryDateStr}T23:59:59.999Z`)
+
+      if (dateRows && dateRows.length > 0) {
+        for (const row of dateRows) {
+          if (matchedIds.includes(row.id)) continue
+          let isMatch = false
+          if (routineName && extractRoutineName(row.description) === routineName) {
+            isMatch = true
+          } else if (priorityGoalName && extractPriorityGoalName(row.description) === priorityGoalName) {
+            isMatch = true
+          } else if (taskName && extractTaskName(row.description) === taskName) {
+            isMatch = true
+          }
+          if (isMatch) {
+            matchedIds.push(row.id)
+            oldXpTotal += (row.amount || 0)
           }
         }
       }
-    } catch (err) {
-      console.warn('XP cleanup failed (non-fatal):', err)
     }
+
+    if (matchedIds.length > 0) {
+      const { error: delErr } = await supabase.from('xp_history').delete().in('id', matchedIds).eq('user_id', userId)
+      if (delErr) {
+        for (const mid of matchedIds) {
+          await supabase.from('xp_history').delete().eq('id', mid).eq('user_id', userId)
+        }
+      }
+
+      if (oldXpTotal !== 0) {
+        const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
+        if (prof) {
+          await supabase.from('profiles').update({
+            total_xp: Math.max(0, (prof.total_xp || 0) - oldXpTotal)
+          }).eq('id', userId)
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('XP cleanup failed (non-fatal):', err)
   }
 
-  // Determine created_at timestamp:
-  // If customCreatedAt is provided, use it.
-  // Else if sourceId contains a date (e.g. habit_<id>_YYYY-MM-DD), anchor to that date!
+  // Determine created_at timestamp
   let entryCreatedAt = customCreatedAt
   if (!entryCreatedAt && sourceId) {
     const match = sourceId.match(/(\d{4}-\d{2}-\d{2})/)
@@ -143,30 +233,67 @@ export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount =
   let deductionAmount = 0
   let matchedIds = []
 
-  // Step 1: Look for matching xp_history entries for sourceId or sourceType
-  if (sourceId || sourceType) {
-    try {
-      let query = supabase.from('xp_history').select('id, amount, description, stat_category').eq('user_id', userId)
-      if (sourceId) {
-        query = query.eq('source_id', sourceId)
-      } else if (sourceType) {
-        query = query.eq('source_type', sourceType)
-      }
-
-      const { data: items } = await query
+  // Step 1: Look for matching xp_history entries for sourceId, sourceType, or description
+  try {
+    if (sourceId) {
+      const { data: items } = await supabase.from('xp_history')
+        .select('id, amount')
+        .eq('user_id', userId)
+        .eq('source_id', sourceId)
       if (items && items.length > 0) {
-        matchedIds = items.map(r => r.id)
-        deductionAmount = items.reduce((sum, r) => sum + (r.amount || 0), 0)
+        matchedIds.push(...items.map(r => r.id))
+        deductionAmount += items.reduce((sum, r) => sum + (r.amount || 0), 0)
       }
-    } catch (err) {
-      console.warn('Failed to query xp_history during remove:', err)
+    } else if (sourceType) {
+      const { data: items } = await supabase.from('xp_history')
+        .select('id, amount')
+        .eq('user_id', userId)
+        .eq('source_type', sourceType)
+      if (items && items.length > 0) {
+        matchedIds.push(...items.map(r => r.id))
+        deductionAmount += items.reduce((sum, r) => sum + (r.amount || 0), 0)
+      }
     }
+
+    if (description && matchedIds.length === 0) {
+      const routineName = extractRoutineName(description)
+      const priorityGoalName = extractPriorityGoalName(description)
+      const taskName = extractTaskName(description)
+
+      const { data: allUserHistory } = await supabase.from('xp_history')
+        .select('id, amount, description')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(100)
+
+      if (allUserHistory) {
+        for (const row of allUserHistory) {
+          let isMatch = false
+          if (routineName && extractRoutineName(row.description) === routineName) isMatch = true
+          else if (priorityGoalName && extractPriorityGoalName(row.description) === priorityGoalName) isMatch = true
+          else if (taskName && extractTaskName(row.description) === taskName) isMatch = true
+          else if (row.description && row.description.toLowerCase().includes(description.toLowerCase())) isMatch = true
+
+          if (isMatch) {
+            matchedIds.push(row.id)
+            deductionAmount += (row.amount || 0)
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to query xp_history during remove:', err)
   }
 
   // Step 2: If previous matching entries exist, delete them and adjust profile total_xp!
   if (matchedIds.length > 0) {
     try {
-      await supabase.from('xp_history').delete().in('id', matchedIds)
+      const { error: delErr } = await supabase.from('xp_history').delete().in('id', matchedIds).eq('user_id', userId)
+      if (delErr) {
+        for (const mid of matchedIds) {
+          await supabase.from('xp_history').delete().eq('id', mid).eq('user_id', userId)
+        }
+      }
       if (deductionAmount !== 0) {
         const { data: prof } = await supabase.from('profiles').select('total_xp').eq('id', userId).single()
         if (prof) {
@@ -249,87 +376,283 @@ export async function fetchAllXpHistory(supabase, userId, select = '*', orderAsc
 }
 
 /**
- * Clean up ONLY true duplicate entries in xp_history.
- * If multiple records exist for the same exact action/source, keep the first one and remove the duplicate copies.
- * Never deletes single entries, penalties, or valid historical logs.
- * Recalculates profiles.total_xp strictly as the sum of all unique records without any 1,000-row truncation.
+ * Multi-pass semantic deduplication engine for xp_history.
+ * 
+ * Accurately detects and removes:
+ * 1. Routine conflicts (e.g. "Completed routine: 10k steps" vs "Failed routine: 10k steps (-38 XP)")
+ *    -> If completed, retains the completion and permanently purges the failed penalty.
+ * 2. Priority Goal conflicts (e.g. "Completed Priority Goal: ..." vs "Failed Priority Goal: ...")
+ *    -> Retains completion and purges obsolete failure penalties.
+ * 3. Task duplicates and obsolete penalties (by UUID or task title on same date).
+ * 4. Screen time duplicates on the same date (keeps latest, purges older).
+ * 5. Completed vs missed penalties for Journal, Speaking, and Weekly Debrief.
+ * 6. Identical description and amount duplicates logged within the same date.
+ * 
+ * Finally, recalculates profiles.total_xp, current_level, and current_rank strictly from all unique surviving records.
  */
 export async function cleanupAllDuplicateXP(userId) {
   const supabase = createClient()
   if (!userId) return { cleanedCount: 0, totalXp: 0, level: 1 }
 
   try {
-    // 1. Fetch ALL records across all pages to prevent 1,000-row PostgREST truncation
+    // 1. Fetch ALL records across all pages (sorted newest-first)
     const allHistory = await fetchAllXpHistory(supabase, userId, '*', false)
 
     if (!allHistory || allHistory.length === 0) {
       return { cleanedCount: 0, totalXp: 0, level: 1 }
     }
 
-    const seenKeys = new Set()
-    const toDeleteIds = []
+    const toDeleteIds = new Set()
+
+    // Pass 1: Semantic Entity Grouping
+    const habitMap = new Map()
+    const priorityGoalMap = new Map()
+    const taskUuidMap = new Map()
+    const taskTitleMap = new Map()
+    const screenTimeMap = new Map()
+    const journalMap = new Map()
+    const speakingMap = new Map()
+    const debriefMap = new Map()
+    const sourceIdMap = new Map()
 
     for (const entry of allHistory) {
       const srcType = (entry.source_type || '').toLowerCase().trim()
       const srcId = (entry.source_id || '').trim()
-      const desc = (entry.description || '').toLowerCase().trim()
+      const desc = (entry.description || '').trim()
+      const createdAt = entry.created_at ? new Date(entry.created_at) : new Date()
+      const localDateStr = getLocalDateStr(createdAt)
 
-      let dedupKey = null
-
-      // 1. If entry has source_id (e.g. habit_UUID_YYYY-MM-DD, task_UUID, goal_UUID, screen_time_YYYY-MM-DD, etc.)
       if (srcId) {
-        if (
-          srcId.startsWith('habit_') ||
-          srcId.startsWith('task_') ||
-          srcId.startsWith('goal_') ||
-          srcId.startsWith('screen_time_') ||
-          srcId.startsWith('daily_all_') ||
-          srcId.startsWith('streak_') ||
-          srcId.startsWith('speaking_') ||
-          srcId.startsWith('journal_') ||
-          srcId.startsWith('debrief_')
-        ) {
-          dedupKey = srcId
-        } else {
-          dedupKey = `${srcType}|${srcId}`
-        }
-      } 
-      // 2. If no source_id, check for habit routine description with date
-      else if (srcType.startsWith('habit') || desc.includes('routine:')) {
-        const dateStr = entry.created_at ? getLocalDateStr(new Date(entry.created_at)) : null
-        if (dateStr) {
-          dedupKey = `${srcType}|${desc}|${dateStr}`
-        }
-      }
-      // 3. General entries with description and date
-      else if (desc && entry.created_at) {
-        const dateStr = getLocalDateStr(new Date(entry.created_at))
-        dedupKey = `${srcType}|${desc}|${dateStr}`
+        if (!sourceIdMap.has(srcId)) sourceIdMap.set(srcId, [])
+        sourceIdMap.get(srcId).push(entry)
       }
 
-      // If this exact action key was already encountered:
-      if (dedupKey) {
-        if (seenKeys.has(dedupKey)) {
-          // DUPLICATE ENTRY: add to delete list
-          toDeleteIds.push(entry.id)
-        } else {
-          // FIRST TIME SEEN: keep this record!
-          seenKeys.add(dedupKey)
+      // Check Habit Routine
+      const routineName = extractRoutineName(desc)
+      const isHabit = srcType.startsWith('habit') || !!routineName || srcId.startsWith('habit_')
+      if (isHabit) {
+        let habitDate = localDateStr
+        const dateMatch = srcId.match(/(\d{4}-\d{2}-\d{2})/) || desc.match(/(\d{4}-\d{2}-\d{2})/)
+        if (dateMatch) habitDate = dateMatch[1]
+
+        const cleanName = routineName || srcId.replace(/^habit_/, '').replace(/_\d{4}-\d{2}-\d{2}$/, '') || 'routine'
+        const habitKey = `${cleanName.toLowerCase()}|${habitDate}`
+        if (!habitMap.has(habitKey)) habitMap.set(habitKey, [])
+        habitMap.get(habitKey).push(entry)
+        continue
+      }
+
+      // Check Priority Goal
+      const priorityGoalName = extractPriorityGoalName(desc)
+      const isPriorityGoal = srcId.startsWith('debrief_p_') || !!priorityGoalName || (desc.toLowerCase().includes('priority goal') && !srcType.includes('screen_time'))
+      if (isPriorityGoal) {
+        const cleanGoal = priorityGoalName || srcId.replace(/^debrief_p_/, '').replace(/_/g, ' ') || 'priority_goal'
+        const goalKey = cleanGoal.toLowerCase()
+        if (!priorityGoalMap.has(goalKey)) priorityGoalMap.set(goalKey, [])
+        priorityGoalMap.get(goalKey).push(entry)
+        continue
+      }
+
+      // Check Regular Task
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(srcId) || srcId.startsWith('task_')
+      const taskName = extractTaskName(desc)
+      const isTask = srcType.startsWith('task') || isUuid || !!taskName
+      if (isTask) {
+        if (isUuid) {
+          const uuidKey = srcId.replace(/^task_/, '')
+          if (!taskUuidMap.has(uuidKey)) taskUuidMap.set(uuidKey, [])
+          taskUuidMap.get(uuidKey).push(entry)
+        } else if (taskName) {
+          const taskKey = `${taskName.toLowerCase()}|${localDateStr}`
+          if (!taskTitleMap.has(taskKey)) taskTitleMap.set(taskKey, [])
+          taskTitleMap.get(taskKey).push(entry)
+        }
+        continue
+      }
+
+      // Check Screen Time
+      const isScreenTime = srcType === 'screen_time' || srcId.startsWith('screen_time_') || (desc.toLowerCase().includes('total time:') && desc.toLowerCase().includes('doomscroll:'))
+      if (isScreenTime) {
+        let stDate = localDateStr
+        const dateMatch = srcId.match(/(\d{4}-\d{2}-\d{2})/)
+        if (dateMatch) stDate = dateMatch[1]
+        if (!screenTimeMap.has(stDate)) screenTimeMap.set(stDate, [])
+        screenTimeMap.get(stDate).push(entry)
+        continue
+      }
+
+      // Check Journal
+      const isJournal = srcType.includes('journal') || desc.toLowerCase().includes('daily journal') || desc.toLowerCase().includes('journal entry')
+      if (isJournal) {
+        let jDate = localDateStr
+        const dateMatch = srcId.match(/(\d{4}-\d{2}-\d{2})/) || desc.match(/(\d{4}-\d{2}-\d{2})/)
+        if (dateMatch) jDate = dateMatch[1]
+        if (!journalMap.has(jDate)) journalMap.set(jDate, [])
+        journalMap.get(jDate).push(entry)
+        continue
+      }
+
+      // Check Speaking
+      const isSpeaking = srcType.includes('speaking') || desc.toLowerCase().includes('speaking practice')
+      if (isSpeaking) {
+        let sDate = localDateStr
+        const dateMatch = srcId.match(/(\d{4}-\d{2}-\d{2})/) || desc.match(/(\d{4}-\d{2}-\d{2})/)
+        if (dateMatch) sDate = dateMatch[1]
+        if (!speakingMap.has(sDate)) speakingMap.set(sDate, [])
+        speakingMap.get(sDate).push(entry)
+        continue
+      }
+
+      // Check Debrief
+      const isDebrief = srcType.includes('debrief') || desc.toLowerCase().includes('weekly debrief')
+      if (isDebrief) {
+        const weekMonday = getLocalDateStr(getStartOfWeek(createdAt))
+        if (!debriefMap.has(weekMonday)) debriefMap.set(weekMonday, [])
+        debriefMap.get(weekMonday).push(entry)
+        continue
+      }
+    }
+
+    // Pass 2: Deduplication resolution per semantic domain
+    habitMap.forEach((entries) => {
+      if (entries.length <= 1) return
+      const completedEntries = entries.filter(e => 
+        (e.amount || 0) > 0 || 
+        e.source_type === 'habit_complete' || 
+        (e.description && e.description.toLowerCase().startsWith('completed'))
+      )
+      if (completedEntries.length > 0) {
+        const keepId = completedEntries[0].id
+        entries.forEach(e => {
+          if (e.id !== keepId) toDeleteIds.add(e.id)
+        })
+      } else {
+        const keepId = entries[0].id
+        entries.slice(1).forEach(e => toDeleteIds.add(e.id))
+      }
+    })
+
+    priorityGoalMap.forEach((entries) => {
+      if (entries.length <= 1) return
+      const completedEntries = entries.filter(e => 
+        (e.amount || 0) > 0 || 
+        e.source_type === 'task_complete' || 
+        (e.description && e.description.toLowerCase().startsWith('completed'))
+      )
+      if (completedEntries.length > 0) {
+        const keepId = completedEntries[0].id
+        entries.forEach(e => {
+          if (e.id !== keepId) toDeleteIds.add(e.id)
+        })
+      } else {
+        const keepId = entries[0].id
+        entries.slice(1).forEach(e => toDeleteIds.add(e.id))
+      }
+    })
+
+    const processTaskGroup = (entries) => {
+      if (entries.length <= 1) return
+      const completedEntries = entries.filter(e => 
+        (e.amount || 0) > 0 || 
+        e.source_type === 'task_complete' || 
+        (e.description && e.description.toLowerCase().startsWith('completed'))
+      )
+      if (completedEntries.length > 0) {
+        const keepId = completedEntries[0].id
+        entries.forEach(e => {
+          if (e.id !== keepId) toDeleteIds.add(e.id)
+        })
+      } else {
+        const keepId = entries[0].id
+        entries.slice(1).forEach(e => toDeleteIds.add(e.id))
+      }
+    }
+    taskUuidMap.forEach(processTaskGroup)
+    taskTitleMap.forEach(processTaskGroup)
+
+    screenTimeMap.forEach((entries) => {
+      if (entries.length <= 1) return
+      const keepId = entries[0].id
+      entries.slice(1).forEach(e => toDeleteIds.add(e.id))
+    })
+
+    journalMap.forEach((entries) => {
+      if (entries.length <= 1) return
+      const completed = entries.filter(e => (e.amount || 0) > 0 || e.source_type === 'journal_complete')
+      if (completed.length > 0) {
+        const keepId = completed[0].id
+        entries.forEach(e => { if (e.id !== keepId) toDeleteIds.add(e.id) })
+      } else {
+        const keepId = entries[0].id
+        entries.slice(1).forEach(e => toDeleteIds.add(e.id))
+      }
+    })
+
+    speakingMap.forEach((entries) => {
+      if (entries.length <= 1) return
+      const completed = entries.filter(e => (e.amount || 0) >= 0 || e.source_type === 'speaking_practice' || e.source_type === 'speaking_rest_day')
+      if (completed.length > 0) {
+        const keepId = completed[0].id
+        entries.forEach(e => { if (e.id !== keepId) toDeleteIds.add(e.id) })
+      } else {
+        const keepId = entries[0].id
+        entries.slice(1).forEach(e => toDeleteIds.add(e.id))
+      }
+    })
+
+    debriefMap.forEach((entries) => {
+      if (entries.length <= 1) return
+      const completed = entries.filter(e => (e.amount || 0) > 0 || e.source_type === 'debrief_submission')
+      if (completed.length > 0) {
+        const keepId = completed[0].id
+        entries.forEach(e => { if (e.id !== keepId) toDeleteIds.add(e.id) })
+      } else {
+        const keepId = entries[0].id
+        entries.slice(1).forEach(e => toDeleteIds.add(e.id))
+      }
+    })
+
+    sourceIdMap.forEach((entries) => {
+      if (entries.length <= 1) return
+      const unflagged = entries.filter(e => !toDeleteIds.has(e.id))
+      if (unflagged.length > 1) {
+        const keepId = unflagged[0].id
+        unflagged.slice(1).forEach(e => toDeleteIds.add(e.id))
+      }
+    })
+
+    // Pass 3: Exact description + amount duplicates on the same date
+    const exactSeen = new Map()
+    for (const entry of allHistory) {
+      if (toDeleteIds.has(entry.id)) continue
+      const desc = cleanDescription(entry.description || '').toLowerCase()
+      const amount = Number(entry.amount) || 0
+      const localDateStr = getLocalDateStr(entry.created_at ? new Date(entry.created_at) : new Date())
+      const key = `${desc}|${amount}|${localDateStr}`
+      if (exactSeen.has(key)) {
+        toDeleteIds.add(entry.id)
+      } else {
+        exactSeen.set(key, entry.id)
+      }
+    }
+
+    // Execute deletions in batches
+    const deleteList = Array.from(toDeleteIds)
+    if (deleteList.length > 0) {
+      for (let i = 0; i < deleteList.length; i += 50) {
+        const batch = deleteList.slice(i, i + 50)
+        const { error: delErr } = await supabase.from('xp_history').delete().in('id', batch).eq('user_id', userId)
+        if (delErr) {
+          console.warn('[XP Cleanup] Batch delete failed, falling back to individual deletes:', delErr)
+          for (const singleId of batch) {
+            await supabase.from('xp_history').delete().eq('id', singleId).eq('user_id', userId)
+          }
         }
       }
     }
 
-    // Delete ONLY the verified duplicate rows
-    if (toDeleteIds.length > 0) {
-      for (let i = 0; i < toDeleteIds.length; i += 50) {
-        const batch = toDeleteIds.slice(i, i + 50)
-        await supabase.from('xp_history').delete().in('id', batch)
-      }
-    }
-
-    // Recalculate true total_xp strictly from ALL remaining unique entries via pagination
+    // Recalculate true total_xp strictly from all remaining records
     const remaining = await fetchAllXpHistory(supabase, userId, 'amount', false)
-
     const trueTotalXp = (remaining || []).reduce((sum, r) => sum + (r.amount || 0), 0)
     const safeXp = Math.max(0, trueTotalXp)
     const newLevel = calculateLevel(safeXp)
@@ -352,7 +675,7 @@ export async function cleanupAllDuplicateXP(userId) {
     }
 
     return {
-      cleanedCount: toDeleteIds.length,
+      cleanedCount: deleteList.length,
       totalXp: safeXp,
       level: newLevel
     }

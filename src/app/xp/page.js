@@ -100,8 +100,8 @@ export default function XPDashboard() {
       const historySum = validHistory.reduce((s, r) => s + (r.amount || 0), 0)
       const safeHistorySum = Math.max(0, historySum)
 
-      // If profile.total_xp was truncated by the old 1,000-row bug and is lower than the actual sum of history rows, restore it!
-      if (profile && profile.total_xp < safeHistorySum) {
+      // Always ensure profile.total_xp reflects the true sum of all valid xp_history rows
+      if (profile && profile.total_xp !== safeHistorySum) {
         setTotalXp(safeHistorySum)
         supabase.from('profiles').update({
           total_xp: safeHistorySum,
