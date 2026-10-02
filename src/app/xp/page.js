@@ -79,7 +79,7 @@ export default function XPDashboard() {
   const [timeline, setTimeline] = useState([])
   const [totalXp, setTotalXp] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [timeRange, setTimeRange] = useState(7) // 7 | 14 | 30
+  const [timeRange, setTimeRange] = useState(7) // 7 | 30 | 'all' (all time from June 29)
   const [chartViewMode, setChartViewMode] = useState('daily') // 'daily' | 'cumulative' | 'both'
   const [logFilterMode, setLogFilterMode] = useState('all') // 'all' | 'additions' | 'deductions'
   const [logSearch, setLogSearch] = useState('')
@@ -193,17 +193,32 @@ export default function XPDashboard() {
     timelineMap[d] += item.amount
   })
   
-  // Create selected days array
-  const dayCount = timeRange || 7
-  const chartDays = Array.from({ length: dayCount }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (dayCount - 1 - i))
-    return getLocalDateStr(d)
-  })
+  const todayStr = getLocalDateStr(new Date())
+  const XP_START_DATE = '2026-06-29'
+
+  // Create selected days array (7D, 30D, or All Time from June 29)
+  let chartDays = []
+  if (timeRange === 'all') {
+    const start = new Date(XP_START_DATE + 'T00:00:00')
+    const end = new Date(todayStr + 'T00:00:00')
+    const daysDiff = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24))) + 1
+    chartDays = Array.from({ length: daysDiff }, (_, i) => {
+      const d = new Date(start)
+      d.setDate(d.getDate() + i)
+      return getLocalDateStr(d)
+    })
+  } else {
+    const dayCount = typeof timeRange === 'number' ? timeRange : 7
+    chartDays = Array.from({ length: dayCount }, (_, i) => {
+      const d = new Date()
+      d.setDate(d.getDate() - (dayCount - 1 - i))
+      return getLocalDateStr(d)
+    })
+  }
 
   // Calculate starting cumulative XP prior to window
   const sumWindowDays = chartDays.reduce((acc, d) => acc + (timelineMap[d] || 0), 0)
-  let runningTotal = Math.max(0, totalXp - sumWindowDays)
+  let runningTotal = timeRange === 'all' ? 0 : Math.max(0, totalXp - sumWindowDays)
 
   const areaData = chartDays.map(d => {
     const dateObj = new Date(d)
@@ -225,8 +240,6 @@ export default function XPDashboard() {
   })
   const last7Active = last7Days.filter(d => (timelineMap[d] || 0) > 0).length
   const momentumScore = Math.min(95, Math.max(25, Math.round((last7Active / 7) * 100) + 15)) // e.g. 78%
-
-  const todayStr = getLocalDateStr(new Date())
 
   const handlePrevDay = () => {
     setIsAllHistoryMode(false)
@@ -503,17 +516,18 @@ export default function XPDashboard() {
               </button>
               <button
                 type="button"
-                onClick={() => setTimeRange(14)}
-                className={`px-3 py-1 rounded font-bold uppercase transition-all ${timeRange === 14 ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-              >
-                14 DAYS
-              </button>
-              <button
-                type="button"
                 onClick={() => setTimeRange(30)}
                 className={`px-3 py-1 rounded font-bold uppercase transition-all ${timeRange === 30 ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
               >
                 30 DAYS
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeRange('all')}
+                className={`px-3 py-1 rounded font-bold uppercase transition-all ${timeRange === 'all' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                title="All time history since June 29"
+              >
+                ALL TIME (FROM JUNE 29)
               </button>
             </div>
           </div>
@@ -542,6 +556,7 @@ export default function XPDashboard() {
                   fontFamily="var(--font-mono)"
                   tick={{ fill: 'rgba(148,163,184,0.8)' }}
                   dy={6}
+                  minTickGap={24}
                 />
                 <YAxis
                   stroke="rgba(255,255,255,0.25)"
