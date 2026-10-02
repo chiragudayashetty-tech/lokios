@@ -8,7 +8,7 @@ import {
   Activity, Clock, Terminal, ArrowUpRight, BarChart2,
   Smartphone, Shield, DollarSign, Moon, Brain, Repeat, X, RotateCcw,
   Calendar as CalendarIcon, MapPin, Plus, ExternalLink, Briefcase, Sun, FileText, CheckCircle2, Mic, Sparkles,
-  ChevronLeft, ChevronRight, Play, Pause, Circle
+  ChevronLeft, ChevronRight, Play, Pause, Circle, Wallet
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
@@ -137,6 +137,7 @@ export default function MissionControl() {
 
   const [eodWorkData, setEodWorkData] = useState({ logged: false, hours: 0 })
   const [eodSpeakingData, setEodSpeakingData] = useState({ logged: false, detail: '' })
+  const [eodBudgetData, setEodBudgetData] = useState({ logged: false, spent: 0, budget: 1000 })
   const [eodQuickLogModal, setEodQuickLogModal] = useState(null)
   const [eodJournalLogged, setEodJournalLogged] = useState(false)
 
@@ -416,9 +417,21 @@ export default function MissionControl() {
         const parsed = JSON.parse(cached)
         if (parsed.eodWorkData) setEodWorkData(parsed.eodWorkData)
         if (parsed.eodSpeakingData) setEodSpeakingData(parsed.eodSpeakingData)
+        if (parsed.eodBudgetData) setEodBudgetData(parsed.eodBudgetData)
         if (parsed.todayScreenTime) setTodayScreenTime(parsed.todayScreenTime)
         if (parsed.latestDebrief) setLatestDebrief(parsed.latestDebrief)
         if (parsed.eodJournalLogged !== undefined) setEodJournalLogged(parsed.eodJournalLogged)
+      }
+      const rawBudget = localStorage.getItem(`lokios_budget_logs_${user.id}`)
+      const rawBudgetLimit = localStorage.getItem(`lokios_daily_budget_limit_${user.id}`)
+      if (rawBudget) {
+        try {
+          const parsedB = JSON.parse(rawBudget)
+          const todayB = (parsedB || []).filter(l => l.date === todayStr)
+          const spent = todayB.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+          const lim = parseFloat(rawBudgetLimit) || 1000
+          setEodBudgetData({ logged: todayB.length > 0, spent, budget: lim })
+        } catch (e) {}
       }
       const rawHist = localStorage.getItem(`lokios_debrief_history_${user.id}`)
       if (rawHist) {
@@ -705,11 +718,29 @@ export default function MissionControl() {
         }
       }
 
+      // Budget protocol status
+      let budgetLogged = false
+      let budgetSpent = 0
+      let budgetLimit = 1000
+      try {
+        const rawBudget = localStorage.getItem(`lokios_budget_logs_${user.id}`)
+        const rawLimit = localStorage.getItem(`lokios_daily_budget_limit_${user.id}`)
+        if (rawLimit) budgetLimit = parseFloat(rawLimit) || 1000
+        const parsedBudget = rawBudget ? JSON.parse(rawBudget) : []
+        const todayEntries = (parsedBudget || []).filter(b => b.date === todayStr)
+        if (todayEntries.length > 0) {
+          budgetLogged = true
+          budgetSpent = todayEntries.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+        }
+        setEodBudgetData({ logged: budgetLogged, spent: budgetSpent, budget: budgetLimit })
+      } catch (e) {}
+
       try {
         const cacheKey = `lokios_dashboard_recon_${user.id}_${todayStr}`
         localStorage.setItem(cacheKey, JSON.stringify({
           eodWorkData: { logged: workLogged, hours: workHours },
           eodSpeakingData: todaySpeakingLog ? { logged: true, detail: `Topic: ${todaySpeakingLog.topic}` } : { logged: false, detail: '' },
+          eodBudgetData: { logged: budgetLogged, spent: budgetSpent, budget: budgetLimit },
           todayScreenTime: stLogs && stLogs.length > 0 ? stLogs[0] : null,
           latestDebrief: debriefLogs && debriefLogs.length > 0 ? debriefLogs[0] : null,
           eodJournalLogged: (entries || []).some(e => e.date === todayStr)
@@ -988,6 +1019,16 @@ export default function MissionControl() {
       path: '/speaking',
       icon: Mic,
       color: '#EAB308'
+    },
+    {
+      key: 'budget',
+      label: 'Daily Budget',
+      subtitle: 'Expense tracking & financial discipline',
+      isDone: eodBudgetData.logged,
+      detail: eodBudgetData.logged ? `₹${eodBudgetData.spent.toLocaleString()} spent today` : 'No expenses logged today',
+      path: '/budget',
+      icon: Wallet,
+      color: '#10B981'
     }
   ]
 
@@ -1464,7 +1505,7 @@ export default function MissionControl() {
           <div className="daily-protocols-grid gap-2.5">
             {eodItems.map((item) => {
               const ItemIcon = item.icon
-              const displayLabel = item.key === 'work' ? 'Work Session' : item.key === 'journal' ? 'Daily Journal' : item.key === 'screen' ? 'Screen Intel' : item.key === 'speaking' ? 'Speaking Challenge' : item.label
+              const displayLabel = item.key === 'work' ? 'Work Session' : item.key === 'journal' ? 'Daily Journal' : item.key === 'screen' ? 'Screen Intel' : item.key === 'speaking' ? 'Speaking Challenge' : item.key === 'budget' ? 'Daily Budget' : item.label
 
               return (
                 <Link
@@ -1531,6 +1572,36 @@ export default function MissionControl() {
                   {isDebriefDoneThisWeek ? 'Cycle completed' : new Date().getDay() === 0 ? 'Sunday debrief due' : 'Reflection cycle'}
                 </div>
               </div>
+            </Link>
+          </div>
+
+          {/* Daily Budget Protocol Quick Bar / Widget */}
+          <div className="mt-3.5 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 px-1 text-xs">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                  <Wallet size={13} />
+                </div>
+                <span className="font-mono text-[11px] text-white font-bold tracking-wider">BUDGET PROTOCOL:</span>
+              </div>
+              <div className="flex items-center gap-2 font-mono text-[11px]">
+                <span className="text-slate-400">Spent: <strong className="text-white">₹{eodBudgetData.spent.toLocaleString()}</strong></span>
+                <span className="text-slate-600">/</span>
+                <span className="text-slate-400">Limit: <strong className="text-emerald-400">₹{eodBudgetData.budget.toLocaleString()}</strong></span>
+                <span className="text-slate-600">•</span>
+                <span className={eodBudgetData.budget - eodBudgetData.spent >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                  {eodBudgetData.budget - eodBudgetData.spent >= 0 
+                    ? `₹${(eodBudgetData.budget - eodBudgetData.spent).toLocaleString()} remaining` 
+                    : `₹${(eodBudgetData.spent - eodBudgetData.budget).toLocaleString()} over budget`}
+                </span>
+              </div>
+            </div>
+
+            <Link
+              href="/budget"
+              className="font-mono text-[10px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 hover:underline ml-auto"
+            >
+              OPEN BUDGET TRACKER & GRAPHS →
             </Link>
           </div>
         </div>

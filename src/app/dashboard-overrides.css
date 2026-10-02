@@ -168,7 +168,7 @@ html, body {
 }
 @media (min-width: 1024px) {
   .daily-protocols-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 12px;
   }
 }
