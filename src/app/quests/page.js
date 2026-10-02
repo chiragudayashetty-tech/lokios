@@ -5,7 +5,8 @@ import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Lock, Clock, Sparkles, CheckCircle2, Minus, PauseCircle, PlayCircle, Sun, Calendar, Edit3 } from 'lucide-react'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Lock, Clock, Sparkles, CheckCircle2, Minus, PauseCircle, PlayCircle, Sun, Calendar, Edit3, Scale, TrendingDown, TrendingUp } from 'lucide-react'
+import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
@@ -41,6 +42,120 @@ export default function DailyOps() {
   yesterdayDate.setDate(yesterdayDate.getDate() - 1)
   const yesterdayStr = getLocalDateStr(yesterdayDate)
   const todayStr = getLocalDateStr(new Date())
+
+  // ── WEIGHT TRACKER & TRENDS STATE ──────────────────────────
+  const [weightLogs, setWeightLogs] = useState([])
+  const [weightInput, setWeightInput] = useState('')
+  const [weightDate, setWeightDate] = useState(todayStr)
+  const [savingWeight, setSavingWeight] = useState(false)
+  const [weightRange, setWeightRange] = useState('30days') // '14days' | '30days' | 'all'
+  const [weightSaveSuccess, setWeightSaveSuccess] = useState(false)
+  const [showStoppedRoutines, setShowStoppedRoutines] = useState(false)
+
+  // Fetch weight logs
+  useEffect(() => {
+    if (!user) return
+    const fetchWeight = async () => {
+      try {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('weight_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: true })
+
+        if (data && data.length > 0) {
+          setWeightLogs(data)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(`lokios_weight_logs_${user.id}`, JSON.stringify(data))
+          }
+        } else if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem(`lokios_weight_logs_${user.id}`)
+          if (cached) try { setWeightLogs(JSON.parse(cached)) } catch (e) {}
+        }
+      } catch (err) {
+        console.error('[Weight Sync] Fetch error:', err)
+        if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem(`lokios_weight_logs_${user.id}`)
+          if (cached) try { setWeightLogs(JSON.parse(cached)) } catch (e) {}
+        }
+      }
+    }
+    fetchWeight()
+  }, [user])
+
+  const handleLogWeight = async (e) => {
+    e?.preventDefault?.()
+    if (!user || !weightInput) return
+    const num = parseFloat(weightInput)
+    if (isNaN(num) || num <= 20 || num > 300) return
+
+    setSavingWeight(true)
+    const logDate = weightDate || todayStr
+
+    const newEntry = {
+      user_id: user.id,
+      date: logDate,
+      weight_kg: Number(num.toFixed(2)),
+      created_at: new Date().toISOString()
+    }
+
+    const updated = [...weightLogs.filter(w => w.date !== logDate), newEntry].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    setWeightLogs(updated)
+    setWeightInput('')
+    setSavingWeight(false)
+    setWeightSaveSuccess(true)
+    setTimeout(() => setWeightSaveSuccess(false), 3000)
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`lokios_weight_logs_${user.id}`, JSON.stringify(updated))
+    }
+
+    try {
+      const supabase = createClient()
+      await supabase.from('weight_logs').upsert(newEntry, { onConflict: 'user_id,date' })
+    } catch (err) {
+      console.error('[Weight Sync] Save error:', err)
+    }
+  }
+
+  // Weight metrics calculations
+  const weightStats = useMemo(() => {
+    if (!weightLogs || weightLogs.length === 0) {
+      return { latest: null, prev: null, diff: 0, min: 0, max: 0, count: 0 }
+    }
+    const sorted = [...weightLogs].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    const latest = sorted[sorted.length - 1]
+    const prev = sorted.length > 1 ? sorted[sorted.length - 2] : null
+    const diff = prev ? Number((latest.weight_kg - prev.weight_kg).toFixed(2)) : 0
+    const weights = sorted.map(s => parseFloat(s.weight_kg) || 0)
+    const min = Math.min(...weights)
+    const max = Math.max(...weights)
+    return { latest, prev, diff, min, max, count: sorted.length }
+  }, [weightLogs])
+
+  const chartWeightData = useMemo(() => {
+    if (!weightLogs || weightLogs.length === 0) return []
+    let list = [...weightLogs].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
+    if (weightRange === '14days') {
+      list = list.slice(-14)
+    } else if (weightRange === '30days') {
+      list = list.slice(-30)
+    }
+    return list.map(item => ({
+      date: item.date ? item.date.slice(5) : '',
+      fullDate: item.date,
+      weight: parseFloat(item.weight_kg)
+    }))
+  }, [weightLogs, weightRange])
+
+  const weightDomain = useMemo(() => {
+    if (!chartWeightData.length) return [60, 90]
+    const vals = chartWeightData.map(d => d.weight).filter(w => !isNaN(w))
+    const min = Math.floor(Math.min(...vals) - 1)
+    const max = Math.ceil(Math.max(...vals) + 1)
+    return [min, max]
+  }, [chartWeightData])
 
   // Habit Column Width automatically fitted to the longest routine title
   const habitColWidth = useMemo(() => {
@@ -899,62 +1014,248 @@ export default function DailyOps() {
           </div>
         )}
 
-        {/* Stopped Routines Panel */}
-        {stoppedHabits && stoppedHabits.length > 0 && (
-          <div className="mt-8 quests-stopped-routines">
-            <HudPanel label={`STOPPED ROUTINES (${stoppedHabits.length})`}>
-              <p className="font-mono text-xs text-muted mb-4">
-                These routines are currently stopped and hidden from the daily ops table. All historical log data and completion history are completely saved. Click <strong className="text-primary">CONTINUE ROUTINE</strong> anytime to reactivate tracking.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {stoppedHabits.map((h) => {
-                  const cat = QUEST_CATEGORIES.find(c => c.id === h.category) || QUEST_CATEGORIES[0]
-                  return (
-                    <div key={h.id} className="p-3 rounded-xl border border-border-subtle bg-bg-secondary flex flex-col gap-2.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-display text-sm text-primary">{h.title}</span>
-                            <span className="px-2 py-0.5 rounded font-mono text-[9px] bg-danger/20 border border-danger/40 text-danger uppercase font-bold shrink-0">STOPPED</span>
-                          </div>
-                          <div className="font-mono text-[10px] text-muted">
-                            {cat.name}{h.created_at ? ` • ${h.created_at.substring(0, 10)}` : ''}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setConfirmModal({
-                              isOpen: true,
-                              title: 'PERMANENTLY DELETE ROUTINE',
-                              message: `Are you sure you want to permanently delete "${h.title}"?`,
-                              danger: true,
-                              confirmText: 'DELETE PERMANENTLY',
-                              onConfirm: async () => {
-                                await deleteHabit(h.id);
-                                setConfirmModal({ isOpen: false });
-                              },
-                              onCancel: () => setConfirmModal({ isOpen: false })
-                            })
-                          }}
-                          className="p-1.5 text-muted hover:text-danger rounded border border-border-subtle hover:border-danger transition-colors shrink-0"
-                          title="Permanently delete routine"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={async () => { await resumeHabit(h.id) }}
-                        className="w-full btn btn-primary btn-sm flex items-center justify-center gap-1.5 text-xs font-mono"
-                        title="Reactivate this routine"
-                      >
-                        <PlayCircle size={14} /> CONTINUE ROUTINE
-                      </button>
+        {/* Weight Tracker & Body Trends Graph */}
+        <div className="mt-6">
+          <HudPanel label="WEIGHT TRACKER & BODY TRENDS">
+            <div className="flex flex-col gap-5">
+              {/* Header Stats & Quick Action Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border-subtle">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-lg bg-info/10 border border-info/30 text-info">
+                      <Scale size={18} />
                     </div>
-                  )
-                })}
+                    <div>
+                      <div className="font-mono text-[10px] text-muted uppercase tracking-wider">Current Weight</div>
+                      <div className="font-display text-xl text-primary font-bold">
+                        {weightStats.latest ? `${weightStats.latest.weight_kg} kg` : '-- kg'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {weightStats.prev && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-bg-secondary border border-border-subtle font-mono text-xs">
+                      {weightStats.diff > 0 ? (
+                        <span className="text-warning flex items-center gap-0.5 font-bold">
+                          <TrendingUp size={13} /> +{weightStats.diff} kg
+                        </span>
+                      ) : weightStats.diff < 0 ? (
+                        <span className="text-success flex items-center gap-0.5 font-bold">
+                          <TrendingDown size={13} /> {weightStats.diff} kg
+                        </span>
+                      ) : (
+                        <span className="text-muted">0.00 kg</span>
+                      )}
+                      <span className="text-[10px] text-muted ml-1">vs last</span>
+                    </div>
+                  )}
+
+                  {weightStats.count > 0 && (
+                    <div className="hidden sm:flex items-center gap-3 font-mono text-[11px] text-muted pl-2 border-l border-border-subtle">
+                      <span>MIN: <strong className="text-primary">{weightStats.min}</strong> kg</span>
+                      <span>MAX: <strong className="text-primary">{weightStats.max}</strong> kg</span>
+                      <span>LOGS: <strong className="text-info">{weightStats.count}</strong></span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Range Selector */}
+                <div className="flex items-center gap-1 bg-bg-secondary p-1 rounded-lg border border-border-subtle">
+                  {[
+                    { id: '14days', label: '14D' },
+                    { id: '30days', label: '30D' },
+                    { id: 'all', label: 'ALL' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setWeightRange(tab.id)}
+                      className={`px-2.5 py-1 rounded text-xs font-mono font-bold transition-all ${
+                        weightRange === tab.id
+                          ? 'bg-info/20 text-info border border-info/40'
+                          : 'text-muted hover:text-primary border border-transparent'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Quick Logger Form */}
+              <form onSubmit={handleLogWeight} className="flex flex-wrap items-center gap-3 bg-bg-secondary/60 p-3 rounded-lg border border-border-subtle">
+                <span className="font-mono text-xs text-primary font-semibold flex items-center gap-1.5">
+                  <Scale size={14} className="text-info" /> QUICK LOG:
+                </span>
+                <input
+                  type="date"
+                  value={weightDate}
+                  onChange={(e) => setWeightDate(e.target.value)}
+                  className="bg-bg-tertiary border border-border-subtle text-primary text-xs font-mono px-2.5 py-1.5 rounded focus:outline-none focus:border-info"
+                />
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="20"
+                    max="300"
+                    placeholder="e.g. 76.5"
+                    value={weightInput}
+                    onChange={(e) => setWeightInput(e.target.value)}
+                    className="bg-bg-tertiary border border-border-subtle text-primary text-xs font-mono px-2.5 py-1.5 rounded w-28 focus:outline-none focus:border-info"
+                  />
+                  <span className="font-mono text-xs text-muted">kg</span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={savingWeight || !weightInput}
+                  className="btn btn-primary btn-sm font-mono text-xs px-3 py-1.5 disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {savingWeight ? 'SAVING...' : weightSaveSuccess ? 'SAVED ✓' : '+ LOG WEIGHT'}
+                </button>
+                {weightSaveSuccess && (
+                  <span className="text-success text-xs font-mono animate-pulse">Recorded successfully!</span>
+                )}
+              </form>
+
+              {/* Trends Graph */}
+              <div className="w-full h-56 pt-2">
+                {chartWeightData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartWeightData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--info)" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="var(--info)" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" opacity={0.3} />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="var(--text-muted)" 
+                        fontSize={10} 
+                        tickLine={false}
+                        dy={6}
+                      />
+                      <YAxis 
+                        domain={weightDomain} 
+                        stroke="var(--text-muted)" 
+                        fontSize={10} 
+                        tickLine={false}
+                        tickFormatter={(v) => `${v}k`}
+                      />
+                      <RechartsTooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload
+                            return (
+                              <div className="bg-bg-tertiary border border-border-color p-2.5 rounded shadow-xl font-mono text-xs">
+                                <div className="text-muted text-[10px] mb-1">{data.fullDate || data.date}</div>
+                                <div className="text-info font-bold flex items-center gap-1.5">
+                                  <Scale size={12} /> {data.weight} kg
+                                </div>
+                              </div>
+                            )
+                          }
+                          return null
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="weight" 
+                        stroke="var(--info)" 
+                        strokeWidth={2.5} 
+                        fillOpacity={1} 
+                        fill="url(#weightGrad)" 
+                        dot={{ r: 3, fill: 'var(--info)', strokeWidth: 1, stroke: 'var(--bg-primary)' }}
+                        activeDot={{ r: 5, fill: 'var(--info)', stroke: '#fff', strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center border border-dashed border-border-subtle rounded-lg text-muted font-mono text-xs gap-2">
+                    <Scale size={24} className="opacity-40" />
+                    <span>NO WEIGHT LOGS RECORDED YET. LOG YOUR FIRST WEIGHT ABOVE.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </HudPanel>
+        </div>
+
+        {/* Shrunk Stopped Routines Panel */}
+        {stoppedHabits && stoppedHabits.length > 0 && (
+          <div className="mt-6 quests-stopped-routines">
+            <HudPanel 
+              label={`STOPPED ROUTINES (${stoppedHabits.length})`}
+              action={
+                <button
+                  type="button"
+                  onClick={() => setShowStoppedRoutines(prev => !prev)}
+                  className="font-mono text-[10px] px-2.5 py-1 rounded bg-bg-secondary hover:bg-hover border border-border-subtle text-muted hover:text-primary transition-colors uppercase font-bold"
+                >
+                  {showStoppedRoutines ? 'COLLAPSE ▲' : `VIEW (${stoppedHabits.length}) ▼`}
+                </button>
+              }
+            >
+              {showStoppedRoutines ? (
+                <div className="flex flex-col gap-2 pt-1">
+                  {stoppedHabits.map((h) => {
+                    const cat = QUEST_CATEGORIES.find(c => c.id === h.category) || QUEST_CATEGORIES[0]
+                    return (
+                      <div key={h.id} className="px-3 py-2 rounded-lg border border-border-subtle bg-bg-secondary/70 flex items-center justify-between gap-3 hover:border-border-color transition-colors">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="px-1.5 py-0.5 rounded font-mono text-[9px] bg-danger/20 border border-danger/40 text-danger uppercase font-bold shrink-0">STOPPED</span>
+                          <span className="font-display text-xs text-primary truncate">{h.title}</span>
+                          <span className="hidden sm:inline font-mono text-[10px] text-muted truncate">({cat.name})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={async () => { await resumeHabit(h.id) }}
+                            className="btn btn-primary btn-sm flex items-center gap-1 text-[11px] font-mono py-1 px-2.5"
+                            title="Reactivate this routine"
+                          >
+                            <PlayCircle size={12} /> CONTINUE
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfirmModal({
+                                isOpen: true,
+                                title: 'PERMANENTLY DELETE ROUTINE',
+                                message: `Are you sure you want to permanently delete "${h.title}"?`,
+                                danger: true,
+                                confirmText: 'DELETE PERMANENTLY',
+                                onConfirm: async () => {
+                                  await deleteHabit(h.id);
+                                  setConfirmModal({ isOpen: false });
+                                },
+                                onCancel: () => setConfirmModal({ isOpen: false })
+                              })
+                            }}
+                            className="p-1 text-muted hover:text-danger rounded border border-transparent hover:border-danger/40 transition-colors"
+                            title="Permanently delete routine"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between py-1 text-xs font-mono text-muted">
+                  <span>{stoppedHabits.length} routine{stoppedHabits.length > 1 ? 's' : ''} paused and preserved in background.</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowStoppedRoutines(true)}
+                    className="text-info hover:underline font-bold text-[11px]"
+                  >
+                    CONTINUE ROUTINES →
+                  </button>
+                </div>
+              )}
             </HudPanel>
           </div>
         )}
