@@ -6,7 +6,7 @@ import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Lock, Clock, Sparkles, CheckCircle2, Minus, PauseCircle, PlayCircle, Sun, Calendar, Edit3, Scale, TrendingDown, TrendingUp } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
@@ -119,10 +119,12 @@ export default function DailyOps() {
     }
   }
 
+  const TARGET_WEIGHT = 70
+
   // Weight metrics calculations
   const weightStats = useMemo(() => {
     if (!weightLogs || weightLogs.length === 0) {
-      return { latest: null, prev: null, diff: 0, min: 0, max: 0, count: 0 }
+      return { latest: null, prev: null, diff: 0, min: 0, max: 0, count: 0, distToTarget: null }
     }
     const sorted = [...weightLogs].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
     const latest = sorted[sorted.length - 1]
@@ -131,7 +133,8 @@ export default function DailyOps() {
     const weights = sorted.map(s => parseFloat(s.weight_kg) || 0)
     const min = Math.min(...weights)
     const max = Math.max(...weights)
-    return { latest, prev, diff, min, max, count: sorted.length }
+    const distToTarget = Number((latest.weight_kg - TARGET_WEIGHT).toFixed(1))
+    return { latest, prev, diff, min, max, count: sorted.length, distToTarget }
   }, [weightLogs])
 
   const chartWeightData = useMemo(() => {
@@ -150,10 +153,10 @@ export default function DailyOps() {
   }, [weightLogs, weightRange])
 
   const weightDomain = useMemo(() => {
-    if (!chartWeightData.length) return [60, 90]
-    const vals = chartWeightData.map(d => d.weight).filter(w => !isNaN(w))
-    const min = Math.floor(Math.min(...vals) - 1)
-    const max = Math.ceil(Math.max(...vals) + 1)
+    if (!chartWeightData.length) return [65, 80]
+    const vals = [...chartWeightData.map(d => d.weight).filter(w => !isNaN(w)), TARGET_WEIGHT]
+    const min = Math.floor(Math.min(...vals) - 2)
+    const max = Math.ceil(Math.max(...vals) + 2)
     return [min, max]
   }, [chartWeightData])
 
@@ -534,6 +537,82 @@ export default function DailyOps() {
             <Plus size={16} /> ADD ROUTINE
           </button>
         </header>
+
+        {/* Weight Logging Bar (Above Habit Tracker) */}
+        <div className="mb-5 p-3.5 sm:p-4 rounded-xl border border-border-color bg-bg-secondary/90 backdrop-blur-md shadow-md flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-info/10 border border-info/30 text-info">
+                <Scale size={18} />
+              </div>
+              <div>
+                <div className="font-mono text-[9px] sm:text-[10px] text-muted uppercase tracking-wider font-bold">CURRENT WEIGHT</div>
+                <div className="font-display text-base sm:text-lg text-primary font-bold">
+                  {weightStats.latest ? `${weightStats.latest.weight_kg} kg` : '-- kg'}
+                </div>
+              </div>
+            </div>
+
+            {weightStats.prev && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-bg-tertiary border border-border-subtle font-mono text-xs">
+                {weightStats.diff > 0 ? (
+                  <span className="text-warning flex items-center gap-0.5 font-bold text-[11px]">
+                    <TrendingUp size={12} /> +{weightStats.diff} kg
+                  </span>
+                ) : weightStats.diff < 0 ? (
+                  <span className="text-success flex items-center gap-0.5 font-bold text-[11px]">
+                    <TrendingDown size={12} /> {weightStats.diff} kg
+                  </span>
+                ) : (
+                  <span className="text-muted text-[11px]">0.0 kg</span>
+                )}
+                <span className="text-[10px] text-muted ml-0.5">vs last</span>
+              </div>
+            )}
+
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber/10 border border-amber/30 text-amber font-mono text-[11px] font-bold">
+              <span>TARGET: 70 kg</span>
+              {weightStats.distToTarget !== null && (
+                <span className="text-muted font-normal text-[10px]">
+                  ({weightStats.distToTarget > 0 ? `+${weightStats.distToTarget} kg to go` : `${Math.abs(weightStats.distToTarget)} kg below`})
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Logger Form */}
+          <form onSubmit={handleLogWeight} className="flex items-center gap-2 flex-wrap">
+            <input
+              type="date"
+              value={weightDate}
+              onChange={(e) => setWeightDate(e.target.value)}
+              className="bg-bg-tertiary border border-border-subtle text-primary text-xs font-mono px-2.5 py-1.5 rounded focus:outline-none focus:border-info"
+            />
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                step="0.1"
+                min="20"
+                max="300"
+                placeholder="70.0"
+                value={weightInput}
+                onChange={(e) => setWeightInput(e.target.value)}
+                className="bg-bg-tertiary border border-border-subtle text-primary text-xs font-mono px-2.5 py-1.5 rounded w-20 focus:outline-none focus:border-info font-bold"
+              />
+              <span className="font-mono text-xs text-muted">kg</span>
+            </div>
+            <button
+              type="submit"
+              disabled={savingWeight || !weightInput}
+              className="btn btn-primary btn-sm font-mono text-xs px-3 py-1.5 disabled:opacity-50 flex items-center gap-1 font-bold"
+            >
+              {savingWeight ? 'SAVING...' : weightSaveSuccess ? 'SAVED ✓' : '+ LOG WEIGHT'}
+            </button>
+            {weightSaveSuccess && (
+              <span className="text-success text-xs font-mono animate-pulse">Logged!</span>
+            )}
+          </form>
+        </div>
 
         {/* Paint Tool & Column Width Controls */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
@@ -1014,19 +1093,19 @@ export default function DailyOps() {
           </div>
         )}
 
-        {/* Weight Tracker & Body Trends Graph */}
+        {/* Weight Trends Graph (After Streaks) */}
         <div className="mt-6">
-          <HudPanel label="WEIGHT TRACKER & BODY TRENDS">
-            <div className="flex flex-col gap-5">
-              {/* Header Stats & Quick Action Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border-subtle">
+          <HudPanel label="WEIGHT TRENDS">
+            <div className="flex flex-col gap-4">
+              {/* Header Stats Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-border-subtle">
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center gap-2.5">
                     <div className="p-2 rounded-lg bg-info/10 border border-info/30 text-info">
                       <Scale size={18} />
                     </div>
                     <div>
-                      <div className="font-mono text-[10px] text-muted uppercase tracking-wider">Current Weight</div>
+                      <div className="font-mono text-[10px] text-muted uppercase tracking-wider font-bold">Current Weight</div>
                       <div className="font-display text-xl text-primary font-bold">
                         {weightStats.latest ? `${weightStats.latest.weight_kg} kg` : '-- kg'}
                       </div>
@@ -1050,8 +1129,21 @@ export default function DailyOps() {
                     </div>
                   )}
 
+                  {/* Target Badge */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber/10 border border-amber/30 font-mono text-xs">
+                    <span className="text-amber font-bold flex items-center gap-1">
+                      <span className="inline-block w-2 h-2 rounded-full bg-amber"></span>
+                      TARGET: {TARGET_WEIGHT} kg
+                    </span>
+                    {weightStats.distToTarget !== null && (
+                      <span className="text-muted text-[11px]">
+                        ({weightStats.distToTarget > 0 ? `+${weightStats.distToTarget} kg to target` : weightStats.distToTarget < 0 ? `${Math.abs(weightStats.distToTarget)} kg under target` : 'GOAL REACHED! 🎯'})
+                      </span>
+                    )}
+                  </div>
+
                   {weightStats.count > 0 && (
-                    <div className="hidden sm:flex items-center gap-3 font-mono text-[11px] text-muted pl-2 border-l border-border-subtle">
+                    <div className="hidden md:flex items-center gap-3 font-mono text-[11px] text-muted pl-2 border-l border-border-subtle">
                       <span>MIN: <strong className="text-primary">{weightStats.min}</strong> kg</span>
                       <span>MAX: <strong className="text-primary">{weightStats.max}</strong> kg</span>
                       <span>LOGS: <strong className="text-info">{weightStats.count}</strong></span>
@@ -1082,47 +1174,11 @@ export default function DailyOps() {
                 </div>
               </div>
 
-              {/* Quick Logger Form */}
-              <form onSubmit={handleLogWeight} className="flex flex-wrap items-center gap-3 bg-bg-secondary/60 p-3 rounded-lg border border-border-subtle">
-                <span className="font-mono text-xs text-primary font-semibold flex items-center gap-1.5">
-                  <Scale size={14} className="text-info" /> QUICK LOG:
-                </span>
-                <input
-                  type="date"
-                  value={weightDate}
-                  onChange={(e) => setWeightDate(e.target.value)}
-                  className="bg-bg-tertiary border border-border-subtle text-primary text-xs font-mono px-2.5 py-1.5 rounded focus:outline-none focus:border-info"
-                />
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="20"
-                    max="300"
-                    placeholder="e.g. 76.5"
-                    value={weightInput}
-                    onChange={(e) => setWeightInput(e.target.value)}
-                    className="bg-bg-tertiary border border-border-subtle text-primary text-xs font-mono px-2.5 py-1.5 rounded w-28 focus:outline-none focus:border-info"
-                  />
-                  <span className="font-mono text-xs text-muted">kg</span>
-                </div>
-                <button
-                  type="submit"
-                  disabled={savingWeight || !weightInput}
-                  className="btn btn-primary btn-sm font-mono text-xs px-3 py-1.5 disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {savingWeight ? 'SAVING...' : weightSaveSuccess ? 'SAVED ✓' : '+ LOG WEIGHT'}
-                </button>
-                {weightSaveSuccess && (
-                  <span className="text-success text-xs font-mono animate-pulse">Recorded successfully!</span>
-                )}
-              </form>
-
               {/* Trends Graph */}
-              <div className="w-full h-56 pt-2">
+              <div className="w-full h-64 pt-2">
                 {chartWeightData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartWeightData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <AreaChart data={chartWeightData} margin={{ top: 15, right: 15, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="var(--info)" stopOpacity={0.35} />
@@ -1148,17 +1204,34 @@ export default function DailyOps() {
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             const data = payload[0].payload
+                            const diffFromTarget = Number((data.weight - TARGET_WEIGHT).toFixed(1))
                             return (
                               <div className="bg-bg-tertiary border border-border-color p-2.5 rounded shadow-xl font-mono text-xs">
                                 <div className="text-muted text-[10px] mb-1">{data.fullDate || data.date}</div>
                                 <div className="text-info font-bold flex items-center gap-1.5">
                                   <Scale size={12} /> {data.weight} kg
                                 </div>
+                                <div className="text-amber text-[10px] mt-1 pt-1 border-t border-border-subtle">
+                                  Target: {TARGET_WEIGHT} kg ({diffFromTarget > 0 ? `+${diffFromTarget}` : diffFromTarget} kg)
+                                </div>
                               </div>
                             )
                           }
                           return null
                         }}
+                      />
+                      <ReferenceLine 
+                        y={TARGET_WEIGHT} 
+                        stroke="var(--amber, #f59e0b)" 
+                        strokeDasharray="5 5" 
+                        strokeWidth={1.5} 
+                        label={{ 
+                          value: `TARGET: ${TARGET_WEIGHT} kg`, 
+                          fill: 'var(--amber, #f59e0b)', 
+                          fontSize: 10, 
+                          fontWeight: 'bold',
+                          position: 'insideTopRight' 
+                        }} 
                       />
                       <Area 
                         type="monotone" 
@@ -1175,9 +1248,22 @@ export default function DailyOps() {
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center border border-dashed border-border-subtle rounded-lg text-muted font-mono text-xs gap-2">
                     <Scale size={24} className="opacity-40" />
-                    <span>NO WEIGHT LOGS RECORDED YET. LOG YOUR FIRST WEIGHT ABOVE.</span>
+                    <span>NO WEIGHT LOGS RECORDED YET. LOG YOUR FIRST WEIGHT AT THE TOP.</span>
                   </div>
                 )}
+              </div>
+
+              {/* Legend Info */}
+              <div className="flex items-center justify-between text-[11px] font-mono text-muted pt-2 border-t border-border-subtle/50 px-1">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-0.5 bg-info"></span> Recorded Weight
+                  </span>
+                  <span className="flex items-center gap-1.5 text-amber">
+                    <span className="inline-block w-3 h-0.5 border-t border-dashed border-amber"></span> Target ({TARGET_WEIGHT} kg)
+                  </span>
+                </div>
+                <span>* Weight is logged exclusively in the top header bar</span>
               </div>
             </div>
           </HudPanel>
