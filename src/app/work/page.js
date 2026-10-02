@@ -126,8 +126,22 @@ export default function WorkPage() {
 
         wData.forEach(l => {
           if (!l.date) return
+          const titleLower = (l.title || '').toLowerCase()
+          // Exclude quest completion proofs and debriefs from overwriting work sessions
+          if (titleLower.startsWith('weekly debrief') || titleLower.startsWith('operation completed') || titleLower.startsWith('mission accomplished')) {
+            return
+          }
           const key = `date_${l.date}`
-          mergedMap.set(key, { ...l })
+          const existing = mergedMap.get(key)
+          if (!existing) {
+            mergedMap.set(key, { ...l })
+          } else {
+            const existingHours = parseFloat(existing.total_hours_worked ?? existing.duration_hours) || 0
+            const currentHours = parseFloat(l.total_hours_worked ?? l.duration_hours) || 0
+            if (currentHours >= existingHours) {
+              mergedMap.set(key, { ...existing, ...l })
+            }
+          }
         })
 
         whData.forEach(l => {
@@ -138,6 +152,7 @@ export default function WorkPage() {
             mergedMap.set(key, {
               ...existing,
               ...l,
+              title: existing.title || `Work Session (${l.work_type || 'General'})`,
               beyond_tatva_hours: Number(l.beyond_tatva_hours) || Number(existing.beyond_tatva_hours) || 0,
               focused_hours: Number(l.focused_hours) || Number(existing.focused_hours) || 0,
               unfocused_hours: Number(l.unfocused_hours) || Number(existing.unfocused_hours) || 0,
@@ -146,7 +161,15 @@ export default function WorkPage() {
               notes: l.notes || existing.notes || l.description || existing.description || ''
             })
           } else {
-            mergedMap.set(key, { ...l, total_hours_worked: l.total_hours_worked ?? l.hours ?? l.duration_hours })
+            mergedMap.set(key, {
+              ...l,
+              title: `Work Session (${l.work_type || 'General'})`,
+              total_hours_worked: l.total_hours_worked ?? l.hours ?? l.duration_hours ?? 0,
+              beyond_tatva_hours: Number(l.beyond_tatva_hours) || 0,
+              focused_hours: Number(l.focused_hours) || 0,
+              unfocused_hours: Number(l.unfocused_hours) || 0,
+              notes: l.notes || l.description || ''
+            })
           }
         })
 
@@ -161,7 +184,8 @@ export default function WorkPage() {
               const map = new Map()
               fetchedW.forEach(l => map.set(l.date, l))
               parsedW.forEach(l => {
-                if (l && l.date && !map.has(l.date)) {
+                const titleLower = (l?.title || '').toLowerCase()
+                if (l && l.date && !titleLower.startsWith('operation completed') && !titleLower.startsWith('weekly debrief') && !titleLower.startsWith('mission accomplished') && !map.has(l.date)) {
                   map.set(l.date, l)
                   sb.from('work_hours_logs').upsert({
                     user_id: user?.id,
@@ -310,14 +334,8 @@ export default function WorkPage() {
     return { tot, bt, foc, unfoc }
   }, [todayWorkLog, valTotalWorked, valBeyondTatva, valFocused, valUnfocused, unitTotalWorked, unitBeyondTatva, unitFocused, unitUnfocused])
 
-  // Helper for Date Navigation Formatting (e.g. 02 Aug - 08 Aug 2026)
-  const offsetDate = (daysOffset) => {
-    const d = new Date()
-    d.setDate(d.getDate() + daysOffset)
-    return getLocalDateStr(d)
-  }
-
-  const formatWeekRange = (weekOffset) => {
+  // Helper for Date Navigation Formatting (e.g. 27 Sept – 03 Oct 2026)
+  const getWeekRange = (weekOffset) => {
     const now = new Date()
     const currentDayOfWeek = now.getDay() // 0 = Sun
     const startOfWeek = new Date(now)
@@ -325,11 +343,20 @@ export default function WorkPage() {
     const endOfWeek = new Date(startOfWeek)
     endOfWeek.setDate(startOfWeek.getDate() + 6)
 
+    const startIso = getLocalDateStr(startOfWeek)
+    const endIso = getLocalDateStr(endOfWeek)
+
     const opt = { day: '2-digit', month: 'short' }
     const startStr = startOfWeek.toLocaleDateString('en-GB', opt)
     const endStr = endOfWeek.toLocaleDateString('en-GB', opt)
     const yearStr = endOfWeek.getFullYear()
-    return `${startStr} – ${endStr} ${yearStr}`
+    const label = `${startStr} – ${endStr} ${yearStr}`
+
+    return { startIso, endIso, label }
+  }
+
+  const formatWeekRange = (weekOffset) => {
+    return getWeekRange(weekOffset).label
   }
 
   // ----------------------------------------------------
@@ -892,13 +919,12 @@ export default function WorkPage() {
 
             {/* WORK HISTORY SECTION */}
             {(() => {
-              const windowEnd = offsetDate(workWeekOffset * 7)
-              const windowStart = offsetDate(workWeekOffset * 7 - 6)
-              const weekFilteredLogs = nonEmptyWorkLogs.filter(l => l.date >= windowStart && l.date <= windowEnd)
+              const { startIso, endIso } = getWeekRange(workWeekOffset)
+              const weekFilteredLogs = nonEmptyWorkLogs.filter(l => l.date >= startIso && l.date <= endIso)
               
               // Automatically fall back to showing ALL logs if week filter returns 0 entries!
               const visibleLogs = (showAllWorkHistory || weekFilteredLogs.length === 0) ? nonEmptyWorkLogs : weekFilteredLogs
-              const hasPrev = nonEmptyWorkLogs.some(l => l.date < windowStart)
+              const hasPrev = nonEmptyWorkLogs.some(l => l.date < startIso)
               const hasNext = workWeekOffset < 0
 
               const weekBeyond = visibleLogs.reduce((acc, l) => acc + (parseFloat(l.beyond_tatva_hours) || 0), 0)

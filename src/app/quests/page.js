@@ -42,57 +42,17 @@ export default function DailyOps() {
   const yesterdayStr = getLocalDateStr(yesterdayDate)
   const todayStr = getLocalDateStr(new Date())
 
-  // Habit Column Width Resizer State (Persisted in localStorage)
-  const [habitColWidth, setHabitColWidth] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('lokios_habit_col_width')
-      return saved ? parseInt(saved, 10) : 260
-    }
-    return 260
-  })
-
-  const startResizingHabitCol = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX
-    const startWidth = habitColWidth
-
-    const onMove = (moveEvent) => {
-      const currentX = moveEvent.type === 'touchmove' ? moveEvent.touches[0].clientX : moveEvent.clientX
-      const newWidth = Math.max(160, Math.min(600, startWidth + (currentX - startX)))
-      setHabitColWidth(newWidth)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('lokios_habit_col_width', newWidth.toString())
-      }
-    }
-
-    const onEnd = () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onEnd)
-      window.removeEventListener('touchmove', onMove)
-      window.removeEventListener('touchend', onEnd)
-    }
-
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onEnd)
-    window.addEventListener('touchmove', onMove)
-    window.addEventListener('touchend', onEnd)
-  }
-
-  const autoFitHabitCol = () => {
-    if (!habits || habits.length === 0) return
+  // Habit Column Width automatically fitted to the longest routine title
+  const habitColWidth = useMemo(() => {
+    if (!habits || habits.length === 0) return 260
     let maxLen = 0
     habits.forEach(h => {
       if (h.title && h.title.length > maxLen) {
         maxLen = h.title.length
       }
     })
-    const idealWidth = Math.max(220, Math.min(650, Math.ceil(maxLen * 8.5) + 120))
-    setHabitColWidth(idealWidth)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('lokios_habit_col_width', idealWidth.toString())
-    }
-  }
+    return Math.max(220, Math.min(650, Math.ceil(maxLen * 8.5) + 120))
+  }, [habits])
 
   // Edit State
   const [editingHabit, setEditingHabit] = useState(null)
@@ -508,58 +468,6 @@ export default function DailyOps() {
             </div>
           </div>
 
-          {/* Habit Column Width Controls */}
-          <div className="hidden-mobile flex items-center gap-2 bg-tertiary border border-border-color rounded-lg px-3 py-1.5">
-            <span className="font-mono text-[10px] text-muted uppercase">COLUMN:</span>
-            <button
-              type="button"
-              onClick={autoFitHabitCol}
-              className="px-2 py-1 bg-amber/10 border border-amber/30 text-amber hover:bg-amber/20 rounded font-mono text-[10px] uppercase font-bold transition-colors"
-              title="Automatically resize column to fit the longest routine title"
-            >
-              Auto-Fit
-            </button>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  const w = Math.max(180, habitColWidth - 30)
-                  setHabitColWidth(w)
-                  if (typeof window !== 'undefined') localStorage.setItem('lokios_habit_col_width', w.toString())
-                }}
-                className="w-6 h-6 flex-center bg-secondary border border-border-subtle rounded font-mono text-xs text-muted hover:text-primary transition-colors"
-                title="Decrease Width"
-              >
-                -
-              </button>
-              <input
-                type="range"
-                min="180"
-                max="550"
-                value={habitColWidth}
-                onChange={(e) => {
-                  const w = parseInt(e.target.value, 10)
-                  setHabitColWidth(w)
-                  if (typeof window !== 'undefined') localStorage.setItem('lokios_habit_col_width', w.toString())
-                }}
-                className="w-20 accent-amber cursor-pointer"
-                title="Drag to adjust column width"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const w = Math.min(550, habitColWidth + 30)
-                  setHabitColWidth(w)
-                  if (typeof window !== 'undefined') localStorage.setItem('lokios_habit_col_width', w.toString())
-                }}
-                className="w-6 h-6 flex-center bg-secondary border border-border-subtle rounded font-mono text-xs text-muted hover:text-primary transition-colors"
-                title="Increase Width"
-              >
-                +
-              </button>
-            </div>
-            <span className="font-mono text-[10px] text-amber font-bold w-12 text-right">{habitColWidth}px</span>
-          </div>
         </div>
 
         {/* The Spreadsheet Grid */}
@@ -574,23 +482,9 @@ export default function DailyOps() {
           <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0, minWidth: '1100px' }}>
             <thead>
               <tr>
-                <th className="sticky z-20 col-habit relative group select-none" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
-                  <div className="w-full flex items-center justify-between pr-6" style={{ padding: '10px 14px 10px 16px', textAlign: 'left' }}>
+                <th className="sticky z-20 col-habit relative select-none" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)', borderTopLeftRadius: 'var(--radius-lg)' }}>
+                  <div className="w-full flex items-center justify-between" style={{ padding: '10px 14px 10px 16px', textAlign: 'left' }}>
                     <span className="font-display text-[10px] md:text-xs uppercase tracking-widest text-primary">DAILY HABITS</span>
-                    <span className="font-mono text-[9px] text-muted opacity-50 font-normal">({habitColWidth}px)</span>
-                  </div>
-                  {/* Prominent Draggable Column Width Resizer Handle */}
-                  <div
-                    onMouseDown={startResizingHabitCol}
-                    onTouchStart={startResizingHabitCol}
-                    className="absolute right-0 top-0 bottom-0 w-6 cursor-col-resize hover:bg-amber/30 active:bg-amber/50 flex items-center justify-center transition-all z-30 group/handle"
-                    title="Click & Drag to resize column width"
-                    style={{ touchAction: 'none' }}
-                  >
-                    <div className="flex gap-0.5 items-center justify-center">
-                      <div className="w-0.5 h-4 bg-amber/70 rounded group-hover/handle:bg-amber group-hover/handle:h-5 transition-all" />
-                      <div className="w-0.5 h-4 bg-amber/70 rounded group-hover/handle:bg-amber group-hover/handle:h-5 transition-all" />
-                    </div>
                   </div>
                 </th>
                 <th className="sticky z-20 col-xp" style={{ background: 'var(--bg-tertiary)', padding: 0, borderBottom: '1px solid var(--border-color)', borderRight: '2px solid var(--border-color)' }}>

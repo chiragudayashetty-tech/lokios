@@ -10,56 +10,9 @@ import { getLocalDateStr, formatDate, isToday, isYesterday } from '@/lib/utils/d
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, BarChart, Bar, Cell, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
-import { Activity, RefreshCw, RotateCcw, TrendingUp, TrendingDown, Calendar, Target, Trophy, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Activity, RefreshCw, RotateCcw, Calendar, Target, Trophy, ChevronLeft, ChevronRight } from 'lucide-react'
 import { RANK_CONFIG, SAGA_TITLES, SAGA_IMAGES } from '@/lib/constants'
 import { cleanupAllDuplicateXP, fetchAllXpHistory } from '@/lib/utils/xpFallback'
-
-// Custom Area Sparkline Component with Rigid Constrained Dimensions
-function MetricCardSparkline({ points = [], strokeColor = '#30d6a0', height = 32, width = 130 }) {
-  const pts = points.length >= 6 ? points : [12, 18, 14, 26, 20, 30, 24, 34, 28, 38, 30, 36]
-  const min = Math.min(...pts)
-  const max = Math.max(...pts, min + 1)
-  
-  const stepX = width / (pts.length - 1)
-  const coords = pts.map((val, idx) => {
-    const normY = height - 4 - ((val - min) / (max - min)) * (height - 8)
-    return { x: idx * stepX, y: normY }
-  })
-
-  let lineD = `M ${coords[0].x} ${coords[0].y}`
-  for (let i = 0; i < coords.length - 1; i++) {
-    const curr = coords[i]
-    const next = coords[i + 1]
-    const cpX = (curr.x + next.x) / 2
-    lineD += ` C ${cpX} ${curr.y}, ${cpX} ${next.y}, ${next.x} ${next.y}`
-  }
-
-  const areaD = `${lineD} L ${width} ${height} L 0 ${height} Z`
-  const gradId = `sparkGrad-${strokeColor.replace(/[^a-zA-Z0-9]/g, '')}`
-
-  return (
-    <div className="w-full flex items-center justify-center my-1" style={{ height: `${height}px`, maxHeight: `${height}px`, overflow: 'hidden' }}>
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ width: `${width}px`, height: `${height}px`, display: 'block' }}>
-        <defs>
-          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.32" />
-            <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
-          </linearGradient>
-        </defs>
-        <path d={areaD} fill={`url(#${gradId})`} />
-        <path
-          d={lineD}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ filter: `drop-shadow(0 0 4px ${strokeColor})` }}
-        />
-      </svg>
-    </div>
-  )
-}
 
 // 10-Segment LED Meter for Momentum Card (Compact)
 function SegmentedMomentumBar({ percentage = 78 }) {
@@ -264,35 +217,6 @@ export default function XPDashboard() {
     }
   })
 
-  // Days tracked calculation
-  let daysTracked = 52
-  if (timeline.length > 0) {
-    const firstDateStr = getLocalDateStr(new Date(timeline[0].created_at))
-    const firstDate = new Date(firstDateStr)
-    const today = new Date(getLocalDateStr(new Date()))
-    const diffTime = Math.abs(today - firstDate)
-    daysTracked = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1)
-  }
-
-  // Calculate Streak
-  let longestStreak = 14
-  let currentStreak = 0
-  const past30 = Array.from({ length: 30 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (29 - i))
-    return getLocalDateStr(d)
-  })
-  let runningStreak = 0
-  past30.forEach(d => {
-    if ((timelineMap[d] || 0) > 0) {
-      runningStreak++
-      if (runningStreak > longestStreak) longestStreak = runningStreak
-    } else {
-      runningStreak = 0
-    }
-  })
-  currentStreak = runningStreak
-
   // 7-day momentum percentage (quality score)
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
@@ -301,23 +225,6 @@ export default function XPDashboard() {
   })
   const last7Active = last7Days.filter(d => (timelineMap[d] || 0) > 0).length
   const momentumScore = Math.min(95, Math.max(25, Math.round((last7Active / 7) * 100) + 15)) // e.g. 78%
-
-  // Waveform points for cards
-  const positiveWave = chartDays.map(d => {
-    const entries = timeline.filter(t => getLocalDateStr(new Date(t.created_at)) === d && t.amount > 0)
-    return entries.reduce((sum, e) => sum + e.amount, 0)
-  })
-
-  const negativeWave = chartDays.map(d => {
-    const entries = timeline.filter(t => getLocalDateStr(new Date(t.created_at)) === d && t.amount < 0)
-    return Math.abs(entries.reduce((sum, e) => sum + e.amount, 0))
-  })
-
-  const daysWave = chartDays.map((d, idx) => idx * 3 + (timelineMap[d] ? 15 : 4))
-  const momentumWave = chartDays.map(d => {
-    const net = timelineMap[d] || 0
-    return net > 0 ? 70 + (net % 30) : 35
-  })
 
   const todayStr = getLocalDateStr(new Date())
 
@@ -495,75 +402,7 @@ export default function XPDashboard() {
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            CARD 2: 3 SQUARE METRICS IN A SINGLE RECTANGLE (LEFT, CENTER, RIGHT)
-        ══════════════════════════════════════════════════════════════════ */}
-        <div className="relative mb-6 rounded-2xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-3 sm:p-5 shadow-[0_16px_40px_rgba(0,0,0,0.7)]">
-          <div 
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', 
-              gap: '10px', 
-              width: '100%' 
-            }}
-          >
-            {/* LEFT: POSITIVE ACTIONS (ADDITIONS) */}
-            <div className="rounded-xl border border-emerald-500/25 bg-[#0f1422] hover:border-emerald-500/50 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)] group-hover:scale-105 transition-transform">
-                <TrendingUp size={15} className="text-emerald-400 sm:w-[18px] sm:h-[18px]" />
-              </div>
-              <div className="font-display font-black text-xl sm:text-4xl text-emerald-400 tracking-tight leading-tight">
-                {positiveCount}
-              </div>
-              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold hidden sm:block">
-                POSITIVE ACTIONS
-              </div>
-              <MetricCardSparkline points={positiveWave} strokeColor="#30d6a0" height={32} width={120} />
-              <div className="font-mono text-[8px] sm:text-[11px] text-emerald-400 font-semibold tracking-wider">
-                <span className="sm:hidden">↑ 12%</span>
-                <span className="hidden sm:inline">↑ 12% vs last 7 days</span>
-              </div>
-            </div>
-
-            {/* CENTER: SUBTRACTIONS & PENALTIES */}
-            <div className="rounded-xl border border-rose-500/25 bg-[#0f1422] hover:border-rose-500/50 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-rose-500/40 bg-rose-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.2)] group-hover:scale-105 transition-transform">
-                <TrendingDown size={15} className="text-rose-400 sm:w-[18px] sm:h-[18px]" />
-              </div>
-              <div className="font-display font-black text-xl sm:text-4xl text-rose-400 tracking-tight leading-tight">
-                {deductionCount}
-              </div>
-              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold hidden sm:block">
-                SUBTRACTIONS & PENALTIES
-              </div>
-              <MetricCardSparkline points={negativeWave} strokeColor="#f43f5e" height={32} width={120} />
-              <div className="font-mono text-[8px] sm:text-[11px] text-rose-400 font-semibold tracking-wider">
-                <span className="sm:hidden">↓ 8%</span>
-                <span className="hidden sm:inline">↓ 8% vs last 7 days</span>
-              </div>
-            </div>
-
-            {/* RIGHT: DAYS TRACKED */}
-            <div className="rounded-xl border border-blue-500/25 bg-[#0f1422] hover:border-blue-500/50 p-2.5 sm:p-5 flex flex-col items-center justify-between text-center transition-all group shadow-md aspect-square">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-blue-500/40 bg-blue-950/40 flex items-center justify-center shadow-[0_0_12px_rgba(59,130,246,0.2)] group-hover:scale-105 transition-transform">
-                <Calendar size={15} className="text-blue-400 sm:w-[18px] sm:h-[18px]" />
-              </div>
-              <div className="font-display font-black text-xl sm:text-4xl text-blue-400 tracking-tight leading-tight">
-                {daysTracked}
-              </div>
-              <div className="font-mono text-[9px] sm:text-[11px] uppercase tracking-widest text-slate-400 font-semibold hidden sm:block">
-                DAYS TRACKED
-              </div>
-              <MetricCardSparkline points={daysWave} strokeColor="#60a5fa" height={32} width={120} />
-              <div className="font-mono text-[8px] sm:text-[11px] text-blue-400 font-semibold tracking-wider">
-                <span className="sm:hidden">{longestStreak}d streak</span>
-                <span className="hidden sm:inline">Longest streak: {longestStreak} days</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            CARD 3: MOMENTUM METER DETAILED SPECTRUM BANNER
+            CARD 2: MOMENTUM METER DETAILED SPECTRUM BANNER
         ══════════════════════════════════════════════════════════════════ */}
         <div className="relative mb-6 rounded-2xl border border-white/10 bg-[#0c0f18] backdrop-blur-2xl p-4 sm:p-7 shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col lg:flex-row items-center justify-between gap-4 sm:gap-6">
           

@@ -1021,10 +1021,6 @@ export default function MissionControl() {
     setQuoteIndex(prev => (prev + 1) % SAGA_DISCIPLINE_QUOTES.length)
   }
 
-  const hoursLeft = +(24 - currentTime.getHours() - currentTime.getMinutes() / 60).toFixed(1)
-  const dayPct    = Math.round(((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100)
-  const dayUrgency = dayPct > 80 ? 'danger' : dayPct > 60 ? 'warning' : 'ok'
-
   const flameColor = currentStreak >= 30 ? '#F59E0B' : currentStreak >= 7 ? '#f97316' : '#ef4444'
 
   // todayStr is defined at the top of component
@@ -1461,7 +1457,7 @@ export default function MissionControl() {
               </span>
             </div>
             <span className="font-mono text-[9px] text-slate-400 uppercase font-semibold">
-              TAP PILL TO QUICK LOG
+              TAP PILL TO OPEN PROTOCOL
             </span>
           </div>
 
@@ -1471,10 +1467,9 @@ export default function MissionControl() {
               const displayLabel = item.key === 'work' ? 'Work Session' : item.key === 'journal' ? 'Daily Journal' : item.key === 'screen' ? 'Screen Intel' : item.key === 'speaking' ? 'Speaking Challenge' : item.label
 
               return (
-                <button
+                <Link
                   key={item.key}
-                  type="button"
-                  onClick={() => setEodQuickLogModal(item.key)}
+                  href={item.path}
                   className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between group relative overflow-hidden active:scale-95 ${
                     item.isDone
                       ? 'bg-emerald-950/30 border-emerald-500/40 text-white shadow-[0_0_15px_rgba(16,185,129,0.15)]'
@@ -1501,7 +1496,7 @@ export default function MissionControl() {
                       {item.detail}
                     </div>
                   </div>
-                </button>
+                </Link>
               )
             })}
 
@@ -2418,51 +2413,6 @@ export default function MissionControl() {
                 </AnimatePresence>
               </div>
             )}
-
-            {/* DAY PRESSURE CLOCK */}
-            <div className="dashboard-card time-remaining-card p-5 sm:p-6">
-              <div className="flex items-center justify-between mb-3.5">
-                <div className="flex items-center gap-2">
-                  <Clock size={14} className="text-slate-400" />
-                  <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-300 font-bold">Time Remaining</span>
-                </div>
-                <span className="font-mono text-[8px] font-bold px-2 py-0.5 rounded-full" style={{
-                  color: dayUrgency === 'danger' ? '#f87171' : dayUrgency === 'warning' ? '#fbbf24' : '#94a3b8',
-                  background: dayUrgency === 'danger' ? 'rgba(239,68,68,0.15)' : dayUrgency === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)'
-                }}>
-                  {dayUrgency === 'danger' ? '⚠ EXECUTE NOW' : dayUrgency === 'warning' ? 'WINDOW CLOSING' : 'TIME ON SIDE'}
-                </span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="time-remaining-ring relative shrink-0 w-12 h-12">
-                  <svg className="w-12 h-12 transform -rotate-90">
-                    <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
-                    <circle cx="24" cy="24" r="20" fill="none"
-                      stroke={dayUrgency === 'danger' ? '#ef4444' : dayUrgency === 'warning' ? '#f59e0b' : arcColor}
-                      strokeWidth="4"
-                      strokeDasharray={`${2 * Math.PI * 20}`}
-                      strokeDashoffset={`${2 * Math.PI * 20 * (1 - dayPct / 100)}`}
-                      style={{ transition: 'stroke-dashoffset 1s ease' }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="font-mono font-bold text-white text-[9px]">{dayPct}%</span>
-                  </div>
-                </div>
-                <div className="time-remaining-info">
-                  <div className="font-display font-black text-white text-2xl leading-none">
-                    {hoursLeft}<span className="font-mono text-xs text-slate-400 font-normal">h left today</span>
-                  </div>
-                  <div className="font-mono text-[9px] text-slate-400 mt-1">
-                    Day cycle resets at midnight
-                  </div>
-                </div>
-              </div>
-            </div>
-
-
-
-
 
           </div>
         </div>

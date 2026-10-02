@@ -468,68 +468,54 @@ export default function SpeakingPracticePage() {
       created_at: new Date().toISOString()
     }
 
-    // 1. Optimistic Local Storage Save
+    // 1. Instant Optimistic UI Update & Local Cache
     const localRaw = localStorage.getItem(`lokios_speaking_logs_${user.id}`)
     const localLogs = localRaw ? JSON.parse(localRaw) : []
     const updatedLocal = [newLog, ...localLogs.filter(l => l.date !== todayStr)]
     localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updatedLocal))
     setHistory(updatedLocal)
-
-    // 2. Save to speaking_logs (authoritative table)
-    try {
-      const { error: spErr } = await sb.from('speaking_logs').insert(newLog)
-      if (spErr) console.error('[Speaking Submit] speaking_logs insert error:', spErr)
-    } catch (spEx) {
-      console.error('[Speaking Submit] speaking_logs exception:', spEx)
-    }
-
-    // 3. FIX XP GLITCH & AUTOMATIC HABIT COMPLETION
-    try {
-      const speakingHabit = (osHabits || []).find(h => h.id === SPEAKING_HABIT_ID || h.title?.toLowerCase().includes('speaking')) || { id: SPEAKING_HABIT_ID }
-      const habitId = speakingHabit.id
-
-      // A. Award 25 XP cleanly to xp_history and profiles
-      await robustAwardXP(
-        user.id,
-        25,
-        'habit_complete',
-        `habit_${habitId}_${todayStr}`,
-        `Completed routine: Speaking Practice - Day ${currentDayNumber}`,
-        'founder',
-        new Date().toISOString()
-      )
-
-      // B. Upsert habit_logs to ensure "Speaking Practice" is checked off & auto-fail penalty prevented
-      await sb.from('habit_logs').upsert({
-        user_id: user.id,
-        habit_id: habitId,
-        date: todayStr,
-        status: 'completed',
-        completed: true
-      }, { onConflict: 'habit_id,date' })
-
-      // C. Trigger context habit state if available
-      if (toggleHabitForDate) {
-        try {
-          await toggleHabitForDate(habitId, todayStr, 'completed')
-        } catch (ctxErr) {
-          console.warn('[Speaking Submit] Context habit toggle fallback:', ctxErr)
-        }
-      }
-
-      // D. Refresh XP momentum
-      if (fetchMomentum) {
-        await fetchMomentum()
-      }
-    } catch (xpErr) {
-      console.error('[Speaking Submit] Error awarding XP / syncing habit:', xpErr)
-    }
-
     setSubmitSuccess(true)
     setDriveLink('')
     setNotes('')
     setSubmitting(false)
     setTimeout(() => setSubmitSuccess(false), 5000)
+
+    // 2. Perform authoritative saves concurrently in background without blocking UI
+    ;(async () => {
+      try {
+        const speakingHabit = (osHabits || []).find(h => h.id === SPEAKING_HABIT_ID || h.title?.toLowerCase().includes('speaking')) || { id: SPEAKING_HABIT_ID }
+        const habitId = speakingHabit.id
+
+        await Promise.allSettled([
+          sb.from('speaking_logs').insert(newLog),
+          robustAwardXP(
+            user.id,
+            25,
+            'habit_complete',
+            `habit_${habitId}_${todayStr}`,
+            `Completed routine: Speaking Practice - Day ${currentDayNumber}`,
+            'founder',
+            new Date().toISOString()
+          ),
+          sb.from('habit_logs').upsert({
+            user_id: user.id,
+            habit_id: habitId,
+            date: todayStr,
+            status: 'completed',
+            completed: true
+          }, { onConflict: 'habit_id,date' })
+        ])
+
+        if (toggleHabitForDate) {
+          try { await toggleHabitForDate(habitId, todayStr, 'completed') } catch (e) {}
+        }
+        if (fetchMomentum) {
+          try { await fetchMomentum() } catch (e) {}
+        }
+      } catch (err) {
+        console.error('[Speaking Background Sync] Error:', err)
+      }
+    })()
   }
 
   // Calculate statistics
@@ -990,9 +976,6 @@ export default function SpeakingPracticePage() {
                     LOG VIDEO PROOF
                   </span>
                 </div>
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-amber/20 text-amber border border-amber/30">
-                  +25 XP REWARD
-                </span>
               </div>
 
               {submitSuccess && (
@@ -1003,7 +986,7 @@ export default function SpeakingPracticePage() {
                 >
                   <div className="flex items-center gap-2 font-bold">
                     <CheckCircle2 size={16} />
-                    <span>Session Logged! +25 XP Awarded! 🎉</span>
+                    <span>Session Logged Successfully! 🎉</span>
                   </div>
                   <span className="text-[10px] opacity-90 pl-6">
                     Speaking Practice routine marked complete for today. Auto-fail prevented!
@@ -1106,7 +1089,7 @@ export default function SpeakingPracticePage() {
                   className="w-full font-mono text-xs font-black py-3.5 flex items-center justify-center gap-2 rounded-xl bg-amber hover:bg-amber-hover text-black shadow-xl transition-all transform hover:scale-[1.01] active:scale-98 disabled:opacity-40 disabled:cursor-not-allowed mt-2"
                 >
                   <Award size={16} />
-                  <span>{submitting ? 'RECORDING & AWARDING XP...' : 'LOG PRACTICE (+25 XP)'}</span>
+                  <span>{submitting ? 'RECORDING...' : 'LOG PRACTICE'}</span>
                 </button>
               </form>
             </div>
