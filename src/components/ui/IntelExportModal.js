@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   X, Download, Calendar, CheckSquare, Target, Monitor, 
   Crosshair, FileText, Check, Printer, Sparkles, Briefcase,
-  BookOpen, Zap, Camera, Brain, ClipboardList, Mic
+  BookOpen, Zap, Camera, Brain, ClipboardList, Mic, Wallet
 } from 'lucide-react'
 import { useOS } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
@@ -30,6 +30,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
     weekly_debrief: true,
     screen_intel: true,
     speaking_intel: true,
+    budget_intel: true,
   })
 
   const [isExporting, setIsExporting] = useState(false)
@@ -70,7 +71,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
         screenRes,
         workHoursRes, workRes, contentRes,
         habitLogsRes, journalRes, speakingRes,
-        habitsRes
+        habitsRes, budgetRes
       ] = await Promise.all([
         supabase.from('screen_time_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('work_hours_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
@@ -79,7 +80,8 @@ export default function IntelExportModal({ isOpen, onClose }) {
         supabase.from('habit_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
         supabase.from('journal_entries').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
         supabase.from('speaking_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
-        supabase.from('habits').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
+        supabase.from('habits').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+        supabase.from('budget_logs').select('*').eq('user_id', user.id).gte('date', startDate).lte('date', endDate).order('date', { ascending: false })
       ])
 
       let workLogs = (workHoursRes.data && workHoursRes.data.length > 0) ? workHoursRes.data : []
@@ -115,6 +117,17 @@ export default function IntelExportModal({ isOpen, onClose }) {
       const fetchedHabitLogs = (habitLogsRes.data && habitLogsRes.data.length > 0) ? habitLogsRes.data : (monthLogs || [])
       const fetchedHabits = (habitsRes?.data && habitsRes.data.length > 0) ? habitsRes.data : (allHabits && allHabits.length > 0 ? allHabits : habits)
       const journalEntries = journalRes.data || []
+
+      let budgetLogs = budgetRes?.data || []
+      if (budgetLogs.length === 0 && typeof window !== 'undefined') {
+        const cached = localStorage.getItem(`lokios_budget_logs_${user.id}`)
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached)
+            budgetLogs = parsed.filter(l => l.date >= startDate && l.date <= endDate)
+          } catch (e) {}
+        }
+      }
 
       // Weekly debriefs from work_logs
       const weeklyDebriefs = allWorkLogs.filter(l =>
@@ -156,8 +169,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
           weekly_debrief: selectedModules.weekly_debrief ? weeklyDebriefs : undefined,
           screen_intel: selectedModules.screen_intel ? screenLogs : undefined,
           speaking_intel: selectedModules.speaking_intel ? speakingLogs : undefined,
-          weight_recon: selectedModules.weight_recon ? weightLogs : undefined,
-          sleep_intel: selectedModules.sleep_intel ? sleepLogs : undefined,
+          budget_intel: selectedModules.budget_intel ? budgetLogs : undefined,
         }
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
         const url = URL.createObjectURL(blob)
@@ -658,6 +670,34 @@ export default function IntelExportModal({ isOpen, onClose }) {
                     <td class="font-mono font-bold text-accent">${l.rating ? `${l.rating}/5 ⭐` : '—'}</td>
                     <td>${l.drive_link ? `<a href="${l.drive_link}" target="_blank" class="text-blue" style="text-decoration:underline;word-break:break-all;font-size:11px;">${l.drive_link}</a>` : '<span class="text-muted">—</span>'}</td>
                     <td style="color:#334155;font-size:11.5px;">${l.notes || '—'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+      }
+
+      // 10. BUDGET & DAILY EXPENSE INTELLIGENCE
+      if (selectedModules.budget_intel) {
+        const totalBudgetSpent = budgetLogs.reduce((acc, l) => acc + (parseFloat(l.amount) || 0), 0)
+        sectionsHTML += `
+          <div class="section">
+            <h2 class="section-title">
+              <span>💳 DAILY BUDGET & EXPENSE INTELLIGENCE</span>
+              <span class="badge badge-success">${budgetLogs.length} Expenses • ₹${totalBudgetSpent.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Total</span>
+            </h2>
+            <table>
+              <thead><tr><th>Date</th><th>Category</th><th>Note / Description</th><th style="text-align:right;">Amount (₹)</th></tr></thead>
+              <tbody>
+                ${budgetLogs.length === 0 ? '<tr><td colspan="4" class="text-muted" style="text-align:center;">No expenses logged in this range.</td></tr>' : budgetLogs.map(l => `
+                  <tr>
+                    <td class="font-mono font-bold">${l.date}</td>
+                    <td>
+                      <span class="badge badge-warning">${l.custom_category || l.category || 'Expense'}</span>
+                    </td>
+                    <td style="color:#334155;font-size:11.5px;">${l.description || '—'}</td>
+                    <td style="text-align:right;"><strong class="font-mono text-accent">₹${parseFloat(l.amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</strong></td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -1227,6 +1267,7 @@ export default function IntelExportModal({ isOpen, onClose }) {
   // Module definitions for UI
   const MODULE_DEFS = [
     { key: 'work_intel',      icon: Briefcase,      label: 'Work & Content Logs',     color: 'text-amber',   desc: 'Hours, type of work, content ops' },
+    { key: 'budget_intel',    icon: Wallet,         label: 'Budget & Expense Logs',   color: 'text-emerald-400', desc: 'Daily expense entries & spending records' },
     { key: 'missions',        icon: Target,          label: 'Missions & Quests',        color: 'text-amber',   desc: 'Goals with lifecycle dates' },
     { key: 'operations',      icon: CheckSquare,     label: 'Operations & Tasks',       color: 'text-info',    desc: 'Tasks with deployed/completed dates' },
     { key: 'habits',          icon: Crosshair,       label: 'Habits Matrix',            color: 'text-danger',  desc: 'Daily ops completion grid' },

@@ -66,8 +66,30 @@ export default function BudgetPage() {
   // Chart range state: '7d' | '14d' | '30d' | 'month'
   const [chartRange, setChartRange] = useState('14d')
 
-  // History tab: 'selected' | 'all'
-  const [historyTab, setHistoryTab] = useState('selected')
+  // 5 days ago cutoff string (inclusive of today: 5 calendar days)
+  const fiveDaysAgoStr = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 4)
+    return getLocalDateStr(d)
+  }, [])
+
+  // Recent history view mode: '5days' | 'calendar' | 'all'
+  const [historyMode, setHistoryMode] = useState('5days')
+  const [historyCalendarDate, setHistoryCalendarDate] = useState(todayStr)
+
+  // Filtered recent logs for bottom table
+  const displayedRecentLogs = useMemo(() => {
+    if (historyMode === '5days') {
+      return logs.filter(l => l.date >= fiveDaysAgoStr && l.date <= todayStr)
+    } else if (historyMode === 'calendar') {
+      return logs.filter(l => l.date === historyCalendarDate)
+    }
+    return logs
+  }, [logs, historyMode, fiveDaysAgoStr, todayStr, historyCalendarDate])
+
+  const displayedRecentTotal = useMemo(() => {
+    return displayedRecentLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [displayedRecentLogs])
 
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -315,119 +337,20 @@ export default function BudgetPage() {
           </div>
         </div>
 
-        {/* 4 KPI Top Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Card 1: Today's Spend */}
-          <div className="dashboard-card p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
-              <span>TODAY'S SPENT</span>
-              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                todayRemaining >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-              }`}>
-                {todayRemaining >= 0 ? 'ON TARGET' : 'OVER BUDGET'}
-              </span>
-            </div>
-            <div className="font-display text-2xl font-bold text-white mb-2">
-              ₹{todayTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-            </div>
-            <div>
-              <div className="flex items-center justify-between font-mono text-[10px] text-muted mb-1">
-                <span>USAGE</span>
-                <span className={todayProgressPct > 100 ? 'text-rose-400 font-bold' : 'text-primary'}>
-                  {todayProgressPct}%
-                </span>
-              </div>
-              <TacticalProgress
-                value={todayProgressPct}
-                color={todayProgressPct > 100 ? 'var(--danger)' : todayProgressPct >= 80 ? 'var(--warning)' : 'var(--success)'}
-                height={5}
-                showValue={false}
-              />
-            </div>
-          </div>
-
-          {/* Card 2: Daily Target Limit */}
-          <div className="dashboard-card p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
-              <span>DAILY TARGET</span>
-              <button
-                type="button"
-                onClick={() => setIsEditingBudget(prev => !prev)}
-                className="text-info hover:text-white flex items-center gap-1 font-mono text-[9px]"
-              >
-                <Edit2 size={10} /> {isEditingBudget ? 'CANCEL' : 'EDIT'}
-              </button>
-            </div>
-            {isEditingBudget ? (
-              <div className="flex items-center gap-2 mt-1 mb-2">
-                <span className="text-muted font-mono text-sm">₹</span>
-                <input
-                  type="number"
-                  value={newBudgetValue}
-                  onChange={(e) => setNewBudgetValue(e.target.value)}
-                  className="bg-bg-tertiary border border-info px-2 py-1 rounded text-white font-mono text-sm w-24"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveBudgetLimit}
-                  className="btn btn-primary btn-sm py-1 px-2 text-xs font-mono"
-                >
-                  SAVE
-                </button>
-              </div>
-            ) : (
-              <div className="font-display text-2xl font-bold text-emerald-400 mb-2">
-                ₹{dailyBudget.toLocaleString('en-IN')}
-              </div>
-            )}
-            <div className="font-mono text-[10px] text-muted">
-              Target allowance per single calendar day
-            </div>
-          </div>
-
-          {/* Card 3: Remaining Today */}
-          <div className="dashboard-card p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
-              <span>REMAINING TODAY</span>
-              {todayRemaining >= 0 ? (
-                <ArrowDownRight size={14} className="text-emerald-400" />
-              ) : (
-                <ArrowUpRight size={14} className="text-rose-400" />
-              )}
-            </div>
-            <div className={`font-display text-2xl font-bold mb-2 ${
-              todayRemaining >= 0 ? 'text-emerald-400' : 'text-rose-400'
-            }`}>
-              {todayRemaining >= 0
-                ? `₹${todayRemaining.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-                : `-₹${Math.abs(todayRemaining).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
-            </div>
-            <div className="font-mono text-[10px] text-muted">
-              {todayRemaining >= 0 ? 'Available within target' : 'Exceeded daily threshold'}
-            </div>
-          </div>
-
-          {/* Card 4: This Month Total */}
-          <div className="dashboard-card p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
-              <span>THIS MONTH TOTAL</span>
-              <Calendar size={14} className="text-cyan-400" />
-            </div>
-            <div className="font-display text-2xl font-bold text-white mb-2">
-              ₹{monthTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-            </div>
-            <div className="font-mono text-[10px] text-muted">
-              Cumulative spending in {new Date().toLocaleString('default', { month: 'long' })}
-            </div>
-          </div>
-        </div>
-
-        {/* Main 2-Column Section: Quick Logger + Day Overview */}
+        {/* Main 2-Column Section: Quick Logger + Day Overview (Top of Page) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
           {/* Quick Expense Logger (5 cols) */}
           <div className="lg:col-span-5">
-            <HudPanel label="LOG DAILY EXPENSE">
+            <HudPanel
+              label="LOG DAILY BUDGET & EXPENSE"
+              action={
+                <div className="font-mono text-[10px] text-muted flex items-center gap-1.5">
+                  <span>TARGET:</span>
+                  <strong className="text-emerald-400 font-bold">₹{dailyBudget.toLocaleString('en-IN')}</strong>
+                  <span className="text-slate-500">/ day</span>
+                </div>
+              }
+            >
               <form onSubmit={handleAddExpense} className="flex flex-col gap-4">
                 {/* Amount input & Quick increment buttons */}
                 <div>
@@ -647,6 +570,114 @@ export default function BudgetPage() {
           </div>
         </div>
 
+        {/* 4 KPI Top Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Card 1: Today's Spend */}
+          <div className="dashboard-card p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
+              <span>TODAY'S SPENT</span>
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                todayRemaining >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+              }`}>
+                {todayRemaining >= 0 ? 'ON TARGET' : 'OVER BUDGET'}
+              </span>
+            </div>
+            <div className="font-display text-2xl font-bold text-white mb-2">
+              ₹{todayTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            </div>
+            <div>
+              <div className="flex items-center justify-between font-mono text-[10px] text-muted mb-1">
+                <span>USAGE</span>
+                <span className={todayProgressPct > 100 ? 'text-rose-400 font-bold' : 'text-primary'}>
+                  {todayProgressPct}%
+                </span>
+              </div>
+              <TacticalProgress
+                value={todayProgressPct}
+                color={todayProgressPct > 100 ? 'var(--danger)' : todayProgressPct >= 80 ? 'var(--warning)' : 'var(--success)'}
+                height={5}
+                showValue={false}
+              />
+            </div>
+          </div>
+
+          {/* Card 2: Daily Target Limit */}
+          <div className="dashboard-card p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
+              <span>DAILY TARGET</span>
+              <button
+                type="button"
+                onClick={() => setIsEditingBudget(prev => !prev)}
+                className="text-info hover:text-white flex items-center gap-1 font-mono text-[9px]"
+              >
+                <Edit2 size={10} /> {isEditingBudget ? 'CANCEL' : 'EDIT'}
+              </button>
+            </div>
+            {isEditingBudget ? (
+              <div className="flex items-center gap-2 mt-1 mb-2">
+                <span className="text-muted font-mono text-sm">₹</span>
+                <input
+                  type="number"
+                  value={newBudgetValue}
+                  onChange={(e) => setNewBudgetValue(e.target.value)}
+                  className="bg-bg-tertiary border border-info px-2 py-1 rounded text-white font-mono text-sm w-24"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveBudgetLimit}
+                  className="btn btn-primary btn-sm py-1 px-2 text-xs font-mono"
+                >
+                  SAVE
+                </button>
+              </div>
+            ) : (
+              <div className="font-display text-2xl font-bold text-emerald-400 mb-2">
+                ₹{dailyBudget.toLocaleString('en-IN')}
+              </div>
+            )}
+            <div className="font-mono text-[10px] text-muted">
+              Target allowance per single calendar day
+            </div>
+          </div>
+
+          {/* Card 3: Remaining Today */}
+          <div className="dashboard-card p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
+              <span>REMAINING TODAY</span>
+              {todayRemaining >= 0 ? (
+                <ArrowDownRight size={14} className="text-emerald-400" />
+              ) : (
+                <ArrowUpRight size={14} className="text-rose-400" />
+              )}
+            </div>
+            <div className={`font-display text-2xl font-bold mb-2 ${
+              todayRemaining >= 0 ? 'text-emerald-400' : 'text-rose-400'
+            }`}>
+              {todayRemaining >= 0
+                ? `₹${todayRemaining.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+                : `-₹${Math.abs(todayRemaining).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+            </div>
+            <div className="font-mono text-[10px] text-muted">
+              {todayRemaining >= 0 ? 'Available within target' : 'Exceeded daily threshold'}
+            </div>
+          </div>
+
+          {/* Card 4: This Month Total */}
+          <div className="dashboard-card p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
+              <span>THIS MONTH TOTAL</span>
+              <Calendar size={14} className="text-cyan-400" />
+            </div>
+            <div className="font-display text-2xl font-bold text-white mb-2">
+              ₹{monthTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            </div>
+            <div className="font-mono text-[10px] text-muted">
+              Cumulative spending in {new Date().toLocaleString('default', { month: 'long' })}
+            </div>
+          </div>
+        </div>
+
         {/* ══════════════════════════════════════════════════════════════════
             GRAPHS SECTION (Trends Graph + Category Breakdown)
         ══════════════════════════════════════════════════════════════════ */}
@@ -835,23 +866,109 @@ export default function BudgetPage() {
           </div>
         </div>
 
-        {/* Recent All Logs History Table */}
+        {/* Recent Filtered Logs History Table */}
         <div className="mt-6">
           <HudPanel
-            label={`RECENT LOGGED EXPENSES (${logs.length} TOTAL)`}
+            label={
+              historyMode === '5days'
+                ? `RECENT LOGGED EXPENSES (LAST 5 DAYS • ${displayedRecentLogs.length} ENTRIES)`
+                : historyMode === 'calendar'
+                ? `LOGGED EXPENSES ON ${historyCalendarDate} (${displayedRecentLogs.length} ENTRIES)`
+                : `ALL LOGGED EXPENSES (${displayedRecentLogs.length} TOTAL)`
+            }
             action={
-              <button
-                type="button"
-                onClick={() => setSelectedDate(todayStr)}
-                className="font-mono text-[10px] text-info hover:underline font-bold"
-              >
-                JUMP TO TODAY →
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Mode Selector Tabs: Last 5 Days / All */}
+                <div className="flex items-center gap-1 bg-bg-secondary p-1 rounded-lg border border-border-subtle">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryMode('5days')}
+                    className={`px-2.5 py-1 rounded font-mono text-[10px] font-bold transition-all ${
+                      historyMode === '5days'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                        : 'text-muted hover:text-white border border-transparent'
+                    }`}
+                  >
+                    LAST 5 DAYS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryMode('all')}
+                    className={`px-2.5 py-1 rounded font-mono text-[10px] font-bold transition-all ${
+                      historyMode === 'all'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                        : 'text-muted hover:text-white border border-transparent'
+                    }`}
+                  >
+                    ALL TIME
+                  </button>
+                </div>
+
+                {/* Calendar Jump Date Picker */}
+                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all ${
+                  historyMode === 'calendar'
+                    ? 'bg-info/15 border-info text-info'
+                    : 'bg-bg-secondary border-border-subtle text-muted hover:text-primary'
+                }`}>
+                  <Calendar size={13} className={historyMode === 'calendar' ? 'text-info' : 'text-muted'} />
+                  <span className="font-mono text-[10px] font-bold uppercase hidden sm:inline">JUMP TO DATE:</span>
+                  <input
+                    type="date"
+                    value={historyCalendarDate}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setHistoryCalendarDate(e.target.value)
+                        setHistoryMode('calendar')
+                      }
+                    }}
+                    className="bg-transparent font-mono text-xs text-white outline-none cursor-pointer"
+                    title="Navigate older expenses via calendar"
+                  />
+                  {historyMode === 'calendar' && (
+                    <button
+                      type="button"
+                      onClick={() => setHistoryMode('5days')}
+                      className="ml-1 text-[10px] font-mono text-rose-400 hover:text-white px-1"
+                      title="Reset to Last 5 Days"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
             }
           >
-            {logs.length === 0 ? (
-              <div className="py-8 text-center text-muted font-mono text-xs">
-                No expense entries logged yet. Record your daily budget above.
+            {/* Filter Context Notice & Total Spent */}
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-border-subtle/60 text-xs font-mono">
+              <span className="text-muted text-[11px]">
+                {historyMode === '5days' && `Showing transactions between ${fiveDaysAgoStr} and ${todayStr}. Use calendar to navigate older dates.`}
+                {historyMode === 'calendar' && `Showing filtered transactions for single date: ${historyCalendarDate}.`}
+                {historyMode === 'all' && `Showing all recorded expense logs across complete timeline.`}
+              </span>
+              <span className="font-bold text-white shrink-0">
+                TOTAL: <strong className="text-emerald-400">₹{displayedRecentTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</strong>
+              </span>
+            </div>
+
+            {displayedRecentLogs.length === 0 ? (
+              <div className="py-8 text-center text-muted font-mono text-xs flex flex-col items-center gap-2">
+                <Wallet size={24} className="opacity-40" />
+                <span>
+                  {historyMode === 'calendar'
+                    ? `No expense entries found for ${historyCalendarDate}.`
+                    : historyMode === '5days'
+                    ? `No expenses logged in the last 5 days (${fiveDaysAgoStr} to ${todayStr}).`
+                    : 'No expense entries logged yet.'}
+                </span>
+                {historyMode === 'calendar' && (
+                  <button
+                    type="button"
+                    onClick={() => setHistoryMode('5days')}
+                    className="btn btn-secondary btn-sm py-1 px-3 text-[10px] font-mono mt-1"
+                  >
+                    RETURN TO LAST 5 DAYS
+                  </button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -866,14 +983,18 @@ export default function BudgetPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-subtle/50">
-                    {logs.slice(0, 20).map((log) => {
+                    {displayedRecentLogs.map((log) => {
                       const catDef = getCategoryById(log.category)
                       const IconComp = CATEGORY_ICONS[catDef.icon] || MoreHorizontal
 
                       return (
                         <tr key={log.id} className="hover:bg-hover/40 transition-colors">
                           <td className="py-2.5 text-muted whitespace-nowrap">
-                            {log.date}
+                            {log.date === todayStr ? (
+                              <span className="text-emerald-400 font-bold">TODAY ({log.date})</span>
+                            ) : (
+                              log.date
+                            )}
                           </td>
                           <td className="py-2.5">
                             <span
