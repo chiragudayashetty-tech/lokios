@@ -128,7 +128,12 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#94a3b8' }}>
-            <span style={{ fontWeight: 700, color: '#f1f5f9' }}>{xpProgress.current.toLocaleString()} / {xpProgress.required.toLocaleString()} XP</span>
+            <span className="hidden sm:inline" style={{ fontWeight: 700, color: '#f1f5f9' }}>
+              {xpProgress.current.toLocaleString()} / {xpProgress.required.toLocaleString()} XP
+            </span>
+            <span className="sm:hidden font-mono font-bold" style={{ color: todayNet < 0 ? '#f43f5e' : todayNet > 0 ? '#34d399' : '#818cf8' }}>
+              {todayNet >= 0 ? `+${todayNet.toLocaleString()}` : todayNet.toLocaleString()} XP today
+            </span>
             <span style={{ color: '#64748b' }}>{toNext.toLocaleString()} to LV.{level + 1}</span>
           </div>
         </div>
@@ -177,7 +182,7 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
           href="/xp" 
           style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, textDecoration: 'none', color: 'inherit', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '12px' }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'right' }}>
+          <div className="hidden sm:flex" style={{ flexDirection: 'column', justifyContent: 'center', textAlign: 'right' }}>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#64748b', fontWeight: 700 }}>
               TODAY
             </span>
