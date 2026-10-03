@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
+import { isExcludedFromDaily, fetchBudgetLogs, getLocalDailyBudget } from '@/lib/utils/budget'
 import GameHub from '@/components/game/GameHub'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useOS } from '@/lib/context/OSContext'
@@ -150,7 +151,28 @@ export default function MissionControl() {
 
   const [eodWorkData, setEodWorkData] = useState({ logged: false, hours: 0 })
   const [eodSpeakingData, setEodSpeakingData] = useState({ logged: false, detail: '' })
-  const [eodBudgetData, setEodBudgetData] = useState({ logged: false, spent: 0, budget: 1000 })
+  const [eodBudgetData, setEodBudgetData] = useState({ logged: false, spent: 0, bills: 0, budget: 1000 })
+
+  // The protocol card reads a local cache first; refresh it from Supabase so the
+  // numbers are right on any device. Bills & subscriptions use the monthly limit.
+  useEffect(() => {
+    if (!user?.id) return
+    let cancelled = false
+    fetchBudgetLogs(user.id).then(logs => {
+      if (cancelled) return
+      const todayKey = getLocalDateStr()
+      const todayEntries = (logs || []).filter(b => b.date === todayKey)
+      const sumOf = (list) => list.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+      setEodBudgetData(prev => ({
+        ...prev,
+        logged: todayEntries.length > 0,
+        spent: sumOf(todayEntries.filter(item => !isExcludedFromDaily(item))),
+        bills: sumOf(todayEntries.filter(item => isExcludedFromDaily(item))),
+        budget: getLocalDailyBudget(user.id),
+      }))
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [user?.id])
   const [eodQuickLogModal, setEodQuickLogModal] = useState(null)
   const [eodJournalLogged, setEodJournalLogged] = useState(false)
 
@@ -734,6 +756,7 @@ export default function MissionControl() {
       // Budget protocol status
       let budgetLogged = false
       let budgetSpent = 0
+      let budgetBills = 0
       let budgetLimit = 1000
       try {
         const rawBudget = localStorage.getItem(`lokios_budget_logs_${user.id}`)
@@ -743,9 +766,11 @@ export default function MissionControl() {
         const todayEntries = (parsedBudget || []).filter(b => b.date === todayStr)
         if (todayEntries.length > 0) {
           budgetLogged = true
-          budgetSpent = todayEntries.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+          // Bills & subscriptions count toward the monthly bills limit, not the daily allowance
+          budgetSpent = todayEntries.filter(item => !isExcludedFromDaily(item)).reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+          budgetBills = todayEntries.filter(item => isExcludedFromDaily(item)).reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
         }
-        setEodBudgetData({ logged: budgetLogged, spent: budgetSpent, budget: budgetLimit })
+        setEodBudgetData({ logged: budgetLogged, spent: budgetSpent, bills: budgetBills, budget: budgetLimit })
       } catch (e) {}
 
       try {
@@ -753,7 +778,7 @@ export default function MissionControl() {
         localStorage.setItem(cacheKey, JSON.stringify({
           eodWorkData: { logged: workLogged, hours: workHours },
           eodSpeakingData: todaySpeakingLog ? { logged: true, detail: `Topic: ${todaySpeakingLog.topic}` } : { logged: false, detail: '' },
-          eodBudgetData: { logged: budgetLogged, spent: budgetSpent, budget: budgetLimit },
+          eodBudgetData: { logged: budgetLogged, spent: budgetSpent, bills: budgetBills, budget: budgetLimit },
           todayScreenTime: stLogs && stLogs.length > 0 ? stLogs[0] : null,
           latestDebrief: debriefLogs && debriefLogs.length > 0 ? debriefLogs[0] : null,
           eodJournalLogged: (entries || []).some(e => e.date === todayStr)
@@ -1038,7 +1063,7 @@ export default function MissionControl() {
       label: 'Daily Budget',
       subtitle: 'Expense tracking & financial discipline',
       isDone: eodBudgetData.logged,
-      detail: eodBudgetData.logged ? `₹${eodBudgetData.spent.toLocaleString()} spent today` : 'No expenses logged today',
+      detail: eodBudgetData.logged ? `₹${eodBudgetData.spent.toLocaleString()} spent today${eodBudgetData.bills ? ` · ₹${eodBudgetData.bills.toLocaleString()} bills` : ''}` : 'No expenses logged today',
       path: '/budget',
       icon: Wallet,
       color: '#10B981'
@@ -1613,6 +1638,12 @@ export default function MissionControl() {
                     ? `₹${(eodBudgetData.budget - eodBudgetData.spent).toLocaleString()} remaining` 
                     : `₹${(eodBudgetData.spent - eodBudgetData.budget).toLocaleString()} over budget`}
                 </span>
+                {eodBudgetData.bills > 0 && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-purple-300" title="Bills & subscriptions count toward the ₹10K monthly bills limit">+ ₹{eodBudgetData.bills.toLocaleString()} bills (monthly limit)</span>
+                  </>
+                )}
               </div>
             </div>
 
