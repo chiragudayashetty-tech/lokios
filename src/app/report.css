@@ -1,0 +1,120 @@
+/* /report (#42) — A4 report, light (default) and dark. Screen shows the sheet; print is the sheet only. */
+
+.rp-root {
+  --rp-bg: #f3f3f5;
+  --rp-paper: #ffffff;
+  --rp-text: #15141a;
+  --rp-text-2: #3d3c47;
+  --rp-muted: #6b6a75;
+  --rp-border: #e6e5ea;
+  --rp-soft: #f6f6f8;
+  --rp-accent: #3987e5;
+  --rp-good: #157a52;
+  --rp-bad: #b8452a;
+  min-height: 100vh;
+  padding: 0 0 48px;
+  color: var(--rp-text);
+  background: var(--rp-bg);
+  font-family: var(--font-body, Inter, system-ui, sans-serif);
+  position: relative;
+  z-index: 1;
+}
+.rp-root[data-theme='dark'] {
+  --rp-bg: #07060d;
+  --rp-paper: #0e0d18;
+  --rp-text: #eeeef5;
+  --rp-text-2: #c5c4d2;
+  --rp-muted: #9a99a8;
+  --rp-border: #24233a;
+  --rp-soft: #15142a;
+  --rp-good: #3ddc97;
+  --rp-bad: #ff8a6b;
+}
+body:has(.rp-root)::before, body:has(.rp-root)::after { display: none !important; }
+body:has(.rp-root) { background: var(--rp-bg, #f3f3f5); }
+
+.rp-toolbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: color-mix(in oklab, var(--rp-bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rp-border); }
+.rp-tool-title { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--rp-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-tool { display: inline-flex; align-items: center; gap: 6px; min-height: 0; height: 34px; padding: 0 12px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--rp-text) !important; text-decoration: none !important; background: var(--rp-paper); border: 1px solid var(--rp-border); white-space: nowrap; }
+.rp-tool:disabled { opacity: 0.5; }
+.rp-tool.is-primary { color: #fff !important; background: var(--rp-accent); border-color: var(--rp-accent); }
+
+.rp-sheet { box-sizing: border-box; width: 210mm; max-width: calc(100% - 32px); margin: 24px auto 0; padding: 16mm 15mm; color: var(--rp-text); background: var(--rp-paper); border-radius: 6px; box-shadow: 0 10px 40px -18px rgba(0, 0, 0, 0.35); }
+.rp-cover { padding-bottom: 14px; margin-bottom: 18px; border-bottom: 2px solid var(--rp-text); }
+.rp-brand { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--rp-accent); }
+.rp-title { margin: 6px 0 4px; font-family: var(--font-display, inherit); font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: var(--rp-text) !important; background: none !important; -webkit-text-fill-color: currentColor; }
+.rp-meta { margin: 0; font-size: 12.5px; color: var(--rp-muted); }
+.rp-empty { padding: 40px 0; text-align: center; font-size: 14px; color: var(--rp-muted); }
+.rp-empty a { color: var(--rp-accent); }
+
+.rp-section { margin: 0 0 22px; }
+.rp-chart, .rp-kpis, .rp-callout, .rp-legend { break-inside: avoid; page-break-inside: avoid; }
+.rp-h2 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 10px; padding-bottom: 6px; font-size: 15px; font-weight: 800; color: var(--rp-text); border-bottom: 1px solid var(--rp-border); break-after: avoid; }
+.rp-h2 span { font-size: 11.5px; font-weight: 500; color: var(--rp-muted); }
+
+.rp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.rp-kpis.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rp-kpi { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 10px 12px; border-radius: 8px; background: var(--rp-soft); border: 1px solid var(--rp-border); }
+.rp-kpi-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rp-muted); }
+.rp-kpi-value { font-family: var(--font-display, inherit); font-size: 20px; font-weight: 800; color: var(--rp-text); font-feature-settings: 'tnum'; }
+.rp-kpi-sub { font-size: 11px; color: var(--rp-muted); }
+.rp-delta { display: inline-flex; align-items: center; gap: 2px; margin-top: 2px; font-size: 10.5px; font-weight: 600; color: var(--rp-muted); }
+.rp-delta.is-good { color: var(--rp-good); }
+.rp-delta.is-bad { color: var(--rp-bad); }
+
+.rp-chart { width: 100%; margin: 4px 0 8px; overflow: hidden; }
+.rp-chart .recharts-wrapper { width: 100% !important; height: auto !important; }
+.rp-chart .recharts-surface { width: 100%; height: auto; }
+.rp-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 6px; font-size: 10.5px; color: var(--rp-text-2); }
+.rp-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.rp-legend i { width: 9px; height: 9px; border-radius: 2px; }
+.rp-legend i.is-line { height: 0; border-top: 2px dashed var(--rp-muted); border-radius: 0; }
+
+.rp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rp-table th { padding: 5px 6px; background: none !important; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rp-muted) !important; border-bottom: 1px solid var(--rp-border); }
+.rp-table td { padding: 5px 6px; color: var(--rp-text); border-bottom: 1px solid var(--rp-border); vertical-align: middle; }
+.rp-table tfoot td { font-weight: 800; border-bottom: 0; }
+.rp-table tr { break-inside: avoid; }
+.rp-table .num { text-align: right; font-feature-settings: 'tnum'; white-space: nowrap; }
+.rp-table .cap { text-transform: capitalize; }
+.rp-barcol { width: 34%; }
+.rp-barwrap { display: flex; align-items: center; gap: 8px; }
+.rp-barwrap .num { width: 34px; text-align: right; }
+.rp-bar { flex: 1; height: 6px; border-radius: 999px; background: var(--rp-border); overflow: hidden; }
+.rp-bar i { display: block; height: 100%; border-radius: 999px; background: var(--rp-accent); }
+
+.rp-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; font-size: 12px; }
+.rp-list li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--rp-border); break-inside: avoid; }
+.rp-list li span { min-width: 0; color: var(--rp-text); }
+.rp-list time { flex: 0 0 auto; color: var(--rp-muted); font-size: 11px; }
+.rp-muted { margin: 6px 0 0; font-size: 11.5px; color: var(--rp-muted); }
+.rp-callout { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; padding: 7px 10px; border-radius: 8px; font-size: 12px; color: var(--rp-good); background: color-mix(in oklab, var(--rp-good) 10%, transparent); }
+.rp-foot { margin: 24px 0 0; padding-top: 8px; font-size: 10px; color: var(--rp-muted); text-align: center; border-top: 1px solid var(--rp-border); }
+
+@media (max-width: 640px) {
+  .rp-sheet { max-width: calc(100% - 16px); margin-top: 8px; padding: 18px 14px; }
+  .rp-title { font-size: 22px; }
+  .rp-kpis, .rp-kpis.is-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rp-tool-title { display: none; }
+  .rp-toolbar { gap: 6px; padding: 8px; }
+  .rp-tool { padding: 0 9px; }
+  .rp-toolbar .rp-tool:first-child { margin-right: auto; }
+}
+
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  /* Dark paper: Chromium leaves page margins white, so the dark page has none and the sheet pads every fragment */
+  @page rp-dark { size: A4 portrait; margin: 0; }
+  .rp-root[data-theme='dark'] { page: rp-dark; }
+  .rp-root[data-theme='dark'] .rp-sheet { padding: 12mm !important; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .rp-root { min-height: 0; padding: 0; background: var(--rp-paper) !important; }
+  body:has(.rp-root) { background: var(--rp-paper, #fff) !important; }
+  body:has(.rp-root[data-theme='dark']) { background: #0e0d18 !important; color: #eeeef5 !important; }
+  html:has(.rp-root[data-theme='dark']) { background: #0e0d18 !important; }
+  html:has(.rp-root[data-theme='light']) { background: #ffffff !important; }
+  .rp-toolbar { display: none !important; }
+  .rp-sheet { width: 100%; max-width: none; margin: 0; padding: 0; border-radius: 0; box-shadow: none; }
+  .rp-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  .rp-kpis.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .rp-chart .recharts-wrapper, .rp-chart .recharts-surface { width: 100% !important; }
+}

@@ -71,7 +71,7 @@ export function download(filename, text, type = 'application/json') {
 
 /**
  * Check an export file before anything is written. Returns { ok, errors, summary, data }.
- * Only known tables, arrays of objects with an id, at most 50k rows per table.
+ * Only known tables, arrays of objects, at most 50k rows per table.
  */
 export function validateImport(json) {
   const errors = []
@@ -88,14 +88,14 @@ export function validateImport(json) {
     if (!DATA_TABLES.includes(t)) { errors.push(`Unknown table "${t}".`); continue }
     if (!Array.isArray(rows)) { errors.push(`"${t}" must be a list.`); continue }
     if (rows.length > 50000) { errors.push(`"${t}" has more than 50,000 rows.`); continue }
-    const bad = rows.findIndex((r) => !r || typeof r !== 'object' || Array.isArray(r) || !r.id)
-    if (bad !== -1) { errors.push(`"${t}" row ${bad + 1} has no id.`); continue }
+    const bad = rows.findIndex((r) => !r || typeof r !== 'object' || Array.isArray(r))
+    if (bad !== -1) { errors.push(`"${t}" row ${bad + 1} is not an object.`); continue }
     if (rows.length) summary.push({ table: t, rows: rows.length })
   }
   return { ok: errors.length === 0, errors, summary, data }
 }
 
-/** Upsert validated rows (owner forced to the signed-in user), then re-total XP if the ledger came along. */
+/** Upsert validated rows (matched on each table's primary key) (owner forced to the signed-in user), then re-total XP if the ledger came along. */
 export async function importAll(userId, data, onProgress) {
   const sb = createClient()
   const results = []
@@ -107,7 +107,8 @@ export async function importAll(userId, data, onProgress) {
     let error = null
     for (let k = 0; k < rows.length; k += 500) {
       const chunk = rows.slice(k, k + 500).map((r) => ({ ...r, user_id: userId }))
-      const res = await sb.from(t).upsert(chunk, { onConflict: 'id' })
+      // Default conflict target = the table's primary key (id, or user_id + achievement_id for achievements)
+      const res = await sb.from(t).upsert(chunk)
       if (res.error) { error = isMissingSchema(res.error) ? 'table not in this database' : res.error.message; break }
       written += chunk.length
     }

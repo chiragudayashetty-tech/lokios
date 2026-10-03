@@ -55,7 +55,7 @@ function useHasMounted() {
 }
 
 // Routes that render without the app chrome.
-const CHROMELESS = [/^\/$/, /^\/login/, /^\/p\//, /^\/auth\//]
+const CHROMELESS = [/^\/$/, /^\/login/, /^\/p\//, /^\/auth\//, /^\/report/]
 const ShellContext = createContext(false)
 
 /**
@@ -271,6 +271,13 @@ function AppShellFrame({ children }) {
                 </div>
 
                 <div className="menu-grid">
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); setExportModalOpen(true) }}
+                    className="flex items-center justify-center gap-2 p-3 bg-amber/10 border border-amber/30 rounded-xl text-amber text-sm font-medium"
+                  >
+                    <Download size={15} />
+                    Report
+                  </button>
                   <button
                     onClick={() => window.location.reload()}
                     className="flex items-center justify-center gap-2 p-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-slate-300 text-sm font-medium"
