@@ -362,7 +362,7 @@ export default function JournalPage() {
               if (updErr) throw updErr
               savedRecord = upd?.[0]
             } else {
-              throw new Error(`Unique constraint conflict on date (${logPayload.date}). Please run fix_weekly_debrief_and_work_logs.sql in Supabase SQL editor to drop work_logs_user_date_key so work sessions and debriefs can coexist on Sundays! Details: ${insertErr.message}`)
+              throw new Error(`Unique constraint conflict on date (${logPayload.date}). Please run supabase/legacy-sql/fix_weekly_debrief_and_work_logs.sql in Supabase SQL editor to drop work_logs_user_date_key so work sessions and debriefs can coexist on Sundays! Details: ${insertErr.message}`)
             }
           } else {
             throw insertErr
