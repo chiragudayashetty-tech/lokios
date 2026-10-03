@@ -1193,4 +1193,4 @@
 .xr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .xr-actions .btn-primary { flex: 1 1 100%; justify-content: center; }
 .xr-actions .btn-secondary, .xr-actions .btn-ghost { flex: 1 1 0; justify-content: center; }
-.menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.menu-grid.menu-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
