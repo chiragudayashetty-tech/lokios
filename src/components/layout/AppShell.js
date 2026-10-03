@@ -17,6 +17,7 @@ import LevelUpCelebration from '@/components/ui/LevelUpCelebration'
 import GameOverlays from '@/components/game/GameOverlays'
 import WeeklyScorecard from '@/components/game/WeeklyScorecard'
 import AppServices from '@/components/layout/AppServices'
+import MissionOverlays from '@/components/goals/MissionOverlays'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { SAGA_TITLES } from '@/lib/constants'
 import { celebrateAt } from '@/lib/utils/celebrate'
@@ -374,6 +375,7 @@ function AppShellFrame({ children }) {
       />
       <XPToastStack events={feedbackEvents} onDismiss={dismissFeedback} />
       <GameOverlays />
+      <MissionOverlays />
       <WeeklyScorecard />
       <AppServices />
       <LevelUpCelebration level={level} rankTitle={SAGA_TITLES[rank.code] || rank.name} />
