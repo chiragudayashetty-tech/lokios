@@ -9,10 +9,12 @@ import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { getSettings, onSettingsChange } from '@/lib/settings'
 import { getQueue, onQueueChange, flushQueue } from '@/lib/utils/offlineQueue'
 import { showNotification, msUntil } from '@/lib/utils/notifications'
+import { runSubscriptionAutopilotDaily } from '@/lib/utils/subscriptions'
 
 /** Service worker, offline status pill and the evening habit reminder. */
 export default function AppServices() {
   const { habits = [], todayLogs = [] } = useOSSlice('habits')
+  const { user } = useOSSlice('auth')
   const [online, setOnline] = useState(true)
   const [queued, setQueued] = useState(0)
   const [settings, setSettings] = useState(null)
@@ -40,6 +42,13 @@ export default function AppServices() {
     const t = setInterval(() => { setOnline(navigator.onLine); setQueued(getQueue().length) }, 1500)
     return () => clearInterval(t)
   }, [online, queued])
+
+  // Subscription autopilot (#25): log due charges once per day per device
+  useEffect(() => {
+    if (!user?.id || !navigator.onLine) return
+    const t = setTimeout(() => { runSubscriptionAutopilotDaily(user.id).catch(e => console.warn('Subscription autopilot failed:', e)) }, 2500)
+    return () => clearTimeout(t)
+  }, [user?.id])
 
   useEffect(() => {
     setSettings(getSettings())

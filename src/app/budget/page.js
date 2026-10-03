@@ -27,13 +27,16 @@ import {
   Wallet, Plus, Trash2, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight,
   TrendingUp, TrendingDown, DollarSign, Calendar, AlertCircle, CheckCircle2,
   PieChart as PieIcon, BarChart3, Utensils, ShoppingCart, Car, Zap, CreditCard,
-  ShoppingBag, Film, HeartPulse, BookOpen, MoreHorizontal, Edit2
+  ShoppingBag, Film, HeartPulse, BookOpen, MoreHorizontal, Edit2, PiggyBank
 } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip,
   CartesianGrid, ReferenceLine, PieChart, Pie, Cell, Legend
 } from 'recharts'
 import { motion, AnimatePresence } from 'framer-motion'
+import SubscriptionsPanel from '@/components/budget/SubscriptionsPanel'
+import SavingsPanel from '@/components/budget/SavingsPanel'
+import { useLocalPref } from '@/lib/hooks/useLocalPref'
 
 // Map category icons
 const CATEGORY_ICONS = {
@@ -49,7 +52,7 @@ const CATEGORY_ICONS = {
   MoreHorizontal
 }
 
-export default function BudgetPage() {
+function SpendingView() {
   const { user } = useAuth()
   const todayStr = useMemo(() => getLocalDateStr(new Date()), [])
 
@@ -375,8 +378,8 @@ export default function BudgetPage() {
   }, [logs, chartRange])
 
   return (
-    <AppShell>
-      <div className="page-container max-w-[1400px] pb-12">
+    <>
+      <div className="page-container max-w-[1400px] pb-12 bud-spending">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
@@ -1296,6 +1299,36 @@ export default function BudgetPage() {
           onCancel={() => setConfirmModal({ isOpen: false })}
         />
       </div>
+    </>
+  )
+}
+
+const BUDGET_TABS = [
+  { id: 'spending', label: 'Spending', icon: Wallet },
+  { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+  { id: 'savings', label: 'Savings', icon: PiggyBank },
+]
+
+/** Budget: daily spending (existing view), subscription autopilot (#25) and savings jars (#26). */
+export default function BudgetPage() {
+  const { user } = useAuth()
+  const [tab, setTab] = useLocalPref('lokios_budget_tab', 'spending', BUDGET_TABS.map((t) => t.id))
+  return (
+    <AppShell>
+      <div className="page-container max-w-[1400px] bud-tabs-wrap">
+        <div className="tl-tabs bud-tabs" role="tablist" aria-label="Budget sections">
+          {BUDGET_TABS.map(({ id, label, icon: Icon }) => (
+            <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => setTab(id)}><Icon size={13} /> {label}</button>
+          ))}
+        </div>
+      </div>
+      {tab === 'spending' && <SpendingView />}
+      {tab !== 'spending' && (
+        <div className="page-container max-w-[1400px] pb-12">
+          {tab === 'subscriptions' && <SubscriptionsPanel userId={user?.id} billsLimit={user?.id ? getLocalMonthlyBillsBudget(user.id) : DEFAULT_MONTHLY_BILLS_BUDGET} />}
+          {tab === 'savings' && <SavingsPanel userId={user?.id} />}
+        </div>
+      )}
     </AppShell>
   )
 }
