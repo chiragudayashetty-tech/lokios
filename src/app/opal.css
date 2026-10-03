@@ -1096,3 +1096,52 @@ textarea::placeholder,
 @media (min-width: 1024px) {
   .hidden-desktop { display: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PERFORMANCE — keep scrolling and idle frames cheap
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Fixed backgrounds repaint the whole page on every scroll frame */
+html, body { background-attachment: scroll !important; }
+
+/* Aurora: the gradients are already soft, so no blur filter (blurring a
+   viewport-sized animated layer is the single most expensive paint here).
+   Promoted to its own compositor layer so it never repaints content. */
+body::before {
+  inset: -12vmax !important;
+  filter: none !important;
+  will-change: transform;
+  contain: strict;
+  animation-duration: 60s !important;
+}
+body::after { will-change: transform; contain: strict; }
+
+/* Glass blur is costly per frame on phones; keep it light everywhere */
+.sidebar,
+.loki-capsule-hud,
+.mobile-nav,
+.game-toast,
+.xp-toast {
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+/* Decorative shimmers: a few passes, then rest */
+.capsule-fill::after,
+.opal-progress-fill::after { animation-iteration-count: 3 !important; }
+
+@media (max-width: 1023px), (pointer: coarse) {
+  /* Phones: static aurora + snow (same look, zero animation cost) */
+  body::before,
+  :root[data-season='winter'] body::after { animation: none !important; }
+  .sidebar,
+  .loki-capsule-hud,
+  .mobile-nav { backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important; }
+  /* Shorter entrance animations feel snappier on touch */
+  .hud-panel, .glass-panel, .dashboard-card, .arena-card { animation-duration: 380ms !important; }
+}
+
+/* Soft CSS pulse (replaces JS-driven infinite animations) */
+.pulse-soft { display: inline-flex; animation: pulse-soft-kf 1.8s ease-in-out infinite; }
+@keyframes pulse-soft-kf { 50% { transform: scale(1.18); } }
+@media (prefers-reduced-motion: reduce) { .pulse-soft { animation: none; } }

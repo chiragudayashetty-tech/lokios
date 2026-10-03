@@ -426,6 +426,8 @@ export default function MissionControl() {
   useEffect(() => {
     if (!isAutoCycling) return
     const interval = setInterval(() => {
+      // Each tick re-renders the dashboard: skip while the tab or the hero isn't visible
+      if (document.hidden || window.scrollY > 600 || (document.querySelector('.main-content')?.scrollTop || 0) > 600) return
       setActiveArtworkIndex(prev => {
         const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
         return (base + 1) % ARC_CONFIG.length
@@ -434,12 +436,8 @@ export default function MissionControl() {
     return () => clearInterval(interval)
   }, [isAutoCycling, currentArcIndex])
 
-  useEffect(() => {
-    const quoteInterval = setInterval(() => {
-      setQuoteIndex(prev => (prev + 1) % SAGA_DISCIPLINE_QUOTES.length)
-    }, 10000)
-    return () => clearInterval(quoteInterval)
-  }, [SAGA_DISCIPLINE_QUOTES.length])
+  // (A 10s quote rotation lived here; the quote isn't rendered, and each tick
+  // re-rendered the whole dashboard, so it was removed.)
 
   // Instant cache loader from localStorage for zero-delay initial widget status
   useEffect(() => {

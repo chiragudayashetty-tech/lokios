@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 export function useAuth() {
-  const [user, setUser] = useState(() => {
+  const [user, setUserRaw] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
         const cached = localStorage.getItem('lokios_cached_user')
@@ -20,6 +20,11 @@ export function useAuth() {
     }
     return true
   })
+  // Keep the same object while the account is unchanged: ~40 effects across the
+  // app depend on `user`, and a fresh copy of the same user re-ran all of them.
+  const setUser = useCallback((next) => {
+    setUserRaw(prev => (prev && next && prev.id === next.id ? prev : next))
+  }, [])
   const router = useRouter()
   const supabase = createClient()
 

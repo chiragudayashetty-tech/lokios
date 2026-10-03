@@ -152,13 +152,12 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
           style={{ borderLeft: '1px solid var(--border-color)' }}
           title={nextMilestone ? `${nextMilestone.days - streak} more day${nextMilestone.days - streak === 1 ? '' : 's'} at 90%+ of habits → +${nextMilestone.xp} XP` : 'Legendary streak'}
         >
-          <motion.span
+          <span
+            className={streak > 0 ? 'pulse-soft' : ''}
             style={{ display: 'flex', color: streak > 0 ? 'var(--warning)' : 'var(--text-disabled)' }}
-            animate={streak > 0 ? { scale: [1, 1.15, 1] } : { scale: 1 }}
-            transition={streak > 0 ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : undefined}
           >
             <Flame size={16} />
-          </motion.span>
+          </span>
           <div className="flex flex-col justify-center">
             <span className="font-display font-extrabold text-sm leading-none text-white font-mono">{streak}d streak</span>
             {nextMilestone && (
@@ -187,13 +186,9 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
               boxShadow: state === 'SURGING' ? `0 0 16px -4px ${stateColor}` : 'none',
             }}
           >
-            <motion.span
-              style={{ display: 'flex' }}
-              animate={state === 'SURGING' ? { scale: [1, 1.25, 1], rotate: [0, -8, 0] } : { scale: 1 }}
-              transition={state === 'SURGING' ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' } : undefined}
-            >
+            <span className={state === 'SURGING' ? 'pulse-soft' : ''} style={{ display: 'flex' }}>
               <StateIcon size={12} />
-            </motion.span>
+            </span>
             <span>{state}</span>
           </div>
         </Link>
