@@ -59,3 +59,8 @@
   .settings-row { flex-direction: column; align-items: flex-start; gap: 8px; }
   .scorecard-stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Missing-migration hint ────────────────────────────────────────────── */
+.schema-hint { display: flex; align-items: flex-start; gap: 8px; margin: 8px 0; padding: 10px 12px; border-radius: 12px; font-size: 12.5px; line-height: 1.45; color: var(--warning); background: var(--warning-subtle); border: 1px solid color-mix(in oklab, var(--warning) 25%, transparent); }
+.schema-hint svg { flex: 0 0 auto; margin-top: 2px; }
+.schema-hint code { font-family: var(--font-code); font-size: 11.5px; color: var(--text-primary); word-break: break-all; }

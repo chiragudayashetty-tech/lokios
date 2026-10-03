@@ -9,6 +9,11 @@ import { calculateAndUpdateStreak, applyStreakRewards } from '@/lib/utils/streak
 import { applyHabitRewards } from '@/lib/utils/gamification'
 import { enqueue, isOffline, registerOfflineHandler } from '@/lib/utils/offlineQueue'
 import { syncWarRoomHabitChange } from '@/lib/utils/warRoomSync'
+import { applyChainRewards } from '@/lib/utils/habitChains'
+import { isMissingSchema } from '@/lib/utils/schema'
+
+// habit_logs.completed_at (round-2 migration) orders habit chains; null = unknown
+let logsHaveCompletedAt = null
 
 /**
  * Calculates prior consecutive missed/failed scheduled days before targetDateStr for a habit.
@@ -208,9 +213,18 @@ export function useHabitsInternal(user) {
       if (nextStatus === 'none') {
         await supabase.from('habit_logs').delete().eq('user_id', user.id).eq('habit_id', habitId).eq('date', targetDate)
       } else {
-        const { data: upsertedRows, error: upsertErr } = await supabase.from('habit_logs')
-          .upsert({ user_id: user.id, habit_id: habitId, date: targetDate, status: nextStatus }, { onConflict: 'habit_id,date' })
+        const row = { user_id: user.id, habit_id: habitId, date: targetDate, status: nextStatus }
+        if (logsHaveCompletedAt !== false) row.completed_at = nextStatus === 'completed' ? new Date().toISOString() : null
+        let { data: upsertedRows, error: upsertErr } = await supabase.from('habit_logs')
+          .upsert(row, { onConflict: 'habit_id,date' })
           .select()
+        if (upsertErr && 'completed_at' in row && isMissingSchema(upsertErr)) {
+          logsHaveCompletedAt = false
+          delete row.completed_at
+          ;({ data: upsertedRows, error: upsertErr } = await supabase.from('habit_logs').upsert(row, { onConflict: 'habit_id,date' }).select())
+        } else if (!upsertErr && 'completed_at' in row) {
+          logsHaveCompletedAt = true
+        }
         if (upsertErr) throw upsertErr
         if (upsertedRows && upsertedRows.length > 0) newLog = upsertedRows[0]
       }
@@ -265,6 +279,11 @@ export function useHabitsInternal(user) {
         await applyStreakRewards(user.id, streak, targetDate)
         // First win x2, critical hits and mastery tier-ups
         await applyHabitRewards({ userId: user.id, habit, dateStr: targetDate, completed: nextStatus === 'completed', wasCompleted: currentStatus === 'completed', model: streak })
+        // Habit chains: bonus for doing this habit right after its predecessor
+        const beforeLogs = monthLogs.filter(l => l.date === targetDate)
+        const afterLogs = beforeLogs.filter(l => l.habit_id !== habitId)
+        if (newLog) afterLogs.push(newLog.completed_at || nextStatus !== 'completed' ? newLog : { ...newLog, completed_at: new Date().toISOString() })
+        await applyChainRewards({ userId: user.id, habits, beforeLogs, afterLogs, dateStr: targetDate })
       } catch (e) {
         console.error('Streak update failed:', e)
       }

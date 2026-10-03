@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr, formatDate, getStartOfWeek, getEndOfWeek, getDebriefSortTime } from '@/lib/utils/dates'
 import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
 import DebriefRecap from '@/components/game/DebriefRecap'
+import StaleReview from '@/components/braindump/StaleReview'
 import { awardDebrief } from '@/lib/utils/gamification'
 import {
   BookOpen, Smile, Frown, Meh, Save, Zap, Flame, ShieldAlert,
@@ -689,6 +690,8 @@ ${w}` : w)
 ${f}` : f)
                     }}
                   />
+
+                  {debriefWeekOffset === 0 && <StaleReview compact />}
 
                   <form onSubmit={handleSaveDebrief} className="space-y-6">
                     {/* Section 1: Wins */}

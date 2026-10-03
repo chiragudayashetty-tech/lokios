@@ -17,10 +17,11 @@ import LevelUpCelebration from '@/components/ui/LevelUpCelebration'
 import GameOverlays from '@/components/game/GameOverlays'
 import WeeklyScorecard from '@/components/game/WeeklyScorecard'
 import AppServices from '@/components/layout/AppServices'
+import MissionOverlays from '@/components/goals/MissionOverlays'
+import AchievementService from '@/components/achievements/AchievementService'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { SAGA_TITLES } from '@/lib/constants'
 import { celebrateAt } from '@/lib/utils/celebrate'
-import { ACTIVE_SEASON } from '@/lib/theme/levelTheme'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Home', group: 'Plan' },
@@ -54,7 +55,7 @@ function useHasMounted() {
 }
 
 // Routes that render without the app chrome.
-const CHROMELESS = [/^\/$/, /^\/login/, /^\/p\//, /^\/auth\//]
+const CHROMELESS = [/^\/$/, /^\/login/, /^\/p\//, /^\/auth\//, /^\/report/]
 const ShellContext = createContext(false)
 
 /**
@@ -203,7 +204,7 @@ function AppShellFrame({ children }) {
                   <span className="text-[11px] uppercase tracking-[0.14em] text-muted font-semibold block">Menu</span>
                   <div className="flex items-center gap-2">
                     <div className="logo-text" style={{ fontSize: '1.6rem' }}>ChiragOS</div>
-                    {ACTIVE_SEASON === 'winter' && <span className="season-badge"><Snowflake size={11} /> Winter arc</span>}
+                    <span className="season-badge season-winter-only"><Snowflake size={11} /> Winter arc</span>
                   </div>
                 </div>
                 <button
@@ -271,6 +272,13 @@ function AppShellFrame({ children }) {
 
                 <div className="menu-grid">
                   <button
+                    onClick={() => { setMobileMenuOpen(false); setExportModalOpen(true) }}
+                    className="flex items-center justify-center gap-2 p-3 bg-amber/10 border border-amber/30 rounded-xl text-amber text-sm font-medium"
+                  >
+                    <Download size={15} />
+                    Report
+                  </button>
+                  <button
                     onClick={() => window.location.reload()}
                     className="flex items-center justify-center gap-2 p-3 bg-white/[0.04] border border-white/[0.08] rounded-xl text-slate-300 text-sm font-medium"
                   >
@@ -296,9 +304,8 @@ function AppShellFrame({ children }) {
         <div className="sidebar-header">
           <Link href="/dashboard" className="logo">
             <span className="logo-text">ChiragOS</span>
-            {ACTIVE_SEASON === 'winter'
-              ? <span className="season-badge"><Snowflake size={11} /> Winter arc</span>
-              : <span className="logo-badge">v3</span>}
+            <span className="season-badge season-winter-only"><Snowflake size={11} /> Winter arc</span>
+            <span className="logo-badge season-off-only">v3</span>
           </Link>
         </div>
 
@@ -374,6 +381,8 @@ function AppShellFrame({ children }) {
       />
       <XPToastStack events={feedbackEvents} onDismiss={dismissFeedback} />
       <GameOverlays />
+      <MissionOverlays />
+      <AchievementService />
       <WeeklyScorecard />
       <AppServices />
       <LevelUpCelebration level={level} rankTitle={SAGA_TITLES[rank.code] || rank.name} />

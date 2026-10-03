@@ -14,8 +14,13 @@ import { useProfileInternal } from '@/lib/hooks/useProfileInternal'
 import { useCalendarInternal } from '@/lib/hooks/useCalendarInternal'
 import { useCharacterStatsInternal } from '@/lib/hooks/useCharacterStatsInternal'
 import { useFocusInternal } from '@/lib/hooks/useFocusInternal'
-import { getThemeForXP } from '@/lib/theme/levelTheme'
+import { MotionConfig } from 'framer-motion'
+import { applyUserTheme } from '@/lib/theme/userTheme'
+import { useSettings } from '@/lib/hooks/useSettings'
 import { hydrateSettingsFromProfile } from '@/lib/settings'
+import { getMilestones, ensureMilestones } from '@/lib/stores/milestoneStore'
+import { progressOf, milestoneTaskStats } from '@/lib/utils/missions'
+import { emitGame } from '@/lib/utils/gamification'
 
 const OSContext = createContext(null)
 
@@ -55,14 +60,11 @@ export function OSProvider({ children }) {
   const characterStats = useShallowStable(useCharacterStatsInternal(auth.user))
   const focus = useShallowStable(useFocusInternal(auth.user, true))
 
-  // Apply rank-derived visual tokens only. XP remains owned by existing profile/RPC flows.
+  // Apply rank-derived visual tokens + the theme picker (#34). XP remains owned by existing profile/RPC flows.
+  const themePref = useSettings().theme
   useEffect(() => {
-    if (typeof document === 'undefined') return
-    const theme = getThemeForXP(profile?.profile?.total_xp || 0)
-    Object.entries(theme.cssVars).forEach(([name, value]) => document.documentElement.style.setProperty(name, value))
-    if (theme.season) document.documentElement.dataset.season = theme.season
-    else delete document.documentElement.dataset.season
-  }, [profile?.profile?.total_xp])
+    applyUserTheme(themePref, profile?.profile?.total_xp || 0)
+  }, [profile?.profile?.total_xp, themePref])
 
   // Settings saved on another device arrive with the profile
   useEffect(() => {
@@ -141,6 +143,15 @@ export function OSProvider({ children }) {
     }
   }, [auth?.user?.id])
 
+  /** Recompute a mission's cached progress (milestones 60% + tasks 40%, see utils/missions). */
+  const syncMissionProgress = useCallback(async (goalId, taskList) => {
+    const goal = goals.goals.find(g => g.id === goalId)
+    if (!goal || goal.status === 'completed') return
+    await ensureMilestones(auth.user?.id)
+    const next = progressOf(goal, getMilestones(), taskList)
+    if (next !== goal.progress) await goals.updateProgress(goal.id, Math.min(100, next))
+  }, [goals, auth.user?.id])
+
   // Cross-Domain Orchestration Methods
   const completeOperation = useCallback(async (taskId, proofUrl = null, completionNote = null) => {
     // 1. Complete the underlying task
@@ -149,18 +160,19 @@ export function OSProvider({ children }) {
     // 2. If it belongs to a Mission (Goal), automate mission progress
     const task = updatedTask || tasks.tasks.find(t => t.id === taskId)
     if (task && task.goal_id) {
-      const goal = goals.goals.find(g => g.id === task.goal_id)
-      if (goal && goal.status !== 'completed') {
-        const goalTasks = tasks.tasks.filter(t => t.goal_id === task.goal_id)
-        const completedGoalTasks = goalTasks.filter(t => t.status === 'completed' || t.id === taskId).length
-        const totalGoalTasks = goalTasks.length || 1
-        
-        const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
-        await goals.updateProgress(goal.id, newProgress)
+      const after = tasks.tasks.map(t => (t.id === taskId ? { ...t, status: 'completed' } : t))
+      await syncMissionProgress(task.goal_id, after)
+      // 3. Last open task of a milestone → offer to complete the milestone (#22)
+      const milestone = task.milestone_id && getMilestones().find(m => m.id === task.milestone_id)
+      if (milestone && !milestone.done_at) {
+        const st = milestoneTaskStats(milestone.id, after)
+        if (st.total > 0 && st.done === st.total) {
+          emitGame('milestone-ready', { milestoneId: milestone.id, goalId: task.goal_id })
+        }
       }
     }
     return updatedTask
-  }, [tasks, goals, xp])
+  }, [tasks, syncMissionProgress])
   
   const deleteOperation = useCallback(async (taskId, revokeXp = true) => {
     const task = tasks.tasks.find(t => t.id === taskId)
@@ -168,21 +180,13 @@ export function OSProvider({ children }) {
     
     const success = await tasks.deleteTask(taskId, revokeXp)
     if (success && task.goal_id) {
-      const goal = goals.goals.find(g => g.id === task.goal_id)
-      if (goal && goal.status !== 'completed') {
-        const goalTasks = tasks.tasks.filter(t => t.goal_id === task.goal_id && t.id !== taskId)
-        const completedGoalTasks = goalTasks.filter(t => t.status === 'completed').length
-        const totalGoalTasks = goalTasks.length || 1
-        
-        const newProgress = Math.min(100, Math.round((completedGoalTasks / totalGoalTasks) * 100))
-        await goals.updateProgress(goal.id, newProgress)
-      }
+      await syncMissionProgress(task.goal_id, tasks.tasks.filter(t => t.id !== taskId))
     }
     if (success) {
       await profile.fetchProfile() // Refresh XP immediately
     }
     return success
-  }, [tasks, goals, profile])
+  }, [tasks, profile, syncMissionProgress])
 
   const failOperation = useCallback(async (taskId, failureReason = null) => {
     const result = await tasks.failTask(taskId, failureReason)
@@ -200,8 +204,8 @@ export function OSProvider({ children }) {
     return result
   }, [tasks, profile])
 
-  const failMission = useCallback(async (goalId) => {
-    const result = await goals.failGoal(goalId)
+  const failMission = useCallback(async (goalId, failureReason = null) => {
+    const result = await goals.failGoal(goalId, failureReason)
     if (result) {
       await profile.fetchProfile() // Refresh XP immediately
     }
@@ -238,6 +242,7 @@ export function OSProvider({ children }) {
     characterStats,
     completeOperation,
     deleteOperation,
+    syncMissionProgress,
     failOperation,
     undoFailOperation,
     failMission,
@@ -257,6 +262,7 @@ export function OSProvider({ children }) {
     characterStats,
     completeOperation,
     deleteOperation,
+    syncMissionProgress,
     failOperation,
     undoFailOperation,
     failMission,
@@ -266,10 +272,12 @@ export function OSProvider({ children }) {
 
   return (
     <OSContext.Provider value={osState}>
-      {SLICES.reduceRight((tree, name) => {
-        const Ctx = SliceContexts[name]
-        return <Ctx.Provider value={osState[name]}>{tree}</Ctx.Provider>
-      }, children)}
+      <MotionConfig reducedMotion={themePref?.motion === 'reduced' ? 'always' : themePref?.motion === 'full' ? 'never' : 'user'}>
+        {SLICES.reduceRight((tree, name) => {
+          const Ctx = SliceContexts[name]
+          return <Ctx.Provider value={osState[name]}>{tree}</Ctx.Provider>
+        }, children)}
+      </MotionConfig>
     </OSContext.Provider>
   )
 }

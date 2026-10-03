@@ -26,8 +26,8 @@ const WINTER_BANDS = {
   border: ['#1D4666', '#22386A', '#1D5A52', '#514C82'],
 }
 
-function gemTheme(level) {
-  const bands = ACTIVE_SEASON === 'winter' ? WINTER_BANDS : GEM_BANDS
+function gemTheme(level, season) {
+  const bands = season === 'winter' ? WINTER_BANDS : GEM_BANDS
   const band = Math.min(bands.bg.length - 1, Math.floor(Math.max(0, level - 1) / 25))
   return {
     name: bands.name[band],
@@ -40,7 +40,8 @@ function gemTheme(level) {
 }
 
 /** Read-only visual tokens derived from the level-by-level exact palette. */
-export function getThemeForXP(totalXp = 0) {
+/** `season` defaults to ACTIVE_SEASON; settings.theme.season can override it (#34). */
+export function getThemeForXP(totalXp = 0, season = ACTIVE_SEASON) {
   const safeXp = Number.isFinite(Number(totalXp)) ? Number(totalXp) : 0
   const level = calculateLevel(Math.max(0, safeXp))
   const rank = getRankForXp(safeXp)
@@ -48,7 +49,7 @@ export function getThemeForXP(totalXp = 0) {
   
   // Lookup exact per-level theme (clamped between 1 and 100)
   const clampedLevel = Math.max(1, Math.min(100, level))
-  const levelTheme = gemTheme(clampedLevel)
+  const levelTheme = gemTheme(clampedLevel, season)
 
   const primary = levelTheme.accent || config.color || DEFAULT_PRIMARY
   const secondary = levelTheme.secondary || '#252D52'
@@ -65,7 +66,7 @@ export function getThemeForXP(totalXp = 0) {
     level,
     levelTheme,
     progressInBand,
-    season: ACTIVE_SEASON,
+    season,
     cssVars: {
       '--saga-primary': primary,
       '--saga-secondary': secondary,
@@ -90,7 +91,7 @@ export function getThemeForXP(totalXp = 0) {
   }
 }
 
-function hexToRgba(hex, alpha) {
+export function hexToRgba(hex, alpha) {
   const value = String(hex).replace('#', '')
   const normalized = value.length === 3 ? value.split('').map(c => c + c).join('') : value
   const int = Number.parseInt(normalized, 16)

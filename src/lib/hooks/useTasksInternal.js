@@ -6,6 +6,8 @@ import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { escalatingPenalty } from '@/lib/utils/xpRules'
 import { getLocalDateStr } from '@/lib/utils/dates'
+import { isMissingSchema } from '@/lib/utils/schema'
+import { settleTaskBlocks, unsettleTaskBlocks } from '@/lib/utils/blockRewards'
 
 // Map quest/task category IDs to canonical stat_category keys used by XP page
 const TASK_CATEGORY_TO_STAT = {
@@ -29,6 +31,8 @@ export function useTasksInternal(user) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [initialized, setInitialized] = useState(false)
+  // Round-2 board columns (subtasks, estimate, position, milestone): null = unknown
+  const [boardSchema, setBoardSchema] = useState(null)
   const supabase = createClient()
 
   const fetchTasks = useCallback(async () => {
@@ -49,6 +53,7 @@ export function useTasksInternal(user) {
 
       if (error) throw error
       setTasks(data || [])
+      if (data?.length) setBoardSchema('subtasks' in data[0] && 'position' in data[0])
     } catch (err) {
       console.error('Error fetching tasks:', err)
       setError('Failed to load data. Please refresh and try again.')
@@ -192,6 +197,9 @@ export function useTasksInternal(user) {
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
 
+      // Time blocks for this task: mark completed, +5 XP when finished on time (#40)
+      settleTaskBlocks(user.id, task).catch(() => {})
+
       // AUTO-CLONING ENGINE FOR RECURRING TASKS
       if (task.type === 'recurring' && task.recurrence_type && task.due_date) {
         const currentDueDate = new Date(task.due_date)
@@ -273,8 +281,8 @@ export function useTasksInternal(user) {
       if (error) throw error
 
       // Remove XP
-      const task = tasks.find(t => t.id === id)
       await robustRemoveXP(user.id, 'task_complete', id)
+      unsettleTaskBlocks(user.id, id).catch(() => {})
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       return updated
@@ -477,9 +485,52 @@ export function useTasksInternal(user) {
     }
   }, [user, tasks])
 
+  /**
+   * Optimistic partial update for board / drawer edits. Rolls back on failure and
+   * reports a missing round-2 column instead of throwing.
+   */
+  const patchTask = useCallback(async (id, patch) => {
+    if (!user) return { error: new Error('Not signed in') }
+    let previous = null
+    setTasks((prev) => prev.map((t) => {
+      if (t.id !== id) return t
+      previous = t
+      return { ...t, ...patch }
+    }))
+    const { data, error } = await supabase.from('tasks').update(patch).eq('id', id).eq('user_id', user.id).select().single()
+    if (error) {
+      if (previous) setTasks((prev) => prev.map((t) => (t.id === id ? previous : t)))
+      const missingSchema = isMissingSchema(error)
+      if (missingSchema) setBoardSchema(false)
+      else console.error('Error updating task:', error)
+      return { error, missingSchema }
+    }
+    setTasks((prev) => prev.map((t) => (t.id === id ? data : t)))
+    return { data }
+  }, [user])
+
+  /** Persist a new order inside a board column: [{ id, position }]. */
+  const reorderTasks = useCallback(async (orders) => {
+    if (!user || !orders?.length) return { ok: true }
+    const byId = new Map(orders.map((o) => [o.id, o.position]))
+    setTasks((prev) => prev.map((t) => (byId.has(t.id) ? { ...t, position: byId.get(t.id) } : t)))
+    const results = await Promise.all(orders.map((o) =>
+      supabase.from('tasks').update({ position: o.position }).eq('id', o.id).eq('user_id', user.id)
+    ))
+    const failed = results.find((r) => r.error)
+    if (failed) {
+      if (isMissingSchema(failed.error)) setBoardSchema(false)
+      return { ok: false, error: failed.error }
+    }
+    return { ok: true }
+  }, [user])
+
   return {
     tasks,
     todayTasks,
+    boardSchema,
+    patchTask,
+    reorderTasks,
     loading,
     error,
     fetchTasks,

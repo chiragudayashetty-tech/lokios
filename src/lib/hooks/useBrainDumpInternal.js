@@ -3,306 +3,135 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { XP_REWARDS } from '@/lib/constants'
+import { robustAwardXP } from '@/lib/utils/xpFallback'
+import { isMissingSchema } from '@/lib/utils/schema'
+import { parseCapture, kindOf } from '@/lib/utils/brainDump'
 
-// 10-color palette for topics
+// 10-color palette for topics (kept for older screens / exports)
 export const TOPIC_COLORS = [
-  { name: 'Cyan',   value: '#22d3ee' },
-  { name: 'Amber',  value: '#f59e0b' },
-  { name: 'Purple', value: '#a855f7' },
-  { name: 'Green',  value: '#22c55e' },
-  { name: 'Red',    value: '#ef4444' },
-  { name: 'Sky',    value: '#38bdf8' },
-  { name: 'Pink',   value: '#ec4899' },
-  { name: 'Yellow', value: '#eab308' },
-  { name: 'Slate',  value: '#94a3b8' },
+  { name: 'Cyan', value: '#22d3ee' }, { name: 'Amber', value: '#f59e0b' }, { name: 'Purple', value: '#a855f7' },
+  { name: 'Green', value: '#22c55e' }, { name: 'Red', value: '#ef4444' }, { name: 'Sky', value: '#38bdf8' },
+  { name: 'Pink', value: '#ec4899' }, { name: 'Yellow', value: '#eab308' }, { name: 'Slate', value: '#94a3b8' },
   { name: 'Bronze', value: '#cd7f32' },
 ]
-
 export const DEFAULT_TOPICS = [
-  { name: 'General',       color: '#94a3b8' },
-  { name: 'Startup Ideas', color: '#22d3ee' },
-  { name: 'Business',      color: '#f59e0b' },
-  { name: 'Health',        color: '#22c55e' },
-  { name: 'Learning',      color: '#38bdf8' },
+  { name: 'General', color: '#94a3b8' }, { name: 'Startup Ideas', color: '#22d3ee' }, { name: 'Business', color: '#f59e0b' },
+  { name: 'Health', color: '#22c55e' }, { name: 'Learning', color: '#38bdf8' },
 ]
-
-export function getTopicColor(topicName) {
-  if (!topicName) return '#94a3b8'
-  const match = DEFAULT_TOPICS.find(t => t.name.toLowerCase() === topicName.toLowerCase())
+export function getTopicColor(name) {
+  if (!name) return '#94a3b8'
+  const match = DEFAULT_TOPICS.find(t => t.name.toLowerCase() === name.toLowerCase())
   if (match) return match.color
-
   let hash = 0
-  for (let i = 0; i < topicName.length; i++) {
-    hash = topicName.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  const idx = Math.abs(hash) % TOPIC_COLORS.length
-  return TOPIC_COLORS[idx].value
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return TOPIC_COLORS[Math.abs(hash) % TOPIC_COLORS.length].value
 }
 
+/** Status values the legacy schema accepts for each kind (round-2 kind column absent). */
+const LEGACY_STATUS = { inbox: 'inbox', note: 'done', idea: 'done', archived: 'done' }
+
 export function useBrainDumpInternal(user) {
-  const [items, setItems]   = useState([])
-  const [topics, setTopics] = useState(DEFAULT_TOPICS)
+  const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [hasKind, setHasKind] = useState(null) // round-2 columns (kind, tags, converted_to)
   const supabase = createClient()
 
-  // ── Fetch items ──────────────────────────────────────────────────────────
   const fetchItems = useCallback(async () => {
     if (!user) { setItems([]); setLoading(false); return }
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('brain_dump')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-      if (error) throw error
+    const { data, error } = await supabase.from('brain_dump').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+    if (!error) {
       setItems(data || [])
-
-      // Derive unique topics from existing data and merge with defaults
-      const existingTopics = Array.from(
-        new Set((data || []).map(i => i.topic || (i.type && !['note', 'thought', 'idea', 'task', 'goal', 'random'].includes(i.type) ? i.type : null) || 'General'))
-      ).map(name => ({ name, color: getTopicColor(name) }))
-
-      const merged = [...DEFAULT_TOPICS]
-      existingTopics.forEach(et => {
-        if (!merged.find(m => m.name === et.name)) merged.push(et)
-      })
-      setTopics(merged)
-    } catch (err) {
-      console.error('Error fetching brain dump:', err)
-    } finally {
-      setLoading(false)
-    }
+      if (data?.length) setHasKind('kind' in data[0])
+    } else console.error('Error fetching brain dump:', error)
+    setLoading(false)
   }, [user])
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  // ── Add item ─────────────────────────────────────────────────────────────
-  const addItem = useCallback(async (content, topic = 'General') => {
-    if (!user) return { error: 'User not authenticated' }
-    try {
-      const topicName = topic || 'General'
-      const payload = {
-        user_id: user.id,
-        content,
-        topic: topicName,
-        type: 'note',
-        status: 'inbox'
-      }
+  const patchLocal = (id, patch) => setItems(prev => prev.map(i => (i.id === id ? { ...i, ...patch } : i)))
 
-      let newItem = null
-      let { data, error } = await supabase
-        .from('brain_dump')
-        .insert(payload)
-        .select()
-        .single()
-
-      if (error) {
-        // Fallback 1: If 'topic' column is not in DB yet
-        if (error.code === '42703' || error.message?.includes('topic')) {
-          delete payload.topic
-          const retry = await supabase.from('brain_dump').insert(payload).select().single()
-          if (retry.error) throw retry.error
-          newItem = retry.data
-        } 
-        // Fallback 2: If type check constraint fails ('brain_dump_type_check')
-        else if (error.code === '23514' || error.message?.includes('brain_dump_type_check')) {
-          const fallbackTypes = ['thought', 'idea', 'task', 'goal', 'random']
-          let success = false
-          for (const ft of fallbackTypes) {
-            payload.type = ft
-            const retry = await supabase.from('brain_dump').insert(payload).select().single()
-            if (!retry.error) {
-              newItem = retry.data
-              success = true
-              break
-            }
-          }
-          if (!success) {
-            delete payload.type
-            const retry = await supabase.from('brain_dump').insert(payload).select().single()
-            if (retry.error) throw retry.error
-            newItem = retry.data
-          }
-        } else {
-          throw error
-        }
-      } else {
-        newItem = data
-      }
-
-      if (newItem) {
-        if (!newItem.topic) newItem.topic = topicName
-        setItems(prev => [newItem, ...prev])
-        setTopics(prev => prev.find(t => t.name === topicName) ? prev : [...prev, { name: topicName, color: getTopicColor(topicName) }])
-
-        try {
-          await supabase.rpc('award_xp', {
-            p_user_id: user.id,
-            p_amount: XP_REWARDS.brain_dump_capture || 5,
-            p_source_type: 'brain_dump',
-            p_source_id: newItem.id,
-            p_description: `Intel Drop: ${topicName}`,
-            p_stat_category: 'discipline',
-          })
-        } catch (xpErr) {
-          console.warn('XP award warning:', xpErr)
-        }
-      }
-
-      return { data: newItem }
-    } catch (err) {
-      console.error('Error adding brain dump item:', err)
-      return { error: err }
+  /** Update an item; round-2 fields are dropped (and remembered) when the columns don't exist. */
+  const updateItem = useCallback(async (id, patch) => {
+    if (!user) return { error: 'Not signed in' }
+    let body = { ...patch }
+    if (hasKind === false) {
+      if (body.kind) body.status = body.converted_to === 'trash' ? 'discarded' : LEGACY_STATUS[body.kind]
+      delete body.kind; delete body.tags; delete body.converted_to
     }
-  }, [user])
-
-  // ── Mark Done ────────────────────────────────────────────────────────────
-  const doneItem = useCallback(async (id) => {
-    if (!user) return { error: 'User not authenticated' }
-    try {
-      let updated = null
-      let { data, error } = await supabase
-        .from('brain_dump')
-        .update({ status: 'done', done_at: new Date().toISOString() })
-        .eq('id', id).eq('user_id', user.id)
-        .select().single()
-
-      if (error) {
-        if (error.code === '23514' || error.message?.includes('brain_dump_status_check')) {
-          const retry = await supabase
-            .from('brain_dump')
-            .update({ status: 'organized' })
-            .eq('id', id).eq('user_id', user.id)
-            .select().single()
-          if (retry.error) throw retry.error
-          updated = retry.data
-        } else {
-          throw error
-        }
-      } else {
-        updated = data
+    const prev = items.find(i => i.id === id)
+    patchLocal(id, patch)
+    let { data, error } = await supabase.from('brain_dump').update(body).eq('id', id).eq('user_id', user.id).select().single()
+    if (error && isMissingSchema(error) && ('kind' in body || 'tags' in body || 'converted_to' in body)) {
+      setHasKind(false)
+      if (body.kind) body.status = body.converted_to === 'trash' ? 'discarded' : LEGACY_STATUS[body.kind]
+      delete body.kind; delete body.tags; delete body.converted_to
+      ;({ data, error } = await supabase.from('brain_dump').update(body).eq('id', id).eq('user_id', user.id).select().single())
+    }
+    if (error) {
+      // status check constraints differ between installs: retry with a safe value
+      if (body.status && (error.code === '23514' || /status_check/.test(error.message || ''))) {
+        ;({ data, error } = await supabase.from('brain_dump').update({ ...body, status: body.status === 'discarded' ? 'discarded' : 'organized' }).eq('id', id).eq('user_id', user.id).select().single())
       }
-
-      if (updated) {
-        setItems(prev => prev.map(i => i.id === id ? updated : i))
-      }
-      return { data: updated }
-    } catch (err) {
-      console.error('Error marking done:', err)
-      return { error: err }
+      if (error) { if (prev) patchLocal(id, prev); return { error } }
     }
-  }, [user])
+    setItems(p => p.map(i => (i.id === id ? { ...data, ...(hasKind === false ? { kind: patch.kind, converted_to: patch.converted_to } : {}) } : i)))
+    return { data }
+  }, [user, items, hasKind])
 
-  // ── Discard (soft) ───────────────────────────────────────────────────────
-  const discardItem = useCallback(async (id) => {
-    if (!user) return false
-    try {
-      const { data: updated, error } = await supabase
-        .from('brain_dump')
-        .update({ status: 'discarded' })
-        .eq('id', id).eq('user_id', user.id)
-        .select().single()
-      if (error) throw error
-      setItems(prev => prev.map(i => i.id === id ? updated : i))
-      return true
-    } catch (err) {
-      console.error('Error discarding item:', err)
-      return false
+  /** Capture: "#tags" are parsed out of the text. */
+  const addItem = useCallback(async (raw, kind = 'inbox') => {
+    if (!user) return { error: 'Not signed in' }
+    const { text, tags } = parseCapture(raw)
+    if (!text && !tags.length) return { error: 'Empty' }
+    const base = { user_id: user.id, topic: 'General', type: 'note', status: 'inbox' }
+    let payload = hasKind === false ? { ...base, content: raw.trim() } : { ...base, content: text || raw.trim(), tags, kind }
+    let { data, error } = await supabase.from('brain_dump').insert(payload).select().single()
+    if (error && isMissingSchema(error)) {
+      setHasKind(false)
+      payload = { ...base, content: raw.trim() } // keep #tags inline so nothing is lost
+      ;({ data, error } = await supabase.from('brain_dump').insert(payload).select().single())
+      if (error && /topic/.test(error.message || '')) { delete payload.topic; ({ data, error } = await supabase.from('brain_dump').insert(payload).select().single()) }
     }
-  }, [user])
-
-  // ── Restore to inbox ─────────────────────────────────────────────────────
-  const restoreItem = useCallback(async (id) => {
-    if (!user) return false
-    try {
-      const { data: updated, error } = await supabase
-        .from('brain_dump')
-        .update({ status: 'inbox', done_at: null })
-        .eq('id', id).eq('user_id', user.id)
-        .select().single()
-      if (error) throw error
-      setItems(prev => prev.map(i => i.id === id ? updated : i))
-      return true
-    } catch (err) {
-      console.error('Error restoring item:', err)
-      return false
+    if (error && (error.code === '23514' || /type_check/.test(error.message || ''))) {
+      delete payload.type
+      ;({ data, error } = await supabase.from('brain_dump').insert(payload).select().single())
     }
-  }, [user])
+    if (error) { console.error('Error adding brain dump item:', error); return { error } }
+    if (hasKind === null) setHasKind('kind' in data)
+    setItems(prev => [data, ...prev])
+    robustAwardXP(user.id, XP_REWARDS.brain_dump_capture || 2, 'brain_dump', `capture_${data.id}`, 'Brain dump capture', 'discipline').catch(() => {})
+    return { data }
+  }, [user, hasKind])
 
-  // ── Delete Forever ───────────────────────────────────────────────────────
+  const setKind = useCallback((id, kind) => updateItem(id, { kind, ...(kind === 'inbox' ? { status: 'inbox', converted_to: null } : {}) }), [updateItem])
+  const trashItem = useCallback((id) => updateItem(id, { kind: 'archived', converted_to: 'trash', status: 'discarded' }), [updateItem])
+  const restoreItem = useCallback((id) => updateItem(id, { kind: 'inbox', converted_to: null, status: 'inbox' }), [updateItem])
+  const markConverted = useCallback((id, ref) => updateItem(id, { kind: 'archived', converted_to: ref, status: 'converted' }), [updateItem])
+
   const deleteItem = useCallback(async (id) => {
     if (!user) return false
-    try {
-      const { error } = await supabase
-        .from('brain_dump').delete().eq('id', id).eq('user_id', user.id)
-      if (error) throw error
-      setItems(prev => prev.filter(i => i.id !== id))
-      return true
-    } catch (err) {
-      console.error('Error deleting item:', err)
-      return false
-    }
+    const { error } = await supabase.from('brain_dump').delete().eq('id', id).eq('user_id', user.id)
+    if (error) { console.error('Error deleting item:', error); return false }
+    setItems(prev => prev.filter(i => i.id !== id))
+    return true
   }, [user])
 
-  // ── Convert to Mission (Goal) ────────────────────────────────────────────
-  const convertToMission = useCallback(async (id) => {
-    if (!user) return null
-    try {
-      const item = items.find(i => i.id === id)
-      if (!item) return null
-      const { data, error } = await supabase
-        .from('goals')
-        .insert({ user_id: user.id, title: item.content, type: 'side_quest' })
-        .select().single()
-      if (error) throw error
-
-      await doneItem(id)
-      return { data }
-    } catch (err) {
-      console.error('Error converting to mission:', err)
-      return { error: err }
-    }
-  }, [user, items, doneItem])
-
-  // ── Rename topic ─────────────────────────────────────────────────────────
-  const renameTopic = useCallback(async (oldName, newName) => {
-    if (!user || !newName.trim()) return
-    try {
-      const { error } = await supabase
-        .from('brain_dump')
-        .update({ topic: newName })
-        .eq('user_id', user.id)
-        .eq('topic', oldName)
-      if (error) console.warn('Topic update warning:', error)
-      setTopics(prev => prev.map(t => t.name === oldName ? { ...t, name: newName } : t))
-      setItems(prev => prev.map(i => i.topic === oldName ? { ...i, topic: newName } : i))
-    } catch (err) {
-      console.error('Error renaming topic:', err)
-    }
-  }, [user])
-
-  // ── Delete topic ─────────────────────────────────────────────────────────
-  const deleteTopic = useCallback(async (topicName) => {
-    if (!user) return
-    try {
-      const { error } = await supabase
-        .from('brain_dump')
-        .update({ topic: 'General' })
-        .eq('user_id', user.id)
-        .eq('topic', topicName)
-      if (error) console.warn('Topic delete warning:', error)
-      setTopics(prev => prev.filter(t => t.name !== topicName))
-      setItems(prev => prev.map(i => i.topic === topicName ? { ...i, topic: 'General' } : i))
-    } catch (err) {
-      console.error('Error deleting topic:', err)
-    }
-  }, [user])
+  /** Draft mission from an idea; the item is archived with converted_to = goal:<id>. */
+  const convertToMission = useCallback(async (id, title) => {
+    if (!user) return { error: 'Not signed in' }
+    const item = items.find(i => i.id === id)
+    if (!item) return { error: 'Not found' }
+    const { data, error } = await supabase.from('goals').insert({ user_id: user.id, title: title || item.content.slice(0, 140), type: 'side_quest', status: 'paused', description: `[Draft from brain dump]\n\n${item.content}` }).select().single()
+    if (error) return { error }
+    await markConverted(id, `goal:${data.id}`)
+    return { data }
+  }, [user, items, markConverted])
 
   return {
-    items, topics, loading,
-    addItem, doneItem, discardItem, restoreItem, deleteItem,
-    convertToMission, renameTopic, deleteTopic,
-    organizeItem: doneItem,
+    items, loading, hasKind, fetchItems,
+    addItem, updateItem, setKind, trashItem, restoreItem, deleteItem, markConverted, convertToMission,
+    inboxCount: items.filter(i => kindOf(i) === 'inbox').length,
+    // legacy names
+    topics: DEFAULT_TOPICS, doneItem: (id) => setKind(id, 'archived'), discardItem: trashItem,
   }
 }

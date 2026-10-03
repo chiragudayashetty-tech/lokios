@@ -15,6 +15,18 @@ export const DEFAULT_SETTINGS = {
   reminderEnabled: false,    // evening "habits left" notification
   reminderTime: '21:00',
   sundayRecap: true,         // weekly scorecard popup on first open each Sunday
+  // Round 2
+  defaultHabitXp: 25,        // XP for new habits
+  defaultTimeOfDay: 'anytime', // morning | afternoon | evening | anytime
+  weekStart: 1,              // 1 = Monday, 0 = Sunday
+  timeFormat: '24h',         // '12h' | '24h'
+  dayBoundary: '00:00',      // a day ends at this time (night owls: '03:00')
+  currency: '₹',
+  habitReminders: {},        // { [habitId]: 'HH:MM' }
+  streakNudge: false,        // "streak at risk" nudge
+  streakNudgeTime: '22:00',
+  theme: { season: 'auto', accent: 'level', snow: true, motion: 'auto', density: 'comfortable' },
+  screenCaps: { social: 60, video: 60, games: 30, doom: 60 }, // daily caps in minutes (#44)
 }
 
 const KEY = 'lokios_settings'

@@ -155,3 +155,5 @@
 .today-protocol { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; font-size: 13.5px; font-weight: 600; color: var(--text-secondary) !important; background: rgba(255, 255, 255, 0.03); border: 1px dashed var(--border-strong); transition: border-color 180ms ease, color 180ms ease; }
 .today-protocol:hover { color: var(--text-primary) !important; border-color: var(--accent-primary); }
 .today-empty { padding: 18px; text-align: center; font-size: 13px; color: var(--text-muted); border-radius: 18px; border: 1px dashed var(--border-color); }
+.game-toast--danger .game-toast-icon { color: #fff; background: linear-gradient(135deg, var(--danger), #ff8a5c); box-shadow: 0 8px 18px -8px var(--danger-glow); }
+.game-toast--success .game-toast-icon { color: #062014; background: linear-gradient(135deg, #3ddc97, #2fc7c9); box-shadow: 0 8px 18px -8px var(--success-glow); }
