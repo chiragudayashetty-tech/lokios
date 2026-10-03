@@ -27,6 +27,7 @@ export default function EventSheet({ open, event, draft, tasks, blockColumns, on
     e.preventDefault()
     const title = form.title.trim() || task?.title || ''
     if (!title || busy) return
+    if (Number.isNaN(new Date(form.start).getTime()) || Number.isNaN(new Date(form.end).getTime())) { setError('Pick a start and end time.'); return }
     if (new Date(form.end) <= new Date(form.start)) { setError('End must be after start.'); return }
     setBusy(true)
     const payload = { title, start_time: new Date(form.start).toISOString(), end_time: new Date(form.end).toISOString(), description: form.description || null, location: form.location || null }
