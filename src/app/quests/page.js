@@ -16,6 +16,9 @@ import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
+import HabitExtraFields from '@/components/habits/HabitExtraFields'
+import { getSettings } from '@/lib/settings'
+import { Link2 } from 'lucide-react'
 
 // Small medal for a habit's mastery tier (Bronze 30 → Diamond 200 completions)
 function MasteryMedal({ count }) {
@@ -35,6 +38,23 @@ export default function DailyOps() {
     habits = [], stoppedHabits = [], allHabits = [], monthLogs = [], todayLogs = [], loading = false, error = null,
     fetchHabits, cycleHabitState, addHabit, deleteHabit, stopHabit, resumeHabit, archiveHabit, reorderHabits, reorderHabitsByDrag, updateHabit
   } = useOSSlice('habits')
+  const { goals = [] } = useOSSlice('goals')
+  // Round-2 habit columns (time_of_day, after_habit_id, goal_id) exist once the migration ran
+  const extrasAvailable = allHabits.length === 0 || 'time_of_day' in allHabits[0]
+  const blankExtra = () => ({ time_of_day: getSettings().defaultTimeOfDay || 'anytime', after_habit_id: null, goal_id: null })
+  const [newExtra, setNewExtra] = useState(blankExtra)
+  const [editExtra, setEditExtra] = useState(blankExtra)
+  const openAddForm = () => {
+    setNewXp(Number(getSettings().defaultHabitXp) || 25)
+    setNewExtra(blankExtra())
+    setShowAddForm(true)
+  }
+  const chainLabel = (habit) => {
+    const prev = habit.after_habit_id && allHabits.find(h => h.id === habit.after_habit_id)
+    return prev ? (
+      <span className="hx-chain" title={`Do after ${prev.title}`}><Link2 size={10} /> after {prev.title}</span>
+    ) : null
+  }
 
   const [draggedHabitId, setDraggedHabitId] = useState(null)
   const [dragOverHabitId, setDragOverHabitId] = useState(null)
@@ -465,7 +485,8 @@ export default function DailyOps() {
       stat_category: QUEST_CATEGORIES.find(c => c.id === newCategory)?.stat_category || 'discipline',
       frequency: 'daily',
       frequency_days: newFrequencyDays,
-      xp_per_completion: newXp
+      xp_per_completion: newXp,
+      ...(extrasAvailable ? newExtra : {}),
     })
     setNewTitle('')
     setCustomCategory('')
@@ -482,7 +503,8 @@ export default function DailyOps() {
       stat_category: QUEST_CATEGORIES.find(c => c.id === editCategory)?.stat_category || 'discipline',
       xp_per_completion: editXp,
       frequency: 'daily',
-      frequency_days: editFrequencyDays
+      frequency_days: editFrequencyDays,
+      ...(extrasAvailable ? editExtra : {}),
     })
     setEditingHabit(null)
   }
@@ -490,6 +512,7 @@ export default function DailyOps() {
   const openEditModal = (h) => {
     setEditingHabit(h)
     setEditTitle(h.title)
+    setEditExtra({ time_of_day: h.time_of_day || 'anytime', after_habit_id: h.after_habit_id || null, goal_id: h.goal_id || null })
     const isCustom = !QUEST_CATEGORIES.some(c => c.id === h.category)
     if (isCustom) {
       setEditCategory('other')
@@ -544,7 +567,7 @@ export default function DailyOps() {
             <h1 className="page-title">Daily habits</h1>
             <p className="page-subtitle font-mono uppercase text-xs">Monthly overview. Click any cell to toggle completion.</p>
           </div>
-          <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddForm(true)}>
+          <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={openAddForm}>
             <Plus size={16} /> ADD ROUTINE
           </button>
         </header>
@@ -797,6 +820,7 @@ export default function DailyOps() {
                           <div className="font-mono text-[10px] md:text-xs text-primary transition-colors hover:text-amber truncate">
                             {habit.title}<MasteryMedal count={masteryCount(habit.id)} />
                           </div>
+                          {chainLabel(habit)}
                           <div className="font-mono text-[8px] md:text-[9px] text-muted uppercase hidden md:flex items-center gap-2 mt-[2px]">
                             <span className="truncate">{cat.name}</span>
                             <span className="opacity-50">|</span>
@@ -920,7 +944,7 @@ export default function DailyOps() {
           {habits.length === 0 && (
             <div className="p-12 text-center">
               <div className="font-mono text-sm text-muted mb-4">NO ROUTINES DEPLOYED</div>
-              <button onClick={() => setShowAddForm(true)} className="btn btn-primary btn-sm">ADD YOUR FIRST ROUTINE</button>
+              <button onClick={openAddForm} className="btn btn-primary btn-sm">ADD YOUR FIRST ROUTINE</button>
             </div>
           )}
         </HudPanel>
@@ -945,6 +969,7 @@ export default function DailyOps() {
                 <div className="flex-col gap-1 pl-2 truncate" style={{ flex: 1, minWidth: 0 }}>
                   <div className="font-display text-base text-primary truncate" onClick={() => openEditModal(habit)}>{habit.title}<MasteryMedal count={masteryCount(habit.id)} /></div>
                   <div className="font-mono text-[10px] text-muted uppercase truncate">{cat.name} • {stats.pct}% WIN RATE</div>
+                  {chainLabel(habit)}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <div className="flex flex-col gap-0.5 pr-0.5">
@@ -977,7 +1002,7 @@ export default function DailyOps() {
           {habits.length === 0 && (
             <div className="p-8 text-center border border-border-color rounded-2xl border-dashed">
               <div className="font-mono text-sm text-muted mb-4">NO ROUTINES DEPLOYED</div>
-              <button type="button" onClick={() => setShowAddForm(true)} className="btn btn-primary btn-sm w-full">ADD ROUTINE</button>
+              <button type="button" onClick={openAddForm} className="btn btn-primary btn-sm w-full">ADD ROUTINE</button>
             </div>
           )}
         </div>
@@ -1416,6 +1441,7 @@ export default function DailyOps() {
                         ))}
                       </div>
                     </div>
+                    <HabitExtraFields value={newExtra} onChange={setNewExtra} habits={habits} goals={goals} available={extrasAvailable} />
                     <div className="flex gap-2 mt-2">
                       <button type="submit" className="btn btn-primary flex-1">DEPLOY</button>
                       <button type="button" className="btn btn-ghost" onClick={() => setShowAddForm(false)}>ABORT</button>
@@ -1483,6 +1509,7 @@ export default function DailyOps() {
                       ))}
                     </div>
                   </div>
+                  <HabitExtraFields value={editExtra} onChange={setEditExtra} habitId={editingHabit.id} habits={habits} goals={goals} available={extrasAvailable} />
                   <div className="flex flex-col gap-3 mt-2">
                     <div className="flex gap-3">
                       <button type="button" onClick={() => setEditingHabit(null)} className="btn btn-ghost flex-1">CANCEL</button>
