@@ -1,709 +1,254 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, RefreshCw, X, Link2, CalendarRange, LayoutGrid, List } from 'lucide-react'
 import AppShell from '@/components/layout/AppShell'
-import WinterLoader from '@/components/ui/WinterLoader'
-import HudPanel from '@/components/ui/HudPanel'
-import { getLocalDateStr } from '@/lib/utils/dates'
-import { useCalendar } from '@/lib/hooks/useCalendar'
-import { useOS } from '@/lib/context/OSContext'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-  ChevronLeft, ChevronRight, Plus, MapPin, AlignLeft, Calendar as CalendarIcon,
-  Clock, CheckSquare, Target, Zap, Rocket, Video, Briefcase, Megaphone, Code,
-  Dumbbell, Trophy, Globe, Camera, Trash2, X, Check, Flame, RefreshCw
-} from 'lucide-react'
-import styles from './calendar.module.css'
+import SchemaHint from '@/components/ui/SchemaHint'
+import WeekGrid from '@/components/calendar/WeekGrid'
+import UnscheduledPanel from '@/components/calendar/UnscheduledPanel'
+import MonthView from '@/components/calendar/MonthView'
+import AgendaView from '@/components/calendar/AgendaView'
+import EventSheet from '@/components/calendar/EventSheet'
+import { useOS, useOSSlice } from '@/lib/context/OSContext'
+import { useCalendarRange } from '@/lib/hooks/useCalendarRange'
+import { useIsPhone } from '@/lib/hooks/useMediaQuery'
+import { useLocalPref } from '@/lib/hooks/useLocalPref'
+import { getLocalDateStr, getStartOfWeek } from '@/lib/utils/dates'
+import { emitGame } from '@/lib/utils/gamification'
+import { atMinutes, nextFreeSlot, durationMin, categoryForTask, CATEGORIES } from '@/lib/utils/calendarBlocks'
+import { formatTimeOf } from '@/lib/utils/appDate'
 
-// Helper: Pick dynamic icon & color based on title or operation type
-const getItemIconDetails = (item) => {
-  const title = (item.title || '').toLowerCase()
-  const category = (item.category || item.stat_category || '').toLowerCase()
+const SYNC_KEY = 'lokios_gcal_last_sync'
+const shiftDays = (ds, n) => { const d = new Date(`${ds}T12:00:00`); d.setDate(d.getDate() + n); return getLocalDateStr(d) }
 
-  if (title.includes('edit') || title.includes('shoot') || title.includes('video') || title.includes('camera') || title.includes('module') || title.includes('film')) {
-    return { Icon: Video, color: '#38bdf8', label: 'MEDIA / PRODUCTION' } // Cyan
-  }
-  if (title.includes('seo') || title.includes('social') || title.includes('post') || title.includes('marketing') || title.includes('campaign')) {
-    return { Icon: Megaphone, color: '#ec4899', label: 'MARKETING / SEO' } // Pink
-  }
-  if (title.includes('code') || title.includes('dev') || title.includes('build') || title.includes('app') || title.includes('feature') || title.includes('bug')) {
-    return { Icon: Code, color: '#a855f7', label: 'DEVELOPMENT' } // Purple
-  }
-  if (title.includes('launch') || title.includes('deploy') || title.includes('release') || title.includes('ship')) {
-    return { Icon: Rocket, color: '#f59e0b', label: 'MISSION LAUNCH' } // Amber
-  }
-  if (title.includes('work') || title.includes('client') || title.includes('meeting') || title.includes('mathuram') || title.includes('call')) {
-    return { Icon: Briefcase, color: '#10b981', label: 'BUSINESS / OPERATIONAL' } // Emerald
-  }
-  if (title.includes('gym') || title.includes('workout') || title.includes('health') || title.includes('run') || title.includes('cardio') || title.includes('sleep')) {
-    return { Icon: Dumbbell, color: '#ef4444', label: 'PHYSICAL RECON' } // Red
-  }
-  if (title.includes('target') || title.includes('goal') || title.includes('milestone') || title.includes('quest')) {
-    return { Icon: Target, color: '#f97316', label: 'GOAL / TARGET' } // Orange
-  }
-
-  // Default fallback by item type
-  if (item._type === 'task') return { Icon: CheckSquare, color: '#22c55e', label: 'DAILY TASK' }
-  if (item._type === 'goal') return { Icon: Trophy, color: '#f59e0b', label: 'STRATEGIC GOAL' }
-  return { Icon: CalendarIcon, color: '#38bdf8', label: 'EVENT' }
+function useSyncStamp() {
+  const [stamp, setStamp] = useLocalPref(SYNC_KEY, '')
+  return [stamp ? new Date(stamp) : null, (d) => setStamp(d.toISOString())]
 }
 
-export default function Calendar() {
-  const {
-    profile: { profile } = {},
-    tasks: { tasks = [], loading: tLoading = false } = {},
-    goals: { goals: allGoals = [], loading: gLoading = false } = {},
-    calendar: { events = [], loading: cLoading = false, fetchEvents, addEvent, deleteEvent } = {}
-  } = useOS() || {}
+export default function CalendarPage() {
+  const { user } = useOSSlice('auth')
+  const { profile } = useOSSlice('profile')
+  const { tasks = [] } = useOSSlice('tasks')
+  const { goals = [] } = useOSSlice('goals')
+  const { habits = [] } = useOSSlice('habits')
+  const { completeOperation } = useOS()
+  const phone = useIsPhone()
+  const [view, setView] = useLocalPref('lokios_calendar_view', 'week', ['week', 'month', 'agenda'])
+  const [anchor, setAnchor] = useState(() => getLocalDateStr())
+  const [now, setNow] = useState(() => new Date())
+  const [sheet, setSheet] = useState(null) // { event } | { draft }
+  const [pickTask, setPickTask] = useState(null)
+  const [syncing, setSyncing] = useState(false)
+  const [lastSync, markSynced] = useSyncStamp()
+  const [notice, setNotice] = useState(null)
+  const today = getLocalDateStr(now)
 
-  const [viewMode, setViewMode] = useState('month') // 'month' | 'week' | 'day'
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState(getLocalDateStr())
-
-  // Event modal state
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [formData, setFormData] = useState({ title: '', description: '', location: '', start_time: '', end_time: '' })
-
-  // Google Calendar sync state
-  const [googleToast, setGoogleToast] = useState(null)  // { type: 'success'|'error', msg: string }
-  const [disconnecting, setDisconnecting] = useState(false)
-  const [syncingGoogle, setSyncingGoogle] = useState(false)
-
-  const isGoogleConnected = !!profile?.google_refresh_token
-
-  // Two-way Google Sync handler
-  const handleSyncGoogle = async (isBackground = false) => {
-    if (!profile?.id || !isGoogleConnected || syncingGoogle) return
-    setSyncingGoogle(true)
-    try {
-      const res = await fetch('/api/google/sync-all', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: profile.id }),
-      })
-      const data = await res.json()
-      if (res.ok && data.success) {
-        if (!isBackground) {
-          const s = data.summary || {}
-          const msg = `✓ Synced with Google Calendar! (${s.pushedTasks || 0} tasks, ${s.pushedGoals || 0} goals updated${s.importedGoogleEvents > 0 ? `, ${s.importedGoogleEvents} events imported` : ''})`
-          setGoogleToast({ type: 'success', msg })
-        }
-        if (fetchEvents) await fetchEvents()
-      } else if (!isBackground) {
-        setGoogleToast({ type: 'error', msg: data.error || 'Sync failed. Please try again.' })
-      }
-    } catch (e) {
-      if (!isBackground) {
-        setGoogleToast({ type: 'error', msg: 'Network error during Google Calendar sync.' })
-      }
-    } finally {
-      setSyncingGoogle(false)
-    }
-  }
-
-  // Show toast if redirected back from Google OAuth & trigger initial sync
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    const t = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Google OAuth return
+  useEffect(() => {
     const p = new URLSearchParams(window.location.search)
-    if (p.get('google_connected')) {
-      setGoogleToast({ type: 'success', msg: '✓ Google Calendar connected! Synchronizing all items...' })
+    if (p.get('google_connected') || p.get('google_error')) {
       window.history.replaceState({}, '', '/calendar')
-      handleSyncGoogle(false)
-    } else if (p.get('google_error')) {
-      setGoogleToast({ type: 'error', msg: `Google connection failed: ${p.get('google_error')}` })
-      window.history.replaceState({}, '', '/calendar')
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-off message from the OAuth redirect
+      setNotice(p.get('google_connected') ? { ok: true, msg: 'Google Calendar connected. Hit “Sync now” to pull your events.' } : { ok: false, msg: `Google connection failed: ${p.get('google_error')}` })
     }
-  }, [profile?.id])
+  }, [])
 
-  const handleGoogleDisconnect = async () => {
-    if (!window.confirm('Disconnect Google Calendar? Events will no longer sync automatically.')) return
-    setDisconnecting(true)
-    try {
-      const res = await fetch('/api/google/disconnect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: profile?.id }),
-      })
-      if (res.ok) {
-        setGoogleToast({ type: 'success', msg: 'Google Calendar disconnected.' })
-        setTimeout(() => window.location.reload(), 1000)
-      } else {
-        setGoogleToast({ type: 'error', msg: 'Failed to disconnect. Try again.' })
+  // Visible days / fetch range per view
+  const days = useMemo(() => {
+    if (phone) return [0, 1, 2].map((i) => shiftDays(anchor, i))
+    const start = getLocalDateStr(getStartOfWeek(new Date(`${anchor}T12:00:00`)))
+    return Array.from({ length: 7 }, (_, i) => shiftDays(start, i))
+  }, [anchor, phone])
+  const range = useMemo(() => {
+    if (view === 'month') {
+      const a = new Date(`${anchor}T12:00:00`)
+      const first = getStartOfWeek(new Date(a.getFullYear(), a.getMonth(), 1))
+      const from = getLocalDateStr(first)
+      return [from, shiftDays(from, 41)]
+    }
+    if (view === 'agenda') return [anchor, shiftDays(anchor, 13)]
+    return [days[0], days[days.length - 1]]
+  }, [view, anchor, days])
+
+  const cal = useCalendarRange(user?.id, range[0], range[1])
+  const tasksById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks])
+  const blockedTaskIds = useMemo(() => new Set(cal.events.filter((e) => e.task_id).map((e) => e.task_id)), [cal.events])
+  const unscheduled = useMemo(() => tasks
+    .filter((t) => !['completed', 'cancelled', 'failed'].includes(t.status) && !blockedTaskIds.has(t.id))
+    .filter((t) => !t.due_date || String(t.due_date).slice(0, 10) <= range[1])
+    .sort((a, b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999'))), [tasks, blockedTaskIds, range])
+
+  const step = view === 'month' ? 'month' : phone ? 3 : 7
+  const go = (dir) => {
+    if (step === 'month') { const d = new Date(`${anchor}T12:00:00`); d.setMonth(d.getMonth() + dir, 1); setAnchor(getLocalDateStr(d)) }
+    else setAnchor(shiftDays(anchor, dir * (view === 'agenda' ? 14 : step)))
+  }
+
+  const title = (() => {
+    const a = new Date(`${anchor}T12:00:00`)
+    if (view === 'month') return a.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    const f = new Date(`${range[0]}T12:00:00`), t = new Date(`${range[1]}T12:00:00`)
+    const sameMonth = f.getMonth() === t.getMonth()
+    return `${f.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${t.toLocaleDateString('en-US', sameMonth ? { day: 'numeric' } : { month: 'short', day: 'numeric' })}`
+  })()
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  const createAt = async (day, minutes, taskId) => {
+    if (taskId) {
+      const task = tasksById.get(taskId)
+      if (!task) return
+      const start = atMinutes(day, minutes)
+      const end = new Date(start.getTime() + (task.estimate_minutes || 60) * 60000)
+      const res = await cal.addEvent({ title: task.title, start_time: start.toISOString(), end_time: end.toISOString(), task_id: task.id, category: categoryForTask(task) })
+      if (res.error) {
+        setNotice({ ok: false, msg: res.missing ? 'Time blocks need the round-2 database update.' : res.error.message })
+        return
       }
+      setPickTask(null)
+      emitGame('toast', { icon: 'calendar', title: 'Time-blocked', sub: `${task.title} · ${formatTimeOf(start)}`, tone: 'accent' })
+      return
+    }
+    const start = atMinutes(day, minutes)
+    setSheet({ draft: { start, end: new Date(start.getTime() + 3600000) }, n: Date.now() })
+  }
+
+  const move = (ev, start, end) => cal.updateEvent(ev.id, { start_time: start.toISOString(), end_time: end.toISOString() })
+
+  const roll = async (ev) => {
+    const slot = nextFreeSlot(cal.events, durationMin(ev), new Date(), ev.id)
+    if (!slot) { setNotice({ ok: false, msg: 'No free slot in the next 14 days.' }); return }
+    await cal.updateEvent(ev.id, { start_time: slot.start.toISOString(), end_time: slot.end.toISOString(), completed: false })
+    setSheet(null)
+    emitGame('toast', { icon: 'calendar', title: 'Rolled forward', sub: `${ev.title} → ${slot.start.toLocaleDateString('en-US', { weekday: 'short' })} ${formatTimeOf(slot.start)}`, tone: 'accent' })
+    if (getLocalDateStr(slot.start) > range[1]) setAnchor(getLocalDateStr(slot.start))
+  }
+
+  const sync = async () => {
+    if (!profile?.id || syncing) return
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/google/sync-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id }) })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.success) { markSynced(new Date()); cal.reload(); setNotice({ ok: true, msg: `Synced with Google Calendar${data.summary?.importedGoogleEvents ? ` · ${data.summary.importedGoogleEvents} events imported` : ''}.` }) }
+      else setNotice({ ok: false, msg: data.error || 'Sync failed — try again.' })
     } catch {
-      setGoogleToast({ type: 'error', msg: 'Network error. Try again.' })
-    } finally {
-      setDisconnecting(false)
-    }
+      setNotice({ ok: false, msg: 'Network error during sync.' })
+    } finally { setSyncing(false) }
   }
 
-  const todayStr = getLocalDateStr()
-
-  // Navigation handlers
-  const prevPeriod = () => {
-    const next = new Date(currentDate)
-    if (viewMode === 'month') next.setMonth(next.getMonth() - 1)
-    else if (viewMode === 'week') next.setDate(next.getDate() - 7)
-    else if (viewMode === 'day') next.setDate(next.getDate() - 1)
-    setCurrentDate(next)
+  const disconnect = async () => {
+    if (!window.confirm('Disconnect Google Calendar? Events stop syncing.')) return
+    const res = await fetch('/api/google/disconnect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile?.id }) })
+    setNotice(res.ok ? { ok: true, msg: 'Google Calendar disconnected.' } : { ok: false, msg: 'Could not disconnect — try again.' })
+    if (res.ok) setTimeout(() => window.location.reload(), 900)
   }
 
-  const nextPeriod = () => {
-    const next = new Date(currentDate)
-    if (viewMode === 'month') next.setMonth(next.getMonth() + 1)
-    else if (viewMode === 'week') next.setDate(next.getDate() + 7)
-    else if (viewMode === 'day') next.setDate(next.getDate() + 1)
-    setCurrentDate(next)
-  }
-
-  const handleToday = () => {
-    const now = new Date()
-    setCurrentDate(now)
-    setSelectedDate(getLocalDateStr(now))
-  }
-
-  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate()
-  const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay()
-
-  const year = currentDate.getFullYear()
-  const month = currentDate.getMonth()
-  const daysInMonth = getDaysInMonth(year, month)
-  const firstDay = getFirstDayOfMonth(year, month)
-
-  const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
-
-  const handleAdd = async (e) => {
-    e.preventDefault()
-    if (!formData.title || !formData.start_time) return
-    await addEvent(formData)
-    setShowAddForm(false)
-    setFormData({ title: '', description: '', location: '', start_time: '', end_time: '' })
-  }
-
-  const handleDeleteEvent = async (id) => {
-    if (deleteEvent && window.confirm('Delete this event?')) {
-      await deleteEvent(id)
-    }
-  }
-
-  // Combine Events, Tasks, and Goals
-  const getItemsForDate = (dateStr) => {
-    const dayEvents = (events || [])
-      .filter(e => getLocalDateStr(new Date(e.start_time)) === dateStr)
-      .map(e => ({ ...e, _type: 'event' }))
-    const dayTasks = (tasks || [])
-      .filter(t => t.due_date === dateStr)
-      .map(t => ({ ...t, _type: 'task', start_time: `${dateStr}T00:00:00` }))
-    const dayGoals = (allGoals || [])
-      .filter(g => g.deadline && getLocalDateStr(new Date(g.deadline)) === dateStr)
-      .map(g => ({ ...g, _type: 'goal', start_time: g.deadline }))
-    return [...dayEvents, ...dayTasks, ...dayGoals]
-  }
-
-  // Calculate days for Week View starting from Sunday of currentDate
-  const weekDays = useMemo(() => {
-    const start = new Date(currentDate)
-    start.setDate(start.getDate() - start.getDay())
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(start)
-      d.setDate(d.getDate() + i)
-      return d
-    })
-  }, [currentDate])
-
-  const selectedDateItems = getItemsForDate(selectedDate)
-  const isLoading = cLoading || tLoading || gLoading
-
-  if (isLoading && !events.length && !tasks.length) {
-    return (
-      <AppShell>
-        <WinterLoader label="Syncing calendar" />
-      </AppShell>
-    )
-  }
+  const connected = !!profile?.google_refresh_token
+  const sinceSync = lastSync ? Math.max(0, Math.round((now.getTime() - lastSync.getTime()) / 60000)) : null
 
   return (
     <AppShell>
-      <div className="page-container narrow">
-
-        {/* ── HEADER ── */}
-        <header className="page-header flex-between flex-wrap gap-4 mb-6">
+      <div className="page-container cal-page" style={{ maxWidth: 1400 }}>
+        <header className="tk-head">
           <div>
-            <h1 className="page-title">Calendar</h1>
-            <p className="page-subtitle font-mono uppercase text-xs">Temporal scheduling and operational tracking.</p>
+            <h1 className="page-title flex items-center gap-3"><CalendarDays className="text-amber" /> Calendar</h1>
+            <p className="page-subtitle">Give every important task a slot.</p>
           </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* View Switcher Tabs (MONTH | WEEK | DAY) */}
-            <div className="flex border border-border-color rounded overflow-hidden bg-bg-tertiary">
-              {[
-                { id: 'month', label: 'MONTH' },
-                { id: 'week', label: 'WEEK' },
-                { id: 'day', label: 'DAY' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setViewMode(tab.id)}
-                  className={`px-3 py-1.5 font-mono text-xs font-bold uppercase transition-colors ${
-                    viewMode === tab.id
-                      ? 'bg-info text-bg-primary font-extrabold'
-                      : 'text-muted hover:text-primary hover:bg-hover'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+          <div className="tk-head-actions cal-actions">
+            <div className="tk-view" role="tablist" aria-label="View">
+              <button type="button" role="tab" aria-selected={view === 'week'} className={view === 'week' ? 'is-on' : ''} onClick={() => setView('week')}><CalendarRange size={14} /> {phone ? '3-day' : 'Week'}</button>
+              <button type="button" role="tab" aria-selected={view === 'month'} className={view === 'month' ? 'is-on' : ''} onClick={() => setView('month')}><LayoutGrid size={14} /> Month</button>
+              <button type="button" role="tab" aria-selected={view === 'agenda'} className={view === 'agenda' ? 'is-on' : ''} onClick={() => setView('agenda')}><List size={14} /> Agenda</button>
             </div>
-
-            {/* Today Button */}
-            <button
-              onClick={handleToday}
-              className="btn btn-ghost text-xs font-mono border border-border-color px-3"
-            >
-              TODAY
-            </button>
-
-            {/* .ICS Link */}
-            {profile?.calendar_token ? (
-              <a
-                href={`/api/calendar?token=${profile.calendar_token}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-info font-mono text-xs hover:text-primary transition-colors hover:underline hidden sm:inline-block"
-              >
-                .ICS SUBSCRIPTION
-              </a>
-            ) : (
-              <span className="text-muted font-mono text-xs cursor-not-allowed hidden sm:inline-block" title="Calendar token not generated">
-                .ICS (UNAVAILABLE)
-              </span>
-            )}
-
-            {/* Google Calendar Sync Button */}
-            {isGoogleConnected ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => handleSyncGoogle(false)}
-                  disabled={syncingGoogle}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '6px 12px', borderRadius: '8px',
-                    background: syncingGoogle ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.12)',
-                    border: '1px solid rgba(16,185,129,0.35)',
-                    color: '#34d399', fontFamily: 'var(--font-mono)',
-                    fontSize: '11px', fontWeight: 700,
-                    cursor: syncingGoogle ? 'not-allowed' : 'pointer',
-                    opacity: syncingGoogle ? 0.8 : 1,
-                    transition: 'all 0.2s',
-                  }}
-                  title="Click to sync operations, goals & external Google events two-way"
-                >
-                  <RefreshCw size={12} className={syncingGoogle ? 'animate-spin' : ''} />
-                  <span>{syncingGoogle ? 'SYNCING...' : 'SYNC GOOGLE'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleGoogleDisconnect}
-                  disabled={disconnecting}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: '28px', height: '28px', borderRadius: '8px',
-                    background: 'rgba(239,68,68,0.08)',
-                    border: '1px solid rgba(239,68,68,0.25)',
-                    color: '#f87171',
-                    cursor: disconnecting ? 'not-allowed' : 'pointer',
-                    opacity: disconnecting ? 0.6 : 1,
-                    transition: 'all 0.2s',
-                  }}
-                  title="Disconnect Google Calendar"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!profile?.id) return
-                  window.location.href = `/api/google/auth?userId=${profile.id}`
-                }}
-                disabled={!profile?.id}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 12px', borderRadius: '8px',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: profile?.id ? '#94a3b8' : '#475569',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '11px', fontWeight: 700,
-                  cursor: profile?.id ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                CONNECT GOOGLE
-              </button>
-            )}
-
-            {/* New Event Button */}
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                setFormData({ ...formData, start_time: `${selectedDate}T09:00`, end_time: `${selectedDate}T10:00` })
-                setShowAddForm(true)
-              }}
-            >
-              <Plus size={16} /> NEW EVENT
-            </button>
+            <button type="button" className="btn btn-primary tk-add" onClick={() => { const s = new Date(); s.setMinutes(s.getMinutes() < 30 ? 30 : 60, 0, 0); setSheet({ draft: { start: s, end: new Date(s.getTime() + 3600000) }, n: Date.now() }) }}><Plus size={16} /> Event</button>
           </div>
         </header>
 
-        {/* Google sync toast */}
-        {googleToast && (
-          <div style={{
-            marginBottom: '16px',
-            padding: '10px 16px',
-            borderRadius: '10px',
-            background: googleToast.type === 'success' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
-            border: `1px solid ${googleToast.type === 'success' ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)'}`,
-            color: googleToast.type === 'success' ? '#34d399' : '#f87171',
-            fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-          }}>
-            <span>{googleToast.msg}</span>
-            <button onClick={() => setGoogleToast(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: '16px', lineHeight: 1 }}>✕</button>
+        <div className="cal-bar">
+          <div className="cal-nav">
+            <button type="button" className="tl-icon" onClick={() => go(-1)} aria-label="Previous"><ChevronLeft size={16} /></button>
+            <button type="button" className="td-pill" onClick={() => setAnchor(getLocalDateStr())}>Today</button>
+            <button type="button" className="tl-icon" onClick={() => go(1)} aria-label="Next"><ChevronRight size={16} /></button>
+            <h2 className="cal-title">{title}</h2>
+          </div>
+          <div className="cal-sync">
+            {connected ? (
+              <>
+                <span className="cal-chip is-on"><i /> Google · {sinceSync === null ? 'not synced yet' : sinceSync < 1 ? 'synced just now' : sinceSync < 60 ? `synced ${sinceSync}m ago` : `synced ${lastSync.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}</span>
+                <button type="button" className="td-pill" onClick={sync} disabled={syncing}><RefreshCw size={12} className={syncing ? 'animate-spin' : ''} /> {syncing ? 'Syncing…' : 'Sync now'}</button>
+                <button type="button" className="tl-icon" onClick={disconnect} title="Disconnect Google" aria-label="Disconnect Google Calendar"><X size={14} /></button>
+              </>
+            ) : (
+              <button type="button" className="cal-chip" onClick={() => profile?.id && (window.location.href = `/api/google/auth?userId=${profile.id}`)} disabled={!profile?.id}><i /> Connect Google Calendar</button>
+            )}
+            {profile?.calendar_token && <a className="cal-chip" href={`/api/calendar?token=${profile.calendar_token}`} target="_blank" rel="noopener noreferrer"><Link2 size={12} /> .ics</a>}
+          </div>
+        </div>
+
+        {notice && (
+          <div className={`cal-notice ${notice.ok ? 'is-ok' : 'is-bad'}`} role="status">
+            <span>{notice.msg}</span>
+            <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss"><X size={14} /></button>
           </div>
         )}
+        {cal.blockColumns === false && <SchemaHint feature="Task time blocks, categories and block XP" />}
 
-        <HudPanel className="p-0 mb-8" style={{ padding: 0 }}>
-          
-          {/* Calendar Control Header */}
-          <div className="flex-between p-4 border-b border-border-color bg-secondary">
-            <button onClick={prevPeriod} className="btn btn-ghost p-2"><ChevronLeft /></button>
-
-            <h2 className="font-display text-xl font-bold tracking-widest text-primary uppercase">
-              {viewMode === 'month' && `${monthNames[month]} ${year}`}
-              {viewMode === 'week' && `WEEK OF ${weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-              {viewMode === 'day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-            </h2>
-
-            <button onClick={nextPeriod} className="btn btn-ghost p-2"><ChevronRight /></button>
-          </div>
-
-          {/* ── 1. MONTH VIEW (ORIGINAL HUD GRID WITH DYNAMIC ICONS) ── */}
-          {viewMode === 'month' && (
-            <div className={styles.calendarGrid}>
-              {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (
-                <div key={day} className={`p-2 text-center font-display text-xs text-muted uppercase tracking-wider bg-tertiary ${styles.calendarHeaderCell}`}>
-                  {day}
-                </div>
-              ))}
-
-              {Array.from({ length: firstDay }).map((_, i) => (
-                <div key={`empty-${i}`} className={`${styles.calendarCell} ${styles.otherMonth}`} />
-              ))}
-
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-                const isToday = dateStr === todayStr
-                const isSelected = dateStr === selectedDate
-                const dayItems = getItemsForDate(dateStr)
-
-                return (
-                  <div
-                    key={day}
-                    onClick={() => setSelectedDate(dateStr)}
-                    className={`${styles.calendarCell} overflow-hidden cursor-pointer transition-all hover:bg-hover ${isToday ? styles.today : ''} ${isSelected ? 'border-info shadow-[inset_0_0_10px_rgba(96,165,250,0.1)]' : ''}`}
-                    style={isSelected ? { border: '1px solid var(--info)' } : {}}
-                  >
-                    <div className="flex-between">
-                      <span className={`font-mono text-sm ${isToday ? 'text-info font-bold' : 'text-primary'}`}>{day}</span>
-                      {dayItems.length > 0 && (
-                        <span className="font-mono text-[9px] text-muted opacity-80">{dayItems.length}</span>
-                      )}
-                    </div>
-
-                    {/* Dynamic Icons for Operation / Mission Types */}
-                    <div className="mt-2 flex flex-wrap gap-1.5 items-center">
-                      {dayItems.map((item, idx) => {
-                        const { Icon, color, label } = getItemIconDetails(item)
-                        return (
-                          <div
-                            key={idx}
-                            title={`${item.title} (${label})`}
-                            className="p-1 rounded bg-bg-tertiary/80 border border-border-color/50 hover:scale-115 transition-transform"
-                            style={{ borderColor: `${color}40` }}
-                          >
-                            <Icon size={13} style={{ color }} />
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* ── 2. WEEK VIEW ── */}
-          {viewMode === 'week' && (
-            <div className="grid grid-cols-7 gap-1 p-3 bg-bg-secondary font-mono">
-              {weekDays.map((d, idx) => {
-                const dateStr = getLocalDateStr(d)
-                const isToday = dateStr === todayStr
-                const isSelected = dateStr === selectedDate
-                const dayItems = getItemsForDate(dateStr)
-
-                return (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedDate(dateStr)}
-                    className={`p-3 rounded border transition-all cursor-pointer min-h-[220px] ${
-                      isSelected ? 'border-info bg-bg-tertiary shadow-lg' : isToday ? 'border-info/50 bg-info/5' : 'border-border-color bg-bg-primary/50 hover:bg-hover'
-                    }`}
-                  >
-                    <div className="border-b border-border-color pb-2 mb-2 flex justify-between items-center">
-                      <div>
-                        <div className="text-[10px] text-muted uppercase font-display">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                        <div className={`text-base font-bold ${isToday ? 'text-info' : 'text-primary'}`}>{d.getDate()}</div>
-                      </div>
-                      <span className="text-[10px] text-muted">{dayItems.length} items</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {dayItems.map((item, itemIdx) => {
-                        const { Icon, color } = getItemIconDetails(item)
-                        return (
-                          <div
-                            key={itemIdx}
-                            className="p-1.5 rounded bg-bg-tertiary border text-[11px] flex items-center gap-1.5 truncate"
-                            style={{ borderColor: `${color}40` }}
-                          >
-                            <Icon size={12} style={{ color }} className="shrink-0" />
-                            <span className="truncate text-primary">{item.title}</span>
-                          </div>
-                        )
-                      })}
-                      {dayItems.length === 0 && (
-                        <div className="text-[10px] text-muted text-center pt-8 opacity-40">NO ITEMS</div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* ── 3. DAY VIEW ── */}
-          {viewMode === 'day' && (
-            <div className="p-6 bg-bg-secondary space-y-4 font-mono">
-              <div className="flex justify-between items-center border-b border-border-color pb-3">
-                <span className="font-display text-lg text-info uppercase font-bold">
-                  {currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </span>
-                <span className="text-xs text-muted">
-                  {getItemsForDate(getLocalDateStr(currentDate)).length} Scheduled
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {getItemsForDate(getLocalDateStr(currentDate)).map((item, idx) => {
-                  const { Icon, color, label } = getItemIconDetails(item)
-                  return (
-                    <div
-                      key={idx}
-                      className="p-4 rounded border bg-bg-tertiary flex items-start justify-between gap-4"
-                      style={{ borderLeftWidth: '4px', borderLeftColor: color }}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Icon size={16} style={{ color }} />
-                          <span className="font-display text-base font-bold text-primary uppercase">{item.title}</span>
-                        </div>
-                        {item.location && <div className="text-xs text-muted flex items-center gap-1"><MapPin size={12} /> {item.location}</div>}
-                        {item.description && <div className="text-xs text-secondary">{item.description}</div>}
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] px-2 py-0.5 rounded border uppercase font-bold" style={{ borderColor: `${color}50`, color }}>
-                          {label}
-                        </span>
-                        <div className="text-xs text-muted mt-1">
-                          {new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-
-                {getItemsForDate(getLocalDateStr(currentDate)).length === 0 && (
-                  <div className="text-center py-12 text-muted text-sm">NO OPERATIONAL ITEMS FOR THIS DAY</div>
-                )}
+        {view === 'week' && (
+          <div className="cal-layout">
+            <div className="cal-grid-card">
+              {pickTask && <div className="cal-picking">Tap a slot for <b>{pickTask.title}</b> <button type="button" className="td-link" onClick={() => setPickTask(null)}>Cancel</button></div>}
+              <WeekGrid
+                days={days}
+                events={cal.events}
+                tasksById={tasksById}
+                habits={habits}
+                logs={cal.logs}
+                today={today}
+                now={now}
+                phone={phone}
+                pickTask={pickTask}
+                onCreateAt={createAt}
+                onMove={move}
+                onOpen={(ev) => setSheet({ event: ev, n: Date.now() })}
+                onRoll={roll}
+                onSwipe={(dir) => setAnchor(shiftDays(anchor, dir * 3))}
+              />
+              <div className="cal-legend">
+                {CATEGORIES.map((c) => <span key={c.id}><i style={{ background: c.color }} /> {c.label}</span>)}
+                <span><i className="is-now" /> Now</span>
               </div>
             </div>
-          )}
-
-        </HudPanel>
-
-        {/* ── SELECTED DATE DETAILS (ORIGINAL HUD PANEL ENHANCED) ── */}
-        <HudPanel label="SELECTED DATE" glow>
-          <h3 className="font-display text-xl uppercase tracking-wide text-primary mb-4 border-b border-border-color pb-2">
-            {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
-          </h3>
-
-          <div className="flex-col gap-4" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            <AnimatePresence>
-              {selectedDateItems.map((item, i) => {
-                const { Icon, color, label } = getItemIconDetails(item)
-
-                return (
-                  <motion.div
-                    key={`${item._type}-${item.id || i}`}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="flex gap-4 p-4 bg-tertiary border border-border-color rounded-sm relative group"
-                    style={{ borderLeftWidth: '3px', borderLeftColor: color }}
-                  >
-                    <div className="flex-col text-right shrink-0 w-20">
-                      {item._type === 'event' ? (
-                        <>
-                          <span className="font-mono font-bold" style={{ color }}>
-                            {new Date(item.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          {item.end_time && (
-                            <span className="font-mono text-xs text-muted mt-1">
-                              {new Date(item.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                        </>
-                      ) : item._type === 'goal' ? (
-                        <span className="font-mono text-amber">
-                          {new Date(item.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      ) : (
-                        <span className="font-mono text-success">ALL DAY</span>
-                      )}
-                    </div>
-
-                    <div className="flex-col gap-2 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Icon size={16} style={{ color }} />
-                        <span className="font-display text-lg uppercase tracking-wide text-primary">{item.title}</span>
-                        <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded border ml-2" style={{ borderColor: `${color}40`, color }}>
-                          {label}
-                        </span>
-                      </div>
-                      {item.location && (
-                        <div className="flex items-center gap-2 text-xs text-secondary font-mono">
-                          <MapPin size={12} /> {item.location}
-                        </div>
-                      )}
-                      {item.description && (
-                        <div className="flex items-start gap-2 text-xs text-muted font-mono">
-                          <AlignLeft size={12} className="mt-0.5" /> {item.description}
-                        </div>
-                      )}
-                    </div>
-
-                    {item._type === 'event' && (
-                      <button
-                        onClick={() => handleDeleteEvent(item.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-muted hover:text-danger transition-all self-center"
-                        title="Delete Event"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-            {selectedDateItems.length === 0 && (
-              <div className="empty-state py-8 font-mono text-xs text-muted">
-                NO EVENTS OR DEADLINES SCHEDULED FOR THIS DATE
-              </div>
+            {cal.blockColumns !== false && (
+              <UnscheduledPanel tasks={unscheduled} today={today} phone={phone} picking={pickTask} onPick={setPickTask} collapsedDefault={phone} />
             )}
           </div>
-        </HudPanel>
-
-        {/* ── NEW EVENT MODAL ── */}
-        {showAddForm && (
-          <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
-            <HudPanel className="modal-content" onClick={e => e.stopPropagation()}>
-              <div className="font-display text-xl uppercase text-primary font-bold mb-4 border-b border-border-color pb-2 flex justify-between items-center">
-                <span>Schedule Event</span>
-                <button onClick={() => setShowAddForm(false)} className="text-muted hover:text-primary"><X size={18} /></button>
-              </div>
-
-              <form onSubmit={handleAdd} className="flex-col gap-4 font-mono text-xs">
-                <div>
-                  <label className="text-muted mb-1 block uppercase">EVENT TITLE</label>
-                  <input
-                    type="text"
-                    className="input font-mono w-full"
-                    value={formData.title}
-                    onChange={e => setFormData({ ...formData, title: e.target.value })}
-                    required
-                    placeholder="e.g. Mathuram SEO Campaign or Video Shoot"
-                    autoFocus
-                  />
-                </div>
-                <div className="grid-2 gap-4">
-                  <div>
-                    <label className="text-muted mb-1 block uppercase">START TIME</label>
-                    <input
-                      type="datetime-local"
-                      className="input font-mono w-full"
-                      value={formData.start_time}
-                      onChange={e => setFormData({ ...formData, start_time: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="text-muted mb-1 block uppercase">END TIME</label>
-                    <input
-                      type="datetime-local"
-                      className="input font-mono w-full"
-                      value={formData.end_time}
-                      onChange={e => setFormData({ ...formData, end_time: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-muted mb-1 block uppercase">LOCATION / URL</label>
-                  <input
-                    type="text"
-                    className="input font-mono w-full"
-                    value={formData.location}
-                    onChange={e => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="e.g. Office or Google Meet"
-                  />
-                </div>
-                <div>
-                  <label className="text-muted mb-1 block uppercase">DETAILS</label>
-                  <textarea
-                    className="textarea font-mono w-full min-h-[80px]"
-                    value={formData.description}
-                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                  />
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <button type="submit" className="btn btn-primary flex-1">DEPLOY EVENT</button>
-                  <button type="button" className="btn btn-ghost" onClick={() => setShowAddForm(false)}>ABORT</button>
-                </div>
-              </form>
-            </HudPanel>
-          </div>
+        )}
+        {view === 'month' && (
+          <MonthView anchor={new Date(`${anchor}T12:00:00`)} events={cal.events} tasks={tasks} goals={goals} today={today} onPickDay={(d) => { setAnchor(d); setView('week') }} />
+        )}
+        {view === 'agenda' && (
+          <AgendaView from={range[0]} events={cal.events} tasks={tasks} goals={goals} today={today} onOpen={(ev) => setSheet({ event: ev, n: Date.now() })} />
         )}
 
+        <EventSheet
+          key={sheet ? `${sheet.event?.id || 'new'}_${sheet.n}` : 'closed'}
+          open={!!sheet}
+          event={sheet?.event}
+          draft={sheet?.draft}
+          tasks={tasks}
+          blockColumns={cal.blockColumns}
+          onClose={() => setSheet(null)}
+          onSave={(payload) => (sheet?.event ? cal.updateEvent(sheet.event.id, payload) : cal.addEvent(payload))}
+          onDelete={async (ev) => { await cal.deleteEvent(ev.id); setSheet(null) }}
+          onCompleteTask={async (ev, task) => { await completeOperation(task.id); await cal.updateEvent(ev.id, { completed: true }); setSheet(null) }}
+          onRoll={roll}
+        />
       </div>
     </AppShell>
   )

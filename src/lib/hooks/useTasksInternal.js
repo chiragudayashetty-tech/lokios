@@ -7,6 +7,7 @@ import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { escalatingPenalty } from '@/lib/utils/xpRules'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { isMissingSchema } from '@/lib/utils/schema'
+import { settleTaskBlocks, unsettleTaskBlocks } from '@/lib/utils/blockRewards'
 
 // Map quest/task category IDs to canonical stat_category keys used by XP page
 const TASK_CATEGORY_TO_STAT = {
@@ -196,6 +197,9 @@ export function useTasksInternal(user) {
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
 
+      // Time blocks for this task: mark completed, +5 XP when finished on time (#40)
+      settleTaskBlocks(user.id, task).catch(() => {})
+
       // AUTO-CLONING ENGINE FOR RECURRING TASKS
       if (task.type === 'recurring' && task.recurrence_type && task.due_date) {
         const currentDueDate = new Date(task.due_date)
@@ -277,8 +281,8 @@ export function useTasksInternal(user) {
       if (error) throw error
 
       // Remove XP
-      const task = tasks.find(t => t.id === id)
       await robustRemoveXP(user.id, 'task_complete', id)
+      unsettleTaskBlocks(user.id, id).catch(() => {})
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
       return updated
