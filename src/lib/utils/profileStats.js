@@ -18,7 +18,7 @@ export function statLevels(rows) {
     for (const r of rows) {
       if (!(r.amount > 0)) continue
       const k = ALIAS[r.stat_category] || r.stat_category || 'discipline'
-      if (k in xp) xp[k] += r.amount
+      if (k in xp) xp[k] += Number(r.amount) || 0
     }
   } else if (rows && typeof rows === 'object') {
     for (const [k0, v] of Object.entries(rows)) { const k = ALIAS[k0] || k0; if (k in xp) xp[k] += Number(v) || 0 }

@@ -11,7 +11,8 @@ import { formatMoney } from '@/lib/utils/money'
 import { CYCLES, monthlyCost, advanceDate, runSubscriptionAutopilot } from '@/lib/utils/subscriptions'
 import { BUDGET_CATEGORIES } from '@/lib/utils/budget'
 
-const daysUntil = (d, today) => Math.round((new Date(`${d}T12:00:00`) - new Date(`${today}T12:00:00`)) / 86400000)
+const daysUntil = (d, today) => (d ? Math.round((new Date(`${d}T12:00:00`) - new Date(`${today}T12:00:00`)) / 86400000) : NaN)
+const shortDate = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 const relDay = (n) => (n === 0 ? 'today' : n === 1 ? 'tomorrow' : n < 0 ? `${-n}d overdue` : `in ${n} days`)
 
 function SubForm({ sub, onClose, onSave }) {
@@ -30,6 +31,7 @@ function SubForm({ sub, onClose, onSave }) {
   const submit = async (e) => {
     e.preventDefault()
     if (!f.name.trim() || !(Number(f.amount) > 0)) { setError('Name and an amount above 0 are required.'); return }
+    if (!f.next_charge_date) { setError('Pick the next charge date.'); return }
     setBusy(true)
     const res = await onSave({ name: f.name.trim(), amount: Number(f.amount), cycle: f.cycle, next_charge_date: f.next_charge_date, billing_day: new Date(`${f.next_charge_date}T12:00:00`).getDate(), category: f.category, active: f.active, currency: 'INR' })
     setBusy(false)
@@ -107,7 +109,7 @@ export default function SubscriptionsPanel({ userId, billsLimit }) {
                 <span className="sub-icon"><CreditCard size={16} /></span>
                 <div className="sub-main">
                   <b>{s.name}</b>
-                  <span><Repeat size={11} /> {CYCLES[s.cycle]} · next {new Date(`${s.next_charge_date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ({relDay(n)}) · then {new Date(`${advanceDate(s.next_charge_date, s.cycle, s.billing_day)}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                  <span><Repeat size={11} /> {CYCLES[s.cycle] || 'Monthly'} · {Number.isNaN(n) ? 'no next charge date — edit to set one' : <>next {shortDate(s.next_charge_date)} ({relDay(n)}) · then {shortDate(advanceDate(s.next_charge_date, s.cycle, s.billing_day))}</>}</span>
                 </div>
                 <span className="sub-amt">{formatMoney(s.amount)}<em>/{s.cycle === 'weekly' ? 'wk' : s.cycle === 'yearly' ? 'yr' : 'mo'}</em></span>
                 <button type="button" className={`settings-toggle ${s.active ? 'is-on' : ''}`} onClick={() => subs.update(s.id, { active: !s.active })} aria-label={s.active ? 'Pause' : 'Activate'} aria-pressed={s.active}><span /></button>

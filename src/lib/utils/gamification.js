@@ -359,7 +359,7 @@ export function computeInsights({ model, habits, screenLogs = [], moods = [], sl
   }
 
   // Keystone habits: other-habit completion on days the habit was done vs missed
-  for (const h of (habits || []).filter(x => x.is_active !== false)) {
+  for (const h of (habits || []).filter(x => x.is_active !== false && x.title)) {
     const yes = [], no = []
     for (const d of days) {
       if (!habitsScheduledOn([h], d.date).length) continue

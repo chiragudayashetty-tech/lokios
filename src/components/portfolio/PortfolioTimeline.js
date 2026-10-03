@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { Rocket, Flag, BookOpen, TrendingUp, Hammer } from 'lucide-react'
+import { calculateLevel } from '@/lib/utils/xp'
 
 const KINDS = {
   work: { icon: Rocket, label: 'Shipped', color: 'var(--accent-primary)' },
@@ -11,14 +12,16 @@ const KINDS = {
   level: { icon: TrendingUp, label: 'Level up', color: 'var(--accent-2)' },
 }
 
+const MAX_LEVEL = 500 // sanity cap so a corrupt ledger can never spin this loop
+
 /** Level-ups from the XP ledger: the date the running total crossed each level. */
 export function levelUps(xpRows) {
   const sorted = [...(xpRows || [])].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
   const out = []
   let total = 0, level = 1
   for (const r of sorted) {
-    total += r.amount || 0
-    const lv = total <= 0 ? 1 : Math.floor(Math.sqrt(total / 50)) + 1
+    total += Number(r.amount) || 0 // amounts could arrive as text; '+' would then concatenate
+    const lv = Math.min(MAX_LEVEL, calculateLevel(total))
     if (lv > level) { for (let l = level + 1; l <= lv; l++) out.push({ level: l, at: r.created_at }); level = lv }
     else if (lv < level) level = lv
   }
