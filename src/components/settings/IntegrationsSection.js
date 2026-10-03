@@ -3,10 +3,9 @@
 import { useState } from 'react'
 import { Plug, CalendarDays, X } from 'lucide-react'
 import { Section } from './controls'
-import ImportTokenCard from '@/components/screentime/ImportTokenCard'
 import { useOSSlice } from '@/lib/context/OSContext'
 
-/** Google Calendar connection + screen-time import tokens. */
+/** Google Calendar connection. */
 export default function IntegrationsSection({ user }) {
   const { profile, fetchProfile } = useOSSlice('profile')
   const [busy, setBusy] = useState(false)
@@ -27,7 +26,6 @@ export default function IntegrationsSection({ user }) {
           ? <button type="button" className="btn btn-ghost btn-sm" onClick={disconnect} disabled={busy}><X size={13} /> Disconnect</button>
           : <a className="btn btn-secondary btn-sm" href={user?.id ? `/api/google/auth?userId=${user.id}` : undefined} aria-disabled={!user?.id}>Connect</a>}
       </div>
-      <ImportTokenCard userId={user?.id} />
     </Section>
   )
 }

@@ -11,6 +11,9 @@ import { shiftDate } from '@/lib/utils/streakCalc'
 import { isExcludedFromDaily, getLocalDailyBudget } from '@/lib/utils/budget'
 import { evaluateAchievements, achievementXp, RARITY } from '@/lib/achievements'
 
+/** earned_at placeholder for achievements earned but not yet saved (achievements table missing). */
+export const PENDING = 'pending'
+
 let state = { list: [], earned: new Map(), stats: null, missing: false, ready: false, userId: null }
 const listeners = new Set()
 const publish = (patch) => { state = { ...state, ...patch }; listeners.forEach((fn) => fn(state)) }
@@ -138,7 +141,9 @@ export function syncAchievements(userId, game) {
     const stats = buildAchievementStats(game, extras, userId)
     const list = evaluateAchievements(stats)
     if (earnedRes.error) {
-      publish({ list, stats, earned: new Map(), missing: isMissingSchema(earnedRes.error), ready: true, userId })
+      // Can't save yet (table missing): still show what the history has earned, marked pending (no XP until saved)
+      const pending = new Map(list.filter((a) => a.earned).map((a) => [a.id, PENDING]))
+      publish({ list, stats, earned: pending, missing: isMissingSchema(earnedRes.error), ready: true, userId })
       return
     }
     const earned = new Map((earnedRes.data || []).map((r) => [r.achievement_id, r.earned_at]))

@@ -9,11 +9,12 @@ import {
 import Sheet from '@/components/ui/Sheet'
 import SchemaHint from '@/components/ui/SchemaHint'
 import { useAchievements } from '@/lib/hooks/useAchievements'
+import { PENDING } from '@/lib/stores/achievementStore'
 import { CATEGORIES, RARITY, achievementXp } from '@/lib/achievements'
 
 export const ICONS = { Flame, Shield, Crown, Sparkles, CalendarCheck, Snowflake, Zap, Repeat, Cog, Mountain, Medal, Gem, Link2, Target, Gift, CheckSquare, ListChecks, Rocket, CalendarClock, Inbox, Flag, MapPin, Briefcase, TrendingUp, Ghost, Swords, Skull, Dices, Wallet, PiggyBank, Trophy, BookOpen, ScrollText, Moon, ClipboardCheck, Smartphone, ShieldOff, Focus, BedDouble, Sunrise }
 
-const fmt = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const fmt = (iso) => (iso === PENDING ? 'Earned · XP pending' : new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }))
 
 export function Badge({ a, earnedAt, size = 'md', onClick }) {
   const Icon = ICONS[a.icon] || Award
@@ -42,6 +43,7 @@ export default function AchievementGallery() {
   if (!ach.ready) return <section className="hud-panel p-5 arena-skeleton" aria-busy="true" />
   const earnedCount = ach.list.filter((a) => ach.earned.has(a.id)).length
   const xp = ach.list.filter((a) => ach.earned.has(a.id)).reduce((s, a) => s + achievementXp(a), 0)
+  const pending = ach.missing && earnedCount > 0
   const show = (a) => filter === 'all' || (filter === 'earned' ? ach.earned.has(a.id) : !ach.earned.has(a.id))
   const sel = open && ach.list.find((a) => a.id === open)
 
@@ -52,7 +54,7 @@ export default function AchievementGallery() {
         <div>
           <span className="record-label">Collected</span>
           <span className="record-value">{earnedCount}<em> / {ach.list.length}</em></span>
-          <span className="record-sub">+{xp} XP from achievements</span>
+          <span className="record-sub">{pending ? `+${xp} XP waiting — paid once the database update is run` : `+${xp} XP from achievements`}</span>
         </div>
         <div className="ach-rarity-key">{Object.entries(RARITY).map(([k, r]) => <span key={k} style={{ '--rc': r.color }}><i /> {r.label} · {r.xp} XP</span>)}</div>
         <div className="tk-chips">
@@ -76,7 +78,7 @@ export default function AchievementGallery() {
           <div className="ach-detail">
             <Badge a={sel} earnedAt={ach.earned.get(sel.id)} size="lg" />
             <p className="ach-desc">{sel.description}</p>
-            <p className="ach-meta">{ach.earned.get(sel.id) ? `Earned ${fmt(ach.earned.get(sel.id))} · +${achievementXp(sel)} XP` : `Progress ${sel.progress}/${sel.target} · unlocks +${achievementXp(sel)} XP`}</p>
+            <p className="ach-meta">{ach.earned.get(sel.id) === PENDING ? `Earned · +${achievementXp(sel)} XP once the database update is run` : ach.earned.get(sel.id) ? `Earned ${fmt(ach.earned.get(sel.id))} · +${achievementXp(sel)} XP` : `Progress ${sel.progress}/${sel.target} · unlocks +${achievementXp(sel)} XP`}</p>
           </div>
         )}
       </Sheet>

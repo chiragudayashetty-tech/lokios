@@ -1,7 +1,7 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- ROUND 2 — tasks board, today timeline, missions roadmap, calendar blocks,
 -- brain dump inbox, habit chains, sleep, subscriptions, savings jars, profile,
--- portfolio, achievements, screen-time import.
+-- portfolio, achievements, screen-time categories.
 --
 -- Safe to run more than once (everything is "if not exists" / "or replace").
 -- The app hides each feature with a one-line hint until its part has run.
@@ -152,17 +152,6 @@ create table if not exists public.achievements (
 
 -- ── #44 Screen intel ────────────────────────────────────────────────────────
 alter table public.screen_time_logs add column if not exists categories jsonb; -- {"social":45,"video":30,...} minutes
-alter table public.screen_time_logs add column if not exists source text default 'manual';
-
-create table if not exists public.api_tokens (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  token_hash text not null,
-  label text,
-  created_at timestamptz default now(),
-  last_used_at timestamptz
-);
-create index if not exists api_tokens_hash_idx on public.api_tokens (token_hash);
 
 -- ── Row level security: owner-only on every new table ───────────────────────
 do $$
@@ -170,7 +159,7 @@ declare t text;
 begin
   foreach t in array array[
     'daily_reviews', 'goal_milestones', 'sleep_logs', 'subscriptions', 'savings_goals',
-    'savings_entries', 'portfolio_items', 'achievements', 'api_tokens'
+    'savings_entries', 'portfolio_items', 'achievements'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and policyname = t || '_owner') then

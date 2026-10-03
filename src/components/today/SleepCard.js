@@ -19,7 +19,8 @@ export default function SleepCard({ today, logs, missing, onSave, compact = fals
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  const preview = useMemo(() => sleepScore({ ...sleepWindow(today, bed, wake), quality }, history), [today, bed, wake, quality, history])
+  const win = useMemo(() => sleepWindow(today, bed, wake), [today, bed, wake])
+  const preview = useMemo(() => (win ? sleepScore({ ...win, quality }, history) : { minutes: 0, score: 0 }), [win, quality, history])
   const tone = scoreTone(todays && !open ? todays.score : preview.score)
 
   if (missing) return <section className="slp"><div className="slp-head"><BedDouble size={16} /> Sleep</div><SchemaHint feature="Sleep logging" /></section>
@@ -51,9 +52,10 @@ export default function SleepCard({ today, logs, missing, onSave, compact = fals
   }
 
   const save = async () => {
+    if (!win) return
     setSaving(true)
     setError(null)
-    const res = await onSave({ date: today, ...sleepWindow(today, bed, wake), quality })
+    const res = await onSave({ date: today, ...win, quality })
     setSaving(false)
     if (res?.error) setError(res.error.message || 'Could not save')
     else setOpen(false)
@@ -72,7 +74,7 @@ export default function SleepCard({ today, logs, missing, onSave, compact = fals
             <b className="slp-score-num">{preview.score}</b>
             <span className="slp-score-lbl">score</span>
           </Ring>
-          <span className="slp-score-sub">{formatDuration(preview.minutes)} · {tone.label}</span>
+          <span className="slp-score-sub">{win ? `${formatDuration(preview.minutes)} · ${tone.label}` : 'Set both times'}</span>
         </div>
       </div>
       <div className="eod-scale" role="radiogroup" aria-label="Sleep quality">
@@ -85,7 +87,7 @@ export default function SleepCard({ today, logs, missing, onSave, compact = fals
       </div>
       {error && <p className="tm-warn">{error}</p>}
       <div className="slp-actions">
-        <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : todays ? 'Update' : 'Save sleep'}</button>
+        <button type="button" className="btn btn-primary" onClick={save} disabled={saving || !win}>{saving ? 'Saving…' : todays ? 'Update' : 'Save sleep'}</button>
         {(todays || compact) && <button type="button" className="btn btn-ghost" onClick={() => setOpen(false)}>Cancel</button>}
       </div>
     </section>

@@ -6,7 +6,6 @@ import AppShell from '@/components/layout/AppShell'
 import WinterLoader from '@/components/ui/WinterLoader'
 import SchemaHint from '@/components/ui/SchemaHint'
 import ScreenCharts from '@/components/screentime/ScreenCharts'
-import ImportTokenCard from '@/components/screentime/ImportTokenCard'
 import { TodayRings, CategoryBreakdown, CapsCard } from '@/components/screentime/ScreenPanels'
 import { createClient } from '@/lib/supabase/client'
 import { useOSSlice } from '@/lib/context/OSContext'
@@ -74,7 +73,7 @@ function LogForm({ userId, date, log, catsMissing, onSaved }) {
         streaming_hours: parseFloat(f.streaming) || 0,
         notes: f.notes,
       }
-      const full = catsMissing ? payload : { ...payload, categories: Object.keys(cats).length ? cats : null, source: 'manual' }
+      const full = catsMissing ? payload : { ...payload, categories: Object.keys(cats).length ? cats : null }
 
       const { data: existing } = await supabase.from('screen_time_logs').select('id').eq('user_id', userId).eq('date', date).maybeSingle()
       const write = (row) => (existing
@@ -179,7 +178,6 @@ export default function ScreenIntel() {
           <CapsCard logs={logs} caps={settings.screenCaps} userId={user?.id} today={today} />
         </div>
 
-        <ImportTokenCard userId={user?.id} />
       </div>
     </AppShell>
   )

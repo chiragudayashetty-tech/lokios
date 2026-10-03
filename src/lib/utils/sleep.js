@@ -39,16 +39,24 @@ export function sleepScore({ bedtime, wake_time: wake, quality }, history = []) 
   return { minutes, score: clamp(score, 0, 100) }
 }
 
-/** Bedtime / wake timestamps for a wake-up date from "HH:MM" inputs (bedtime may be the night before). */
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
+
+/**
+ * Bedtime / wake timestamps for a wake-up date from "HH:MM" inputs (bedtime may be the night before).
+ * Returns null while an input is empty or partial (a cleared time field sends '').
+ */
 export function sleepWindow(dateStr, bedHHMM, wakeHHMM) {
+  if (!HHMM.test(bedHHMM || '') || !HHMM.test(wakeHHMM || '')) return null
   const wake = new Date(`${dateStr}T${wakeHHMM}:00`)
   const bed = new Date(`${dateStr}T${bedHHMM}:00`)
+  if (Number.isNaN(wake.getTime()) || Number.isNaN(bed.getTime())) return null
   if (bed >= wake) bed.setDate(bed.getDate() - 1)
   return { bedtime: bed.toISOString(), wake_time: wake.toISOString() }
 }
 
 export const hhmmOf = (iso) => {
   const d = new Date(iso)
+  if (!iso || Number.isNaN(d.getTime())) return ''
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 

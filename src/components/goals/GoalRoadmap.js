@@ -16,10 +16,11 @@ export default function GoalRoadmap({ goals, milestones, progressById, today }) 
 
   // Shared axis: earliest start → latest deadline / milestone (at least 4 weeks)
   const dates = [today]
+  const add = (d) => { const s = String(d || '').slice(0, 10); if (/^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(`${s}T12:00:00`).getTime())) dates.push(s) }
   for (const g of goals) {
-    if (g.created_at) dates.push(String(g.created_at).slice(0, 10))
-    if (deadlineOf(g)) dates.push(deadlineOf(g))
-    for (const m of milestonesOf(g.id, milestones)) if (m.target_date) dates.push(m.target_date)
+    add(g.created_at)
+    add(deadlineOf(g))
+    for (const m of milestonesOf(g.id, milestones)) add(m.target_date)
   }
   dates.sort()
   let start = dates[0]
