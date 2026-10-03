@@ -34,13 +34,19 @@ const hasRow = (rows, sid) => rows.some(r => r.source_id === sid || String(r.des
 async function load(userId) {
   const supabase = createClient()
   const today = getLocalDateStr()
-  const [{ data: habits }, logs, xpRows, { data: screenLogs }, { data: moods }] = await Promise.all([
+  const since = shiftDate(today, -150)
+  const [{ data: habits }, logs, xpRows, { data: screenLogs }, { data: moods }, sleepRes, reviewRes] = await Promise.all([
     supabase.from('habits').select('*').eq('user_id', userId),
     fetchAllLogs(supabase, userId, shiftDate(today, -LOOKBACK_DAYS)),
     fetchAllXp(supabase, userId),
     supabase.from('screen_time_logs').select('date, doom_scroll_minutes, focus_hours').eq('user_id', userId),
     supabase.from('journal_entries').select('date, mood').eq('user_id', userId),
+    // Round-2 tables: an error (table missing) just means no data yet
+    supabase.from('sleep_logs').select('date, duration_minutes, score').eq('user_id', userId).gte('date', since),
+    supabase.from('daily_reviews').select('date, mood, energy').eq('user_id', userId).gte('date', since),
   ])
+  const sleepLogs = sleepRes.error ? [] : sleepRes.data || []
+  const reviews = reviewRes.error ? [] : reviewRes.data || []
   const model = buildStreakModel(habits || [], logs, today)
   const weekStart = weekStartOf(today)
   const lastWeekStart = shiftDate(weekStart, -7)
@@ -73,7 +79,9 @@ async function load(userId) {
     today, habits: habits || [], model, xpRows, boss, season, bet, lastBet, records, weekStart, changed,
     weekRecap: (ws = weekStart) => computeWeekRecap(xpRows, model, habits || [], ws),
     ghost,
-    insights: () => (insightsCache ||= computeInsights({ model, habits: habits || [], screenLogs: screenLogs || [], moods: moods || [], today })),
+    insights: () => (insightsCache ||= computeInsights({ model, habits: habits || [], screenLogs: screenLogs || [], moods: moods || [], sleepLogs, reviews, today })),
+    sleepLogs,
+    reviews,
   }
 }
 

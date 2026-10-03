@@ -95,9 +95,9 @@ const DAYS = [{ l: 'Mon', v: 1 }, { l: 'Tue', v: 2 }, { l: 'Wed', v: 3 }, { l: '
 const blank = (due) => ({ title: '', description: '', difficulty: 'MEDIUM', category: 'beyond_tatva', customCategory: '', recurrence_type: '', due_date: due ?? '', goal_id: '', weeklyDays: [new Date().getDay()], weeklyDuration: 0, estimate_minutes: '' })
 
 /** "+ Task" sheet. preset = { due_date } from the column the user tapped. */
-export function NewTaskSheet({ open, preset, goals, today, schemaReady, onClose, onCreate }) {
+export function NewTaskSheet({ open, preset, goals, today, schemaReady, onClose, onCreate, initialTitle = '', initialNotes = '' }) {
   // Parent re-keys this sheet per opening, so the form starts fresh each time
-  const [form, setForm] = useState(() => blank(preset?.due_date === undefined ? today : preset.due_date))
+  const [form, setForm] = useState(() => ({ ...blank(preset?.due_date === undefined ? today : preset.due_date), title: initialTitle, description: initialNotes }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e?.target ? e.target.value : e }))

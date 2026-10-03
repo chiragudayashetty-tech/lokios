@@ -341,7 +341,7 @@ const pctTxt = (x) => `${Math.round(x * 100)}%`
  * Compares average daily completion between groups of days (last 120 days)
  * and returns the strongest, best-supported effects as plain sentences.
  */
-export function computeInsights({ model, habits, screenLogs = [], moods = [], today = getLocalDateStr() }) {
+export function computeInsights({ model, habits, screenLogs = [], moods = [], sleepLogs = [], reviews = [], today = getLocalDateStr() }) {
   const days = []
   for (let i = 1; i <= 120; i++) {
     const d = shift(today, -i)
@@ -414,6 +414,29 @@ export function computeInsights({ model, habits, screenLogs = [], moods = [], to
     else if (Number(m.mood) <= 2) moodNo.push(r)
   }
   compare('mood', moodYes, moodNo, (a, b) => `Good-mood days (journal 4–5) hit ${pctTxt(a)}; low-mood days ${pctTxt(b)}. Protect your mornings.`)
+
+  // Sleep logs (#24): the log date is the wake-up date, so it scores that day
+  if ((sleepLogs || []).length >= 10) {
+    const longYes = [], longNo = [], goodYes = [], goodNo = []
+    for (const l of sleepLogs) {
+      const r = byDate.get(l.date)
+      if (r == null) continue
+      if (l.duration_minutes != null) (Number(l.duration_minutes) >= 420 ? longYes : longNo).push(r)
+      if (l.score != null) (Number(l.score) >= 70 ? goodYes : goodNo).push(r)
+    }
+    compare('sleep_7h', longYes, longNo, (a, b) => `After **7h+ of sleep** you finish ${pctTxt(a)} of your habits next day — vs ${pctTxt(b)} on short nights.`)
+    compare('sleep_score', goodYes, goodNo, (a, b) => `Nights with a **sleep score of 70+** lead to ${pctTxt(a)} completion; rougher nights ${pctTxt(b)}.`)
+  }
+
+  // Energy from the end-of-day review (#41)
+  const enYes = [], enNo = []
+  for (const rv of reviews || []) {
+    const r = byDate.get(rv.date)
+    if (r == null || !rv.energy) continue
+    if (Number(rv.energy) >= 4) enYes.push(r)
+    else if (Number(rv.energy) <= 2) enNo.push(r)
+  }
+  compare('energy', enYes, enNo, (a, b) => `High-energy days (review 4–5) finish ${pctTxt(a)}; drained days ${pctTxt(b)}.`)
 
   // Weekday pattern
   const byDow = Array.from({ length: 7 }, () => [])

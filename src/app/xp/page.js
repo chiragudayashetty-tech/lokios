@@ -14,7 +14,7 @@ import { Activity, RefreshCw, RotateCcw, Calendar, Target, Trophy, ChevronLeft, 
 import { RANK_CONFIG, SAGA_TITLES, SAGA_IMAGES } from '@/lib/constants'
 import { cleanupAllDuplicateXP, fetchAllXpHistory, stripSidMarker } from '@/lib/utils/xpFallback'
 
-import ProgressExtras from '@/components/game/ProgressExtras'
+import ProgressTabs from '@/components/progress/ProgressTabs'
 // 10-Segment LED Meter for Momentum Card (Compact)
 function SegmentedMomentumBar({ percentage = 78 }) {
   const activeSegments = Math.round((Math.max(0, Math.min(100, percentage)) / 100) * 10)
@@ -874,7 +874,7 @@ export default function XPDashboard() {
           </HudPanel>
         </div>
 
-        <ProgressExtras />
+        <ProgressTabs />
       </div>
     </AppShell>
   )
