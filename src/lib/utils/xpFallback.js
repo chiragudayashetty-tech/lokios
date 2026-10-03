@@ -74,8 +74,10 @@ export function extractTaskName(desc) {
 
 let rpcAvailable = null // null = unknown, true / false once probed
 
+// Missing function, or a schema mismatch (e.g. source_id still uuid: 42883 / 22P02):
+// fall back to the legacy client path instead of silently dropping XP.
 function isMissingFunction(error) {
-  return error && (error.code === 'PGRST202' || /could not find the function/i.test(error.message || ''))
+  return error && (['PGRST202', '42883', '22P02', '42804'].includes(error.code) || /could not find the function|operator does not exist|invalid input syntax for type uuid/i.test(error.message || ''))
 }
 
 /** Local calendar date an XP event belongs to. */
