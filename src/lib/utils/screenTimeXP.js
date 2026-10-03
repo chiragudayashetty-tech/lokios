@@ -1,6 +1,7 @@
 ﻿import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
+import { calculateScreenTimeXPPure } from '@/lib/utils/screenTimeScore'
 
 /**
  * Calculates dynamic XP for a Screen Time / Screen Intel entry.
@@ -11,50 +12,7 @@ import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
  *  - Streaming Hours: target 1h (±10 XP per hour diff)
  */
 export function calculateScreenTimeXP(log) {
-  if (!log) return { xpAmount: 0, finalReason: 'Screen Time logged' }
-
-  const tHours = parseFloat(log.total_hours) || 0
-  const fHours = parseFloat(log.focus_hours) || 0
-  const dMins = parseInt(log.doom_scroll_minutes) || 0
-  const sHours = parseFloat(log.streaming_hours) || 0
-
-  let xpAmount = 0
-  let reasons = []
-
-  // 1. Total Hours: Target 6
-  const totalDiff = 6 - tHours
-  const totalXp = Math.round(totalDiff * 10)
-  if (totalXp !== 0) {
-    xpAmount += totalXp
-    reasons.push(`Total Time: ${totalXp > 0 ? '+' : ''}${totalXp}`)
-  }
-
-  // 2. Doom Scroll: Target 60 mins (1 hr)
-  const doomDiff = 60 - dMins
-  const doomXp = Math.round(doomDiff * 0.5)
-  if (doomXp !== 0) {
-    xpAmount += doomXp
-    reasons.push(`Doomscroll: ${doomXp > 0 ? '+' : ''}${doomXp}`)
-  }
-
-  // 3. Focus Hours: Target 3
-  const focusDiff = fHours - 3
-  const focusXp = Math.round(focusDiff * 15)
-  if (focusXp !== 0) {
-    xpAmount += focusXp
-    reasons.push(`Focus: ${focusXp > 0 ? '+' : ''}${focusXp}`)
-  }
-
-  // 4. Streaming Hours: Target 1h (60 min)
-  const streamingDiff = 1 - sHours
-  const streamingXp = Math.round(streamingDiff * 10)
-  if (streamingXp !== 0) {
-    xpAmount += streamingXp
-    reasons.push(`Streaming: ${streamingXp > 0 ? '+' : ''}${streamingXp}`)
-  }
-
-  const finalReason = reasons.join(' | ') || 'Screen Time logged'
-  return { xpAmount, finalReason }
+  return calculateScreenTimeXPPure(log)
 }
 
 /**

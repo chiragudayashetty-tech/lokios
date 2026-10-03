@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS = {
   streakNudge: false,        // "streak at risk" nudge
   streakNudgeTime: '22:00',
   theme: { season: 'auto', accent: 'level', snow: true, motion: 'auto', density: 'comfortable' },
+  screenCaps: { social: 60, video: 60, games: 30, doom: 60 }, // daily caps in minutes (#44)
 }
 
 const KEY = 'lokios_settings'
