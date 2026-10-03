@@ -57,3 +57,76 @@ export function habitsScheduledOn(habits, dateStr) {
     return true
   })
 }
+
+// ── Game layer (docs/xp-gamification-plan.md §8) ─────────────────────────────
+
+/** Rules below apply from this date on (forward only). */
+export const GAME_START_DATE = '2026-10-03'
+
+/** Streak freezes: +1 per 7 qualifying days in a run, hold up to 3. */
+export const FREEZE_START_DATE = GAME_START_DATE
+export const FREEZE_EVERY_DAYS = 7
+export const FREEZE_MAX = 3
+
+/** Mystery chest on Perfect Days. */
+export const CHEST_CHANCE = 0.25
+export const CHEST_BASE_XP = 50
+export const CHEST_MIN_MULT = 1.5
+export const CHEST_MAX_MULT = 3
+
+/** First habit completed today pays double; any completion has a 1-in-20 critical hit (×2). */
+export const CRIT_CHANCE = 0.05
+
+/** Weekly boss: weakest habit of the last 14 days; hit it 6 of 7 days. */
+export const BOSS_XP = 200
+export const BOSS_HITS = 6
+
+/** Habit mastery tiers by lifetime completions. */
+export const MASTERY_TIERS = [
+  { id: 'bronze', label: 'Bronze', at: 30, xp: 50, color: '#E3A36B' },
+  { id: 'silver', label: 'Silver', at: 60, xp: 100, color: '#D6E2F0' },
+  { id: 'gold', label: 'Gold', at: 100, xp: 200, color: '#FFD166' },
+  { id: 'diamond', label: 'Diamond', at: 200, xp: 400, color: '#8FD3FF' },
+]
+export function masteryTier(completions = 0) {
+  return [...MASTERY_TIERS].reverse().find(t => completions >= t.at) || null
+}
+export function nextMasteryTier(completions = 0) {
+  return MASTERY_TIERS.find(t => completions < t.at) || null
+}
+
+/** Winter Arc season pass: tiers by XP gained since the season started. */
+export const SEASON = {
+  id: 'winter',
+  name: 'Winter Arc',
+  start: '2026-10-01',
+  tiers: [
+    { at: 500, title: 'First Frost', xp: 25 },
+    { at: 1500, title: 'Cold Start', xp: 50 },
+    { at: 3000, title: 'Ice Veins', xp: 75 },
+    { at: 5000, title: 'Frostbite', xp: 100 },
+    { at: 7500, title: 'Blizzard', xp: 125 },
+    { at: 10000, title: 'Permafrost', xp: 150 },
+    { at: 13000, title: 'Glacier', xp: 175 },
+    { at: 16500, title: 'Polar Night', xp: 200 },
+    { at: 20500, title: 'Aurora', xp: 250 },
+    { at: 25000, title: 'Survived Winter', xp: 500 },
+  ],
+}
+
+/** Self-staked weekly bets on streak days (90%+ days) this week. */
+export const BET_STAKES = [100, 250, 500]
+export const BET_TARGETS = [4, 5, 6, 7]
+
+/** Weekly debrief reward. */
+export const DEBRIEF_XP = 50
+
+/** Deterministic 0–1 roll from a string, so re-toggling never re-rolls a reward. */
+export function seededRoll(key) {
+  let h = 2166136261
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return ((h >>> 0) % 100000) / 100000
+}

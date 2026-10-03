@@ -14,6 +14,7 @@ import IntelExportModal from '@/components/ui/IntelExportModal'
 import XPToastStack from '@/components/ui/XPToastStack'
 import CharacterCapsuleHUD from '@/components/ui/CharacterCapsuleHUD'
 import LevelUpCelebration from '@/components/ui/LevelUpCelebration'
+import GameOverlays from '@/components/game/GameOverlays'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { SAGA_TITLES } from '@/lib/constants'
 import { celebrateAt } from '@/lib/utils/celebrate'
@@ -366,6 +367,7 @@ function AppShellFrame({ children }) {
         onClose={() => setExportModalOpen(false)}
       />
       <XPToastStack events={feedbackEvents} onDismiss={dismissFeedback} />
+      <GameOverlays />
       <LevelUpCelebration level={level} rankTitle={SAGA_TITLES[rank.code] || rank.name} />
 
       {/* Mobile floating dock */}

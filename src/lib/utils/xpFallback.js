@@ -63,6 +63,20 @@ export function extractTaskName(desc) {
   return null
 }
 
+/** Marker appended to descriptions when source_id can't be stored (uuid column). */
+export const sidMarker = (sourceId) => ` [#${sourceId}]`
+/** Strip the marker for display. */
+export const stripSidMarker = (desc = '') => String(desc || '').replace(/s[#[^]]+]$/, '')
+
+async function findBySourceId(supabase, userId, sourceId) {
+  const rows = []
+  const { data: exact, error } = await supabase.from('xp_history').select('id, amount').eq('user_id', userId).eq('source_id', sourceId)
+  if (!error && exact) rows.push(...exact)
+  const { data: tagged } = await supabase.from('xp_history').select('id, amount').eq('user_id', userId).like('description', `%[#${sourceId}]`)
+  for (const r of tagged || []) if (!rows.some(x => x.id === r.id)) rows.push(r)
+  return rows
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // XP ENGINE v2
 // Awards go through the award_xp / revoke_xp Postgres functions
@@ -71,6 +85,15 @@ export function extractTaskName(desc) {
 // awards can't lose XP and nothing is matched by description.
 // Until that migration is applied, the legacy client-side path below is used.
 // ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Broadcast an XP change so the shell refreshes the profile / momentum and shows
+ * an XP toast immediately (no dependence on Supabase Realtime being enabled).
+ */
+function notifyXpChanged(detail) {
+  if (typeof window === 'undefined') return
+  try { window.dispatchEvent(new CustomEvent('lokios:xp-changed', { detail })) } catch {}
+}
 
 let rpcAvailable = null // null = unknown, true / false once probed
 
@@ -102,11 +125,17 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
       p_stat_category: statCategory || 'discipline',
       p_occurred_on: resolveOccurredOn(sourceId, customCreatedAt),
     })
-    if (!error) { rpcAvailable = true; return true }
+    if (!error) {
+      rpcAvailable = true
+      notifyXpChanged({ amount: Math.round(Number(amount) || 0), sourceType, sourceId: String(sourceId), description })
+      return true
+    }
     if (isMissingFunction(error)) rpcAvailable = false
     else { console.error('award_xp failed:', error); return false }
   }
-  return legacyAwardXP(userId, amount, sourceType, sourceId, description, statCategory, customCreatedAt)
+  const ok = await legacyAwardXP(userId, amount, sourceType, sourceId, description, statCategory, customCreatedAt)
+  notifyXpChanged({ amount: Math.round(Number(amount) || 0), sourceType, sourceId: sourceId ? String(sourceId) : null, description })
+  return ok
 }
 
 /**
@@ -127,6 +156,7 @@ export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount =
       } else {
         rpcAvailable = true
         removed = Number(data) || 0
+        if (removed) notifyXpChanged({ amount: -removed, sourceType, sourceId: String(sourceId), silent: true })
       }
     }
     if (rpcAvailable !== false) {
@@ -142,7 +172,9 @@ export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount =
       return true
     }
   }
-  return legacyRemoveXP(userId, sourceType, sourceId, fixedAmount, description)
+  const ok = await legacyRemoveXP(userId, sourceType, sourceId, fixedAmount, description)
+  notifyXpChanged({ amount: 0, sourceType, sourceId, silent: true })
+  return ok
 }
 
 /**
@@ -172,10 +204,7 @@ async function legacyAwardXP(
 
     // A. Match by sourceId across all source_types
     if (sourceId) {
-      const { data: exact } = await supabase.from('xp_history')
-        .select('id, amount')
-        .eq('user_id', userId)
-        .eq('source_id', sourceId)
+      const exact = await findBySourceId(supabase, userId, sourceId)
 
       if (exact && exact.length > 0) {
         matchedIds.push(...exact.map(r => r.id))
@@ -281,7 +310,7 @@ async function legacyAwardXP(
     
     if (err2) {
       console.warn('Insert without stat_category failed, retrying minimal payload without source_id:', err2.message || err2)
-      const payloadMinimal = { ...payloadNoCat }
+      const payloadMinimal = { ...payloadNoCat, description: `${payloadNoCat.description || ''}${sidMarker(sourceId)}`.trim() }
       delete payloadMinimal.source_id
       let { error: err3 } = await supabase.from('xp_history').insert(payloadMinimal)
       if (err3) {
@@ -318,24 +347,13 @@ async function legacyRemoveXP(userId, sourceType, sourceId, fixedAmount = null, 
   // Step 1: Look for matching xp_history entries for sourceId, sourceType, or description
   try {
     if (sourceId) {
-      const { data: items } = await supabase.from('xp_history')
-        .select('id, amount')
-        .eq('user_id', userId)
-        .eq('source_id', sourceId)
-      if (items && items.length > 0) {
-        matchedIds.push(...items.map(r => r.id))
-        deductionAmount += items.reduce((sum, r) => sum + (r.amount || 0), 0)
-      }
-    } else if (sourceType) {
-      const { data: items } = await supabase.from('xp_history')
-        .select('id, amount')
-        .eq('user_id', userId)
-        .eq('source_type', sourceType)
+      const items = await findBySourceId(supabase, userId, sourceId)
       if (items && items.length > 0) {
         matchedIds.push(...items.map(r => r.id))
         deductionAmount += items.reduce((sum, r) => sum + (r.amount || 0), 0)
       }
     }
+    // (Deleting every row of a source_type when no id was given was removed: it wiped history.)
 
     if (description && matchedIds.length === 0) {
       const routineName = extractRoutineName(description)

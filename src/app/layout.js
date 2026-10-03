@@ -3,6 +3,7 @@ import './design-overrides.css'
 import './dashboard-overrides.css'
 import './mobile-premium.css'
 import './opal.css'
+import './game.css'
 import './tailwind.css'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 

@@ -101,12 +101,15 @@ export function OSProvider({ children }) {
       if (document.visibilityState === 'visible') debouncedSync()
     }
     window.addEventListener('focus', debouncedSync)
+    // Local XP changes (award / revoke) refresh the profile immediately
+    window.addEventListener('lokios:xp-changed', debouncedXpSync)
     document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
       if (syncTimeout) clearTimeout(syncTimeout)
       supabase.removeChannel(channel)
       window.removeEventListener('focus', debouncedSync)
+      window.removeEventListener('lokios:xp-changed', debouncedXpSync)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [auth?.user?.id])

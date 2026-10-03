@@ -52,18 +52,34 @@ export function useXPInternal(user) {
     fetchMomentum()
   }, [fetchMomentum])
 
-  const handleXpRealtime = useCallback((payload) => {
-    const row = payload?.new
-    const amount = Number(row?.amount)
-    if (typeof window === 'undefined' || !row || !Number.isFinite(amount) || amount === 0 || !row.id || seenEventIds.current.has(row.id)) return
-    seenEventIds.current.add(row.id)
-    const source = String(row.source_type || 'EXECUTION').replaceAll('_', ' ').toUpperCase()
-    const event = { id: row.id, amount, source }
+  const pushFeedback = useCallback((id, amount, source) => {
+    if (!Number.isFinite(amount) || amount === 0 || seenEventIds.current.has(id)) return
+    seenEventIds.current.add(id)
+    const event = { id, amount, source }
     setFeedbackEvents(previous => [...previous.slice(-2), event])
     window.setTimeout(() => {
-      setFeedbackEvents(previous => previous.filter(item => item.id !== row.id))
+      setFeedbackEvents(previous => previous.filter(item => item.id !== id))
     }, 4200)
   }, [])
+
+  // Toasts come from local XP events (see xpFallback notifyXpChanged), so they
+  // work even when Supabase Realtime isn't enabled; realtime only refreshes data.
+  const handleXpRealtime = useCallback(() => {}, [])
+
+  useEffect(() => {
+    let timer = null
+    const onXp = (e) => {
+      const d = e.detail || {}
+      if (!d.silent) {
+        const label = String(d.description || d.sourceType || 'XP').replace(/s[#[^]]+]$/, '').replace(/s*([^)]*XP[^)]*)s*$/i, '')
+        pushFeedback(`${d.sourceId || 'xp'}_${Date.now()}`, Number(d.amount), label.length > 48 ? label.slice(0, 47) + '…' : label)
+      }
+      clearTimeout(timer)
+      timer = setTimeout(() => { fetchMomentum() }, 400)
+    }
+    window.addEventListener('lokios:xp-changed', onXp)
+    return () => { window.removeEventListener('lokios:xp-changed', onXp); clearTimeout(timer) }
+  }, [pushFeedback, fetchMomentum])
 
   const dismissFeedback = useCallback((id) => {
     setFeedbackEvents(previous => previous.filter(item => item.id !== id))

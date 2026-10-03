@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
+import GameHub from '@/components/game/GameHub'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -1491,6 +1492,9 @@ export default function MissionControl() {
           </div>
 
         </div>
+
+        {/* Arena: streak & freezes, weekly boss, season pass, bets, perfect-day chest */}
+        <GameHub />
 
         {/* ══════════════════════════════════════════════════════════════════
             DAILY PROTOCOL STATUS FLOATING DECK (INSTANT MODAL LAUNCH)

@@ -12,8 +12,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AreaChart, Area, BarChart, Bar, Cell, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { Activity, RefreshCw, RotateCcw, Calendar, Target, Trophy, ChevronLeft, ChevronRight } from 'lucide-react'
 import { RANK_CONFIG, SAGA_TITLES, SAGA_IMAGES } from '@/lib/constants'
-import { cleanupAllDuplicateXP, fetchAllXpHistory } from '@/lib/utils/xpFallback'
+import { cleanupAllDuplicateXP, fetchAllXpHistory, stripSidMarker } from '@/lib/utils/xpFallback'
 
+import ProgressExtras from '@/components/game/ProgressExtras'
 // 10-Segment LED Meter for Momentum Card (Compact)
 function SegmentedMomentumBar({ percentage = 78 }) {
   const activeSegments = Math.round((Math.max(0, Math.min(100, percentage)) / 100) * 10)
@@ -798,7 +799,7 @@ export default function XPDashboard() {
                       <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 min-w-0 flex-1">
                         {/* LINE 1 ON PHONE: Task / Activity Description */}
                         <span className="text-primary font-bold text-sm leading-snug break-words whitespace-normal">
-                          {typeof item.description === 'string' ? item.description : 'XP Event Logged'}
+                          {typeof item.description === 'string' ? stripSidMarker(item.description) : 'XP Event Logged'}
                         </span>
 
                         {/* LINE 2 ON PHONE: Date & Time + Badges */}
@@ -873,6 +874,7 @@ export default function XPDashboard() {
           </HudPanel>
         </div>
 
+        <ProgressExtras />
       </div>
     </AppShell>
   )

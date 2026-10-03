@@ -2,11 +2,13 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import { useGameState } from '@/lib/hooks/useGameState'
+import { masteryTier } from '@/lib/utils/xpRules'
 import WinterLoader from '@/components/ui/WinterLoader'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
-import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Lock, Clock, Sparkles, CheckCircle2, Minus, PauseCircle, PlayCircle, Sun, Calendar, Edit3, Scale, TrendingDown, TrendingUp } from 'lucide-react'
+import { Plus, Check, X, Archive, Trash2, ChevronLeft, ChevronRight, AlertTriangle, ArrowUp, ArrowDown, Flame, ChevronsUp, GripVertical, RotateCcw, Crosshair, Leaf, Lock, Clock, Sparkles, CheckCircle2, Minus, PauseCircle, PlayCircle, Sun, Calendar, Edit3, Scale, TrendingDown, TrendingUp, Medal } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { useOS } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -15,7 +17,20 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
 
+// Small medal for a habit's mastery tier (Bronze 30 → Diamond 200 completions)
+function MasteryMedal({ count }) {
+  const tier = masteryTier(count)
+  if (!tier) return null
+  return (
+    <span title={`${tier.label} mastery · ${count} completions`} style={{ display: 'inline-flex', verticalAlign: '-2px', marginLeft: 6, color: tier.color, filter: `drop-shadow(0 0 6px ${tier.color}66)` }}>
+      <Medal size={12} />
+    </span>
+  )
+}
+
 export default function DailyOps() {
+  const game = useGameState()
+  const masteryCount = (id) => game.model?.doneCountByHabit?.get(id) || 0
   const {
     habits = [], stoppedHabits = [], allHabits = [], monthLogs = [], todayLogs = [], loading = false, error = null,
     fetchHabits, cycleHabitState, addHabit, deleteHabit, stopHabit, resumeHabit, archiveHabit, reorderHabits, reorderHabitsByDrag, updateHabit
@@ -780,7 +795,7 @@ export default function DailyOps() {
                         {/* Text */}
                         <div style={{ flex: '1 1 0', minWidth: 0, cursor: 'pointer' }} onClick={() => openEditModal(habit)} title={habit.title}>
                           <div className="font-mono text-[10px] md:text-xs text-primary transition-colors hover:text-amber truncate">
-                            {habit.title}
+                            {habit.title}<MasteryMedal count={masteryCount(habit.id)} />
                           </div>
                           <div className="font-mono text-[8px] md:text-[9px] text-muted uppercase hidden md:flex items-center gap-2 mt-[2px]">
                             <span className="truncate">{cat.name}</span>
@@ -928,7 +943,7 @@ export default function DailyOps() {
               <HudPanel key={habit.id} className="p-4 flex-between relative overflow-hidden">
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: cat.color }} />
                 <div className="flex-col gap-1 pl-2 truncate" style={{ flex: 1, minWidth: 0 }}>
-                  <div className="font-display text-base text-primary truncate" onClick={() => openEditModal(habit)}>{habit.title}</div>
+                  <div className="font-display text-base text-primary truncate" onClick={() => openEditModal(habit)}>{habit.title}<MasteryMedal count={masteryCount(habit.id)} /></div>
                   <div className="font-mono text-[10px] text-muted uppercase truncate">{cat.name} • {stats.pct}% WIN RATE</div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

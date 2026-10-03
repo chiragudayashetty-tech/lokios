@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { getLocalDateStr, formatDate, getStartOfWeek, getEndOfWeek, getDebriefSortTime } from '@/lib/utils/dates'
 import { evaluateProtocolAutoFail } from '@/lib/utils/protocolAutoFail'
+import DebriefRecap from '@/components/game/DebriefRecap'
+import { awardDebrief } from '@/lib/utils/gamification'
 import {
   BookOpen, Smile, Frown, Meh, Save, Zap, Flame, ShieldAlert,
   CalendarDays, Trophy, CheckSquare, Target, ArrowRight, AlertTriangle,
@@ -427,6 +429,9 @@ export default function JournalPage() {
         return next
       })
 
+      // Reflection is a rep too: +50 XP once per week
+      try { await awardDebrief(user.id, startStr) } catch (xpErr) { console.warn('Debrief XP failed:', xpErr) }
+
       // 4. Reset form only after successful persistence
       setWins('')
       setFails('')
@@ -674,6 +679,16 @@ export default function JournalPage() {
                       <ChevronRight size={13} />
                     </button>
                   </div>
+
+                  <DebriefRecap
+                    weekStart={(() => { const t = new Date(); t.setDate(t.getDate() + debriefWeekOffset * 7); return getLocalDateStr(getStartOfWeek(t)) })()}
+                    onAutofill={(w, f) => {
+                      setWins(prev => prev.trim() ? `${prev.trim()}
+${w}` : w)
+                      setFails(prev => prev.trim() ? `${prev.trim()}
+${f}` : f)
+                    }}
+                  />
 
                   <form onSubmit={handleSaveDebrief} className="space-y-6">
                     {/* Section 1: Wins */}
