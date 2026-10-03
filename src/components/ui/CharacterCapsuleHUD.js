@@ -6,6 +6,7 @@ import { motion, animate } from 'framer-motion'
 import { Shield, ShieldAlert, Flame, TrendingUp, TrendingDown } from 'lucide-react'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { SAGA_TITLES } from '@/lib/constants'
+import { nextStreakMilestone } from '@/lib/utils/xpRules'
 
 const STATE_STYLE = {
   'AT RISK': { color: 'var(--danger)', Icon: ShieldAlert },
@@ -59,6 +60,9 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
   const state = dailyMomentum?.state || 'STEADY'
   const { color: stateColor, Icon: StateIcon } = STATE_STYLE[state] || STATE_STYLE.STEADY
   const sparklineBars = dailyMomentum?.sparkline || []
+
+  const streak = effectiveProfile?.current_streak ?? effectiveProfile?.streak_days ?? 0
+  const nextMilestone = nextStreakMilestone(streak)
 
   const toNext = Math.max(0, xpProgress.required - xpProgress.current)
   const pct = Math.max(4, Math.min(100, Math.round(xpProgress.percentage)))
@@ -141,6 +145,29 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
             </div>
           </div>
         )}
+
+        {/* ── Streak + next milestone ── */}
+        <div
+          className="hidden md:flex items-center gap-2 pl-3 shrink-0"
+          style={{ borderLeft: '1px solid var(--border-color)' }}
+          title={nextMilestone ? `${nextMilestone.days - streak} more day${nextMilestone.days - streak === 1 ? '' : 's'} at 90%+ of habits → +${nextMilestone.xp} XP` : 'Legendary streak'}
+        >
+          <motion.span
+            style={{ display: 'flex', color: streak > 0 ? 'var(--warning)' : 'var(--text-disabled)' }}
+            animate={streak > 0 ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+            transition={streak > 0 ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : undefined}
+          >
+            <Flame size={16} />
+          </motion.span>
+          <div className="flex flex-col justify-center">
+            <span className="font-display font-extrabold text-sm leading-none text-white font-mono">{streak}d streak</span>
+            {nextMilestone && (
+              <span className="text-[10px] font-semibold text-muted mt-0.5 whitespace-nowrap">
+                {nextMilestone.days - streak}d → <span style={{ color: 'var(--success)' }}>+{nextMilestone.xp} XP</span>
+              </span>
+            )}
+          </div>
+        </div>
 
         {/* ── Today + momentum state ── */}
         <Link href="/xp" className="flex items-center gap-2.5 shrink-0 pl-3" style={{ color: 'inherit', borderLeft: '1px solid var(--border-color)' }}>

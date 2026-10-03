@@ -54,7 +54,7 @@ function RenderDebrief({ text }) {
 }
 
 export default function JournalPage() {
-  const { journal: { entries = [], loading = false, saveEntry, clearJournal } = {} } = useOS() || {}
+  const { journal: { entries = [], loading = false, saveEntry, clearJournal } = {}, habits: { habits: activeHabits = [], toggleHabitForDate } = {} } = useOS() || {}
   const { user } = useAuth()
 
   useEffect(() => {
@@ -231,7 +231,14 @@ export default function JournalPage() {
     setSaving(true)
     const success = await saveEntry({ content, mood, date: entryDate })
     setSaving(false)
-    if (success) { setContent(''); setMood(''); setShowHistory(true) }
+    if (success) {
+      setContent(''); setMood(''); setShowHistory(true)
+      // Writing a journal entry completes the "Journaling" habit for that day
+      const journalHabit = activeHabits.find(h => /journal/i.test(h.title || ''))
+      if (journalHabit && toggleHabitForDate) {
+        try { await toggleHabitForDate(journalHabit.id, entryDate, 'completed') } catch (e) { console.warn('Journal habit auto-tick failed:', e) }
+      }
+    }
   }
 
   const handleSaveDebrief = async (e) => {

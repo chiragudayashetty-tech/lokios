@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { calculateDailyMomentum } from '@/lib/utils/dailyMomentum'
-import { getLocalDateStr } from '@/lib/utils/dates'
 import { backfillRecentScreenTimeXP } from '@/lib/utils/screenTimeXP'
 
 export function useXPInternal(user) {
@@ -30,13 +29,15 @@ export function useXPInternal(user) {
       }
     }
 
+    // Local midnight six days ago (a "YYYY-MM-DDT00:00Z" string would be UTC midnight)
     const start = new Date()
+    start.setHours(0, 0, 0, 0)
     start.setDate(start.getDate() - 6)
     const { data, error } = await createClient()
       .from('xp_history')
       .select('amount, created_at')
       .eq('user_id', user.id)
-      .gte('created_at', `${getLocalDateStr(start)}T00:00:00.000Z`)
+      .gte('created_at', start.toISOString())
       .order('created_at', { ascending: false })
       .limit(5000)
 

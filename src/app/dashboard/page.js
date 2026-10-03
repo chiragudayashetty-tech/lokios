@@ -2082,7 +2082,7 @@ export default function MissionControl() {
                           }
 
                           await updateDebriefWorkLog(goalTitleText, '[FAILED]')
-                          await robustAwardXP(user.id, -38, 'task_failed', stableSourceId, `Failed Priority Goal: ${goalTitleText} (-38 XP, -1.5x)`, 'discipline')
+                          await robustAwardXP(user.id, -25, 'task_failed', stableSourceId, `Failed Priority Goal: ${goalTitleText} (-25 XP, -1x)`, 'discipline')
 
                           if (fetchTasks) await fetchTasks()
                           await profileHook?.fetchProfile?.()
@@ -2295,7 +2295,7 @@ export default function MissionControl() {
                 <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-2xl bg-white/[0.03] border border-white/10">
                   <Flame size={14} color={flameColor} className="animate-pulse" />
                   <span className="font-mono font-bold text-white text-xs">
-                    {currentStreak} <span className="text-[9px] text-slate-400 font-normal">days streak</span>
+                    {currentStreak} <span className="text-[9px] text-slate-400 font-normal">day streak</span>
                   </span>
                 </div>
                 <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-2xl bg-white/[0.03] border border-white/10">

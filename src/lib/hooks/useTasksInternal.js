@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
+import { escalatingPenalty } from '@/lib/utils/xpRules'
 import { getLocalDateStr } from '@/lib/utils/dates'
 
 // Map quest/task category IDs to canonical stat_category keys used by XP page
@@ -333,14 +334,13 @@ export function useTasksInternal(user) {
         }
       }
 
-      const missStreak = overdueDays > 0 ? overdueDays : 1
-      const multiplier = missStreak === 1 ? 1.5 : missStreak
-      const penalty = Math.round(baseXP * multiplier)
+      // Days overdue escalate the penalty: x1, x1.5, then capped at x2
+      const { missStreak, multiplier, penaltyMagnitude: penalty } = escalatingPenalty(baseXP, Math.max(0, overdueDays - 1))
 
       if (penalty > 0) {
         const reason = missStreak > 1
           ? `🚨 ESCALATING PENALTY (${missStreak} Days Overdue): ${task?.title || 'Unknown'} (-${penalty} XP, -${multiplier}x)`
-          : `Failed task: ${task?.title || 'Unknown'} (-${penalty} XP, -1.5x)`
+          : `Failed task: ${task?.title || 'Unknown'} (-${penalty} XP, -1x)`
         await robustAwardXP(
           user.id,
           -penalty,

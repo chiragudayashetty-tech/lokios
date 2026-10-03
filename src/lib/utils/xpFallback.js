@@ -63,15 +63,95 @@ export function extractTaskName(desc) {
   return null
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// XP ENGINE v2
+// Awards go through the award_xp / revoke_xp Postgres functions
+// (supabase/migrations/20261004_xp_engine_v2.sql): one ledger row per
+// source_id, and the balance moves in the same transaction, so concurrent
+// awards can't lose XP and nothing is matched by description.
+// Until that migration is applied, the legacy client-side path below is used.
+// ═══════════════════════════════════════════════════════════════════════════
+
+let rpcAvailable = null // null = unknown, true / false once probed
+
+function isMissingFunction(error) {
+  return error && (error.code === 'PGRST202' || /could not find the function/i.test(error.message || ''))
+}
+
+/** Local calendar date an XP event belongs to. */
+function resolveOccurredOn(sourceId, customCreatedAt) {
+  if (customCreatedAt) return getLocalDateStr(new Date(customCreatedAt))
+  const match = sourceId && String(sourceId).match(/(\d{4}-\d{2}-\d{2})/)
+  return match ? match[1] : getLocalDateStr(new Date())
+}
+
 /**
- * Award XP with entity-level deduplication.
+ * Award (or re-award) XP for one action. Re-awarding the same sourceId replaces
+ * the previous amount, so toggling complete → failed → complete never double-counts.
+ */
+export async function robustAwardXP(userId, amount, sourceType, sourceId, description, statCategory = 'discipline', customCreatedAt = null) {
+  if (!userId) return false
+  if (rpcAvailable !== false && sourceId) {
+    const { error } = await createClient().rpc('award_xp', {
+      p_amount: Math.round(Number(amount) || 0),
+      p_source_type: sourceType,
+      p_source_id: String(sourceId),
+      p_description: description || null,
+      p_stat_category: statCategory || 'discipline',
+      p_occurred_on: resolveOccurredOn(sourceId, customCreatedAt),
+    })
+    if (!error) { rpcAvailable = true; return true }
+    if (isMissingFunction(error)) rpcAvailable = false
+    else { console.error('award_xp failed:', error); return false }
+  }
+  return legacyAwardXP(userId, amount, sourceType, sourceId, description, statCategory, customCreatedAt)
+}
+
+/**
+ * Remove an action's XP. With a sourceId, that exact ledger row is revoked.
+ * With no prior row and a fixedAmount, a one-off deduction is recorded instead.
+ * Never deletes by type or by description.
+ */
+export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount = null, description = null) {
+  if (!userId) return false
+  if (rpcAvailable !== false) {
+    const supabase = createClient()
+    let removed = 0
+    if (sourceId) {
+      const { data, error } = await supabase.rpc('revoke_xp', { p_source_id: String(sourceId) })
+      if (error) {
+        if (isMissingFunction(error)) rpcAvailable = false
+        else { console.error('revoke_xp failed:', error); return false }
+      } else {
+        rpcAvailable = true
+        removed = Number(data) || 0
+      }
+    }
+    if (rpcAvailable !== false) {
+      if (!removed && fixedAmount) {
+        return robustAwardXP(
+          userId,
+          -Math.abs(fixedAmount),
+          sourceType ? `${sourceType}_reversed` : 'xp_deduction',
+          `${sourceType || 'xp'}_deduction_${sourceId || Date.now()}`,
+          description || `↩ Action Reversed: ${sourceType || 'XP Deduction'}`
+        )
+      }
+      return true
+    }
+  }
+  return legacyRemoveXP(userId, sourceType, sourceId, fixedAmount, description)
+}
+
+/**
+ * LEGACY: client-side award with description-based dedupe. Fallback only.
  * 
  * For habits, sourceId = `habit_${habitId}_${targetDate}` (e.g. `habit_abc123_2026-08-22`).
  * If a previous XP entry exists for the same entity or action on that date,
  * it is deleted and its amount deducted from profiles.total_xp BEFORE
  * the new entry is inserted. This ensures exactly 1 XP record per habit per day.
  */
-export async function robustAwardXP(
+async function legacyAwardXP(
   userId,
   amount,
   sourceType,
@@ -226,7 +306,7 @@ export async function robustAwardXP(
 /**
  * Remove an action's XP cleanly by deleting the original entry rather than polluting the timeline with duplicate reversal rows.
  */
-export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount = null, description = null) {
+async function legacyRemoveXP(userId, sourceType, sourceId, fixedAmount = null, description = null) {
   const supabase = createClient()
   if (!userId) return false
 

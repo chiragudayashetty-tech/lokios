@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
+import { escalatingPenalty, penaltyLabel, AUTOFAIL_BACKFILL_DAYS } from '@/lib/utils/xpRules'
 import { getLocalDateStr } from '@/lib/utils/dates'
-import { calculateAndUpdateStreak } from '@/lib/utils/streakCalc'
+import { calculateAndUpdateStreak, applyStreakRewards } from '@/lib/utils/streakCalc'
 import { syncWarRoomHabitChange } from '@/lib/utils/warRoomSync'
 
 /**
@@ -40,21 +41,8 @@ function getConsecutiveMisses(habitId, targetDateStr, allLogs, habit) {
   return consecutiveMisses
 }
 
-/**
- * Calculates the escalating penalty multiplier based on consecutive missed days.
- * - 1st day missed (0 prior misses): 1.5x (150%)
- * - 2 days missed (1 prior miss):    2.0x (200%)
- * - 3 days missed (2 prior misses):  3.0x (300%)
- * - 4 days missed (3 prior misses):  4.0x (400%)
- * - 5 days missed (4 prior misses):  5.0x (500%)
- * Day on day escalation: missStreak === 1 ? 1.5 : missStreak
- */
-function getEscalatingPenalty(baseXP, priorMisses) {
-  const missStreak = priorMisses + 1
-  const multiplier = missStreak === 1 ? 1.5 : missStreak
-  const penaltyMagnitude = Math.round(baseXP * multiplier)
-  return { missStreak, multiplier, penaltyMagnitude }
-}
+// Penalty escalation lives in lib/utils/xpRules (x1, x1.5, capped at x2)
+const getEscalatingPenalty = escalatingPenalty
 
 export function useHabitsInternal(user) {
   const [allHabits, setAllHabits] = useState([])
@@ -246,9 +234,7 @@ export function useHabitsInternal(user) {
           const priorMisses = getConsecutiveMisses(habitId, targetDate, monthLogs, habit)
           const { missStreak, multiplier, penaltyMagnitude } = getEscalatingPenalty(baseXP, priorMisses)
           const penaltyXP = isBlocked ? 0 : -penaltyMagnitude
-          const reason = missStreak > 1 
-            ? `🚨 ESCALATING PENALTY (${missStreak} Days Missed): ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP, -${multiplier}x)` 
-            : `Failed routine: ${habit?.title || 'Unknown'} (-${penaltyMagnitude} XP, -1.5x)`
+          const reason = penaltyLabel(habit?.title || 'Unknown', { missStreak, multiplier, penaltyMagnitude })
           await robustAwardXP(
             user.id,
             penaltyXP,
@@ -264,49 +250,10 @@ export function useHabitsInternal(user) {
       // Persistently update War Room Battle HP in DB for ALL status transitions
       await syncWarRoomHabitChange(user.id, habitId, habit?.title || 'Habit', currentStatus, nextStatus)
 
-      try { 
-        await calculateAndUpdateStreak(user.id, habitId)
-
-        // ── DAILY ALL-HABITS BONUS ──
-        // Check if every active habit has a completed log for today
-        if (nextStatus === 'completed' && targetDate === currentTodayStr && habits) {
-          const dailyBonusKey = `daily_all_bonus_${currentTodayStr}`
-          if (!localStorage.getItem(dailyBonusKey)) {
-            // Get the latest monthLogs state to check completion
-            const todayCompletedIds = new Set()
-            todayCompletedIds.add(habitId)
-            monthLogs.forEach(l => {
-              if (l.date === currentTodayStr && (!l.status || l.status === 'completed')) {
-                todayCompletedIds.add(l.habit_id)
-              }
-            })
-            const allDone = habits.every(h => todayCompletedIds.has(h.id))
-            if (allDone && habits.length > 0) {
-              await robustAwardXP(user.id, XP_REWARDS.daily_all_habits || 25, 'daily_all_complete', `daily_all_${currentTodayStr}`, '🏆 100% OPERATIONAL — All daily ops completed!', 'discipline')
-              localStorage.setItem(dailyBonusKey, 'true')
-            }
-          }
-        }
-
-        // ── STREAK MILESTONE REWARDS ──
-        const { data: profileData } = await supabase.from('profiles').select('streak_days').eq('id', user.id).single()
-        if (profileData?.streak_days) {
-          const streak = profileData.streak_days
-          const milestones = [
-            { days: 7, xp: XP_REWARDS.streak_7_days || 50, label: '🔥 7-Day Streak!' },
-            { days: 30, xp: XP_REWARDS.streak_30_days || 200, label: '🔥🔥 30-Day Streak!' },
-            { days: 100, xp: XP_REWARDS.streak_100_days || 500, label: '🔥🔥🔥 100-Day Streak!' }
-          ]
-          for (const milestone of milestones) {
-            if (streak >= milestone.days) {
-              const streakKey = `streak_reward_${milestone.days}`
-              if (!localStorage.getItem(streakKey)) {
-                await robustAwardXP(user.id, milestone.xp, 'streak_milestone', `streak_${milestone.days}`, `${milestone.label} — ${milestone.xp} XP bonus unlocked!`, 'discipline')
-                localStorage.setItem(streakKey, 'true')
-              }
-            }
-          }
-        }
+      try {
+        // Streak (>= 90% of scheduled habits), re-earnable milestones and the Perfect Day bonus
+        const streak = await calculateAndUpdateStreak(user.id, habitId)
+        await applyStreakRewards(user.id, streak, targetDate)
       } catch (e) {
         console.error('Streak update failed:', e)
       }
@@ -643,8 +590,9 @@ export function useHabitsInternal(user) {
       const yesterday = new Date(now)
       yesterday.setDate(yesterday.getDate() - 1)
       
+      // Only look back AUTOFAIL_BACKFILL_DAYS so a break can't trigger weeks of penalties at once
       const thirtyDaysAgo = new Date(now)
-      thirtyDaysAgo.setDate(now.getDate() - 30)
+      thirtyDaysAgo.setDate(now.getDate() - AUTOFAIL_BACKFILL_DAYS)
 
       let globalStartDate = Math.max(RESET_DATE.getTime(), thirtyDaysAgo.getTime())
       for (const h of habits) {
@@ -688,9 +636,7 @@ export function useHabitsInternal(user) {
               const priorMisses = getConsecutiveMisses(h.id, dateStr, recentLogs, h)
               const { missStreak, multiplier, penaltyMagnitude } = getEscalatingPenalty(baseXP, priorMisses)
               const penaltyXP = -penaltyMagnitude
-              const reason = missStreak > 1 
-                ? `🚨 ESCALATING PENALTY (${missStreak} Days Missed): ${h.title} (-${penaltyMagnitude} XP, -${multiplier}x)` 
-                : `Missed routine: ${h.title} (-${penaltyMagnitude} XP, -1.5x)`
+              const reason = penaltyLabel(h.title, { missStreak, multiplier, penaltyMagnitude })
 
               const stableSourceId = `habit_${h.id}_${dateStr}`
               const createdAt = `${dateStr}T12:00:00.000Z`
