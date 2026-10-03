@@ -11,7 +11,8 @@ export const BUDGET_CATEGORIES = [
     color: '#f59e0b', // amber
     bgColor: 'rgba(245, 158, 11, 0.15)',
     borderColor: 'rgba(245, 158, 11, 0.35)',
-    description: 'Meals, coffee, snacks, dining out'
+    description: 'Meals, coffee, snacks, dining out',
+    defaultExcludeDaily: false
   },
   {
     id: 'groceries',
@@ -21,7 +22,8 @@ export const BUDGET_CATEGORIES = [
     color: '#10b981', // emerald
     bgColor: 'rgba(16, 185, 129, 0.15)',
     borderColor: 'rgba(16, 185, 129, 0.35)',
-    description: 'Supermarket, provisions, vegetables, milk'
+    description: 'Supermarket, provisions, vegetables, milk',
+    defaultExcludeDaily: false
   },
   {
     id: 'transport',
@@ -31,17 +33,19 @@ export const BUDGET_CATEGORIES = [
     color: '#06b6d4', // cyan
     bgColor: 'rgba(6, 182, 212, 0.15)',
     borderColor: 'rgba(6, 182, 212, 0.35)',
-    description: 'Metro, cab, fuel, bus, auto, parking'
+    description: 'Metro, cab, fuel, bus, auto, parking',
+    defaultExcludeDaily: false
   },
   {
-    id: 'utilities',
-    label: 'Bills & Utilities',
-    shortLabel: 'Bills',
-    icon: 'Zap',
+    id: 'subscriptions',
+    label: 'Subscriptions & Bills',
+    shortLabel: 'Bills & Subs',
+    icon: 'CreditCard',
     color: '#8b5cf6', // purple
     bgColor: 'rgba(139, 92, 246, 0.15)',
     borderColor: 'rgba(139, 92, 246, 0.35)',
-    description: 'Recharge, Wi-Fi, electricity, subscriptions'
+    description: 'Wi-Fi, mobile, electricity, OTT, gym, rent, recurring subscriptions',
+    defaultExcludeDaily: true // Excluded from daily allowance by default, counted in 10K monthly bills budget
   },
   {
     id: 'shopping',
@@ -51,7 +55,8 @@ export const BUDGET_CATEGORIES = [
     color: '#ec4899', // pink
     bgColor: 'rgba(236, 72, 153, 0.15)',
     borderColor: 'rgba(236, 72, 153, 0.35)',
-    description: 'Clothes, electronics, accessories, gear'
+    description: 'Clothes, electronics, accessories, gear',
+    defaultExcludeDaily: false
   },
   {
     id: 'entertainment',
@@ -61,7 +66,8 @@ export const BUDGET_CATEGORIES = [
     color: '#f97316', // orange
     bgColor: 'rgba(249, 115, 22, 0.15)',
     borderColor: 'rgba(249, 115, 22, 0.35)',
-    description: 'Movies, gaming, parties, leisure'
+    description: 'Movies, gaming, parties, leisure',
+    defaultExcludeDaily: false
   },
   {
     id: 'health',
@@ -71,7 +77,8 @@ export const BUDGET_CATEGORIES = [
     color: '#ef4444', // red
     bgColor: 'rgba(239, 68, 68, 0.15)',
     borderColor: 'rgba(239, 68, 68, 0.35)',
-    description: 'Gym, supplements, medicine, doctor'
+    description: 'Supplements, medicine, doctor, clinic',
+    defaultExcludeDaily: false
   },
   {
     id: 'learning',
@@ -81,7 +88,8 @@ export const BUDGET_CATEGORIES = [
     color: '#3b82f6', // blue
     bgColor: 'rgba(59, 130, 246, 0.15)',
     borderColor: 'rgba(59, 130, 246, 0.35)',
-    description: 'Courses, books, software tools'
+    description: 'Courses, books, software tools',
+    defaultExcludeDaily: false
   },
   {
     id: 'other',
@@ -91,14 +99,43 @@ export const BUDGET_CATEGORIES = [
     color: '#94a3b8', // slate
     bgColor: 'rgba(148, 163, 184, 0.15)',
     borderColor: 'rgba(148, 163, 184, 0.35)',
-    description: 'Miscellaneous or custom expenses'
+    description: 'Miscellaneous or custom expenses',
+    defaultExcludeDaily: false
   }
 ]
 
 export const DEFAULT_DAILY_BUDGET = 1000
+export const DEFAULT_MONTHLY_BILLS_BUDGET = 10000
 
 export function getCategoryById(id) {
+  if (id === 'utilities') {
+    return BUDGET_CATEGORIES.find(c => c.id === 'subscriptions') || BUDGET_CATEGORIES[3]
+  }
   return BUDGET_CATEGORIES.find(c => c.id === id) || BUDGET_CATEGORIES[BUDGET_CATEGORIES.length - 1]
+}
+
+/**
+ * Checks whether an expense log is excluded from the daily budget allowance.
+ * True for Subscriptions & Bills unless explicitly overridden by user.
+ */
+export function isExcludedFromDaily(log) {
+  if (!log) return false
+  if (typeof log.exclude_daily === 'boolean') {
+    return log.exclude_daily
+  }
+  const customStr = (log.custom_category || '').toLowerCase()
+  const descStr = (log.description || '').toLowerCase()
+  if (customStr.includes('exclude_daily') || descStr.includes('[exclude_daily]')) {
+    return true
+  }
+  if (customStr.includes('include_daily') || descStr.includes('[include_daily]')) {
+    return false
+  }
+  // Default: subscriptions and legacy utilities are excluded from daily budget
+  if (log.category === 'subscriptions' || log.category === 'utilities') {
+    return true
+  }
+  return false
 }
 
 export function getLocalBudgetLogs(userId) {
@@ -136,6 +173,24 @@ export function saveLocalDailyBudget(userId, amount) {
   } catch (e) {}
 }
 
+export function getLocalMonthlyBillsBudget(userId) {
+  if (typeof window === 'undefined' || !userId) return DEFAULT_MONTHLY_BILLS_BUDGET
+  try {
+    const val = localStorage.getItem(`lokios_monthly_bills_budget_${userId}`)
+    const parsed = parseFloat(val)
+    return !isNaN(parsed) && parsed > 0 ? parsed : DEFAULT_MONTHLY_BILLS_BUDGET
+  } catch (e) {
+    return DEFAULT_MONTHLY_BILLS_BUDGET
+  }
+}
+
+export function saveLocalMonthlyBillsBudget(userId, amount) {
+  if (typeof window === 'undefined' || !userId) return
+  try {
+    localStorage.setItem(`lokios_monthly_bills_budget_${userId}`, String(amount))
+  } catch (e) {}
+}
+
 // Fetch all budget logs from Supabase with local fallback
 export async function fetchBudgetLogs(userId) {
   const localLogs = getLocalBudgetLogs(userId)
@@ -170,6 +225,10 @@ export async function addBudgetExpense(userId, expense) {
   if (!userId) return null
   const localLogs = getLocalBudgetLogs(userId)
   
+  const isExcluded = typeof expense.exclude_daily === 'boolean'
+    ? expense.exclude_daily
+    : (expense.category === 'subscriptions' || expense.category === 'utilities')
+
   const newEntry = {
     id: expense.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'b_' + Date.now()),
     user_id: userId,
@@ -178,16 +237,32 @@ export async function addBudgetExpense(userId, expense) {
     category: expense.category || 'other',
     custom_category: expense.custom_category || null,
     description: expense.description || '',
+    exclude_daily: isExcluded,
     created_at: new Date().toISOString()
   }
 
   const updated = [newEntry, ...localLogs]
   saveLocalBudgetLogs(userId, updated)
 
-  // Sync to Supabase in background
+  // Sync to Supabase in background with schema fallback
   try {
     const supabase = createClient()
-    await supabase.from('budget_logs').insert(newEntry)
+    const { error: insertErr } = await supabase.from('budget_logs').insert(newEntry)
+    if (insertErr) {
+      // If remote table doesn't have exclude_daily column yet, fallback to inserting without it
+      const fallbackEntry = { ...newEntry }
+      delete fallbackEntry.exclude_daily
+      if (isExcluded) {
+        fallbackEntry.description = fallbackEntry.description 
+          ? `${fallbackEntry.description} [EXCLUDE_DAILY]` 
+          : '[EXCLUDE_DAILY]'
+      } else {
+        fallbackEntry.description = fallbackEntry.description 
+          ? `${fallbackEntry.description} [INCLUDE_DAILY]` 
+          : '[INCLUDE_DAILY]'
+      }
+      await supabase.from('budget_logs').insert(fallbackEntry)
+    }
   } catch (e) {
     // Graceful fallback to local storage
   }

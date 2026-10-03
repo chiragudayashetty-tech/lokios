@@ -681,25 +681,35 @@ export default function IntelExportModal({ isOpen, onClose }) {
       // 10. BUDGET & DAILY EXPENSE INTELLIGENCE
       if (selectedModules.budget_intel) {
         const totalBudgetSpent = budgetLogs.reduce((acc, l) => acc + (parseFloat(l.amount) || 0), 0)
+        const billsSpent = budgetLogs.filter(l => l.exclude_daily || l.category === 'subscriptions' || l.category === 'utilities' || (l.description && l.description.includes('[EXCLUDE_DAILY]'))).reduce((acc, l) => acc + (parseFloat(l.amount) || 0), 0)
+        const dailySpent = totalBudgetSpent - billsSpent
+
         sectionsHTML += `
           <div class="section">
             <h2 class="section-title">
               <span>💳 DAILY BUDGET & EXPENSE INTELLIGENCE</span>
-              <span class="badge badge-success">${budgetLogs.length} Expenses • ₹${totalBudgetSpent.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Total</span>
+              <span class="badge badge-success">${budgetLogs.length} Expenses • ₹${totalBudgetSpent.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Total (Daily: ₹${dailySpent.toLocaleString('en-IN')} | Bills: ₹${billsSpent.toLocaleString('en-IN')})</span>
             </h2>
             <table>
-              <thead><tr><th>Date</th><th>Category</th><th>Note / Description</th><th style="text-align:right;">Amount (₹)</th></tr></thead>
+              <thead><tr><th>Date</th><th>Category</th><th>Scope</th><th>Note / Description</th><th style="text-align:right;">Amount (₹)</th></tr></thead>
               <tbody>
-                ${budgetLogs.length === 0 ? '<tr><td colspan="4" class="text-muted" style="text-align:center;">No expenses logged in this range.</td></tr>' : budgetLogs.map(l => `
-                  <tr>
-                    <td class="font-mono font-bold">${l.date}</td>
-                    <td>
-                      <span class="badge badge-warning">${l.custom_category || l.category || 'Expense'}</span>
-                    </td>
-                    <td style="color:#334155;font-size:11.5px;">${l.description || '—'}</td>
-                    <td style="text-align:right;"><strong class="font-mono text-accent">₹${parseFloat(l.amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</strong></td>
-                  </tr>
-                `).join('')}
+                ${budgetLogs.length === 0 ? '<tr><td colspan="5" class="text-muted" style="text-align:center;">No expenses logged in this range.</td></tr>' : budgetLogs.map(l => {
+                  const isBills = l.exclude_daily || l.category === 'subscriptions' || l.category === 'utilities' || (l.description && l.description.includes('[EXCLUDE_DAILY]'))
+                  const cleanNote = l.description ? l.description.replace(/\s*\[(?:EXCLUDE|INCLUDE)_DAILY\]\s*/g, '') : '—'
+                  return `
+                    <tr>
+                      <td class="font-mono font-bold">${l.date}</td>
+                      <td>
+                        <span class="badge badge-warning">${l.custom_category || (l.category === 'subscriptions' ? 'Bills & Subs' : l.category) || 'Expense'}</span>
+                      </td>
+                      <td>
+                        <span class="badge ${isBills ? 'badge-info' : 'badge-success'}">${isBills ? 'Bills (No Daily)' : 'Daily Allowance'}</span>
+                      </td>
+                      <td style="color:#334155;font-size:11.5px;">${cleanNote}</td>
+                      <td style="text-align:right;"><strong class="font-mono text-accent">₹${parseFloat(l.amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</strong></td>
+                    </tr>
+                  `
+                }).join('')}
               </tbody>
             </table>
           </div>

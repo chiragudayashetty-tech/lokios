@@ -10,11 +10,15 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import {
   BUDGET_CATEGORIES,
   DEFAULT_DAILY_BUDGET,
+  DEFAULT_MONTHLY_BILLS_BUDGET,
   getCategoryById,
+  isExcludedFromDaily,
   getLocalBudgetLogs,
   saveLocalBudgetLogs,
   getLocalDailyBudget,
   saveLocalDailyBudget,
+  getLocalMonthlyBillsBudget,
+  saveLocalMonthlyBillsBudget,
   fetchBudgetLogs,
   addBudgetExpense,
   deleteBudgetExpense
@@ -22,7 +26,7 @@ import {
 import {
   Wallet, Plus, Trash2, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight,
   TrendingUp, TrendingDown, DollarSign, Calendar, AlertCircle, CheckCircle2,
-  PieChart as PieIcon, BarChart3, Utensils, ShoppingCart, Car, Zap,
+  PieChart as PieIcon, BarChart3, Utensils, ShoppingCart, Car, Zap, CreditCard,
   ShoppingBag, Film, HeartPulse, BookOpen, MoreHorizontal, Edit2
 } from 'lucide-react'
 import {
@@ -37,6 +41,7 @@ const CATEGORY_ICONS = {
   ShoppingCart,
   Car,
   Zap,
+  CreditCard,
   ShoppingBag,
   Film,
   HeartPulse,
@@ -51,15 +56,23 @@ export default function BudgetPage() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(todayStr)
+  
+  // Daily budget limit
   const [dailyBudget, setDailyBudget] = useState(DEFAULT_DAILY_BUDGET)
   const [isEditingBudget, setIsEditingBudget] = useState(false)
   const [newBudgetValue, setNewBudgetValue] = useState(String(DEFAULT_DAILY_BUDGET))
+
+  // Monthly Bills & Subscriptions limit (default 10K)
+  const [monthlyBillsBudget, setMonthlyBillsBudget] = useState(DEFAULT_MONTHLY_BILLS_BUDGET)
+  const [isEditingBillsBudget, setIsEditingBillsBudget] = useState(false)
+  const [newBillsBudgetValue, setNewBillsBudgetValue] = useState(String(DEFAULT_MONTHLY_BILLS_BUDGET))
 
   // Expense form state
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('food')
   const [customCategory, setCustomCategory] = useState('')
   const [description, setDescription] = useState('')
+  const [includeInDaily, setIncludeInDaily] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successNotice, setSuccessNotice] = useState(false)
 
@@ -91,6 +104,14 @@ export default function BudgetPage() {
     return displayedRecentLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
   }, [displayedRecentLogs])
 
+  const displayedRecentDailyTotal = useMemo(() => {
+    return displayedRecentLogs.filter(l => !isExcludedFromDaily(l)).reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [displayedRecentLogs])
+
+  const displayedRecentBillsTotal = useMemo(() => {
+    return displayedRecentLogs.filter(l => isExcludedFromDaily(l)).reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [displayedRecentLogs])
+
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     title: '',
@@ -105,6 +126,10 @@ export default function BudgetPage() {
     setDailyBudget(initialBudget)
     setNewBudgetValue(String(initialBudget))
 
+    const initialBillsBudget = getLocalMonthlyBillsBudget(user.id)
+    setMonthlyBillsBudget(initialBillsBudget)
+    setNewBillsBudgetValue(String(initialBillsBudget))
+
     const cached = getLocalBudgetLogs(user.id)
     if (cached && cached.length > 0) {
       setLogs(cached)
@@ -117,13 +142,33 @@ export default function BudgetPage() {
     })
   }, [user])
 
-  // Save budget limit
+  // Save daily budget limit
   const handleSaveBudgetLimit = () => {
     const parsed = parseFloat(newBudgetValue)
     if (!isNaN(parsed) && parsed > 0 && user) {
       setDailyBudget(parsed)
       saveLocalDailyBudget(user.id, parsed)
       setIsEditingBudget(false)
+    }
+  }
+
+  // Save monthly bills limit
+  const handleSaveBillsBudgetLimit = () => {
+    const parsed = parseFloat(newBillsBudgetValue)
+    if (!isNaN(parsed) && parsed > 0 && user) {
+      setMonthlyBillsBudget(parsed)
+      saveLocalMonthlyBillsBudget(user.id, parsed)
+      setIsEditingBillsBudget(false)
+    }
+  }
+
+  // Handle category change: defaults subscriptions to NOT in daily allowance
+  const handleCategorySelect = (catId) => {
+    setCategory(catId)
+    if (catId === 'subscriptions' || catId === 'utilities') {
+      setIncludeInDaily(false)
+    } else {
+      setIncludeInDaily(true)
     }
   }
 
@@ -140,7 +185,8 @@ export default function BudgetPage() {
       amount: numAmount,
       category,
       custom_category: category === 'other' && customCategory.trim() ? customCategory.trim() : null,
-      description: description.trim()
+      description: description.trim(),
+      exclude_daily: !includeInDaily
     }
 
     const created = await addBudgetExpense(user.id, expenseData)
@@ -149,6 +195,7 @@ export default function BudgetPage() {
       setAmount('')
       setDescription('')
       setCustomCategory('')
+      setIncludeInDaily(category !== 'subscriptions' && category !== 'utilities')
       setSuccessNotice(true)
       setTimeout(() => setSuccessNotice(false), 2500)
     }
@@ -185,25 +232,66 @@ export default function BudgetPage() {
     return selectedDateLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
   }, [selectedDateLogs])
 
-  // Today stats
+  const selectedDateDailyTotal = useMemo(() => {
+    return selectedDateLogs.filter(l => !isExcludedFromDaily(l)).reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [selectedDateLogs])
+
+  const selectedDateBillsTotal = useMemo(() => {
+    return selectedDateLogs.filter(l => isExcludedFromDaily(l)).reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [selectedDateLogs])
+
+  // Today stats (Daily allowance vs Bills)
   const todayLogs = useMemo(() => {
     return logs.filter(l => l.date === todayStr)
   }, [logs, todayStr])
 
-  const todayTotal = useMemo(() => {
-    return todayLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  const todayDailyLogs = useMemo(() => {
+    return todayLogs.filter(l => !isExcludedFromDaily(l))
   }, [todayLogs])
+
+  const todayTotal = useMemo(() => {
+    return todayDailyLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [todayDailyLogs])
+
+  const todayBillsLogs = useMemo(() => {
+    return todayLogs.filter(l => isExcludedFromDaily(l))
+  }, [todayLogs])
+
+  const todayBillsTotal = useMemo(() => {
+    return todayBillsLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [todayBillsLogs])
 
   const todayRemaining = dailyBudget - todayTotal
   const todayProgressPct = Math.min(100, Math.round((todayTotal / dailyBudget) * 100))
 
-  // This month total
+  // This month totals
+  const currentMonth = todayStr.substring(0, 7)
+
+  const monthLogs = useMemo(() => {
+    return logs.filter(l => l.date && l.date.startsWith(currentMonth))
+  }, [logs, currentMonth])
+
+  // Total month spending (all expenses)
   const monthTotal = useMemo(() => {
-    const currentMonth = todayStr.substring(0, 7)
-    return logs
-      .filter(l => l.date && l.date.startsWith(currentMonth))
-      .reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
-  }, [logs, todayStr])
+    return monthLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [monthLogs])
+
+  // Monthly Subscriptions & Bills logs (separate 10K limit)
+  const monthBillsLogs = useMemo(() => {
+    return monthLogs.filter(l => isExcludedFromDaily(l) || l.category === 'subscriptions' || l.category === 'utilities')
+  }, [monthLogs])
+
+  const monthBillsTotal = useMemo(() => {
+    return monthBillsLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [monthBillsLogs])
+
+  const monthBillsRemaining = monthlyBillsBudget - monthBillsTotal
+  const monthBillsProgressPct = Math.min(100, Math.round((monthBillsTotal / monthlyBillsBudget) * 100))
+
+  // Monthly daily allowance total
+  const monthDailyTotal = useMemo(() => {
+    return monthLogs.filter(l => !isExcludedFromDaily(l)).reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
+  }, [monthLogs])
 
   // Generate range days for trend chart
   const trendChartData = useMemo(() => {
@@ -221,14 +309,19 @@ export default function BudgetPage() {
       d.setDate(d.getDate() - i)
       const dateStr = getLocalDateStr(d)
       const dayLogs = logs.filter(l => l.date === dateStr)
-      const total = dayLogs.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+      // Daily allowance strictly compares against daily target
+      const dailySpend = dayLogs.filter(l => !isExcludedFromDaily(l)).reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+      const billsSpend = dayLogs.filter(l => isExcludedFromDaily(l)).reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+      const totalSpend = dailySpend + billsSpend
 
       result.push({
         date: dateStr.substring(5).replace('-', '/'),
         fullDate: dateStr,
-        amount: total,
+        amount: dailySpend,
+        billsAmount: billsSpend,
+        totalAmount: totalSpend,
         target: dailyBudget,
-        isOver: total > dailyBudget,
+        isOver: dailySpend > dailyBudget,
         count: dayLogs.length
       })
     }
@@ -412,7 +505,7 @@ export default function BudgetPage() {
                         <button
                           key={cat.id}
                           type="button"
-                          onClick={() => setCategory(cat.id)}
+                          onClick={() => handleCategorySelect(cat.id)}
                           className={`p-2 rounded-xl border text-left flex flex-col items-start gap-1 transition-all ${
                             isSelected
                               ? 'border-emerald-500 bg-emerald-500/15 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
@@ -462,11 +555,56 @@ export default function BudgetPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Lunch at bistro, cab to station"
+                    placeholder="e.g. Lunch at bistro, Wi-Fi bill, gym fee"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full bg-bg-tertiary border border-border-subtle focus:border-info rounded-xl px-3 py-2 text-xs font-mono text-white outline-none"
                   />
+                </div>
+
+                {/* Daily Allowance Inclusion Toggle */}
+                <div className="p-3 rounded-xl border border-border-subtle bg-bg-secondary/50 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-mono text-xs font-semibold text-white flex items-center gap-1.5">
+                        <CreditCard size={13} className={category === 'subscriptions' || category === 'utilities' ? 'text-purple-400' : 'text-emerald-400'} />
+                        Daily Budget Allowance
+                      </span>
+                      <span className="font-mono text-[10px] text-muted truncate">
+                        {includeInDaily 
+                          ? `Counts against today's ₹${dailyBudget.toLocaleString('en-IN')} allowance` 
+                          : `Excluded from daily allowance (tracked in ₹${monthlyBillsBudget.toLocaleString('en-IN')}/mo Bills limit)`}
+                      </span>
+                    </div>
+
+                    {/* Interactive Toggle Switch */}
+                    <button
+                      type="button"
+                      onClick={() => setIncludeInDaily(prev => !prev)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        includeInDaily ? 'bg-emerald-500' : 'bg-slate-700'
+                      }`}
+                      role="switch"
+                      aria-checked={includeInDaily}
+                      title={includeInDaily ? "Click to exclude from daily allowance" : "Click to count in daily allowance"}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                          includeInDaily ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 text-[9px] font-mono">
+                    <span className={`px-2 py-0.5 rounded font-bold uppercase ${
+                      includeInDaily 
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                        : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    }`}>
+                      {includeInDaily ? '✓ COUNT IN DAILY ALLOWANCE: YES' : '★ EXCLUDED FROM DAILY ALLOWANCE (BILLS & SUBS)'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Submit Action */}
@@ -480,7 +618,7 @@ export default function BudgetPage() {
                 </button>
                 {successNotice && (
                   <div className="font-mono text-xs text-emerald-400 text-center animate-pulse">
-                    ✓ Logged successfully to daily budget!
+                    ✓ Logged successfully to budget ledger!
                   </div>
                 )}
               </form>
@@ -492,9 +630,23 @@ export default function BudgetPage() {
             <HudPanel
               label={`EXPENSES FOR ${selectedDate === todayStr ? 'TODAY' : selectedDate} (${selectedDateLogs.length})`}
               action={
-                <span className="font-mono text-xs font-bold text-emerald-400">
-                  TOTAL: ₹{selectedDateTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                </span>
+                <div className="flex items-center gap-2 font-mono text-xs flex-wrap justify-end">
+                  <span className="text-muted">
+                    DAILY: <strong className="text-emerald-400 font-bold">₹{selectedDateDailyTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</strong>
+                  </span>
+                  {selectedDateBillsTotal > 0 && (
+                    <>
+                      <span className="text-border-subtle">•</span>
+                      <span className="text-muted">
+                        BILLS: <strong className="text-purple-400 font-bold">₹{selectedDateBillsTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</strong>
+                      </span>
+                    </>
+                  )}
+                  <span className="text-border-subtle">•</span>
+                  <span className="text-muted">
+                    TOTAL: <strong className="text-white font-bold">₹{selectedDateTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</strong>
+                  </span>
+                </div>
               }
             >
               {selectedDateLogs.length === 0 ? (
@@ -509,6 +661,7 @@ export default function BudgetPage() {
                     const catDef = getCategoryById(item.category)
                     const IconComp = CATEGORY_ICONS[catDef.icon] || MoreHorizontal
                     const displayName = item.custom_category || catDef.label
+                    const isBills = isExcludedFromDaily(item)
 
                     return (
                       <div
@@ -526,7 +679,7 @@ export default function BudgetPage() {
                             <IconComp size={16} />
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-display text-sm text-white font-semibold truncate">
                                 {displayName}
                               </span>
@@ -539,10 +692,19 @@ export default function BudgetPage() {
                               >
                                 {catDef.shortLabel}
                               </span>
+                              {isBills ? (
+                                <span className="font-mono text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                  BILLS (NO DAILY)
+                                </span>
+                              ) : (
+                                <span className="font-mono text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                                  DAILY
+                                </span>
+                              )}
                             </div>
                             {item.description && (
                               <span className="font-mono text-[11px] text-muted truncate">
-                                {item.description}
+                                {item.description.replace(/\s*\[(?:EXCLUDE|INCLUDE)_DAILY\]\s*/g, '')}
                               </span>
                             )}
                           </div>
@@ -570,12 +732,12 @@ export default function BudgetPage() {
           </div>
         </div>
 
-        {/* 4 KPI Top Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Card 1: Today's Spend */}
+        {/* 5 KPI Top Cards (Daily Allowance + Monthly Bills + Month Total) */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5 mb-6">
+          {/* Card 1: Today's Daily Allowance Spend */}
           <div className="dashboard-card p-4 flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
-              <span>TODAY'S SPENT</span>
+              <span>TODAY'S DAILY SPEND</span>
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                 todayRemaining >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
               }`}>
@@ -637,7 +799,7 @@ export default function BudgetPage() {
               </div>
             )}
             <div className="font-mono text-[10px] text-muted">
-              Target allowance per single calendar day
+              Target allowance per day (excluding bills)
             </div>
           </div>
 
@@ -663,17 +825,82 @@ export default function BudgetPage() {
             </div>
           </div>
 
-          {/* Card 4: This Month Total */}
+          {/* Card 4: Monthly Bills & Subscriptions (Dedicated 10K Limit) */}
           <div className="dashboard-card p-4 flex flex-col justify-between">
             <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
-              <span>THIS MONTH TOTAL</span>
+              <span className="flex items-center gap-1">
+                <CreditCard size={11} className="text-purple-400" />
+                <span>BILLS & SUBS (MO)</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                  monthBillsRemaining >= 0 ? 'bg-purple-500/20 text-purple-300' : 'bg-rose-500/20 text-rose-400'
+                }`}>
+                  {monthBillsRemaining >= 0 ? 'ON TRACK' : 'OVER LIMIT'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingBillsBudget(prev => !prev)}
+                  className="text-info hover:text-white flex items-center gap-1 font-mono text-[9px]"
+                  title="Edit monthly bills budget limit"
+                >
+                  <Edit2 size={10} /> {isEditingBillsBudget ? 'CANCEL' : 'EDIT'}
+                </button>
+              </div>
+            </div>
+
+            {isEditingBillsBudget ? (
+              <div className="flex items-center gap-2 mt-1 mb-2">
+                <span className="text-muted font-mono text-sm">₹</span>
+                <input
+                  type="number"
+                  value={newBillsBudgetValue}
+                  onChange={(e) => setNewBillsBudgetValue(e.target.value)}
+                  className="bg-bg-tertiary border border-purple-500 px-2 py-1 rounded text-white font-mono text-sm w-24"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveBillsBudgetLimit}
+                  className="btn btn-primary btn-sm py-1 px-2 text-xs font-mono"
+                >
+                  SAVE
+                </button>
+              </div>
+            ) : (
+              <div className="font-display text-2xl font-bold text-purple-300 mb-2">
+                ₹{monthBillsTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                <span className="text-xs text-muted font-mono font-normal ml-1">/ ₹{monthlyBillsBudget.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+
+            <div>
+              <div className="flex items-center justify-between font-mono text-[10px] text-muted mb-1">
+                <span>{monthBillsProgressPct}% OF MONTHLY LIMIT</span>
+                <span className={monthBillsRemaining >= 0 ? 'text-purple-400 font-bold' : 'text-rose-400 font-bold'}>
+                  {monthBillsRemaining >= 0 ? `₹${monthBillsRemaining.toLocaleString('en-IN')} LEFT` : `₹${Math.abs(monthBillsRemaining).toLocaleString('en-IN')} OVER`}
+                </span>
+              </div>
+              <TacticalProgress
+                value={monthBillsProgressPct}
+                color={monthBillsProgressPct > 100 ? 'var(--danger)' : monthBillsProgressPct >= 80 ? 'var(--warning)' : '#a855f7'}
+                height={5}
+                showValue={false}
+              />
+            </div>
+          </div>
+
+          {/* Card 5: This Month Total (All cumulative) */}
+          <div className="dashboard-card p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-muted font-mono text-[10px] uppercase tracking-wider mb-2">
+              <span>THIS MONTH (ALL)</span>
               <Calendar size={14} className="text-cyan-400" />
             </div>
             <div className="font-display text-2xl font-bold text-white mb-2">
               ₹{monthTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
             </div>
-            <div className="font-mono text-[10px] text-muted">
-              Cumulative spending in {new Date().toLocaleString('default', { month: 'long' })}
+            <div className="font-mono text-[10px] text-muted truncate">
+              Daily: ₹{monthDailyTotal.toLocaleString('en-IN')} • Bills: ₹{monthBillsTotal.toLocaleString('en-IN')}
             </div>
           </div>
         </div>
@@ -753,8 +980,14 @@ export default function BudgetPage() {
                               <div className="text-muted text-[10px] mb-1">{data.fullDate}</div>
                               <div className="text-white font-bold flex items-center gap-1.5">
                                 <Wallet size={12} className="text-emerald-400" />
-                                Spent: ₹{data.amount.toLocaleString()}
+                                Daily Spent: ₹{data.amount.toLocaleString()}
                               </div>
+                              {data.billsAmount > 0 && (
+                                <div className="text-purple-300 font-semibold flex items-center gap-1.5 mt-0.5 text-[11px]">
+                                  <CreditCard size={11} className="text-purple-400" />
+                                  Bills & Subs: ₹{data.billsAmount.toLocaleString()}
+                                </div>
+                              )}
                               <div className="text-[10px] text-muted mt-1">
                                 Target: ₹{data.target} • {data.isOver ? (
                                   <span className="text-rose-400 font-bold">Over Target</span>
@@ -947,6 +1180,11 @@ export default function BudgetPage() {
               </span>
               <span className="font-bold text-white shrink-0">
                 TOTAL: <strong className="text-emerald-400">₹{displayedRecentTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</strong>
+                {displayedRecentBillsTotal > 0 && (
+                  <span className="text-muted text-[11px] font-normal ml-1.5 hidden sm:inline">
+                    (Daily: ₹{displayedRecentDailyTotal.toLocaleString('en-IN')} • Bills: ₹{displayedRecentBillsTotal.toLocaleString('en-IN')})
+                  </span>
+                )}
               </span>
             </div>
 
@@ -986,6 +1224,7 @@ export default function BudgetPage() {
                     {displayedRecentLogs.map((log) => {
                       const catDef = getCategoryById(log.category)
                       const IconComp = CATEGORY_ICONS[catDef.icon] || MoreHorizontal
+                      const isBills = isExcludedFromDaily(log)
 
                       return (
                         <tr key={log.id} className="hover:bg-hover/40 transition-colors">
@@ -997,19 +1236,30 @@ export default function BudgetPage() {
                             )}
                           </td>
                           <td className="py-2.5">
-                            <span
-                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold"
-                              style={{
-                                backgroundColor: `${catDef.color}20`,
-                                color: catDef.color
-                              }}
-                            >
-                              <IconComp size={11} />
-                              {log.custom_category || catDef.label}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold"
+                                style={{
+                                  backgroundColor: `${catDef.color}20`,
+                                  color: catDef.color
+                                }}
+                              >
+                                <IconComp size={11} />
+                                {log.custom_category || catDef.label}
+                              </span>
+                              {isBills ? (
+                                <span className="font-mono text-[8px] px-1 py-0.5 rounded font-bold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                  BILLS
+                                </span>
+                              ) : (
+                                <span className="font-mono text-[8px] px-1 py-0.5 rounded font-bold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                                  DAILY
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2.5 text-primary max-w-xs truncate">
-                            {log.description || '—'}
+                            {log.description ? log.description.replace(/\s*\[(?:EXCLUDE|INCLUDE)_DAILY\]\s*/g, '') : '—'}
                           </td>
                           <td className="py-2.5 text-right font-bold text-white whitespace-nowrap">
                             ₹{parseFloat(log.amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
