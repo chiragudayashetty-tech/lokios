@@ -5,6 +5,7 @@ import './mobile-premium.css'
 import './opal.css'
 import './game.css'
 import './app-features.css'
+import './round2.css'
 import './tailwind.css'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 

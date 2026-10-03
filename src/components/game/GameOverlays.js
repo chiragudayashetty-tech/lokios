@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Gift, Trophy, Zap, Medal, Swords, Snowflake, Dices, ScrollText, Sparkles } from 'lucide-react'
+import { Gift, Trophy, Zap, Medal, Swords, Snowflake, Dices, ScrollText, Sparkles, CalendarClock, AlertTriangle, CheckCircle2, Link2, Moon, Wallet, PiggyBank, Inbox, Award, Target, Flag } from 'lucide-react'
 import { confetti, celebrateBig, haptic } from '@/lib/utils/celebrate'
 
-const ICONS = { trophy: Trophy, zap: Zap, medal: Medal, swords: Swords, snowflake: Snowflake, dice: Dices, scroll: ScrollText, sparkles: Sparkles }
+const ICONS = {
+  trophy: Trophy, zap: Zap, medal: Medal, swords: Swords, snowflake: Snowflake, dice: Dices, scroll: ScrollText, sparkles: Sparkles,
+  calendar: CalendarClock, alert: AlertTriangle, check: CheckCircle2, link: Link2, moon: Moon, wallet: Wallet, piggy: PiggyBank,
+  inbox: Inbox, award: Award, target: Target, flag: Flag,
+}
 const GOLD = ['#FFD166', '#FFE29A', '#FFB547', '#FFFFFF', '#F7C873']
 
 /** Mystery chest reveal, game toasts and critical-hit bursts (driven by lokios:game events). */
