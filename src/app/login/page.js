@@ -22,26 +22,23 @@ export default function Login() {
   const router = useRouter()
 
   useEffect(() => {
-    // Instant check for cached user to avoid showing login UI on mobile
-    try {
-      const cached = localStorage.getItem('lokios_cached_user')
-      if (cached) {
-        router.replace('/dashboard')
-        return
-      }
-    } catch (e) {}
-
     // Check for auth error in URL
     const params = new URLSearchParams(window.location.search)
     if (params.get('error')) {
       setError('Authentication failed. Please try again.')
     }
 
-    // Check if already logged in via Supabase
+    // The proxy sends signed-in visitors straight to /dashboard, so reaching this page
+    // means the session cookie is gone. Trusting the cached user here would bounce
+    // between /dashboard and /login, so drop it unless the check failed for lack of network.
     const checkUser = async () => {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) router.replace('/dashboard')
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (user) {
+        router.replace('/dashboard')
+      } else if (error?.name !== 'AuthRetryableFetchError') {
+        try { localStorage.removeItem('lokios_cached_user') } catch (e) {}
+      }
     }
     checkUser()
   }, [router])
