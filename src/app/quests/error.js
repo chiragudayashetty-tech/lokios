@@ -8,7 +8,7 @@ export default function Error({ error, reset }) {
   }, [error])
 
   return (
-    <div style={{ padding: '40px', backgroundColor: '#000', color: '#ff4444', fontFamily: 'monospace' }}>
+    <div style={{ padding: '40px', backgroundColor: '#000', color: '#ff4444', fontFamily: 'var(--font-mono)' }}>
       <h2>DailyOps Page Crashed!</h2>
       <p style={{ color: '#fff', margin: '20px 0' }}>{error?.message || 'Unknown error'}</p>
       <pre style={{ backgroundColor: '#222', padding: '10px', overflowX: 'auto', fontSize: '12px', whiteSpace: 'pre-wrap' }}>

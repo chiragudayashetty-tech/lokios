@@ -17,6 +17,30 @@ import {
   FileText, MoreHorizontal, Plus, Trash2, CheckCircle2, Layers, Share2, Youtube, RotateCcw
 } from 'lucide-react'
 
+// Field Unit Toggle Helper
+const FieldUnitToggle = ({ unit, setUnit }) => (
+  <div className="flex items-center bg-black/60 border border-white/10 rounded-md p-0.5 ml-auto">
+    <button
+      type="button"
+      onClick={() => setUnit('h')}
+      className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
+        unit === 'h' ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+      }`}
+    >
+      h
+    </button>
+    <button
+      type="button"
+      onClick={() => setUnit('m')}
+      className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
+        unit === 'm' ? 'bg-amber text-black shadow-sm' : 'text-muted hover:text-primary'
+      }`}
+    >
+      m
+    </button>
+  </div>
+)
+
 export default function WorkPage() {
   const { auth: { user } = {} } = useOS() || {}
 
@@ -536,29 +560,6 @@ export default function WorkPage() {
     })
   }, [filteredWorkLogs])
 
-  // Field Unit Toggle Helper
-  const FieldUnitToggle = ({ unit, setUnit }) => (
-    <div className="flex items-center bg-black/60 border border-white/10 rounded-md p-0.5 ml-auto">
-      <button
-        type="button"
-        onClick={() => setUnit('h')}
-        className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
-          unit === 'h' ? 'bg-[#D4AF37] text-black shadow-sm' : 'text-muted hover:text-primary'
-        }`}
-      >
-        h
-      </button>
-      <button
-        type="button"
-        onClick={() => setUnit('m')}
-        className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold transition-all ${
-          unit === 'm' ? 'bg-[#D4AF37] text-black shadow-sm' : 'text-muted hover:text-primary'
-        }`}
-      >
-        m
-      </button>
-    </div>
-  )
 
   return (
     <AppShell>
@@ -569,7 +570,7 @@ export default function WorkPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[99999] bg-[#D4AF37] text-black font-mono font-bold text-xs px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border border-[#D4AF37]/40"
+            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[99999] bg-amber text-black font-mono font-bold text-xs px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border border-amber/40"
           >
             <Sparkles size={15} />
             <span>{xpToast}</span>
@@ -584,7 +585,7 @@ export default function WorkPage() {
         {/* ========================================================================= */}
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37]">
+            <div className="p-2.5 rounded-xl bg-amber/15 border border-amber/40 text-amber">
               <Briefcase size={22} />
             </div>
             <h1 className="font-display text-xl sm:text-2xl tracking-wider text-white font-extrabold uppercase flex items-center gap-2">
@@ -595,7 +596,7 @@ export default function WorkPage() {
           <button
             type="button"
             onClick={() => setExportModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] hover:opacity-90 text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg transition-all active:scale-95 shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber to-pink-400 hover:opacity-90 text-black font-mono text-xs font-bold uppercase rounded-xl shadow-lg transition-all active:scale-95 shrink-0"
           >
             <Download size={14} />
             <span>Export</span>
@@ -609,7 +610,7 @@ export default function WorkPage() {
             onClick={() => setActiveTab('work_log')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs uppercase font-bold transition-all whitespace-nowrap border ${
               activeTab === 'work_log'
-                ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-[#D4AF37] shadow-lg'
+                ? 'bg-amber/15 border-amber text-amber shadow-lg'
                 : 'bg-black/40 border-white/10 text-muted hover:text-primary hover:border-white/20'
             }`}
           >
@@ -635,7 +636,7 @@ export default function WorkPage() {
         {/* DATE SELECTOR ROW */}
         <div className="flex items-center justify-between gap-3 p-3.5 bg-black/60 border border-white/10 rounded-2xl backdrop-blur-md flex-wrap">
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-[#D4AF37] uppercase font-bold tracking-widest flex items-center gap-1.5">
+            <span className="font-mono text-xs text-amber uppercase font-bold tracking-widest flex items-center gap-1.5">
               DATE:
             </span>
             <div className="relative flex items-center">
@@ -643,7 +644,7 @@ export default function WorkPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-black/80 border border-white/15 rounded-xl px-3.5 py-1.5 font-mono text-sm font-bold text-white focus:outline-none focus:border-[#D4AF37] transition-colors"
+                className="bg-black/80 border border-white/15 rounded-xl px-3.5 py-1.5 font-mono text-sm font-bold text-white focus:outline-none focus:border-amber transition-colors"
                 style={{ colorScheme: 'dark' }}
               />
             </div>
@@ -654,7 +655,7 @@ export default function WorkPage() {
               type="button"
               onClick={() => setSelectedDate(todayStr)}
               className={`px-4 py-1.5 rounded-xl font-mono text-xs font-bold transition-all border ${
-                selectedDate === todayStr ? 'bg-[#D4AF37] text-black border-[#D4AF37]' : 'bg-black/40 text-muted hover:text-primary border-white/10'
+                selectedDate === todayStr ? 'bg-amber text-black border-amber' : 'bg-black/40 text-muted hover:text-primary border-white/10'
               }`}
             >
               Today
@@ -938,7 +939,7 @@ export default function WorkPage() {
                   {/* WORK HISTORY HEADER WITH TOGGLE */}
                   <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-display text-xs uppercase tracking-widest text-[#D4AF37] font-extrabold flex items-center gap-2">
+                      <h3 className="font-display text-xs uppercase tracking-widest text-amber font-extrabold flex items-center gap-2">
                         <Clock size={15} />
                         HISTORY
                       </h3>
@@ -952,7 +953,7 @@ export default function WorkPage() {
                       onClick={() => setShowAllWorkHistory(prev => !prev)}
                       className={`px-3 py-1 rounded-lg font-mono text-[10px] font-bold uppercase transition-all border ${
                         showAllWorkHistory 
-                          ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37]' 
+                          ? 'bg-amber/20 border-amber text-amber' 
                           : 'bg-black/40 border-white/10 text-muted hover:text-white'
                       }`}
                     >
@@ -974,7 +975,7 @@ export default function WorkPage() {
                       </button>
 
                       <div className="flex items-center gap-2 min-w-0">
-                        <Calendar size={13} className="text-[#D4AF37] shrink-0" />
+                        <Calendar size={13} className="text-amber shrink-0" />
                         <span className="font-bold text-white text-[11px] tracking-wider uppercase truncate">
                           {formatWeekRange(workWeekOffset)}
                         </span>
@@ -1031,7 +1032,7 @@ export default function WorkPage() {
                         const rawText = (l.notes || l.description || l.what_did_i_do || l.title || '').replace(/\n--- WIN\/LEARNING ---\n/g, ' · ').trim()
 
                         return (
-                          <div key={logKey} className="rounded-xl bg-black/60 border border-white/10 overflow-hidden hover:border-[#D4AF37]/40 transition-all">
+                          <div key={logKey} className="rounded-xl bg-black/60 border border-white/10 overflow-hidden hover:border-amber/40 transition-all">
                             <div 
                               className="p-3.5 flex items-center justify-between gap-3 cursor-pointer"
                               onClick={() => toggleWorkDate(logKey)}
@@ -1041,7 +1042,7 @@ export default function WorkPage() {
                               </div>
 
                               <div className="flex items-center gap-2.5">
-                                <span className="font-mono text-xs sm:text-sm font-extrabold text-[#D4AF37]">
+                                <span className="font-mono text-xs sm:text-sm font-extrabold text-amber">
                                   {tot}h
                                 </span>
                                 <div className="p-1 text-muted hover:text-white">
@@ -1107,7 +1108,7 @@ export default function WorkPage() {
                     type="button"
                     onClick={() => setAnalyticsRange(rangeKey)}
                     className={`px-4 py-1.5 rounded-lg font-mono text-xs uppercase font-bold transition-all ${
-                      analyticsRange === rangeKey ? 'bg-[#D4AF37] text-black shadow-md' : 'text-muted hover:text-white'
+                      analyticsRange === rangeKey ? 'bg-amber text-black shadow-md' : 'text-muted hover:text-white'
                     }`}
                   >
                     {rangeKey === '7days' ? '7 Days' : rangeKey === '30days' ? '30 Days' : 'All Time'}
@@ -1121,7 +1122,7 @@ export default function WorkPage() {
               <HudPanel className="p-4 space-y-1">
                 <div className="flex items-center justify-between text-muted font-mono text-[10px]">
                   <span>TOTAL WORKED</span>
-                  <Clock size={14} className="text-[#D4AF37]" />
+                  <Clock size={14} className="text-amber" />
                 </div>
                 <div className="font-display text-2xl text-white font-extrabold">
                   {totals.totWork.toFixed(1)} h

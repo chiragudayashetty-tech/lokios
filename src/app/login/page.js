@@ -161,7 +161,7 @@ export default function Login() {
 
           {error && (
             <div className="auth-error">
-              [ERROR]: {error}
+              {error}
             </div>
           )}
 
@@ -170,8 +170,8 @@ export default function Login() {
               <Mail size={16} className="auth-field-icon" />
               <input
                 type="email"
-                placeholder="operator@email.com"
-                className="input font-mono text-sm"
+                placeholder="you@email.com"
+                className="input text-sm"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -182,8 +182,8 @@ export default function Login() {
               <Lock size={16} className="auth-field-icon" />
               <input
                 type="password"
-                placeholder="access code"
-                className="input font-mono text-sm"
+                placeholder="Password"
+                className="input text-sm"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -195,7 +195,7 @@ export default function Login() {
                 <Loader2 size={18} className="animate-spin" />
               ) : (
                 <>
-                  {isLogin ? 'Initialize login' : 'Create profile'}
+                  {isLogin ? 'Sign in' : 'Create account'}
                   <ArrowRight size={16} />
                 </>
               )}
@@ -211,7 +211,7 @@ export default function Login() {
             type="button"
             className="btn btn-secondary btn-full font-display tracking-wide"
           >
-            Google OAuth
+            Continue with Google
           </button>
         </motion.div>
       </div>

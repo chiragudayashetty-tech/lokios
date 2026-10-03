@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import WinterLoader from '@/components/ui/WinterLoader'
 
 export default function AuthRedirectGate() {
   const router = useRouter()
@@ -36,14 +37,5 @@ export default function AuthRedirectGate() {
     })
   }, [router])
 
-  return (
-    <div className="flex-center min-h-screen bg-[#05070e] flex-col gap-3">
-      <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center animate-pulse">
-        <img src="/icons/winter-warrior-logo.png" alt="Loki OS" className="w-8 h-8 opacity-80" />
-      </div>
-      <span className="font-mono text-xs text-muted tracking-widest uppercase animate-pulse">
-        CONNECTING TO CONSOLE...
-      </span>
-    </div>
-  )
+  return <WinterLoader label="Waking up your console" fullscreen />
 }

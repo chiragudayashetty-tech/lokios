@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import WinterLoader from '@/components/ui/WinterLoader'
 import HudPanel from '@/components/ui/HudPanel'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -282,12 +283,7 @@ export default function OperatorDashboard() {
 
   if (loading) return (
     <AppShell>
-      <div className="flex-center h-full flex-col gap-2">
-        <span className="typewriter-text">ACCESSING IDENTITY MATRIX...</span>
-        <span className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase animate-pulse flex items-center gap-1.5">
-          <span>❄️</span> WINTER IS COMING <span>❄️</span>
-        </span>
-      </div>
+      <WinterLoader label="Loading profile" />
     </AppShell>
   )
 

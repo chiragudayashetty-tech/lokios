@@ -1215,11 +1215,12 @@ export default function MissionControl() {
                   border: `1px solid ${sagaAccentColor}60`,
                   background: `${sagaAccentColor}20`,
                   color: sagaAccentColor,
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '9px',
                   fontWeight: 700,
-                  letterSpacing: '0.2em',
+                  letterSpacing: '0.12em',
                   textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                 }}>
                   YOUR SAGA
                 </div>
@@ -1229,11 +1230,12 @@ export default function MissionControl() {
                   border: '1px solid rgba(255,255,255,0.12)',
                   background: 'rgba(255,255,255,0.07)',
                   color: '#fff',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '9px',
                   fontWeight: 700,
-                  letterSpacing: '0.2em',
+                  letterSpacing: '0.12em',
                   textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                 }}>
                   SAGA {currentArc?.rank}  •  LV.{currentLevel}
                 </div>
@@ -1246,11 +1248,12 @@ export default function MissionControl() {
                   border: `1px solid ${timeAtmosphere.accent}35`,
                   background: `${timeAtmosphere.accent}15`,
                   color: timeAtmosphere.accent,
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '9px',
                   fontWeight: 700,
-                  letterSpacing: '0.15em',
+                  letterSpacing: '0.1em',
                   textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '5px',
@@ -1263,10 +1266,10 @@ export default function MissionControl() {
               {/* Saga title */}
               <div style={{ marginBottom: '12px' }}>
                 <div style={{
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '10px',
                   fontWeight: 700,
-                  letterSpacing: '0.3em',
+                  letterSpacing: '0.16em',
                   color: sagaAccentColor,
                   textTransform: 'uppercase',
                   marginBottom: '4px',
@@ -1291,11 +1294,11 @@ export default function MissionControl() {
               {/* Progress bar */}
               <div className="saga-cover-progress" style={{ marginBottom: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: '9px', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
                     SAGA PROGRESS
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>
                       {currentXpInSaga.toLocaleString()} / {totalXpInSaga.toLocaleString()} XP
                     </span>
                     <span style={{
@@ -1331,11 +1334,11 @@ export default function MissionControl() {
           {/* ── LOCKED SAGAS STRIP ── */}
           <div className="saga-selector" style={{ padding: '14px 16px 16px', borderTop: `1px solid rgba(255,255,255,0.06)` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
                 ALL CHAPTERS
               </span>
               {nextArc && (
-                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: sagaAccentColor, opacity: 0.8 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: sagaAccentColor, opacity: 0.8 }}>
                   NEXT: SAGA {nextArc.rank} — {nextArc.name?.toUpperCase()}
                 </span>
               )}
@@ -1420,7 +1423,7 @@ export default function MissionControl() {
                           background: 'rgba(5,7,15,0.40)',
                         }}>
                           <Lock size={12} style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '2px' }} />
-                          <span style={{ fontFamily: 'monospace', fontSize: '7px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '7px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
                             LV.{saga.minLvl}
                           </span>
                         </div>
@@ -1435,7 +1438,7 @@ export default function MissionControl() {
                           padding: '1px 4px',
                           borderRadius: '4px',
                           background: sagaAccentColor,
-                          fontFamily: 'monospace',
+                          fontFamily: 'var(--font-mono)',
                           fontSize: '6px',
                           fontWeight: 900,
                           color: '#000',
@@ -1468,7 +1471,7 @@ export default function MissionControl() {
                     {/* Label */}
                     <div style={{ textAlign: 'center', width: '100%' }}>
                       <div style={{
-                        fontFamily: 'monospace',
+                        fontFamily: 'var(--font-mono)',
                         fontSize: '7px',
                         fontWeight: 700,
                         textTransform: 'uppercase',
@@ -1776,6 +1779,7 @@ export default function MissionControl() {
                           onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
                         >
                           <button
+                            data-celebrate={isDone ? undefined : ''}
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
@@ -1841,7 +1845,7 @@ export default function MissionControl() {
                             {/* Full description */}
                             {task.description && (
                               <p style={{
-                                fontFamily: 'monospace',
+                                fontFamily: 'var(--font-mono)',
                                 fontSize: '11px',
                                 color: 'rgba(255,255,255,0.5)',
                                 lineHeight: 1.6,
@@ -1856,22 +1860,22 @@ export default function MissionControl() {
                             {/* Meta row */}
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', marginTop: task.description ? '0' : '10px' }}>
                               {task.due_time && (
-                                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', padding: '2px 8px', borderRadius: '100px' }}>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', padding: '2px 8px', borderRadius: '100px' }}>
                                   ⏰ {task.due_time}
                                 </span>
                               )}
                               {task.due_date && (
-                                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px' }}>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '100px' }}>
                                   📅 {task.due_date}
                                 </span>
                               )}
                               {task.category && (
-                                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: 'rgba(148,163,184,0.8)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: 'rgba(148,163,184,0.8)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>
                                   {task.category.replace(/_/g, ' ')}
                                 </span>
                               )}
                               {task.priority && (
-                                <span style={{ fontFamily: 'monospace', fontSize: '9px', fontWeight: 700, color: task.priority === 'high' ? '#f87171' : task.priority === 'medium' ? '#fb923c' : 'rgba(148,163,184,0.8)', background: task.priority === 'high' ? 'rgba(248,113,113,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${task.priority === 'high' ? 'rgba(248,113,113,0.3)' : 'rgba(255,255,255,0.08)'}`, padding: '2px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: task.priority === 'high' ? '#f87171' : task.priority === 'medium' ? '#fb923c' : 'rgba(148,163,184,0.8)', background: task.priority === 'high' ? 'rgba(248,113,113,0.1)' : 'rgba(255,255,255,0.04)', border: `1px solid ${task.priority === 'high' ? 'rgba(248,113,113,0.3)' : 'rgba(255,255,255,0.08)'}`, padding: '2px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>
                                   {task.priority} priority
                                 </span>
                               )}
@@ -1879,6 +1883,7 @@ export default function MissionControl() {
 
                             {/* Action button */}
                             <button
+                              data-celebrate={isDone ? undefined : ''}
                               type="button"
                               onClick={async () => {
                                 if (isDone) {
@@ -1897,7 +1902,7 @@ export default function MissionControl() {
                                 border: isDone ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(16,185,129,0.5)',
                                 background: isDone ? 'rgba(5,46,22,0.4)' : 'rgba(16,185,129,0.15)',
                                 color: isDone ? '#6ee7b7' : '#34d399',
-                                fontFamily: 'monospace',
+                                fontFamily: 'var(--font-mono)',
                                 fontSize: '10px',
                                 fontWeight: 700,
                                 textTransform: 'uppercase',

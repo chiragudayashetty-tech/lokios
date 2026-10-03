@@ -343,7 +343,8 @@ export default function BudgetPage() {
     const totalsByCategory = {}
 
     filteredLogs.forEach(log => {
-      const catKey = log.category || 'other'
+      // Legacy 'utilities' logs belong to the same Subscriptions & Bills bucket
+      const catKey = log.category === 'utilities' ? 'subscriptions' : (log.category || 'other')
       if (!totalsByCategory[catKey]) {
         totalsByCategory[catKey] = {
           id: catKey,

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import WinterLoader from '@/components/ui/WinterLoader'
 import { useBrainDump } from '@/lib/hooks/useBrainDump'
 import { TOPIC_COLORS, DEFAULT_TOPICS, getTopicColor } from '@/lib/hooks/useBrainDumpInternal'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -297,12 +298,7 @@ export default function IntelDrop() {
 
   if (loading) return (
     <AppShell>
-      <div className="flex items-center justify-center h-full flex-col gap-2">
-        <span className="font-mono text-xs uppercase tracking-widest text-muted animate-pulse">ACCESSING INTEL...</span>
-        <span className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase animate-pulse flex items-center gap-1.5">
-          <span>❄️</span> WINTER IS COMING <span>❄️</span>
-        </span>
-      </div>
+      <WinterLoader label="Loading brain dump" />
     </AppShell>
   )
 

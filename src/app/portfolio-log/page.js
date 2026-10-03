@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import WinterLoader from '@/components/ui/WinterLoader'
 import HudPanel from '@/components/ui/HudPanel'
 import { getLocalDateStr, getDebriefSortTime } from '@/lib/utils/dates'
 import { createClient } from '@/lib/supabase/client'
@@ -450,12 +451,7 @@ export default function ProofOfWork() {
 
   if (loading) return (
     <AppShell>
-      <div className="flex-center h-full flex-col gap-2">
-        <span className="typewriter-text">ACCESSING ARCHIVES...</span>
-        <span className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase animate-pulse flex items-center gap-1.5">
-          <span>❄️</span> WINTER IS COMING <span>❄️</span>
-        </span>
-      </div>
+      <WinterLoader label="Loading portfolio" />
     </AppShell>
   )
 
@@ -479,7 +475,7 @@ export default function ProofOfWork() {
       <div className="page-container max-w-5xl">
         <header className="page-header flex-between flex-wrap gap-4">
           <div>
-            <h1 className="page-title flex items-center gap-3"><Terminal className="text-amber" /> PORTFOLIO ENGINE</h1>
+            <h1 className="page-title flex items-center gap-3"><Terminal className="text-amber" /> Portfolio</h1>
             <p className="page-subtitle">Proof of work, books completed, project history, and auto-generated resume.</p>
           </div>
         </header>

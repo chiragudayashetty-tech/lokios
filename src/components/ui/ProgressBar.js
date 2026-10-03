@@ -2,14 +2,14 @@
 
 import { motion } from 'framer-motion'
 
-export default function TacticalProgress({ value = 0, max = 100, color = '#d4a843', height = 6, label = '', showValue = true }) {
+export default function TacticalProgress({ value = 0, max = 100, color = 'var(--accent-primary)', height = 6, label = '', showValue = true }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
 
   return (
     <div className="flex-col w-full">
       {(label || showValue) && (
         <div className="flex-between mb-2">
-          {label && <span className="font-mono text-xs text-muted uppercase tracking-widest">{label}</span>}
+          {label && <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">{label}</span>}
           {showValue && (
             <span className="font-mono text-xs font-bold" style={{ color }}>
               {Math.round(pct)}%
@@ -17,16 +17,17 @@ export default function TacticalProgress({ value = 0, max = 100, color = '#d4a84
           )}
         </div>
       )}
-      <div className="w-full bg-bg-primary border border-border-color p-[2px]" style={{ height: `${height + 4}px` }}>
+      <div className="opal-progress-track" style={{ height: `${height}px` }}>
         <motion.div
-          className="h-full relative overflow-hidden"
+          className="opal-progress-fill"
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-          style={{ background: color }}
-        >
-          <div className="absolute inset-0 w-full h-full" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)', animation: 'shimmer 2s infinite' }} />
-        </motion.div>
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            background: `linear-gradient(90deg, color-mix(in oklab, ${color} 70%, white), ${color})`,
+            boxShadow: `0 0 12px -2px ${color}`,
+          }}
+        />
       </div>
     </div>
   )

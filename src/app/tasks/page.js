@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import WinterLoader from '@/components/ui/WinterLoader'
 import HudPanel from '@/components/ui/HudPanel'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { getLocalDateStr, parseTaskNotes } from '@/lib/utils/dates'
@@ -691,12 +692,7 @@ export default function Operations() {
 
   if (loading) return (
     <AppShell>
-      <div className="flex-center h-full flex-col gap-2">
-        <span className="typewriter-text">LOADING OPERATIONS...</span>
-        <span className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase animate-pulse flex items-center gap-1.5">
-          <span>❄️</span> WINTER IS COMING <span>❄️</span>
-        </span>
-      </div>
+      <WinterLoader label="Loading tasks" />
     </AppShell>
   )
 
@@ -707,7 +703,7 @@ export default function Operations() {
         {/* HEADER */}
         <header className="flex-between flex-wrap gap-4 mb-6 tasks-header">
           <div>
-            <h1 className="page-title flex items-center gap-3"><Target className="text-amber" /> OPERATIONS</h1>
+            <h1 className="page-title flex items-center gap-3"><Target className="text-amber" /> Tasks</h1>
             <p className="page-subtitle font-mono text-xs uppercase">Deploy morning work goals. Execute. Complete. Prove.</p>
           </div>
           <button type='button' className="btn btn-primary flex items-center gap-2" onClick={() => setShowDeploy(true)}>
@@ -716,7 +712,7 @@ export default function Operations() {
         </header>
 
         {/* METRICS STRIP — Single bar, 4 divisions */}
-        <div className="mb-6 flex items-stretch overflow-hidden" style={{
+        <div className="tasks-metrics mb-6 flex items-stretch overflow-hidden" style={{
           border: '1px solid var(--border-color)',
           background: 'var(--bg-tertiary)',
           borderRadius: '10px',
@@ -1034,11 +1030,11 @@ export default function Operations() {
                     </div>
 
                     <div className="flex flex-col gap-2 mt-2">
-                      <button type='button' className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2 font-bold" onClick={() => submitCompletion(false)}>
+                      <button type='button' className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2 font-bold" onClick={() => submitCompletion(false)} data-celebrate>
                         <Check size={16} /> SUBMIT REPORT & COMPLETE
                       </button>
                       
-                      <button type='button' className="btn btn-ghost btn-xs text-muted font-mono" onClick={() => submitCompletion(true)}>
+                      <button type='button' className="btn btn-ghost btn-xs text-muted font-mono" onClick={() => submitCompletion(true)} data-celebrate>
                         QUICK COMPLETE (SKIP NOTES)
                       </button>
                     </div>

@@ -165,7 +165,7 @@ export async function evaluateProtocolAutoFail(userId) {
       .select('source_type, source_id, description')
       .eq('user_id', userId)
 
-    const activePenaltyKeys = new Set()
+    const activePenaltyKeys = new Set();
     (updatedXpHistory || []).forEach(x => {
       const text = `${x.source_type} ${x.source_id} ${x.description}`
       const match = text.match(/202\d-\d{2}-\d{2}/)

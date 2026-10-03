@@ -1,0 +1,56 @@
+/* Tailwind utilities for the class names used throughout the JSX.
+   Imported LAST and unlayered on purpose: globals.css ships unlayered resets
+   (`* { padding: 0 }`, `button { background: none }`) that would otherwise beat
+   layered utilities. Scanning is limited to src/ so dist/ and reports are ignored. */
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' source(none);
+
+@source '../';
+
+/* App color vocabulary -> design tokens (defined in opal.css). The property-scoped
+   namespaces keep `text-primary` (text color) and `bg-primary` (surface) distinct. */
+@theme inline {
+  --text-color-primary: var(--text-primary);
+  --text-color-secondary: var(--text-secondary);
+  --text-color-tertiary: var(--text-muted);
+  --text-color-muted: var(--text-muted);
+
+  --background-color-primary: var(--bg-primary);
+  --background-color-secondary: var(--bg-secondary);
+  --background-color-tertiary: var(--bg-tertiary);
+  --background-color-hover: var(--bg-hover);
+
+  --color-muted: var(--text-muted);
+  --color-amber: var(--accent-primary);
+  --color-navy: var(--accent-secondary);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-glow: var(--success-glow);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-info: var(--info);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-tertiary: var(--bg-tertiary);
+  --color-border-color: var(--border-color);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+}
+
+/* Utilities the app relies on that Tailwind does not ship. */
+@utility flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@utility flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+@utility flex-start {
+  display: flex;
+  align-items: flex-start;
+}

@@ -38,6 +38,8 @@ export function OSProvider({ children }) {
     if (typeof document === 'undefined') return
     const theme = getThemeForXP(profile?.profile?.total_xp || 0)
     Object.entries(theme.cssVars).forEach(([name, value]) => document.documentElement.style.setProperty(name, value))
+    if (theme.season) document.documentElement.dataset.season = theme.season
+    else delete document.documentElement.dataset.season
   }, [profile?.profile?.total_xp])
 
   // Stable refs so the sync callback always calls the latest functions

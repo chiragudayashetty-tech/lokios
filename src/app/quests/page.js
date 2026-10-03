@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import WinterLoader from '@/components/ui/WinterLoader'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -510,12 +511,7 @@ export default function DailyOps() {
 
   if (loading) return (
     <AppShell>
-      <div className="flex-center h-full flex-col gap-2">
-        <span className="typewriter-text">LOADING HABIT TRACKER...</span>
-        <span className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase animate-pulse flex items-center gap-1.5">
-          <span>❄️</span> WINTER IS COMING <span>❄️</span>
-        </span>
-      </div>
+      <WinterLoader label="Loading habits" />
     </AppShell>
   )
 
@@ -530,7 +526,7 @@ export default function DailyOps() {
       <div className="page-container" style={{ maxWidth: '1600px' }}>
         <header className="page-header flex-between flex-wrap gap-4">
           <div>
-            <h1 className="page-title">DAILY OPS — HABIT TRACKER</h1>
+            <h1 className="page-title">Daily habits</h1>
             <p className="page-subtitle font-mono uppercase text-xs">Monthly overview. Click any cell to toggle completion.</p>
           </div>
           <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddForm(true)}>
@@ -586,7 +582,7 @@ export default function DailyOps() {
               type="date"
               value={weightDate}
               onChange={(e) => setWeightDate(e.target.value)}
-              className="bg-bg-tertiary border border-border-subtle text-primary text-xs font-mono px-2.5 py-1.5 rounded focus:outline-none focus:border-info"
+              className="w-auto bg-bg-tertiary border border-border-subtle text-primary text-xs font-mono px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-info"
             />
             <div className="flex items-center gap-1">
               <input
@@ -621,7 +617,7 @@ export default function DailyOps() {
             <div className="flex flex-row items-center bg-tertiary border border-border-color rounded overflow-hidden">
               <button 
                 type="button"
-                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors ${activeTool === 'cycle' ? 'bg-primary text-bg-primary font-bold' : 'active:bg-hover text-primary'}`}
+                className={`px-2.5 sm:px-3 md:px-4 py-2 font-mono text-[10px] flex items-center justify-center gap-1.5 transition-colors ${activeTool === 'cycle' ? 'bg-white text-black font-bold' : 'active:bg-hover text-primary'}`}
                 onClick={() => setActiveTool('cycle')}
                 title="Cycle mode"
               >
@@ -822,6 +818,7 @@ export default function DailyOps() {
                       return (
                         <td key={d}
                           onClick={() => handleToggle(habit.id, d)}
+                          data-celebrate={(activeTool === 'cycle' && status !== 'completed' && status !== 'failed') || (activeTool === 'completed' && status !== 'completed') ? '' : undefined}
                           style={{
                             textAlign: 'center', padding: '0', cursor: 'pointer', borderRight: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)',
                             background: isToday ? 'var(--accent-subtle)' : 'transparent',
@@ -942,6 +939,7 @@ export default function DailyOps() {
                   <span className="font-mono text-[10px] text-info font-bold">+{habit.xp_per_completion || 25} XP</span>
                   <button 
                     type="button"
+                    data-celebrate={(activeTool === 'cycle' && todayStatus !== 'completed' && todayStatus !== 'failed') || (activeTool === 'completed' && todayStatus !== 'completed') ? '' : undefined}
                     onClick={(e) => { e?.stopPropagation?.(); handleToggle(habit.id, mobileSelectedDate.getDate()) }}
                     className="flex items-center justify-center transition-all active:scale-95"
                     style={{
@@ -1040,6 +1038,7 @@ export default function DailyOps() {
                       <span className="font-mono text-xs text-muted w-5 text-right">{i + 1}</span>
                       <button 
                         type="button"
+                        data-celebrate={!isComplete && !isFailed ? '' : undefined}
                         onClick={(e) => { e?.stopPropagation?.(); cycleHabitState(h.id, todayStr) }}
                         className="flex items-center justify-center transition-all hover:scale-110"
                         style={{

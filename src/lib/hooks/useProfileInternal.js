@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export function useProfileInternal(user) {
@@ -14,25 +14,29 @@ export function useProfileInternal(user) {
     return null
   })
   const [loading, setLoading] = useState(!profile)
-  const [initialized, setInitialized] = useState(false)
+  // Refs, not state deps: depending on `profile` made every fetch recreate
+  // fetchProfile, re-trigger the effect below and refetch in an endless loop.
+  const hasDataRef = useRef(!!profile)
+  const userId = user?.id
   const supabase = createClient()
 
   const fetchProfile = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setProfile(null)
       setLoading(false)
       return
     }
 
     try {
-      if (!initialized && !profile) setLoading(true)
+      if (!hasDataRef.current) setLoading(true)
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
 
       if (error) throw error
+      hasDataRef.current = true
       setProfile(data)
       if (typeof window !== 'undefined' && data) {
         localStorage.setItem('lokios_cached_profile', JSON.stringify(data))
@@ -41,9 +45,9 @@ export function useProfileInternal(user) {
       console.error('Error fetching profile:', error)
     } finally {
       setLoading(false)
-      setInitialized(true)
     }
-  }, [user, initialized, profile])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is a per-render singleton wrapper
+  }, [userId])
 
   useEffect(() => {
     fetchProfile()

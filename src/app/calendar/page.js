@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import WinterLoader from '@/components/ui/WinterLoader'
 import HudPanel from '@/components/ui/HudPanel'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { useCalendar } from '@/lib/hooks/useCalendar'
@@ -216,12 +217,7 @@ export default function Calendar() {
   if (isLoading && !events.length && !tasks.length) {
     return (
       <AppShell>
-        <div className="flex-center h-full min-h-[60vh] flex-col gap-2">
-          <span className="typewriter-text">SYNCING SATELLITES...</span>
-          <span className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase animate-pulse flex items-center gap-1.5">
-            <span>❄️</span> WINTER IS COMING <span>❄️</span>
-          </span>
-        </div>
+        <WinterLoader label="Syncing calendar" />
       </AppShell>
     )
   }
@@ -233,7 +229,7 @@ export default function Calendar() {
         {/* ── HEADER ── */}
         <header className="page-header flex-between flex-wrap gap-4 mb-6">
           <div>
-            <h1 className="page-title">CALENDAR</h1>
+            <h1 className="page-title">Calendar</h1>
             <p className="page-subtitle font-mono uppercase text-xs">Temporal scheduling and operational tracking.</p>
           </div>
 
@@ -295,7 +291,7 @@ export default function Calendar() {
                     padding: '6px 12px', borderRadius: '8px',
                     background: syncingGoogle ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.12)',
                     border: '1px solid rgba(16,185,129,0.35)',
-                    color: '#34d399', fontFamily: 'monospace',
+                    color: '#34d399', fontFamily: 'var(--font-mono)',
                     fontSize: '11px', fontWeight: 700,
                     cursor: syncingGoogle ? 'not-allowed' : 'pointer',
                     opacity: syncingGoogle ? 0.8 : 1,
@@ -339,7 +335,7 @@ export default function Calendar() {
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.15)',
                   color: profile?.id ? '#94a3b8' : '#475569',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: '11px', fontWeight: 700,
                   cursor: profile?.id ? 'pointer' : 'not-allowed',
                   transition: 'all 0.2s',
@@ -377,7 +373,7 @@ export default function Calendar() {
             background: googleToast.type === 'success' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
             border: `1px solid ${googleToast.type === 'success' ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)'}`,
             color: googleToast.type === 'success' ? '#34d399' : '#f87171',
-            fontFamily: 'monospace', fontSize: '12px', fontWeight: 600,
+            fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
           }}>
             <span>{googleToast.msg}</span>

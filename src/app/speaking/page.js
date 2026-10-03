@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import WinterLoader from '@/components/ui/WinterLoader'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
@@ -1165,9 +1166,7 @@ export default function SpeakingPracticePage() {
           </div>
 
           {loading ? (
-            <div className="p-12 text-center font-mono text-xs text-muted">
-              Loading speaking logs...
-            </div>
+            <WinterLoader label="Loading speaking logs" compact />
           ) : filteredCompletedTopics.length === 0 ? (
             <div className="p-12 text-center rounded-xl bg-black/40 border border-dashed border-white/10 space-y-2">
               <Mic size={28} className="mx-auto text-muted opacity-40" />

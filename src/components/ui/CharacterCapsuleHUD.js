@@ -1,20 +1,53 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { Shield, ShieldAlert, Flame } from 'lucide-react'
+import { motion, animate } from 'framer-motion'
+import { Shield, ShieldAlert, Flame, TrendingUp, TrendingDown } from 'lucide-react'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { SAGA_TITLES } from '@/lib/constants'
 
+const STATE_STYLE = {
+  'AT RISK': { color: 'var(--danger)', Icon: ShieldAlert },
+  RECOVERY: { color: 'var(--info)', Icon: Shield },
+  SURGING: { color: 'var(--success)', Icon: Flame },
+  STEADY: { color: 'var(--accent-primary)', Icon: Shield },
+}
+
+function netColor(n) {
+  return n < 0 ? 'var(--danger)' : n > 0 ? 'var(--success)' : 'var(--accent-primary)'
+}
+
+/** Animates a number from its previous value to the new one. */
+function CountUp({ value, format = (n) => n.toLocaleString() }) {
+  const ref = useRef(null)
+  const from = useRef(0)
+  useEffect(() => {
+    const controls = animate(from.current, value, {
+      duration: 0.9,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => { if (ref.current) ref.current.textContent = format(Math.round(v)) },
+    })
+    from.current = value
+    return () => controls.stop()
+  }, [value, format])
+  return <span ref={ref}>{format(0)}</span>
+}
+
+const signed = (n) => (n > 0 ? `+${n.toLocaleString()}` : n.toLocaleString())
+
 export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
-  let effectiveProfile = profile
-  if (!effectiveProfile && typeof window !== 'undefined') {
+  // Cached profile keeps the HUD populated on cold start before Supabase responds
+  const [cachedProfile, setCachedProfile] = useState(null)
+  useEffect(() => {
+    if (profile) return
     try {
       const raw = localStorage.getItem('lokios_cached_profile')
-      if (raw) effectiveProfile = JSON.parse(raw)
-    } catch (e) {}
-  }
+      if (raw) setCachedProfile(JSON.parse(raw))
+    } catch {}
+  }, [profile])
+
+  const effectiveProfile = profile || cachedProfile
   const totalXp = effectiveProfile?.total_xp || 0
   const level = calculateLevel(totalXp)
   const xpProgress = xpToNextLevel(totalXp)
@@ -24,212 +57,116 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
   const todayNet = dailyMomentum?.todayNet || 0
   const trend3Day = dailyMomentum?.threeDayNet || 0
   const state = dailyMomentum?.state || 'STEADY'
-  const sparklineBars = dailyMomentum?.sparkline || [
-    { heightPct: 30, isPositive: true },
-    { heightPct: 45, isPositive: true },
-    { heightPct: 60, isPositive: false },
-    { heightPct: 80, isPositive: false },
-    { heightPct: 50, isPositive: false },
-    { heightPct: 40, isPositive: todayNet >= 0 }
-  ]
+  const { color: stateColor, Icon: StateIcon } = STATE_STYLE[state] || STATE_STYLE.STEADY
+  const sparklineBars = dailyMomentum?.sparkline || []
 
   const toNext = Math.max(0, xpProgress.required - xpProgress.current)
   const pct = Math.max(4, Math.min(100, Math.round(xpProgress.percentage)))
 
   return (
-    <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '0 4px', marginBottom: '20px', boxSizing: 'border-box' }}>
-      <div 
-        className="loki-capsule-hud premium-xp-hud"
-        style={{
-          width: '100%',
-          maxWidth: '1280px',
-          minHeight: '48px',
-          borderRadius: '9999px',
-          background: 'rgba(9, 13, 24, 0.88)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          backdropFilter: 'blur(28px)',
-          WebkitBackdropFilter: 'blur(28px)',
-          boxShadow: '0 14px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.12)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 16px',
-          gap: '12px',
-          boxSizing: 'border-box'
-        }}
-      >
-        
-        {/* ── 1. SAGA & LEVEL (Left) ── */}
-        <Link 
-          href="/xp" 
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
-        >
-          {/* Glowing Faceted Crystal Gem Icon */}
-          <div style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #1e1b4b, #581c87, #0f172a)',
-            border: '1px solid rgba(168, 85, 247, 0.5)',
-            boxShadow: '0 0 15px rgba(168, 85, 247, 0.35)',
-            flexShrink: 0
-          }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ filter: 'drop-shadow(0 0 8px rgba(168,85,247,0.8))' }}>
-              <path d="M12 2L2 9L12 22L22 9L12 2Z" fill="url(#hudGemGrad1)" stroke="#c084fc" strokeWidth="1.2" strokeLinejoin="round" />
-              <path d="M12 2L7 9L12 22L17 9L12 2Z" fill="url(#hudGemGrad2)" fillOpacity="0.9" />
-              <path d="M2 9H22" stroke="#e9d5ff" strokeWidth="0.8" strokeLinecap="round" />
-              <defs>
-                <linearGradient id="hudGemGrad1" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#a855f7" />
-                  <stop offset="1" stopColor="#4338ca" />
-                </linearGradient>
-                <linearGradient id="hudGemGrad2" x1="7" y1="2" x2="17" y2="22" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#f5d0fe" />
-                  <stop offset="0.4" stopColor="#c084fc" />
-                  <stop offset="1" stopColor="#6366f1" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
+    <div className="flex justify-center w-full px-1 mb-5">
+      <div className="loki-capsule-hud premium-xp-hud">
 
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '14px', color: '#ffffff', letterSpacing: '0.04em', lineHeight: 1 }}>
-                LV.{level}
-              </span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 700 }}>
-                SAGA {rank.code}
-              </span>
+        {/* ── Level gem + saga ── */}
+        <Link href="/xp" className="flex items-center gap-2.5 shrink-0 min-w-0" style={{ color: 'inherit' }}>
+          <motion.div
+            className="relative grid place-items-center w-9 h-9 rounded-xl shrink-0"
+            style={{
+              background: 'var(--accent-gradient)',
+              boxShadow: '0 6px 18px -6px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.4)',
+            }}
+            whileHover={{ rotate: -8, scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 14 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2L2 9L12 22L22 9L12 2Z" fill="rgba(255,255,255,0.28)" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" />
+              <path d="M2 9H22M12 2L8 9L12 22L16 9L12 2Z" stroke="#fff" strokeOpacity="0.7" strokeWidth="1.1" strokeLinejoin="round" />
+            </svg>
+          </motion.div>
+          <div className="flex flex-col justify-center min-w-0">
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-display font-extrabold text-[15px] leading-none text-white">Lv. {level}</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Saga {rank.code}</span>
             </div>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '10px', color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+            <span className="font-display font-semibold text-[11px] mt-0.5 truncate" style={{ color: 'var(--accent-primary)' }}>
               {rankTitle}
             </span>
           </div>
         </Link>
 
-        {/* ── 2. LEVEL PROGRESS CAPSULE BAR (Center) ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px', flex: 1, maxWidth: '320px', minWidth: 0, padding: '0 6px' }}>
-          <div className="capsule-track" style={{ width: '100%', height: '8px', borderRadius: '9999px', background: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255, 255, 255, 0.12)', overflow: 'hidden' }}>
-            <motion.div 
+        {/* ── Level progress ── */}
+        <div className="flex flex-col justify-center gap-1.5 flex-1 min-w-0 px-1.5" style={{ maxWidth: 340 }}>
+          <div className="capsule-track" style={{ height: 8, borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
+            <motion.div
               className="capsule-fill"
-              style={{
-                height: '100%',
-                borderRadius: '9999px',
-                background: 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #22d3ee 100%)',
-                boxShadow: '0 0 12px rgba(168, 85, 247, 0.7)'
-              }}
+              style={{ height: '100%', borderRadius: 999 }}
               initial={{ width: 0 }}
               animate={{ width: `${pct}%` }}
-              transition={{ duration: 1.2, ease: 'easeOut' }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '9px', color: '#94a3b8' }}>
-            <span className="hidden sm:inline" style={{ fontWeight: 700, color: '#f1f5f9' }}>
+          <div className="flex items-center justify-between text-[10px] text-muted font-mono">
+            <span className="hidden sm:inline font-semibold text-secondary">
               {xpProgress.current.toLocaleString()} / {xpProgress.required.toLocaleString()} XP
             </span>
-            <span className="sm:hidden font-mono font-bold" style={{ color: todayNet < 0 ? '#f43f5e' : todayNet > 0 ? '#34d399' : '#818cf8' }}>
-              {todayNet >= 0 ? `+${todayNet.toLocaleString()}` : todayNet.toLocaleString()} XP today
+            <span className="sm:hidden font-bold" style={{ color: netColor(todayNet) }}>
+              {signed(todayNet)} XP today
             </span>
-            <span style={{ color: '#64748b' }}>{toNext.toLocaleString()} to LV.{level + 1}</span>
+            <span>{toNext.toLocaleString()} to Lv. {level + 1}</span>
           </div>
         </div>
 
-        {/* ── 3. 3-DAY TREND (Desktop only) ── */}
-        <div className="hidden lg:flex" style={{ alignItems: 'center', gap: '16px', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '16px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#64748b', fontWeight: 700 }}>
-              3-DAY TREND
-            </span>
-            <div 
-              style={{ 
-                fontFamily: 'var(--font-mono)', 
-                fontSize: '11px', 
-                fontWeight: 800, 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '4px',
-                marginTop: '1px',
-                color: trend3Day < 0 ? '#f43f5e' : '#34d399' 
-              }}
-            >
-              <span>{trend3Day >= 0 ? '↗' : '↘'}</span>
-              <span>{trend3Day >= 0 ? `+${trend3Day}` : trend3Day} XP</span>
+        {/* ── 3-day trend (desktop) ── */}
+        {sparklineBars.length > 0 && (
+          <div className="hidden lg:flex items-center gap-4 pl-4 shrink-0" style={{ borderLeft: '1px solid var(--border-color)' }}>
+            <div className="flex flex-col justify-center">
+              <span className="text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">3-day trend</span>
+              <div className="flex items-center gap-1 mt-0.5 text-xs font-bold font-mono" style={{ color: trend3Day < 0 ? 'var(--danger)' : 'var(--success)' }}>
+                {trend3Day >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+                <span>{signed(trend3Day)} XP</span>
+              </div>
+            </div>
+            <div className="flex items-end gap-[3px] h-5">
+              {sparklineBars.slice(-5).map((bar, idx) => (
+                <motion.div
+                  key={idx}
+                  className="w-1 rounded-full"
+                  initial={{ height: 0 }}
+                  animate={{ height: `${Math.max(12, bar.heightPct)}%` }}
+                  transition={{ delay: 0.3 + idx * 0.06, type: 'spring', stiffness: 300, damping: 18 }}
+                  style={{ backgroundColor: bar.isPositive ? 'var(--success)' : 'var(--danger)' }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Today + momentum state ── */}
+        <Link href="/xp" className="flex items-center gap-2.5 shrink-0 pl-3" style={{ color: 'inherit', borderLeft: '1px solid var(--border-color)' }}>
+          <div className="hidden sm:flex flex-col justify-center text-right">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Today</span>
+            <div className="font-display font-extrabold text-sm leading-none font-mono" style={{ color: netColor(todayNet) }}>
+              <CountUp value={todayNet} format={signed} /> <span className="text-[10px] font-semibold text-muted">XP</span>
             </div>
           </div>
 
-          {/* Sparkline */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '16px', paddingBottom: '1px' }}>
-            {sparklineBars.slice(-5).map((bar, idx) => (
-              <div 
-                key={idx}
-                style={{ 
-                  width: '4px',
-                  borderRadius: '2px 2px 0 0',
-                  height: `${bar.heightPct}%`,
-                  backgroundColor: bar.isPositive ? '#34d399' : '#f43f5e',
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* ── 4. MOMENTUM & STATUS PILL (Right) ── */}
-        <Link 
-          href="/xp" 
-          style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, textDecoration: 'none', color: 'inherit', borderLeft: '1px solid rgba(255, 255, 255, 0.1)', paddingLeft: '12px' }}
-        >
-          <div className="hidden sm:flex" style={{ flexDirection: 'column', justifyContent: 'center', textAlign: 'right' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#64748b', fontWeight: 700 }}>
-              TODAY
-            </span>
-            <div 
-              style={{ 
-                fontFamily: 'var(--font-display)', 
-                fontWeight: 900, 
-                fontSize: '13px', 
-                letterSpacing: '-0.02em', 
-                lineHeight: 1, 
-                color: todayNet < 0 ? '#f43f5e' : todayNet > 0 ? '#34d399' : '#818cf8' 
-              }}
-            >
-              {todayNet >= 0 ? `+${todayNet}` : todayNet} <span style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 700, color: '#64748b' }}>XP</span>
-            </div>
-          </div>
-
-          {/* Status Pill Badge */}
-          <div 
+          <div
+            className="flex items-center gap-1.5 shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.06em]"
             style={{
-              padding: '4px 10px',
-              borderRadius: '9999px',
-              border: '1px solid',
-              fontSize: '10px',
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              flexShrink: 0,
-              backgroundColor: state === 'AT RISK' ? 'rgba(76, 5, 25, 0.85)' : state === 'RECOVERY' ? 'rgba(6, 40, 55, 0.85)' : state === 'SURGING' ? 'rgba(6, 44, 28, 0.85)' : 'rgba(30, 27, 75, 0.85)',
-              borderColor: state === 'AT RISK' ? '#f43f5e' : state === 'RECOVERY' ? '#22d3ee' : state === 'SURGING' ? '#34d399' : '#818cf8',
-              color: state === 'AT RISK' ? '#f43f5e' : state === 'RECOVERY' ? '#22d3ee' : state === 'SURGING' ? '#34d399' : '#818cf8',
-              boxShadow: state === 'SURGING' ? '0 0 10px rgba(52, 211, 153, 0.35)' : 'none'
+              color: stateColor,
+              background: `color-mix(in oklab, ${stateColor} 14%, transparent)`,
+              border: `1px solid color-mix(in oklab, ${stateColor} 38%, transparent)`,
+              boxShadow: state === 'SURGING' ? `0 0 16px -4px ${stateColor}` : 'none',
             }}
           >
-            {state === 'AT RISK' ? (
-              <ShieldAlert size={11} style={{ color: '#f43f5e' }} />
-            ) : state === 'RECOVERY' ? (
-              <Shield size={11} style={{ color: '#22d3ee' }} />
-            ) : state === 'SURGING' ? (
-              <Flame size={11} style={{ color: '#34d399' }} />
-            ) : (
-              <Shield size={11} style={{ color: '#818cf8' }} />
-            )}
+            <motion.span
+              style={{ display: 'flex' }}
+              animate={state === 'SURGING' ? { scale: [1, 1.25, 1], rotate: [0, -8, 0] } : { scale: 1 }}
+              transition={state === 'SURGING' ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' } : undefined}
+            >
+              <StateIcon size={12} />
+            </motion.span>
             <span>{state}</span>
           </div>
         </Link>
@@ -238,4 +175,3 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
     </div>
   )
 }
-

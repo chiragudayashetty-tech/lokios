@@ -7,7 +7,7 @@
    0. FONT IMPORTS
    ───────────────────────────────────────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+/* Fonts are self-hosted via next/font in layout.js */
 
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -103,8 +103,8 @@
   --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.8);
   --shadow-lg:    0 12px 24px rgba(0, 0, 0, 0.9);
   --shadow-xl:    0 16px 48px rgba(0, 0, 0, 0.6);
-  --shadow-amber: 0 0 20px rgba(212, 168, 67, 0.15);
-  --shadow-amber-lg: 0 0 40px rgba(212, 168, 67, 0.1), 0 0 80px rgba(212, 168, 67, 0.05);
+  --shadow-amber: 0 0 20px color-mix(in oklab, var(--accent-primary) 15%, transparent);
+  --shadow-amber-lg: 0 0 40px color-mix(in oklab, var(--accent-primary) 10%, transparent), 0 0 80px color-mix(in oklab, var(--accent-primary) 5%, transparent);
   --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 
   /* ── Spacing (4px increments) ── */
@@ -200,7 +200,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  border: 0;
+  border: 0 solid var(--border-color);
 }
 
 html {
@@ -236,12 +236,12 @@ button, a, input, select, textarea {
 
 /* ── Selection ── */
 ::selection {
-  background-color: rgba(212, 168, 67, 0.25);
+  background-color: color-mix(in oklab, var(--accent-primary) 25%, transparent);
   color: var(--accent-primary);
 }
 
 ::-moz-selection {
-  background-color: rgba(212, 168, 67, 0.25);
+  background-color: color-mix(in oklab, var(--accent-primary) 25%, transparent);
   color: var(--accent-primary);
 }
 
@@ -824,8 +824,8 @@ p:last-child {
 }
 
 .hud-panel.hud-glow {
-  box-shadow: inset 0 0 40px rgba(212, 168, 67, 0.02);
-  border-color: rgba(212, 168, 67, 0.2);
+  box-shadow: inset 0 0 40px color-mix(in oklab, var(--accent-primary) 2%, transparent);
+  border-color: color-mix(in oklab, var(--accent-primary) 20%, transparent);
 }
 
 /* Tactical Corner Brackets */
@@ -1209,7 +1209,7 @@ p:last-child {
 }
 
 .btn-secondary:active {
-  background: rgba(212, 168, 67, 0.15);
+  background: color-mix(in oklab, var(--accent-primary) 15%, transparent);
 }
 
 /* Danger — Red */
@@ -1391,15 +1391,7 @@ p:last-child {
 }
 
 .input,
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="number"],
-input[type="search"],
-input[type="url"],
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"] {
+:where(input:is([type="text"], [type="email"], [type="password"], [type="number"], [type="search"], [type="url"], [type="date"], [type="time"], [type="datetime-local"])) {
   width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
@@ -1679,7 +1671,7 @@ select:focus {
 .badge-amber {
   background: var(--accent-subtle);
   color: var(--accent-primary);
-  border-color: rgba(212, 168, 67, 0.2);
+  border-color: color-mix(in oklab, var(--accent-primary) 20%, transparent);
 }
 
 /* Success */
@@ -3025,30 +3017,30 @@ select:focus {
     /* Fine grid — 20px */
     repeating-linear-gradient(
       0deg,
-      rgba(212, 168, 67, 0.03) 0px,
-      rgba(212, 168, 67, 0.03) 1px,
+      color-mix(in oklab, var(--accent-primary) 3%, transparent) 0px,
+      color-mix(in oklab, var(--accent-primary) 3%, transparent) 1px,
       transparent 1px,
       transparent 20px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(212, 168, 67, 0.03) 0px,
-      rgba(212, 168, 67, 0.03) 1px,
+      color-mix(in oklab, var(--accent-primary) 3%, transparent) 0px,
+      color-mix(in oklab, var(--accent-primary) 3%, transparent) 1px,
       transparent 1px,
       transparent 20px
     ),
     /* Major grid — 100px */
     repeating-linear-gradient(
       0deg,
-      rgba(212, 168, 67, 0.06) 0px,
-      rgba(212, 168, 67, 0.06) 1px,
+      color-mix(in oklab, var(--accent-primary) 6%, transparent) 0px,
+      color-mix(in oklab, var(--accent-primary) 6%, transparent) 1px,
       transparent 1px,
       transparent 100px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(212, 168, 67, 0.06) 0px,
-      rgba(212, 168, 67, 0.06) 1px,
+      color-mix(in oklab, var(--accent-primary) 6%, transparent) 0px,
+      color-mix(in oklab, var(--accent-primary) 6%, transparent) 1px,
       transparent 1px,
       transparent 100px
     );
@@ -3058,15 +3050,15 @@ select:focus {
   background-image:
     repeating-linear-gradient(
       0deg,
-      rgba(212, 168, 67, 0.015) 0px,
-      rgba(212, 168, 67, 0.015) 1px,
+      color-mix(in oklab, var(--accent-primary) 1.5%, transparent) 0px,
+      color-mix(in oklab, var(--accent-primary) 1.5%, transparent) 1px,
       transparent 1px,
       transparent 40px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(212, 168, 67, 0.015) 0px,
-      rgba(212, 168, 67, 0.015) 1px,
+      color-mix(in oklab, var(--accent-primary) 1.5%, transparent) 0px,
+      color-mix(in oklab, var(--accent-primary) 1.5%, transparent) 1px,
       transparent 1px,
       transparent 40px
     );
@@ -3077,7 +3069,7 @@ select:focus {
   background:
     radial-gradient(
       ellipse at 50% 0%,
-      rgba(212, 168, 67, 0.05) 0%,
+      color-mix(in oklab, var(--accent-primary) 5%, transparent) 0%,
       transparent 60%
     ),
     var(--bg-primary);
@@ -3089,8 +3081,8 @@ select:focus {
     -45deg,
     transparent,
     transparent 10px,
-    rgba(212, 168, 67, 0.02) 10px,
-    rgba(212, 168, 67, 0.02) 11px
+    color-mix(in oklab, var(--accent-primary) 2%, transparent) 10px,
+    color-mix(in oklab, var(--accent-primary) 2%, transparent) 11px
   );
 }
 
@@ -3098,7 +3090,7 @@ select:focus {
 .tactical-dots {
   background-image: radial-gradient(
     circle,
-    rgba(212, 168, 67, 0.06) 1px,
+    color-mix(in oklab, var(--accent-primary) 6%, transparent) 1px,
     transparent 1px
   );
   background-size: 24px 24px;
@@ -3956,23 +3948,23 @@ select:focus {
 }
 
 .habit-cell.level-1 {
-  background: rgba(212, 168, 67, 0.15);
-  border-color: rgba(212, 168, 67, 0.2);
+  background: color-mix(in oklab, var(--accent-primary) 15%, transparent);
+  border-color: color-mix(in oklab, var(--accent-primary) 20%, transparent);
 }
 
 .habit-cell.level-2 {
-  background: rgba(212, 168, 67, 0.3);
-  border-color: rgba(212, 168, 67, 0.35);
+  background: color-mix(in oklab, var(--accent-primary) 30%, transparent);
+  border-color: color-mix(in oklab, var(--accent-primary) 35%, transparent);
 }
 
 .habit-cell.level-3 {
-  background: rgba(212, 168, 67, 0.5);
-  border-color: rgba(212, 168, 67, 0.55);
+  background: color-mix(in oklab, var(--accent-primary) 50%, transparent);
+  border-color: color-mix(in oklab, var(--accent-primary) 55%, transparent);
 }
 
 .habit-cell.level-4 {
-  background: rgba(212, 168, 67, 0.75);
-  border-color: rgba(212, 168, 67, 0.8);
+  background: color-mix(in oklab, var(--accent-primary) 75%, transparent);
+  border-color: color-mix(in oklab, var(--accent-primary) 80%, transparent);
 }
 
 /* ── XP Notification Flash ── */
@@ -4684,7 +4676,7 @@ select:focus {
 /* High contrast mode */
 @media (prefers-contrast: high) {
   :root {
-    --hud-border: rgba(212, 168, 67, 0.4);
+    --hud-border: color-mix(in oklab, var(--accent-primary) 40%, transparent);
     --border-color: #3a3f4d;
     --text-secondary: #b0b4bf;
     --text-muted: #8a8f9a;
@@ -4731,38 +4723,38 @@ select:focus {
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 /* ─── LOKI AI INTELLIGENCE LAYER ────────────────────────────────────────────── */
-.loki-trigger{display:flex;align-items:center;gap:6px;width:100%;padding:8px 10px;margin-top:4px;background:rgba(212,168,67,.06);border:1px solid rgba(212,168,67,.2);border-radius:6px;color:#d4a843;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:all 200ms ease;position:relative;}
-.loki-trigger:hover{background:rgba(212,168,67,.12);border-color:rgba(212,168,67,.45);box-shadow:0 0 12px rgba(212,168,67,.15);}
+.loki-trigger{display:flex;align-items:center;gap:6px;width:100%;padding:8px 10px;margin-top:4px;background:color-mix(in oklab, var(--accent-primary) 6%, transparent);border:1px solid color-mix(in oklab, var(--accent-primary) 20%, transparent);border-radius:6px;color:var(--accent-primary);font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;transition:all 200ms ease;position:relative;}
+.loki-trigger:hover{background:color-mix(in oklab, var(--accent-primary) 12%, transparent);border-color:color-mix(in oklab, var(--accent-primary) 45%, transparent);box-shadow:0 0 12px color-mix(in oklab, var(--accent-primary) 15%, transparent);}
 .loki-trigger-icon{flex-shrink:0;}
 .loki-trigger-dot{width:5px;height:5px;background:var(--warning,#F59E0B);border-radius:50%;margin-left:auto;animation:pulse 2s infinite;}
 .loki-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(2px);z-index:48;}
-.loki-panel{position:fixed;top:0;right:0;height:100dvh;width:380px;max-width:100vw;background:linear-gradient(180deg,rgba(10,11,16,.98) 0%,rgba(6,7,10,.99) 100%);border-left:1px solid rgba(212,168,67,.2);box-shadow:-20px 0 60px rgba(0,0,0,.6),-4px 0 0 rgba(212,168,67,.08);z-index:49;display:flex;flex-direction:column;overflow:hidden;}
-.loki-header{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 14px;border-bottom:1px solid rgba(212,168,67,.15);background:rgba(212,168,67,.03);flex-shrink:0;}
+.loki-panel{position:fixed;top:0;right:0;height:100dvh;width:380px;max-width:100vw;background:linear-gradient(180deg,rgba(10,11,16,.98) 0%,rgba(6,7,10,.99) 100%);border-left:1px solid color-mix(in oklab, var(--accent-primary) 20%, transparent);box-shadow:-20px 0 60px rgba(0,0,0,.6),-4px 0 0 color-mix(in oklab, var(--accent-primary) 8%, transparent);z-index:49;display:flex;flex-direction:column;overflow:hidden;}
+.loki-header{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 14px;border-bottom:1px solid color-mix(in oklab, var(--accent-primary) 15%, transparent);background:color-mix(in oklab, var(--accent-primary) 3%, transparent);flex-shrink:0;}
 .loki-header-left{display:flex;align-items:center;gap:10px;}
-.loki-logo{width:32px;height:32px;background:linear-gradient(135deg,rgba(212,168,67,.2),rgba(212,168,67,.05));border:1px solid rgba(212,168,67,.4);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#d4a843;box-shadow:0 0 12px rgba(212,168,67,.2);flex-shrink:0;}
-.loki-title{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#d4a843;line-height:1;}
-.loki-subtitle{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(212,168,67,.5);letter-spacing:.12em;margin-top:3px;}
+.loki-logo{width:32px;height:32px;background:linear-gradient(135deg,color-mix(in oklab, var(--accent-primary) 20%, transparent),color-mix(in oklab, var(--accent-primary) 5%, transparent));border:1px solid color-mix(in oklab, var(--accent-primary) 40%, transparent);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--accent-primary);box-shadow:0 0 12px color-mix(in oklab, var(--accent-primary) 20%, transparent);flex-shrink:0;}
+.loki-title{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-primary);line-height:1;}
+.loki-subtitle{font-family:'JetBrains Mono',monospace;font-size:9px;color:color-mix(in oklab, var(--accent-primary) 50%, transparent);letter-spacing:.12em;margin-top:3px;}
 .loki-header-actions{display:flex;gap:4px;}
 .loki-icon-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid rgba(255,255,255,.06);border-radius:4px;color:var(--text-muted,#71717A);cursor:pointer;transition:all 150ms ease;}
-.loki-icon-btn:hover,.loki-icon-btn.active{border-color:rgba(212,168,67,.3);color:#d4a843;background:rgba(212,168,67,.06);}
-.loki-scanline{height:1px;background:linear-gradient(90deg,transparent,rgba(212,168,67,.6),transparent);background-size:200% 100%;animation:loki-scan 2.5s linear infinite;flex-shrink:0;}
+.loki-icon-btn:hover,.loki-icon-btn.active{border-color:color-mix(in oklab, var(--accent-primary) 30%, transparent);color:var(--accent-primary);background:color-mix(in oklab, var(--accent-primary) 6%, transparent);}
+.loki-scanline{height:1px;background:linear-gradient(90deg,transparent,color-mix(in oklab, var(--accent-primary) 60%, transparent),transparent);background-size:200% 100%;animation:loki-scan 2.5s linear infinite;flex-shrink:0;}
 @keyframes loki-scan{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.loki-settings{border-bottom:1px solid rgba(212,168,67,.1);overflow:hidden;flex-shrink:0;}
+.loki-settings{border-bottom:1px solid color-mix(in oklab, var(--accent-primary) 10%, transparent);overflow:hidden;flex-shrink:0;}
 .loki-settings-form{padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
-.loki-settings-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(212,168,67,.6);display:flex;align-items:center;gap:5px;}
+.loki-settings-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:color-mix(in oklab, var(--accent-primary) 60%, transparent);display:flex;align-items:center;gap:5px;}
 .loki-key-status{color:var(--success,#10B981);margin-left:4px;}
 .loki-settings-row{display:flex;gap:6px;}
-.loki-key-input{flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(212,168,67,.2);border-radius:4px;padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-primary,#EDEDED);outline:none;transition:border-color 150ms;}
-.loki-key-input:focus{border-color:rgba(212,168,67,.5);}
-.loki-save-btn{padding:7px 14px;background:linear-gradient(135deg,#d4a843,#f1c76d);border:none;border-radius:4px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;color:#050505;cursor:pointer;white-space:nowrap;transition:opacity 150ms;}
+.loki-key-input{flex:1;background:rgba(0,0,0,.4);border:1px solid color-mix(in oklab, var(--accent-primary) 20%, transparent);border-radius:4px;padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-primary,#EDEDED);outline:none;transition:border-color 150ms;}
+.loki-key-input:focus{border-color:color-mix(in oklab, var(--accent-primary) 50%, transparent);}
+.loki-save-btn{padding:7px 14px;background:linear-gradient(135deg,var(--accent-primary),var(--accent-primary));border:none;border-radius:4px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;color:#050505;cursor:pointer;white-space:nowrap;transition:opacity 150ms;}
 .loki-save-btn:hover{opacity:.9;}
 .loki-clear-btn{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--danger,#EF4444);background:none;border:none;cursor:pointer;text-align:left;padding:0;opacity:.7;transition:opacity 150ms;}
 .loki-clear-btn:hover{opacity:1;}
 .loki-settings-note{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted,#71717A);line-height:1.6;}
-.loki-no-key-banner{display:flex;align-items:center;gap:8px;padding:8px 16px;background:rgba(212,168,67,.05);border-bottom:1px solid rgba(212,168,67,.08);font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(212,168,67,.6);flex-shrink:0;}
-.loki-body{flex:1;overflow-y:auto;padding:12px 0;scrollbar-width:thin;scrollbar-color:rgba(212,168,67,.2) transparent;}
+.loki-no-key-banner{display:flex;align-items:center;gap:8px;padding:8px 16px;background:color-mix(in oklab, var(--accent-primary) 5%, transparent);border-bottom:1px solid color-mix(in oklab, var(--accent-primary) 8%, transparent);font-family:'JetBrains Mono',monospace;font-size:9px;color:color-mix(in oklab, var(--accent-primary) 60%, transparent);flex-shrink:0;}
+.loki-body{flex:1;overflow-y:auto;padding:12px 0;scrollbar-width:thin;scrollbar-color:color-mix(in oklab, var(--accent-primary) 20%, transparent) transparent;}
 .loki-body::-webkit-scrollbar{width:3px;}
-.loki-body::-webkit-scrollbar-thumb{background:rgba(212,168,67,.2);border-radius:2px;}
+.loki-body::-webkit-scrollbar-thumb{background:color-mix(in oklab, var(--accent-primary) 20%, transparent);border-radius:2px;}
 .loki-section{padding:10px 16px;}
 .loki-section-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.25);display:flex;align-items:center;gap:5px;margin-bottom:8px;}
 .loki-insights{display:flex;flex-direction:column;gap:4px;}
@@ -4776,44 +4768,44 @@ select:focus {
 .loki-insight--info .loki-insight-dot{background:#3B82F6;}
 .loki-actions{display:flex;flex-direction:column;gap:4px;}
 .loki-action-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:6px;cursor:pointer;transition:all 150ms ease;text-align:left;width:100%;}
-.loki-action-btn:hover{background:rgba(212,168,67,.06);border-color:rgba(212,168,67,.25);}
-.loki-action-btn.active{background:rgba(212,168,67,.08);border-color:rgba(212,168,67,.35);}
+.loki-action-btn:hover{background:color-mix(in oklab, var(--accent-primary) 6%, transparent);border-color:color-mix(in oklab, var(--accent-primary) 25%, transparent);}
+.loki-action-btn.active{background:color-mix(in oklab, var(--accent-primary) 8%, transparent);border-color:color-mix(in oklab, var(--accent-primary) 35%, transparent);}
 .loki-action-btn.loading,.loki-action-btn:disabled{opacity:.4;pointer-events:none;}
-.loki-action-icon{color:#d4a843;flex-shrink:0;}
+.loki-action-icon{color:var(--accent-primary);flex-shrink:0;}
 .loki-action-text{flex:1;display:flex;flex-direction:column;gap:2px;}
 .loki-action-label{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-primary,#EDEDED);line-height:1;}
 .loki-action-desc{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted,#71717A);line-height:1;}
-.loki-action-chevron{color:rgba(212,168,67,.3);flex-shrink:0;transition:transform 150ms,color 150ms;}
-.loki-action-btn:hover .loki-action-chevron{transform:translateX(2px);color:rgba(212,168,67,.7);}
-.loki-response{margin:6px 16px;background:rgba(212,168,67,.04);border:1px solid rgba(212,168,67,.15);border-radius:6px;overflow:hidden;}
-.loki-response-header{display:flex;align-items:center;gap:6px;padding:7px 12px;background:rgba(212,168,67,.07);border-bottom:1px solid rgba(212,168,67,.1);font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#d4a843;}
-.loki-response-clear{margin-left:auto;background:none;border:none;color:rgba(212,168,67,.4);cursor:pointer;padding:0;display:flex;align-items:center;transition:color 150ms;}
-.loki-response-clear:hover{color:#d4a843;}
+.loki-action-chevron{color:color-mix(in oklab, var(--accent-primary) 30%, transparent);flex-shrink:0;transition:transform 150ms,color 150ms;}
+.loki-action-btn:hover .loki-action-chevron{transform:translateX(2px);color:color-mix(in oklab, var(--accent-primary) 70%, transparent);}
+.loki-response{margin:6px 16px;background:color-mix(in oklab, var(--accent-primary) 4%, transparent);border:1px solid color-mix(in oklab, var(--accent-primary) 15%, transparent);border-radius:6px;overflow:hidden;}
+.loki-response-header{display:flex;align-items:center;gap:6px;padding:7px 12px;background:color-mix(in oklab, var(--accent-primary) 7%, transparent);border-bottom:1px solid color-mix(in oklab, var(--accent-primary) 10%, transparent);font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-primary);}
+.loki-response-clear{margin-left:auto;background:none;border:none;color:color-mix(in oklab, var(--accent-primary) 40%, transparent);cursor:pointer;padding:0;display:flex;align-items:center;transition:color 150ms;}
+.loki-response-clear:hover{color:var(--accent-primary);}
 .loki-loading{display:flex;align-items:center;gap:6px;padding:14px 12px;}
-.loki-loading-dot{width:5px;height:5px;background:#d4a843;border-radius:50%;animation:loki-pulse 1.2s ease-in-out infinite;}
-.loki-loading-text{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.15em;color:rgba(212,168,67,.5);animation:loki-pulse 1.2s ease-in-out infinite;}
+.loki-loading-dot{width:5px;height:5px;background:var(--accent-primary);border-radius:50%;animation:loki-pulse 1.2s ease-in-out infinite;}
+.loki-loading-text{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.15em;color:color-mix(in oklab, var(--accent-primary) 50%, transparent);animation:loki-pulse 1.2s ease-in-out infinite;}
 @keyframes loki-pulse{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
 .loki-response-text{padding:12px;display:flex;flex-direction:column;gap:2px;}
-.loki-resp-heading{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#d4a843;margin-top:8px;margin-bottom:4px;padding-bottom:3px;border-bottom:1px solid rgba(212,168,67,.12);}
+.loki-resp-heading{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-primary);margin-top:8px;margin-bottom:4px;padding-bottom:3px;border-bottom:1px solid color-mix(in oklab, var(--accent-primary) 12%, transparent);}
 .loki-resp-line{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(237,237,237,.85);line-height:1.6;}
-.loki-resp-line strong{color:#d4a843;font-weight:600;}
+.loki-resp-line strong{color:var(--accent-primary);font-weight:600;}
 .loki-resp-bullet{display:flex;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(237,237,237,.85);line-height:1.5;margin:2px 0;}
-.loki-resp-bullet-dot{color:#d4a843;flex-shrink:0;font-size:9px;margin-top:1px;}
+.loki-resp-bullet-dot{color:var(--accent-primary);flex-shrink:0;font-size:9px;margin-top:1px;}
 .loki-resp-numbered{display:flex;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(237,237,237,.85);line-height:1.5;margin:2px 0;}
-.loki-resp-num{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;color:#d4a843;min-width:16px;flex-shrink:0;}
+.loki-resp-num{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;color:var(--accent-primary);min-width:16px;flex-shrink:0;}
 .loki-resp-spacer{height:6px;}
 .loki-chat-form{display:flex;gap:6px;}
 .loki-chat-input{flex:1;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-primary,#EDEDED);outline:none;transition:border-color 150ms;min-width:0;}
-.loki-chat-input:focus{border-color:rgba(212,168,67,.35);}
+.loki-chat-input:focus{border-color:color-mix(in oklab, var(--accent-primary) 35%, transparent);}
 .loki-chat-input::placeholder{color:var(--text-muted,#71717A);font-size:9px;}
 .loki-chat-input:disabled{opacity:.4;}
-.loki-chat-send{width:36px;height:36px;background:rgba(212,168,67,.1);border:1px solid rgba(212,168,67,.25);border-radius:6px;color:#d4a843;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 150ms ease;}
-.loki-chat-send:hover:not(:disabled){background:rgba(212,168,67,.2);border-color:rgba(212,168,67,.5);}
+.loki-chat-send{width:36px;height:36px;background:color-mix(in oklab, var(--accent-primary) 10%, transparent);border:1px solid color-mix(in oklab, var(--accent-primary) 25%, transparent);border-radius:6px;color:var(--accent-primary);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 150ms ease;}
+.loki-chat-send:hover:not(:disabled){background:color-mix(in oklab, var(--accent-primary) 20%, transparent);border-color:color-mix(in oklab, var(--accent-primary) 50%, transparent);}
 .loki-chat-send:disabled{opacity:.3;cursor:not-allowed;}
 .loki-footer{padding:8px 16px;border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;color:rgba(255,255,255,.18);flex-shrink:0;}
 .loki-status-dot.online{color:var(--success,#10B981);}
 .loki-status-dot.offline{color:rgba(255,255,255,.2);}
-@media(max-width:639px){.loki-panel{top:auto;bottom:0;right:0;left:0;width:100%;height:85dvh;border-left:none;border-top:1px solid rgba(212,168,67,.25);border-radius:20px 20px 0 0;box-shadow:0 -20px 60px rgba(0,0,0,.7);}}
+@media(max-width:639px){.loki-panel{top:auto;bottom:0;right:0;left:0;width:100%;height:85dvh;border-left:none;border-top:1px solid color-mix(in oklab, var(--accent-primary) 25%, transparent);border-radius:20px 20px 0 0;box-shadow:0 -20px 60px rgba(0,0,0,.7);}}
 /* ─── END LOKI ─────────────────────────────────────────────────────────────── */
 
 
@@ -4827,10 +4819,10 @@ select:focus {
   width: 100%;
   padding: 8px 10px;
   margin-top: 4px;
-  background: rgba(212, 168, 67, 0.06);
-  border: 1px solid rgba(212, 168, 67, 0.2);
+  background: color-mix(in oklab, var(--accent-primary) 6%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent-primary) 20%, transparent);
   border-radius: 6px;
-  color: #d4a843;
+  color: var(--accent-primary);
   font-family: 'Rajdhani', sans-serif;
   font-size: 11px;
   font-weight: 700;
@@ -4842,9 +4834,9 @@ select:focus {
 }
 
 .loki-trigger:hover {
-  background: rgba(212, 168, 67, 0.12);
-  border-color: rgba(212, 168, 67, 0.45);
-  box-shadow: 0 0 12px rgba(212, 168, 67, 0.15);
+  background: color-mix(in oklab, var(--accent-primary) 12%, transparent);
+  border-color: color-mix(in oklab, var(--accent-primary) 45%, transparent);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent-primary) 15%, transparent);
 }
 
 .loki-trigger-icon { flex-shrink: 0; }
@@ -4880,9 +4872,9 @@ select:focus {
   max-width: 800px;
   height: 85vh;
   background: linear-gradient(180deg, rgba(10, 11, 16, 0.98) 0%, rgba(6, 7, 10, 0.99) 100%);
-  border: 1px solid rgba(212, 168, 67, 0.25);
+  border: 1px solid color-mix(in oklab, var(--accent-primary) 25%, transparent);
   border-radius: 12px;
-  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(212, 168, 67, 0.1);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8), 0 0 0 1px color-mix(in oklab, var(--accent-primary) 10%, transparent);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -4895,8 +4887,8 @@ select:focus {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(212, 168, 67, 0.15);
-  background: rgba(212, 168, 67, 0.03);
+  border-bottom: 1px solid color-mix(in oklab, var(--accent-primary) 15%, transparent);
+  background: color-mix(in oklab, var(--accent-primary) 3%, transparent);
   flex-shrink: 0;
 }
 
@@ -4909,14 +4901,14 @@ select:focus {
 .loki-logo {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, rgba(212, 168, 67, 0.2), rgba(212, 168, 67, 0.05));
-  border: 1px solid rgba(212, 168, 67, 0.4);
+  background: linear-gradient(135deg, color-mix(in oklab, var(--accent-primary) 20%, transparent), color-mix(in oklab, var(--accent-primary) 5%, transparent));
+  border: 1px solid color-mix(in oklab, var(--accent-primary) 40%, transparent);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #d4a843;
-  box-shadow: 0 0 12px rgba(212, 168, 67, 0.2);
+  color: var(--accent-primary);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent-primary) 20%, transparent);
 }
 
 .loki-title {
@@ -4925,14 +4917,14 @@ select:focus {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #d4a843;
+  color: var(--accent-primary);
   line-height: 1;
 }
 
 .loki-subtitle {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: rgba(212, 168, 67, 0.5);
+  color: color-mix(in oklab, var(--accent-primary) 50%, transparent);
   letter-spacing: 0.12em;
   margin-top: 4px;
 }
@@ -4958,14 +4950,14 @@ select:focus {
 
 .loki-icon-btn:hover,
 .loki-icon-btn.active {
-  border-color: rgba(212, 168, 67, 0.3);
-  color: #d4a843;
-  background: rgba(212, 168, 67, 0.06);
+  border-color: color-mix(in oklab, var(--accent-primary) 30%, transparent);
+  color: var(--accent-primary);
+  background: color-mix(in oklab, var(--accent-primary) 6%, transparent);
 }
 
 /* ── Settings Panel ── */
 .loki-settings {
-  border-bottom: 1px solid rgba(212, 168, 67, 0.1);
+  border-bottom: 1px solid color-mix(in oklab, var(--accent-primary) 10%, transparent);
   overflow: hidden;
   flex-shrink: 0;
   background: rgba(0,0,0,0.2);
@@ -4982,7 +4974,7 @@ select:focus {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   letter-spacing: 0.14em;
-  color: rgba(212, 168, 67, 0.6);
+  color: color-mix(in oklab, var(--accent-primary) 60%, transparent);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -4998,7 +4990,7 @@ select:focus {
 .loki-key-input {
   flex: 1;
   background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(212, 168, 67, 0.2);
+  border: 1px solid color-mix(in oklab, var(--accent-primary) 20%, transparent);
   border-radius: 6px;
   padding: 8px 12px;
   font-family: 'JetBrains Mono', monospace;
@@ -5008,11 +5000,11 @@ select:focus {
   transition: border-color 150ms;
 }
 
-.loki-key-input:focus { border-color: rgba(212, 168, 67, 0.5); }
+.loki-key-input:focus { border-color: color-mix(in oklab, var(--accent-primary) 50%, transparent); }
 
 .loki-save-btn {
   padding: 8px 16px;
-  background: linear-gradient(135deg, #d4a843, #f1c76d);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary));
   border: none;
   border-radius: 6px;
   font-family: 'Rajdhani', sans-serif;
@@ -5044,7 +5036,7 @@ select:focus {
   flex-direction: column;
   gap: 24px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(212, 168, 67, 0.2) transparent;
+  scrollbar-color: color-mix(in oklab, var(--accent-primary) 20%, transparent) transparent;
 }
 
 .loki-msg-row {
@@ -5065,12 +5057,12 @@ select:focus {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: rgba(212, 168, 67, 0.1);
-  border: 1px solid rgba(212, 168, 67, 0.3);
+  background: color-mix(in oklab, var(--accent-primary) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent-primary) 30%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #d4a843;
+  color: var(--accent-primary);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -5091,8 +5083,8 @@ select:focus {
 }
 
 .loki-msg-model .loki-msg-bubble {
-  background: rgba(212, 168, 67, 0.05);
-  border: 1px solid rgba(212, 168, 67, 0.15);
+  background: color-mix(in oklab, var(--accent-primary) 5%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent-primary) 15%, transparent);
   border-radius: 12px 12px 12px 0;
   color: rgba(237, 237, 237, 0.9);
 }
@@ -5106,7 +5098,7 @@ select:focus {
 
 .loki-loading-dot {
   width: 6px; height: 6px;
-  background: #d4a843;
+  background: var(--accent-primary);
   border-radius: 50%;
   animation: loki-pulse 1.2s ease-in-out infinite;
 }
@@ -5122,14 +5114,14 @@ select:focus {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: #d4a843;
+  color: var(--accent-primary);
   margin-top: 10px; margin-bottom: 4px;
 }
-.loki-resp-line strong { color: #d4a843; font-weight: 600; }
+.loki-resp-line strong { color: var(--accent-primary); font-weight: 600; }
 .loki-resp-bullet { display: flex; gap: 8px; margin: 4px 0; }
-.loki-resp-bullet-dot { color: #d4a843; }
+.loki-resp-bullet-dot { color: var(--accent-primary); }
 .loki-resp-numbered { display: flex; gap: 8px; margin: 4px 0; }
-.loki-resp-num { color: #d4a843; font-weight: 700; font-family: 'Rajdhani', sans-serif; }
+.loki-resp-num { color: var(--accent-primary); font-weight: 700; font-family: 'Rajdhani', sans-serif; }
 
 /* ── Input Area ── */
 .loki-input-area {
@@ -5156,21 +5148,21 @@ select:focus {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: rgba(212, 168, 67, 0.05);
-  border: 1px solid rgba(212, 168, 67, 0.2);
+  background: color-mix(in oklab, var(--accent-primary) 5%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent-primary) 20%, transparent);
   border-radius: 20px;
   font-family: 'Rajdhani', sans-serif;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: rgba(212, 168, 67, 0.8);
+  color: color-mix(in oklab, var(--accent-primary) 80%, transparent);
   white-space: nowrap;
   cursor: pointer;
   transition: all 150ms;
 }
 .loki-quick-btn:hover {
-  background: rgba(212, 168, 67, 0.15);
-  color: #d4a843;
+  background: color-mix(in oklab, var(--accent-primary) 15%, transparent);
+  color: var(--accent-primary);
 }
 
 /* Chat Input */
@@ -5192,16 +5184,16 @@ select:focus {
   transition: border-color 150ms;
 }
 
-.loki-chat-input:focus { border-color: rgba(212, 168, 67, 0.4); box-shadow: 0 0 10px rgba(212,168,67,0.1); }
+.loki-chat-input:focus { border-color: color-mix(in oklab, var(--accent-primary) 40%, transparent); box-shadow: 0 0 10px color-mix(in oklab, var(--accent-primary) 10%, transparent); }
 .loki-chat-input::placeholder { color: var(--text-muted, #71717A); }
 .loki-chat-input:disabled { opacity: 0.5; }
 
 .loki-chat-send {
   width: 44px; height: 44px;
-  background: rgba(212, 168, 67, 0.1);
-  border: 1px solid rgba(212, 168, 67, 0.3);
+  background: color-mix(in oklab, var(--accent-primary) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent-primary) 30%, transparent);
   border-radius: 8px;
-  color: #d4a843;
+  color: var(--accent-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -5211,8 +5203,8 @@ select:focus {
 }
 
 .loki-chat-send:hover:not(:disabled) {
-  background: rgba(212, 168, 67, 0.25);
-  border-color: rgba(212, 168, 67, 0.6);
+  background: color-mix(in oklab, var(--accent-primary) 25%, transparent);
+  border-color: color-mix(in oklab, var(--accent-primary) 60%, transparent);
 }
 
 .loki-chat-send:disabled { opacity: 0.4; cursor: not-allowed; }

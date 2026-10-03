@@ -1,22 +1,41 @@
 import { RANK_CONFIG } from '@/lib/constants'
 import { calculateLevel, xpForLevel, getRankForXp } from '@/lib/utils/xp'
 
-const DEFAULT_PRIMARY = '#A7E8FF'
+const DEFAULT_PRIMARY = '#9B8CFF'
 
-const WINTER_ARC = {
-  bg: ['#050A14', '#071222', '#091A2E', '#0B2238'],
-  accent: ['#A7E8FF', '#7DD3FC', '#67E8F9', '#C4B5FD'],
-  secondary: ['#18344F', '#1D4666', '#245A78', '#3B3A68'],
-  border: ['#17314A', '#205071', '#28728D', '#514C82'],
+// Gem bands every 25 levels: Amethyst → Sapphire → Aurora → Opal.
+const GEM_BANDS = {
+  name: ['Amethyst', 'Sapphire', 'Aurora', 'Opal'],
+  bg: ['#07060D', '#060812', '#050A0D', '#0A060D'],
+  accent: ['#9B8CFF', '#6FA8FF', '#4FE0C0', '#FF8AD8'],
+  accent2: ['#FF7AC6', '#9B8CFF', '#6FD3FF', '#FFB38A'],
+  secondary: ['#1E1A3A', '#162447', '#123A36', '#3A1A36'],
+  border: ['#2A2550', '#22386A', '#1D5A52', '#5A2A55'],
 }
 
-function winterTheme(level) {
-  const band = Math.min(WINTER_ARC.bg.length - 1, Math.floor(Math.max(0, level - 1) / 25))
+// Seasonal skin layered over the gem bands. Set to null when the arc ends.
+// 'winter' also sets <html data-season="winter"> (frost aurora + snowfall in opal.css).
+export const ACTIVE_SEASON = 'winter'
+
+const WINTER_BANDS = {
+  name: ['Frost', 'Glacier', 'Aurora', 'Polar'],
+  bg: ['#050A14', '#050B16', '#04100F', '#0A0814'],
+  accent: ['#8FD3FF', '#7FB2FF', '#7DE8E0', '#C4B5FD'],
+  accent2: ['#B9A8FF', '#8FD3FF', '#A5F3FC', '#F0ABFC'],
+  secondary: ['#12304A', '#152A52', '#0F3A3A', '#2A2152'],
+  border: ['#1D4666', '#22386A', '#1D5A52', '#514C82'],
+}
+
+function gemTheme(level) {
+  const bands = ACTIVE_SEASON === 'winter' ? WINTER_BANDS : GEM_BANDS
+  const band = Math.min(bands.bg.length - 1, Math.floor(Math.max(0, level - 1) / 25))
   return {
-    bg: WINTER_ARC.bg[band],
-    accent: WINTER_ARC.accent[band],
-    secondary: WINTER_ARC.secondary[band],
-    border: WINTER_ARC.border[band],
+    name: bands.name[band],
+    bg: bands.bg[band],
+    accent: bands.accent[band],
+    accent2: bands.accent2[band],
+    secondary: bands.secondary[band],
+    border: bands.border[band],
   }
 }
 
@@ -29,7 +48,7 @@ export function getThemeForXP(totalXp = 0) {
   
   // Lookup exact per-level theme (clamped between 1 and 100)
   const clampedLevel = Math.max(1, Math.min(100, level))
-  const levelTheme = winterTheme(clampedLevel)
+  const levelTheme = gemTheme(clampedLevel)
 
   const primary = levelTheme.accent || config.color || DEFAULT_PRIMARY
   const secondary = levelTheme.secondary || '#252D52'
@@ -46,6 +65,7 @@ export function getThemeForXP(totalXp = 0) {
     level,
     levelTheme,
     progressInBand,
+    season: ACTIVE_SEASON,
     cssVars: {
       '--saga-primary': primary,
       '--saga-secondary': secondary,
@@ -53,14 +73,15 @@ export function getThemeForXP(totalXp = 0) {
       '--saga-bg': bg,
       '--saga-glow': String(glow),
       '--accent-primary': primary,
-      '--accent-glow': hexToRgba(primary, glow),
-      '--accent-subtle': hexToRgba(primary, 0.08),
+      '--accent-2': levelTheme.accent2,
+      '--accent-glow': hexToRgba(primary, 0.3 + glow * 0.3),
+      '--accent-subtle': hexToRgba(primary, 0.12),
       '--accent-hover': hexToRgba(primary, 0.86),
       '--accent-pressed': hexToRgba(primary, 0.7),
       '--hud-border-active': primary,
-        '--game-gold': '#BFEFFF',
-        '--game-cyan': '#67E8F9',
-        '--game-violet': '#A5B4FC',
+      '--game-gold': primary,
+      '--game-cyan': '#6FD3FF',
+      '--game-violet': primary,
       '--game-border-soft': hexToRgba(primary, 0.12),
       '--ambient-saga-glow': hexToRgba(primary, 0.08),
     },

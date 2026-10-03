@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/layout/AppShell'
+import WinterLoader from '@/components/ui/WinterLoader'
 import HudPanel from '@/components/ui/HudPanel'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import TacticalProgress from '@/components/ui/ProgressBar'
 import { useGoals } from '@/lib/hooks/useGoals'
 import { getLocalDateStr, parseTaskNotes } from '@/lib/utils/dates'
 import { useOS } from '@/lib/context/OSContext'
-import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw, AlertTriangle, CheckSquare, Square } from 'lucide-react'
+import { Target, Flag, Star, Clock, Plus, Check, Trash2, Pause, Play, Edit2, ChevronDown, ChevronUp, X, RotateCcw, AlertTriangle, CheckSquare, Square, CheckCircle2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Missions() {
@@ -597,12 +598,7 @@ export default function Missions() {
 
   if (loading) return (
     <AppShell>
-      <div className="flex-center h-full flex-col gap-2">
-        <span className="typewriter-text">LOADING MISSIONS...</span>
-        <span className="font-mono text-xs text-cyan-400 font-bold tracking-widest uppercase animate-pulse flex items-center gap-1.5">
-          <span>❄️</span> WINTER IS COMING <span>❄️</span>
-        </span>
-      </div>
+      <WinterLoader label="Loading goals" />
     </AppShell>
   )
 
@@ -611,7 +607,7 @@ export default function Missions() {
       <div className="page-container narrow">
         <header className="page-header flex-between">
           <div>
-            <h1 className="page-title">MISSIONS</h1>
+            <h1 className="page-title">Goals</h1>
             <p className="page-subtitle font-mono uppercase text-xs text-amber glow-amber">Strategic objectives and long-term targets.</p>
           </div>
           <button className="btn btn-primary btn-sm flex items-center gap-2 tracking-widest" onClick={() => setShowForm(true)}>
@@ -818,10 +814,10 @@ export default function Missions() {
                     </div>
                     
                     <div className="flex flex-col gap-2 mt-2">
-                      <button className="btn btn-primary w-full py-2.5 font-bold flex items-center justify-center gap-2" onClick={() => submitMissionCompletion(false)}>
+                      <button className="btn btn-primary w-full py-2.5 font-bold flex items-center justify-center gap-2" onClick={() => submitMissionCompletion(false)} data-celebrate>
                         <Check size={16} /> CONFIRM & LOG MISSION
                       </button>
-                      <button className="btn btn-ghost btn-xs text-muted font-mono" onClick={() => submitMissionCompletion(true)}>
+                      <button className="btn btn-ghost btn-xs text-muted font-mono" onClick={() => submitMissionCompletion(true)} data-celebrate>
                         QUICK COMPLETE (SKIP NOTES)
                       </button>
                     </div>
