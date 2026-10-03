@@ -96,7 +96,7 @@ export default function ScreenCharts({ logs }) {
           {active.map((s) => <span key={s.id}><i style={{ background: s.color }} /> {s.label}</span>)}
           <span><i className="is-line" /> 6h target</span>
         </div>
-        {!hasCats && <p className="ms-muted">Log minutes per category (or import them) to split the bars.</p>}
+        {!hasCats && <p className="ms-muted">Log minutes per category to split the bars.</p>}
       </section>
 
       <div className="si-two">

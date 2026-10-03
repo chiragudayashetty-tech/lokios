@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, AlertTriangle, Flame, Pencil, Zap, Download } from 'lucide-react'
+import { Check, AlertTriangle, Flame, Pencil, Zap } from 'lucide-react'
 import Ring from '@/components/ui/Ring'
 import { saveSettings } from '@/lib/settings'
 import { calculateScreenTimeXPPure } from '@/lib/utils/screenTimeScore'
@@ -17,11 +17,10 @@ export function TodayRings({ log, dateLabel, isToday = true }) {
     <section className="pf-card si-today">
       <div className="pf-card-head">
         {isToday ? 'Today' : 'Last logged'} · {dateLabel}
-        {log?.source === 'import' && <span className="si-badge"><Download size={11} /> Imported</span>}
         {score != null && <span className="arena-hint ml-auto">Discipline {score}/100</span>}
       </div>
       {!log ? (
-        <p className="ms-muted">Nothing logged yet today. Log it below or let your phone post it at night.</p>
+        <p className="ms-muted">Nothing logged yet today. Log it below.</p>
       ) : (
         <>
           <div className="si-rings">
@@ -59,7 +58,7 @@ export function CategoryBreakdown({ logs, days = 7 }) {
     return (
       <section className="pf-card">
         <div className="pf-card-head">Where the time goes</div>
-        <p className="ms-muted">No category split yet. Add minutes per category when you log, or send <code>categories</code> from your phone.</p>
+        <p className="ms-muted">No category split yet. Add minutes per category when you log a day.</p>
       </section>
     )
   }

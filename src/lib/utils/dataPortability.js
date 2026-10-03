@@ -126,7 +126,7 @@ export async function importAll(userId, data, onProgress) {
 export async function deleteAll(userId, onProgress) {
   const sb = createClient()
   const results = []
-  const order = [...DATA_TABLES].reverse().concat('api_tokens')
+  const order = [...DATA_TABLES].reverse()
   for (const [i, t] of order.entries()) {
     onProgress?.({ table: t, done: i, total: order.length })
     const { error } = await sb.from(t).delete().eq('user_id', userId)
