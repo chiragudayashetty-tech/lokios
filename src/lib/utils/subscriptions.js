@@ -14,6 +14,7 @@ export const CYCLES = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' }
 /** Next charge date after `dateStr` for a cycle (monthly keeps the billing day, clamped to month length). */
 export function advanceDate(dateStr, cycle, billingDay) {
   const d = new Date(`${dateStr}T12:00:00`)
+  if (!dateStr || Number.isNaN(d.getTime())) return ''
   if (cycle === 'weekly') { d.setDate(d.getDate() + 7); return getLocalDateStr(d) }
   if (cycle === 'yearly') { d.setFullYear(d.getFullYear() + 1); return getLocalDateStr(d) }
   const day = billingDay || d.getDate()
@@ -56,6 +57,7 @@ export async function runSubscriptionAutopilot(userId, today = getLocalDateStr()
   const logged = []
   for (const sub of subs) {
     let next = sub.next_charge_date
+    if (!next) continue // no charge date set: nothing to log until it's edited
     let guard = 0
     while (next <= today && guard++ < 60) {
       const marker = chargeMarker(sub.id, next)
