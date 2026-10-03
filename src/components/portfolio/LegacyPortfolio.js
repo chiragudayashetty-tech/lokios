@@ -1,0 +1,1188 @@
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
+import WinterLoader from '@/components/ui/WinterLoader'
+import HudPanel from '@/components/ui/HudPanel'
+import { getLocalDateStr, getDebriefSortTime } from '@/lib/utils/dates'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { useProfile } from '@/lib/hooks/useProfile'
+import { useOS } from '@/lib/context/OSContext'
+import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  Briefcase, Code, Terminal, Database, Shield, Plus, ExternalLink, 
+  Image as ImageIcon, Link as LinkIcon, Edit2, Save, FileText, Clock, 
+  ChevronDown, ChevronUp, Trash2, BookOpen, Star, Sparkles, Search, Filter, Book,
+  Check, CheckSquare, Trophy, Printer, RefreshCw, Target, Flame
+} from 'lucide-react'
+
+/**
+ * The pre-round-2 portfolio screens (work log, weekly reviews, book manager,
+ * projects), rendered one tab at a time inside the new portfolio page.
+ */
+export default function LegacyPortfolio({ tab = 'timeline', onBooksChange }) {
+  const { user } = useAuth()
+  const { profile } = useProfile()
+  const { xp: { awardXP, deductXP } = {} } = useOS() || {}
+
+  // Active tab: 'timeline' | 'reviews' | 'books' | 'projects' (chosen by the parent)
+  const activeTab = tab
+  const [expandedReview, setExpandedReview] = useState(null)
+  const [expandedLogId, setExpandedLogId] = useState(null)
+  const [expandedBookId, setExpandedBookId] = useState(null)
+  const [showAllResumeLogs, setShowAllResumeLogs] = useState(false)
+
+  // Dynamic Level & Rank Calculations
+  const userXp = profile?.total_xp || 0
+  const dynamicLevel = calculateLevel(userXp)
+  const dynamicRank = getRankForXp(userXp)
+
+  // DATA STATES - declared before useMemo to prevent TDZ crash
+  const [goals, setGoals] = useState([])
+
+  const completedMissions = useMemo(() => {
+    return goals.filter(g => g.status === 'completed' || g.completed_at)
+  }, [goals])
+
+  const ongoingMissions = useMemo(() => {
+    return goals.filter(g => g.status !== 'completed' && !g.completed_at && g.status !== 'cancelled')
+  }, [goals])
+
+  // Executive Resume Bullet Point Parser (Strips raw markdown section headers)
+  const parseResumeHighlights = (description) => {
+    if (!description) return []
+    const cleanText = description.replace(/\r\n/g, '\n')
+    const highlights = []
+
+    const isSectionHeader = (str) => {
+      if (!str || str.trim().length < 4) return true
+      const lower = str.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
+      if (
+        lower === 'what went well' || 
+        lower === 'priorities for next week' || 
+        lower === 'bottlenecks  fails' || 
+        lower === 'bottlenecks fails' || 
+        lower === 'priorities'
+      ) return true
+      if (str.trim().startsWith('###')) return true
+      return false
+    }
+
+    // Extract What Went Well / Achievements
+    const wentWellMatch = cleanText.match(/###\s*What went well\??([\s\S]*?)(?=###|$)/i)
+    if (wentWellMatch && wentWellMatch[1]) {
+      const points = wentWellMatch[1]
+        .split(/\n+/)
+        .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^[\-\*\•]\s*/, '').trim())
+        .filter(s => !isSectionHeader(s))
+      highlights.push(...points)
+    }
+
+    // Extract Priorities / Key Wins
+    const prioritiesMatch = cleanText.match(/###\s*Priorities for Next Week([\s\S]*?)(?=###|$)/i)
+    if (prioritiesMatch && prioritiesMatch[1]) {
+      const points = prioritiesMatch[1]
+        .split(/\n+/)
+        .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^[\-\*\•]\s*/, '').replace(/\[DONE\]/g, '').replace(/\[FAILED\]/g, '').trim())
+        .filter(s => !isSectionHeader(s))
+      highlights.push(...points)
+    }
+
+    // Fallback: If no markdown section headers found
+    if (highlights.length === 0) {
+      const cleanLines = cleanText
+        .split(/\n+/)
+        .map(s => s.replace(/^###\s*/, '').replace(/^\d+[\.\)]\s*/, '').replace(/^[\-\*\•]\s*/, '').trim())
+        .filter(s => !isSectionHeader(s))
+      return cleanLines.slice(0, 5)
+    }
+
+    return Array.from(new Set(highlights)).filter(s => !isSectionHeader(s)).slice(0, 6)
+  }
+
+
+  // DATA STATES
+  const [logs, setLogs] = useState([])
+  const [projects, setProjects] = useState([])
+  const [books, setBooks] = useState([])
+  // (goals state already declared above)
+  const [loading, setLoading] = useState(true)
+
+  const [editingId, setEditingId] = useState(null)
+  const [newMediaUrl, setNewMediaUrl] = useState('')
+
+  // Edit Log State
+  const [editingLogId, setEditingLogId] = useState(null)
+  const [editLogForm, setEditLogForm] = useState({})
+
+  // New Log Form State
+  const [showAddLog, setShowAddLog] = useState(false)
+  const [newLog, setNewLog] = useState({ title: '', description: '', type: 'project_work', duration: '', duration_unit: 'hours', mediaUrl: '' })
+
+  // New Project Form State
+  const [showAddProject, setShowAddProject] = useState(false)
+  const [newProj, setNewProj] = useState({ title: '', description: '', status: 'active', tech_stack: '' })
+
+  // BOOKS COMPLETED STATE
+  const [showAddBook, setShowAddBook] = useState(false)
+  const [bookSearch, setBookSearch] = useState('')
+  const [bookCategoryFilter, setBookCategoryFilter] = useState('all')
+  const [xpToast, setXpToast] = useState(null)
+
+  const [newBook, setNewBook] = useState({
+    title: '',
+    author: '',
+    category: 'Business',
+    rating: 5,
+    date_completed: getLocalDateStr(),
+    cover_url: '',
+    takeaways: ''
+  })
+
+  const [editingBookId, setEditingBookId] = useState(null)
+  const [editBookForm, setEditBookForm] = useState({})
+
+  useEffect(() => {
+    if (!user) return
+    fetchData()
+  }, [user])
+
+  const fetchData = async () => {
+    const supabase = createClient()
+    try {
+      const [logsRes, workHoursRes, projRes, booksRes, goalsRes] = await Promise.all([
+        supabase.from('work_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+        supabase.from('work_hours_logs').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+        supabase.from('projects').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('books_completed').select('*').eq('user_id', user.id).order('date_completed', { ascending: false }),
+        supabase.from('goals').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+      ])
+
+      let combinedLogs = logsRes.data || []
+      if (workHoursRes.data && workHoursRes.data.length > 0) {
+        const mappedHours = workHoursRes.data.map(h => ({
+          id: `wh_${h.id}`,
+          title: `Work Session (${h.work_type || 'General'}: ${h.hours}h)`,
+          description: h.notes || `Logged ${h.hours}h focused work. Focused: ${h.focused_hours || h.hours}h, Beyond Tatva: ${h.beyond_tatva_hours || 0}h.`,
+          type: 'project_work',
+          date: h.date,
+          created_at: h.created_at
+        }))
+        
+        const map = new Map()
+        combinedLogs.forEach(l => map.set(l.id, l))
+        mappedHours.forEach(h => {
+          if (!map.has(h.id)) map.set(h.id, h)
+        })
+        combinedLogs = Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      }
+
+      setLogs(combinedLogs)
+      if (projRes.data) setProjects(projRes.data)
+      if (goalsRes.data) setGoals(goalsRes.data)
+      
+      if (booksRes.data) {
+        setBooks(booksRes.data)
+        if (typeof window !== 'undefined') localStorage.setItem('lokios_books_completed_cache', JSON.stringify(booksRes.data))
+      } else if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('lokios_books_completed_cache')
+        if (cached) setBooks(JSON.parse(cached))
+      }
+    } catch (err) {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('lokios_books_completed_cache')
+        if (cached) setBooks(JSON.parse(cached))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // LOG HANDLERS
+  const startEditLog = (log) => {
+    setEditingLogId(log.id)
+    setEditLogForm({
+      title: log.title || '',
+      type: log.type || 'other',
+      description: log.description || '',
+      duration: log.duration_hours || '',
+      duration_unit: 'hours'
+    })
+  }
+
+  const saveEditLog = async (id) => {
+    const supabase = createClient()
+    await supabase.from('work_logs').update({
+      title: editLogForm.title,
+      type: editLogForm.type,
+      description: editLogForm.description,
+      duration_hours: editLogForm.duration ? parseFloat(editLogForm.duration) * (editLogForm.duration_unit === 'days' ? 24 : 1) : null
+    }).eq('id', id)
+    setEditingLogId(null)
+    fetchData()
+  }
+
+  const handleDeleteLog = async (id) => {
+    if (confirm("Are you sure you want to delete this work log?")) {
+      const supabase = createClient()
+      await supabase.from('work_logs').delete().eq('id', id)
+      setLogs(prev => prev.filter(l => l.id !== id))
+      deductXP(2, 'work_log', id, 'Deleted Work Log')
+    }
+  }
+
+  const handleAddMedia = async (logId, currentMedia) => {
+    if (!newMediaUrl.trim()) return
+    const supabase = createClient()
+    const updatedMedia = [...(currentMedia || []), newMediaUrl]
+    
+    const { error } = await supabase.from('work_logs').update({ media_urls: updatedMedia }).eq('id', logId)
+    if (!error) {
+      setLogs(prev => prev.map(l => l.id === logId ? { ...l, media_urls: updatedMedia } : l))
+      setNewMediaUrl('')
+      setEditingId(null)
+    }
+  }
+
+  const handleCreateLog = async (e) => {
+    e.preventDefault()
+    if (!newLog.title.trim()) return
+    const supabase = createClient()
+    const parsedDuration = newLog.duration ? parseFloat(newLog.duration) : null
+    const duration_hours = parsedDuration ? (newLog.duration_unit === 'days' ? parsedDuration * 24 : parsedDuration) : null
+
+    const payload = {
+      user_id: user.id,
+      title: newLog.title,
+      description: newLog.description,
+      type: newLog.type,
+      duration_hours: duration_hours,
+      date: getLocalDateStr()
+    }
+
+    if (newLog.mediaUrl.trim()) {
+      payload.media_urls = [newLog.mediaUrl.trim()]
+    }
+
+    const { data, error } = await supabase.from('work_logs').insert([payload]).select()
+    
+    if (error) {
+      alert(`UPLOAD FAILED: ${error.message}\n\nPlease let the AI know what this error says!`)
+      return
+    }
+
+    if (data) {
+      setLogs([data[0], ...logs])
+      setShowAddLog(false)
+      setNewLog({ title: '', description: '', type: 'project_work', duration: '', duration_unit: 'hours', mediaUrl: '' })
+    }
+  }
+
+  const [editingProjectId, setEditingProjectId] = useState(null)
+  const [editProjForm, setEditProjForm] = useState({})
+
+  const handleCreateProject = async (e) => {
+    e.preventDefault()
+    if (!newProj.title.trim()) return
+    const supabase = createClient()
+    const { data, error } = await supabase.from('projects').insert([{
+      user_id: user.id,
+      title: newProj.title,
+      description: newProj.description,
+      status: newProj.status,
+      tech_stack: newProj.tech_stack.split(',').map(s => s.trim()).filter(Boolean)
+    }]).select()
+    
+    if (data) {
+      setProjects([data[0], ...projects])
+      setShowAddProject(false)
+      setNewProj({ title: '', description: '', status: 'active', tech_stack: '' })
+    }
+  }
+
+  const startEditProject = (proj) => {
+    setEditingProjectId(proj.id)
+    setEditProjForm({
+      title: proj.title || '',
+      description: proj.description || '',
+      status: proj.status || 'active',
+      tech_stack: Array.isArray(proj.tech_stack) ? proj.tech_stack.join(', ') : (proj.tech_stack || '')
+    })
+  }
+
+  const saveEditProject = async (id) => {
+    const supabase = createClient()
+    const updatedStack = (editProjForm.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean)
+    const payload = {
+      title: editProjForm.title,
+      description: editProjForm.description,
+      status: editProjForm.status,
+      tech_stack: updatedStack
+    }
+
+    await supabase.from('projects').update(payload).eq('id', id)
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...payload } : p))
+    setEditingProjectId(null)
+  }
+
+  const handleDeleteProject = async (id, title) => {
+    if (confirm(`Are you sure you want to delete project "${title || 'this project'}"?`)) {
+      const supabase = createClient()
+      await supabase.from('projects').delete().eq('id', id)
+      setProjects(prev => prev.filter(p => p.id !== id))
+    }
+  }
+
+  // ----------------------------------------------------
+  // BOOK HANDLERS (+10 XP REWARD PER COMPLETED BOOK)
+  // ----------------------------------------------------
+  const handleCreateBook = async (e) => {
+    e.preventDefault()
+    if (!newBook.title.trim() || !user) return
+
+    const payload = {
+      user_id: user.id,
+      title: newBook.title.trim(),
+      author: newBook.author.trim() || 'Unknown Author',
+      category: newBook.category || 'Business',
+      rating: parseInt(newBook.rating) || 5,
+      date_completed: newBook.date_completed || getLocalDateStr(),
+      cover_url: newBook.cover_url.trim() || '',
+      takeaways: newBook.takeaways.trim() || ''
+    }
+
+    const updated = [payload, ...books].sort((a, b) => (b.date_completed || '').localeCompare(a.date_completed || ''))
+    setBooks(updated)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_books_completed_cache', JSON.stringify(updated))
+
+    try {
+      const supabase = createClient()
+      await supabase.from('books_completed').insert([payload])
+    } catch (err) {}
+
+    setXpToast(`\u2713 Book Logged: "${payload.title}"`)
+    setTimeout(() => setXpToast(null), 3500)
+
+    setShowAddBook(false)
+    setNewBook({
+      title: '',
+      author: '',
+      category: 'Business',
+      rating: 5,
+      date_completed: getLocalDateStr(),
+      cover_url: '',
+      takeaways: ''
+    })
+  }
+
+  const startEditBook = (book) => {
+    setEditingBookId(book.id || book.title)
+    setEditBookForm({
+      title: book.title || '',
+      author: book.author || '',
+      category: book.category || 'Business',
+      rating: book.rating || 5,
+      date_completed: book.date_completed || getLocalDateStr(),
+      cover_url: book.cover_url || '',
+      takeaways: book.takeaways || ''
+    })
+  }
+
+  const saveEditBook = async (bookId) => {
+    const updatedBooks = books.map(b => {
+      if ((b.id && b.id === bookId) || b.title === editBookForm.title) {
+        return { ...b, ...editBookForm }
+      }
+      return b
+    })
+
+    setBooks(updatedBooks)
+    if (typeof window !== 'undefined') localStorage.setItem('lokios_books_completed_cache', JSON.stringify(updatedBooks))
+
+    try {
+      const supabase = createClient()
+      if (bookId) {
+        await supabase.from('books_completed').update(editBookForm).eq('id', bookId)
+      }
+    } catch (err) {}
+
+    setEditingBookId(null)
+  }
+
+  const handleDeleteBook = async (bookId, title) => {
+    if (confirm(`Are you sure you want to remove "${title}" from your completed books archive?`)) {
+      const filtered = books.filter(b => (b.id ? b.id !== bookId : b.title !== title))
+      setBooks(filtered)
+      if (typeof window !== 'undefined') localStorage.setItem('lokios_books_completed_cache', JSON.stringify(filtered))
+
+      try {
+        if (bookId) {
+          const supabase = createClient()
+          await supabase.from('books_completed').delete().eq('id', bookId)
+        }
+      } catch (err) {}
+
+      setXpToast(`Book Removed: "${title}"`)
+      setTimeout(() => setXpToast(null), 3500)
+    }
+  }
+
+  // Filtered books
+  const filteredBooks = useMemo(() => {
+    return books.filter(b => {
+      const matchesSearch = (b.title || '').toLowerCase().includes(bookSearch.toLowerCase()) ||
+                            (b.author || '').toLowerCase().includes(bookSearch.toLowerCase()) ||
+                            (b.takeaways || '').toLowerCase().includes(bookSearch.toLowerCase())
+      const matchesCategory = bookCategoryFilter === 'all' || (b.category || 'Business').toLowerCase() === bookCategoryFilter.toLowerCase()
+      return matchesSearch && matchesCategory
+    })
+  }, [books, bookSearch, bookCategoryFilter])
+
+  // Book stats
+  const avgBookRating = useMemo(() => {
+    if (books.length === 0) return '0.0'
+    const sum = books.reduce((acc, b) => acc + (parseInt(b.rating) || 5), 0)
+    return (sum / books.length).toFixed(1)
+  }, [books])
+
+  // Let the new Books shelf follow edits made in the manager below it
+  useEffect(() => { onBooksChange?.(books) }, [books, onBooksChange])
+
+  if (loading) return <WinterLoader label="Loading portfolio" />
+
+  return (
+    <>
+      {/* Floating XP Toast */}
+      <AnimatePresence>
+        {xpToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[99999] bg-amber text-black font-mono font-bold text-xs px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 border border-amber/40"
+          >
+            <Sparkles size={15} />
+            <span>{xpToast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="legacy-portfolio">
+        {/* TIMELINE TAB */}
+        {activeTab === 'timeline' && (
+          <div className="flex-col gap-6">
+            <div className="flex justify-end">
+              <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddLog(!showAddLog)}>
+                <Plus size={16} /> ADD LOG
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {showAddLog && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                  <HudPanel label="NEW WORK LOG" className="border-amber mb-6">
+                    <form onSubmit={handleCreateLog} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">TITLE</label>
+                        <input type="text" className="input font-mono text-sm" value={newLog.title} onChange={e => setNewLog({...newLog, title: e.target.value})} required />
+                      </div>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">TYPE</label>
+                        <select className="select font-mono text-sm" value={newLog.type} onChange={e => setNewLog({...newLog, type: e.target.value})}>
+                          <option value="project_work">PROJECT WORK</option>
+                          <option value="content">CONTENT CREATION</option>
+                          <option value="meeting">MEETING / SALES</option>
+                          <option value="learning">LEARNING</option>
+                          <option value="other">OTHER</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="font-mono text-xs text-muted mb-1 block">DESCRIPTION</label>
+                        <textarea className="textarea font-mono text-sm h-20" value={newLog.description} onChange={e => setNewLog({...newLog, description: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">DURATION</label>
+                        <div className="flex gap-2">
+                          <input type="text" inputMode="decimal" className="input font-mono text-sm" style={{ flex: 1, minWidth: '60px' }} value={newLog.duration} onChange={e => setNewLog({...newLog, duration: e.target.value})} placeholder="0" />
+                          <select className="select font-mono text-sm" style={{ width: '120px', flexShrink: 0 }} value={newLog.duration_unit} onChange={e => setNewLog({...newLog, duration_unit: e.target.value})}>
+                            <option value="hours">HOURS</option>
+                            <option value="days">DAYS</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">ATTACH LINK / IMAGE URL</label>
+                        <input type="url" className="input font-mono text-sm" value={newLog.mediaUrl} onChange={e => setNewLog({...newLog, mediaUrl: e.target.value})} placeholder="https://..." />
+                      </div>
+                      <div className="flex items-end justify-end md:col-span-2 mt-2">
+                        <button type="submit" className="btn btn-primary w-full md:w-auto">SAVE LOG</button>
+                      </div>
+                    </form>
+                  </HudPanel>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="flex-col gap-0 border-l border-border-strong ml-4 pl-6 relative">
+              {logs.filter(l => !l.title?.startsWith('Weekly Debrief')).map((log) => (
+                <div key={log.id} className="relative pb-8 group">
+                  <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
+                  
+                  <div className="bg-tertiary border border-border-color p-4 hover:border-amber transition-colors">
+                    {editingLogId === log.id ? (
+                      <div className="flex-col gap-3">
+                        <input type="text" className="input font-mono text-sm py-1" value={editLogForm.title} onChange={e=>setEditLogForm({...editLogForm, title: e.target.value})} />
+                        <select className="select font-mono text-sm py-1" value={editLogForm.type} onChange={e=>setEditLogForm({...editLogForm, type: e.target.value})}>
+                          <option value="project_work">PROJECT WORK</option>
+                          <option value="content">CONTENT CREATION</option>
+                          <option value="meeting">MEETING / SALES</option>
+                          <option value="learning">LEARNING</option>
+                          <option value="other">OTHER</option>
+                        </select>
+                        <textarea className="textarea font-mono text-sm py-1" value={editLogForm.description} onChange={e=>setEditLogForm({...editLogForm, description: e.target.value})} rows={2} />
+                        <div className="flex gap-2">
+                          <input type="text" inputMode="decimal" className="input font-mono text-sm py-1" style={{ flex: 1, minWidth: '60px' }} value={editLogForm.duration} onChange={e => setEditLogForm({...editLogForm, duration: e.target.value})} placeholder="Duration" />
+                          <select className="select font-mono text-sm py-1" style={{ width: '120px', flexShrink: 0 }} value={editLogForm.duration_unit} onChange={e => setEditLogForm({...editLogForm, duration_unit: e.target.value})}>
+                            <option value="hours">HOURS</option>
+                            <option value="days">DAYS</option>
+                          </select>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-2">
+                          <button onClick={() => saveEditLog(log.id)} className="btn btn-primary btn-sm">SAVE</button>
+                          <button onClick={() => setEditingLogId(null)} className="btn btn-ghost btn-sm">CANCEL</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div 
+                          onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                          className="cursor-pointer select-none"
+                        >
+                          <div className="flex-between mb-2">
+                            <span className="font-mono text-xs text-amber font-semibold">{String(log.date || '')}</span>
+                            <span className="badge">{String(log.type || 'OTHER').replace('_', ' ').toUpperCase()}</span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="font-display text-xl uppercase tracking-wider text-primary break-words flex-1">{log.title}</h3>
+                            <button type="button" className="p-1 text-muted hover:text-primary transition-colors shrink-0">
+                              {expandedLogId === log.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                            </button>
+                          </div>
+
+                          <div className="font-mono text-[10px] text-muted flex items-center gap-3 mt-2">
+                            <span className="flex items-center gap-1">
+                              <Clock size={10} />
+                              {log.duration_hours ? (log.duration_hours >= 24 && log.duration_hours % 24 === 0 ? `${log.duration_hours / 24} DAYS` : `${log.duration_hours} HOURS`) : 'NO DURATION LOGGED'}
+                            </span>
+                            {Array.isArray(log.media_urls) && log.media_urls.length > 0 && (
+                              <span className="text-amber font-semibold">[{log.media_urls.length} PROOF ATTACHED]</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded Accordion */}
+                        <AnimatePresence>
+                          {expandedLogId === log.id && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="mt-4 pt-3 border-t border-border-color flex flex-col gap-3 font-mono text-xs">
+                                {log.description && (
+                                  <p className="text-secondary whitespace-pre-wrap leading-relaxed">{log.description}</p>
+                                )}
+                                
+                                {Array.isArray(log.media_urls) && log.media_urls.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {log.media_urls.map((url, idx) => (
+                                      <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-mono text-[10px] text-amber hover:text-primary transition-colors bg-bg-primary border border-amber/40 px-2 py-1 rounded">
+                                        <ExternalLink size={10} /> PROOF {idx + 1}
+                                      </a>
+                                    ))}
+                                  </div>
+                                )}
+
+                                <div className="flex justify-between items-center border-t border-border-color/60 pt-3 mt-2">
+                                  <div className="flex gap-3">
+                                    <button onClick={() => startEditLog(log)} className="font-mono text-[10px] text-muted hover:text-amber flex items-center gap-1">
+                                      <Edit2 size={10} /> EDIT LOG
+                                    </button>
+                                    <button onClick={() => setEditingId(editingId === log.id ? null : log.id)} className="font-mono text-[10px] text-muted hover:text-primary flex items-center gap-1">
+                                      <Plus size={10} /> ADD PROOF
+                                    </button>
+                                  </div>
+                                  <button onClick={() => handleDeleteLog(log.id)} className="font-mono text-[10px] text-danger hover:text-danger/80 flex items-center gap-1">
+                                    <Trash2 size={10} /> DELETE
+                                  </button>
+                                </div>
+
+                                {editingId === log.id && (
+                                  <div className="mt-2 flex gap-2">
+                                    <input type="url" placeholder="https://..." className="input font-mono text-xs flex-1 py-1" value={newMediaUrl} onChange={e => setNewMediaUrl(e.target.value)} />
+                                    <button onClick={() => handleAddMedia(log.id, log.media_urls)} className="btn btn-primary btn-sm flex items-center gap-1">
+                                      <Save size={12} /> SAVE
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {logs.filter(l => !l.title?.startsWith('Weekly Debrief')).length === 0 && <div className="font-mono text-sm text-muted py-8">NO WORK LOGS ARCHIVED.</div>}
+            </div>
+          </div>
+        )}
+
+        {/* WEEKLY REVIEWS TAB */}
+        {activeTab === 'reviews' && (
+          <div className="flex-col gap-6">
+            <div className="flex-col gap-0 border-l border-border-strong ml-4 pl-6 relative">
+              {logs.filter(l => l.title?.startsWith('Weekly Debrief')).sort((a, b) => getDebriefSortTime(b) - getDebriefSortTime(a)).map((log, idx, arr) => (
+                <div key={log.id} className="relative pb-8 group">
+                  <div className="absolute -left-[29px] top-1 w-3 h-3 rounded-full bg-border-color border border-border-strong group-hover:bg-amber transition-colors z-10" />
+                  
+                  <div className="bg-tertiary border border-border-color p-4 hover:border-amber transition-colors cursor-pointer" onClick={() => setExpandedReview(expandedReview === log.id ? null : log.id)}>
+                    <div className="flex-between mb-2">
+                      <span className="font-mono text-xs text-amber">{String(log.date || '')}</span>
+                      <span className="badge badge-amber">WEEKLY DEBRIEF</span>
+                    </div>
+                    
+                    <h3 className="font-display text-xl uppercase tracking-wider text-primary mb-0">WEEK {arr.length - idx}</h3>
+                    
+                    {expandedReview === log.id && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="mt-4 border-t border-border-color pt-4">
+                        <h4 className="font-display text-lg uppercase tracking-wider text-secondary mb-4">{log.title}</h4>
+                        {log.description && (
+                          <div className="prose prose-invert prose-sm max-w-none font-mono text-sm text-secondary">
+                            {log.description.split('\n').map((line, i) => {
+                              if (line.startsWith('### ')) {
+                                return <h4 key={i} className="text-amber mt-4 mb-2 font-display tracking-widest uppercase">{line.replace('### ', '')}</h4>
+                              }
+                              return <div key={i} className="min-h-[1.5em]">{line}</div>
+                            })}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {logs.filter(l => l.title?.startsWith('Weekly Debrief')).length === 0 && <div className="font-mono text-sm text-muted py-8">NO WEEKLY REVIEWS ARCHIVED YET.</div>}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* BOOKS COMPLETED TAB */}
+        {/* ========================================================================= */}
+        {activeTab === 'books' && (
+          <div className="space-y-6">
+            {/* STATS HEADER */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <HudPanel className="p-4 flex items-center justify-between">
+                <div>
+                  <span className="font-mono text-[10px] text-muted uppercase block">BOOKS READ</span>
+                  <span className="font-display text-2xl text-amber font-bold">{books.length}</span>
+                </div>
+                <BookOpen size={24} className="text-amber opacity-60" />
+              </HudPanel>
+
+              <HudPanel className="p-4 flex items-center justify-between">
+                <div>
+                  <span className="font-mono text-[10px] text-muted uppercase block">AVG RATING</span>
+                  <span className="font-display text-2xl text-warning font-bold">{avgBookRating} ⭐</span>
+                </div>
+                <Star size={24} className="text-warning opacity-60" />
+              </HudPanel>
+
+              <HudPanel className="p-4 flex items-center justify-between">
+                <div>
+                  <span className="font-mono text-[10px] text-muted uppercase block">KNOWLEDGE ARCHIVE</span>
+                  <span className="font-display text-2xl text-success font-bold">{books.length} READ</span>
+                </div>
+                <Sparkles size={24} className="text-success opacity-60" />
+              </HudPanel>
+            </div>
+
+            {/* CONTROLS BAR: SEARCH, FILTER, ADD BOOK */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-tertiary border border-border-color rounded-xl">
+              <div className="flex flex-1 items-center gap-2 bg-secondary border border-border-color rounded-lg px-3 py-1.5" style={{ background: '#121520' }}>
+                <Search size={14} className="text-muted flex-shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search books, authors, notes..."
+                  value={bookSearch}
+                  onChange={(e) => setBookSearch(e.target.value)}
+                  className="w-full bg-transparent font-mono text-xs text-primary focus:outline-none placeholder:text-muted"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={bookCategoryFilter}
+                  onChange={(e) => setBookCategoryFilter(e.target.value)}
+                  className="bg-secondary border border-border-color rounded-lg px-3 py-1.5 font-mono text-xs text-primary focus:outline-none"
+                  style={{ background: '#121520', color: '#fff' }}
+                >
+                  <option value="all">ALL GENRES</option>
+                  <option value="Business">Business / Startup</option>
+                  <option value="Philosophy">Philosophy / Mindset</option>
+                  <option value="Technical">Technical / Skills</option>
+                  <option value="Biography">Biography / History</option>
+                  <option value="Fiction">Fiction</option>
+                  <option value="Other">Other</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAddBook(!showAddBook)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-lg shadow-md transition-all shrink-0 active:scale-95"
+                >
+                  <Plus size={16} />
+                  <span>ADD BOOK</span>
+                </button>
+              </div>
+            </div>
+
+            {/* ADD BOOK FORM MODAL */}
+            <AnimatePresence>
+              {showAddBook && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                  <HudPanel label="LOG COMPLETED BOOK" className="border-amber p-5 space-y-4">
+                    <form onSubmit={handleCreateBook} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="font-mono text-xs text-amber uppercase font-bold block mb-1">Book Title *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Atomic Habits"
+                            value={newBook.title}
+                            onChange={(e) => setNewBook({ ...newBook, title: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
+                            style={{ background: '#141824', color: '#fff' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Author</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. James Clear"
+                            value={newBook.author}
+                            onChange={(e) => setNewBook({ ...newBook, author: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-sm text-primary focus:outline-none focus:border-amber"
+                            style={{ background: '#141824', color: '#fff' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Genre / Category</label>
+                          <select
+                            value={newBook.category}
+                            onChange={(e) => setNewBook({ ...newBook, category: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                            style={{ background: '#141824', color: '#fff' }}
+                          >
+                            <option value="Business">Business / Startup</option>
+                            <option value="Philosophy">Philosophy / Mindset</option>
+                            <option value="Technical">Technical / Skills</option>
+                            <option value="Biography">Biography / History</option>
+                            <option value="Fiction">Fiction</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Rating</label>
+                          <select
+                            value={newBook.rating}
+                            onChange={(e) => setNewBook({ ...newBook, rating: parseInt(e.target.value) })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-xs text-warning font-bold focus:outline-none focus:border-amber"
+                            style={{ background: '#141824' }}
+                          >
+                            <option value={5}>⭐⭐⭐⭐⭐ (5/5 Exceptional)</option>
+                            <option value={4}>⭐⭐⭐⭐ (4/5 Great)</option>
+                            <option value={3}>⭐⭐⭐ (3/5 Good)</option>
+                            <option value={2}>⭐⭐ (2/5 Average)</option>
+                            <option value={1}>⭐ (1/5 Poor)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Completion Date</label>
+                          <input
+                            type="date"
+                            value={newBook.date_completed}
+                            onChange={(e) => setNewBook({ ...newBook, date_completed: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded-lg p-2 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                            style={{ background: '#141824', color: '#fff' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Cover Image URL (Optional)</label>
+                        <input
+                          type="url"
+                          placeholder="https://..."
+                          value={newBook.cover_url}
+                          onChange={(e) => setNewBook({ ...newBook, cover_url: e.target.value })}
+                          className="w-full bg-secondary border border-border-color rounded-lg p-2.5 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                          style={{ background: '#141824', color: '#fff' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-mono text-xs text-muted uppercase font-bold block mb-1">Key Takeaways & Summary</label>
+                        <textarea
+                          rows={3}
+                          placeholder="Main lessons, action items, or core concepts..."
+                          value={newBook.takeaways}
+                          onChange={(e) => setNewBook({ ...newBook, takeaways: e.target.value })}
+                          className="w-full bg-secondary border border-border-color rounded-xl p-3 font-mono text-xs text-primary focus:outline-none focus:border-amber"
+                          style={{ background: '#141824', color: '#fff' }}
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddBook(false)}
+                          className="px-4 py-2 bg-secondary border border-border-color rounded-xl font-mono text-xs text-muted hover:text-primary transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-5 py-2 bg-amber hover:bg-amber-hover text-black font-mono text-xs font-bold uppercase rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2"
+                        >
+                          <Save size={15} />
+                          <span>Save Book</span>
+                        </button>
+                      </div>
+                    </form>
+                  </HudPanel>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* BOOKS GRID ARCHIVE */}
+            {filteredBooks.length === 0 ? (
+              <div className="font-mono text-sm text-muted text-center py-12 bg-tertiary border border-border-color rounded-xl">
+                NO BOOKS FOUND IN ARCHIVE.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredBooks.map((book, idx) => {
+                  const isEditing = editingBookId === (book.id || book.title)
+                  const isExpanded = expandedBookId === (book.id || book.title)
+
+                  return (
+                    <div
+                      key={book.id || idx}
+                      className="p-4 rounded-xl bg-tertiary border border-border-color hover:border-amber/60 transition-all flex flex-col justify-between space-y-3 group"
+                    >
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            value={editBookForm.title}
+                            onChange={(e) => setEditBookForm({ ...editBookForm, title: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded p-2 font-mono text-xs text-primary"
+                          />
+                          <input
+                            type="text"
+                            value={editBookForm.author}
+                            onChange={(e) => setEditBookForm({ ...editBookForm, author: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded p-2 font-mono text-xs text-primary"
+                          />
+                          <textarea
+                            rows={3}
+                            value={editBookForm.takeaways}
+                            onChange={(e) => setEditBookForm({ ...editBookForm, takeaways: e.target.value })}
+                            className="w-full bg-secondary border border-border-color rounded p-2 font-mono text-xs text-primary"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => saveEditBook(book.id)}
+                              className="px-3 py-1 bg-amber text-black font-mono text-xs font-bold rounded"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingBookId(null)}
+                              className="px-3 py-1 bg-secondary text-muted font-mono text-xs rounded"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-3">
+                            {/* Book Cover Preview or Stylized Book Spine */}
+                            {book.cover_url ? (
+                              <img
+                                src={book.cover_url}
+                                alt={book.title}
+                                className="w-14 h-20 object-cover rounded-lg border border-border-color shadow-sm shrink-0"
+                              />
+                            ) : (
+                              <div className="w-14 h-20 rounded-lg bg-amber/10 border border-amber/30 flex flex-col items-center justify-center p-1 text-center shrink-0">
+                                <Book size={20} className="text-amber mb-1" />
+                                <span className="font-mono text-[8px] text-amber font-bold leading-tight truncate max-w-full">
+                                  {book.category}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono text-[10px] text-amber font-bold uppercase">
+                                  {book.category || 'Business'}
+                                </span>
+                                <span className="font-mono text-[10px] text-muted">
+                                  {book.date_completed}
+                                </span>
+                              </div>
+
+                              <h3 className="font-display text-base uppercase tracking-wider text-primary truncate mt-0.5">
+                                {book.title}
+                              </h3>
+                              <p className="font-mono text-xs text-secondary italic truncate">
+                                by {book.author || 'Unknown'}
+                              </p>
+
+                              {/* Star Rating Display */}
+                              <div className="flex items-center gap-1 mt-1.5 text-warning font-mono text-xs font-bold">
+                                {'★'.repeat(book.rating || 5)}{'☆'.repeat(5 - (book.rating || 5))}
+                                <span className="text-muted text-[10px] ml-1">({book.rating || 5}/5)</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Key Takeaways & Expand Accordion */}
+                          {book.takeaways && (
+                            <div className="pt-2 border-t border-border-subtle/50">
+                              <div
+                                onClick={() => setExpandedBookId(isExpanded ? null : (book.id || book.title))}
+                                className="flex items-center justify-between cursor-pointer text-muted hover:text-primary transition-colors font-mono text-[10px] uppercase font-bold"
+                              >
+                                <span>Key Takeaways & Notes</span>
+                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </div>
+
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                  >
+                                    <p className="font-mono text-xs text-secondary whitespace-pre-wrap leading-relaxed mt-2 p-2.5 rounded bg-secondary/40 border border-border-subtle">
+                                      {book.takeaways}
+                                    </p>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          )}
+
+                          {/* Card Actions */}
+                          <div className="flex items-center justify-between pt-2 border-t border-border-subtle/40">
+                            <div className="flex items-center gap-2 font-mono text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() => startEditBook(book)}
+                                className="text-muted hover:text-amber transition-colors flex items-center gap-1"
+                              >
+                                <Edit2 size={10} /> EDIT
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteBook(book.id, book.title)}
+                              className="text-danger/70 hover:text-danger transition-colors font-mono text-[10px] flex items-center gap-1"
+                            >
+                              <Trash2 size={10} /> DELETE
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PROJECTS TAB */}
+        {activeTab === 'projects' && (
+          <div className="flex-col gap-6">
+            <div className="flex justify-end">
+              <button className="btn btn-primary btn-sm flex items-center gap-2" onClick={() => setShowAddProject(!showAddProject)}>
+                <Plus size={16} /> ADD PROJECT
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {showAddProject && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                  <HudPanel label="NEW PROJECT" className="border-info mb-6">
+                    <form onSubmit={handleCreateProject} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">PROJECT TITLE</label>
+                        <input type="text" className="input font-mono text-sm" value={newProj.title} onChange={e => setNewProj({...newProj, title: e.target.value})} required />
+                      </div>
+                      <div>
+                        <label className="font-mono text-xs text-muted mb-1 block">STATUS</label>
+                        <select className="select font-mono text-sm" value={newProj.status} onChange={e => setNewProj({...newProj, status: e.target.value})}>
+                          <option value="idea">IDEA</option>
+                          <option value="active">ACTIVE</option>
+                          <option value="paused">PAUSED</option>
+                          <option value="completed">COMPLETED</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="font-mono text-xs text-muted mb-1 block">DESCRIPTION</label>
+                        <textarea className="textarea font-mono text-sm h-20" value={newProj.description} onChange={e => setNewProj({...newProj, description: e.target.value})} />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="font-mono text-xs text-muted mb-1 block">TECH STACK / SKILLS (COMMA SEPARATED)</label>
+                        <input type="text" className="input font-mono text-sm" value={newProj.tech_stack} onChange={e => setNewProj({...newProj, tech_stack: e.target.value})} placeholder="React, Node.js, Marketing..." />
+                      </div>
+                      <div className="md:col-span-2 flex justify-end">
+                        <button type="submit" className="btn btn-primary w-full md:w-auto">SAVE PROJECT</button>
+                      </div>
+                    </form>
+                  </HudPanel>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {projects.map((proj) => {
+                const isEditing = editingProjectId === proj.id
+                return (
+                  <div key={proj.id} className="bg-tertiary border border-border-color p-5 hover:border-info transition-colors flex flex-col justify-between h-full group rounded-xl">
+                    {isEditing ? (
+                      <form onSubmit={(e) => { e.preventDefault(); saveEditProject(proj.id); }} className="space-y-3">
+                        <div>
+                          <label className="font-mono text-[10px] text-amber uppercase font-bold block mb-1">Project Title</label>
+                          <input
+                            type="text"
+                            className="input w-full font-mono text-xs py-1.5 px-2 bg-bg-primary border border-border-color"
+                            value={editProjForm.title}
+                            onChange={e => setEditProjForm({ ...editProjForm, title: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="font-mono text-[10px] text-amber uppercase font-bold block mb-1">Status</label>
+                          <select
+                            className="select w-full font-mono text-xs py-1.5 px-2 bg-bg-primary border border-border-color"
+                            value={editProjForm.status}
+                            onChange={e => setEditProjForm({ ...editProjForm, status: e.target.value })}
+                          >
+                            <option value="idea">IDEA</option>
+                            <option value="active">ACTIVE</option>
+                            <option value="paused">PAUSED</option>
+                            <option value="completed">COMPLETED</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="font-mono text-[10px] text-amber uppercase font-bold block mb-1">Description</label>
+                          <textarea
+                            className="textarea w-full font-mono text-xs py-1.5 px-2 bg-bg-primary border border-border-color h-16"
+                            value={editProjForm.description}
+                            onChange={e => setEditProjForm({ ...editProjForm, description: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="font-mono text-[10px] text-amber uppercase font-bold block mb-1">Tech Stack (comma separated)</label>
+                          <input
+                            type="text"
+                            className="input w-full font-mono text-xs py-1.5 px-2 bg-bg-primary border border-border-color"
+                            value={editProjForm.tech_stack}
+                            onChange={e => setEditProjForm({ ...editProjForm, tech_stack: e.target.value })}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button type="submit" className="btn btn-primary btn-xs font-mono font-bold flex items-center gap-1">
+                            <Save size={12} /> SAVE
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingProjectId(null)}
+                            className="btn btn-secondary btn-xs font-mono font-bold text-muted"
+                          >
+                            CANCEL
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <h3 className="font-display text-2xl uppercase tracking-wider text-primary group-hover:text-info transition-colors">{proj.title}</h3>
+                            <span className={`badge ${proj.status === 'active' ? 'badge-amber' : proj.status === 'completed' ? 'badge-success' : 'badge-ghost'}`}>
+                              {String(proj.status || 'UNKNOWN').toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="font-mono text-sm text-secondary mb-4">{proj.description}</p>
+                        </div>
+
+                        <div className="space-y-3 mt-auto pt-3 border-t border-border-subtle/50">
+                          {Array.isArray(proj.tech_stack) && proj.tech_stack.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {proj.tech_stack.map((tech, idx) => (
+                                <span key={idx} className="font-mono text-[10px] text-muted bg-bg-primary px-2 py-0.5 border border-border-strong rounded">
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between pt-2 border-t border-border-subtle/40 font-mono text-[10px]">
+                            <button
+                              type="button"
+                              onClick={() => startEditProject(proj)}
+                              className="text-muted hover:text-amber transition-colors flex items-center gap-1 font-bold"
+                            >
+                              <Edit2 size={11} /> EDIT PROJECT
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProject(proj.id, proj.title)}
+                              className="text-danger/70 hover:text-danger transition-colors flex items-center gap-1 font-bold"
+                            >
+                              <Trash2 size={11} /> DELETE
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+              {projects.length === 0 && <div className="font-mono text-sm text-muted col-span-2 py-8 text-center border border-dashed border-border-color rounded-xl">NO PROJECTS ARCHIVED YET.</div>}
+            </div>
+          </div>
+        )}
+
+        {/* RESUME TAB (EXECUTIVE MASTER RESUME) */}
+
+      </div>
+    </>
+  )
+}

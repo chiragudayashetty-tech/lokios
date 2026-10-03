@@ -3,16 +3,18 @@
 import { BarChart3, BedDouble, Award } from 'lucide-react'
 import ProgressExtras from '@/components/game/ProgressExtras'
 import SleepPanel from './SleepPanel'
+import AchievementGallery from '@/components/achievements/AchievementGallery'
 import { useLocalPref } from '@/lib/hooks/useLocalPref'
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
   { id: 'sleep', label: 'Sleep', icon: BedDouble },
+  { id: 'achievements', label: 'Achievements', icon: Award },
 ]
 
 /** Progress page sections: Overview (records, streaks, mastery), Sleep, Achievements. */
-export default function ProgressTabs({ achievements = null }) {
-  const tabs = achievements ? [...TABS, { id: 'achievements', label: 'Achievements', icon: Award }] : TABS
+export default function ProgressTabs() {
+  const tabs = TABS
   const [tab, setTab] = useLocalPref('lokios_progress_tab', 'overview', tabs.map((t) => t.id))
   return (
     <div className="progress-tabs">
@@ -23,7 +25,7 @@ export default function ProgressTabs({ achievements = null }) {
       </div>
       {tab === 'overview' && <ProgressExtras />}
       {tab === 'sleep' && <SleepPanel />}
-      {tab === 'achievements' && achievements}
+      {tab === 'achievements' && <AchievementGallery />}
     </div>
   )
 }
