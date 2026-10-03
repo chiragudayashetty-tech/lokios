@@ -1091,3 +1091,8 @@ textarea::placeholder,
   .winter-loader-bar span { animation: none !important; }
   .winter-loader-dots i { opacity: 1; }
 }
+
+/* .hidden-desktop must win over display utilities (e.g. `flex`) that load after it */
+@media (min-width: 1024px) {
+  .hidden-desktop { display: none !important; }
+}
