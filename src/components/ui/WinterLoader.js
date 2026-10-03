@@ -1,10 +1,9 @@
-import { ACTIVE_SEASON } from '@/lib/theme/levelTheme'
 
 /** Six-armed frost crystal, drawn so each arm has little side branches. */
 function FrostCrystal() {
   const arms = [0, 60, 120, 180, 240, 300]
   return (
-    <svg className="winter-crystal" viewBox="0 0 64 64" width="44" height="44" aria-hidden="true">
+    <svg className="winter-crystal season-winter-only" viewBox="0 0 64 64" width="44" height="44" aria-hidden="true">
       <defs>
         <linearGradient id="winterCrystalGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
           <stop stopColor="#FFFFFF" />
@@ -27,27 +26,27 @@ function FrostCrystal() {
 }
 
 /**
- * Seasonal loading state.
+ * Seasonal loading state. Season variants are switched in CSS (html[data-season]) so
+ * server-rendered loaders follow the theme picker too.
  * - default: inline, centred in the page area (used while a page fetches data)
  * - fullscreen: boot screen with the wordmark (route + auth loading)
  * - compact: small, for loading inside a card
  */
 export default function WinterLoader({ label = 'Loading', fullscreen = false, compact = false }) {
-  const winter = ACTIVE_SEASON === 'winter'
-
   return (
     <div className={`winter-loader ${fullscreen ? 'winter-loader--full' : ''} ${compact ? 'winter-loader--compact' : ''}`} role="status" aria-live="polite">
       {fullscreen && (
         <div className="winter-loader-brand">
           <span className="logo-text">ChiragOS</span>
-          {winter && <span className="season-badge">Winter arc</span>}
+          <span className="season-badge season-winter-only">Winter arc</span>
         </div>
       )}
 
       <div className="winter-loader-orb">
         <span className="winter-loader-ring" />
         <span className="winter-loader-glow" />
-        {winter ? <FrostCrystal /> : <span className="winter-loader-gem" />}
+        <FrostCrystal />
+        <span className="winter-loader-gem season-off-only" />
       </div>
 
       <div className="winter-loader-label">
@@ -55,7 +54,7 @@ export default function WinterLoader({ label = 'Loading', fullscreen = false, co
         <span className="winter-loader-dots"><i>.</i><i>.</i><i>.</i></span>
       </div>
 
-      {winter && <div className="winter-loader-tagline">Winter is coming</div>}
+      <div className="winter-loader-tagline season-winter-only">Winter is coming</div>
 
       {fullscreen && <div className="winter-loader-bar"><span /></div>}
     </div>

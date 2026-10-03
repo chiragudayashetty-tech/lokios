@@ -22,7 +22,6 @@ import AchievementService from '@/components/achievements/AchievementService'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { SAGA_TITLES } from '@/lib/constants'
 import { celebrateAt } from '@/lib/utils/celebrate'
-import { ACTIVE_SEASON } from '@/lib/theme/levelTheme'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Home', group: 'Plan' },
@@ -205,7 +204,7 @@ function AppShellFrame({ children }) {
                   <span className="text-[11px] uppercase tracking-[0.14em] text-muted font-semibold block">Menu</span>
                   <div className="flex items-center gap-2">
                     <div className="logo-text" style={{ fontSize: '1.6rem' }}>ChiragOS</div>
-                    {ACTIVE_SEASON === 'winter' && <span className="season-badge"><Snowflake size={11} /> Winter arc</span>}
+                    <span className="season-badge season-winter-only"><Snowflake size={11} /> Winter arc</span>
                   </div>
                 </div>
                 <button
@@ -298,9 +297,8 @@ function AppShellFrame({ children }) {
         <div className="sidebar-header">
           <Link href="/dashboard" className="logo">
             <span className="logo-text">ChiragOS</span>
-            {ACTIVE_SEASON === 'winter'
-              ? <span className="season-badge"><Snowflake size={11} /> Winter arc</span>
-              : <span className="logo-badge">v3</span>}
+            <span className="season-badge season-winter-only"><Snowflake size={11} /> Winter arc</span>
+            <span className="logo-badge season-off-only">v3</span>
           </Link>
         </div>
 

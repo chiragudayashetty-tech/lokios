@@ -39,12 +39,15 @@ export const viewport = {
 import { OSProvider } from '@/lib/context/OSContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { PersistentShell } from '@/components/layout/AppShell'
+import Script from 'next/script'
 import { ACTIVE_SEASON } from '@/lib/theme/levelTheme'
+import { THEME_BOOT_SCRIPT } from '@/lib/theme/userTheme'
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jakarta.variable}`} data-season={ACTIVE_SEASON || undefined}>
+    <html lang="en" className={`${inter.variable} ${jakarta.variable}`} data-season={ACTIVE_SEASON || undefined} suppressHydrationWarning>
       <body>
+        <Script id="theme-boot" strategy="beforeInteractive">{THEME_BOOT_SCRIPT}</Script>
         <ErrorBoundary>
           <OSProvider>
             <PersistentShell>{children}</PersistentShell>

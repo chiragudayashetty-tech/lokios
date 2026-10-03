@@ -14,7 +14,9 @@ import { useProfileInternal } from '@/lib/hooks/useProfileInternal'
 import { useCalendarInternal } from '@/lib/hooks/useCalendarInternal'
 import { useCharacterStatsInternal } from '@/lib/hooks/useCharacterStatsInternal'
 import { useFocusInternal } from '@/lib/hooks/useFocusInternal'
-import { getThemeForXP } from '@/lib/theme/levelTheme'
+import { MotionConfig } from 'framer-motion'
+import { applyUserTheme } from '@/lib/theme/userTheme'
+import { useSettings } from '@/lib/hooks/useSettings'
 import { hydrateSettingsFromProfile } from '@/lib/settings'
 import { getMilestones, ensureMilestones } from '@/lib/stores/milestoneStore'
 import { progressOf, milestoneTaskStats } from '@/lib/utils/missions'
@@ -58,14 +60,11 @@ export function OSProvider({ children }) {
   const characterStats = useShallowStable(useCharacterStatsInternal(auth.user))
   const focus = useShallowStable(useFocusInternal(auth.user, true))
 
-  // Apply rank-derived visual tokens only. XP remains owned by existing profile/RPC flows.
+  // Apply rank-derived visual tokens + the theme picker (#34). XP remains owned by existing profile/RPC flows.
+  const themePref = useSettings().theme
   useEffect(() => {
-    if (typeof document === 'undefined') return
-    const theme = getThemeForXP(profile?.profile?.total_xp || 0)
-    Object.entries(theme.cssVars).forEach(([name, value]) => document.documentElement.style.setProperty(name, value))
-    if (theme.season) document.documentElement.dataset.season = theme.season
-    else delete document.documentElement.dataset.season
-  }, [profile?.profile?.total_xp])
+    applyUserTheme(themePref, profile?.profile?.total_xp || 0)
+  }, [profile?.profile?.total_xp, themePref])
 
   // Settings saved on another device arrive with the profile
   useEffect(() => {
@@ -273,10 +272,12 @@ export function OSProvider({ children }) {
 
   return (
     <OSContext.Provider value={osState}>
-      {SLICES.reduceRight((tree, name) => {
-        const Ctx = SliceContexts[name]
-        return <Ctx.Provider value={osState[name]}>{tree}</Ctx.Provider>
-      }, children)}
+      <MotionConfig reducedMotion={themePref?.motion === 'reduced' ? 'always' : themePref?.motion === 'full' ? 'never' : 'user'}>
+        {SLICES.reduceRight((tree, name) => {
+          const Ctx = SliceContexts[name]
+          return <Ctx.Provider value={osState[name]}>{tree}</Ctx.Provider>
+        }, children)}
+      </MotionConfig>
     </OSContext.Provider>
   )
 }
