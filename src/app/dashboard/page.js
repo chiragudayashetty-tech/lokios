@@ -2,14 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Target, AlertTriangle, Zap, Swords, Flame, ChevronDown,
-  ChevronUp, Lock, Check, ClipboardList, BookOpen,
-  Activity, Clock, Terminal, ArrowUpRight, BarChart2,
-  Smartphone, Shield, DollarSign, Moon, Brain, Repeat, X, RotateCcw,
-  Calendar as CalendarIcon, MapPin, Plus, ExternalLink, Briefcase, Sun, FileText, CheckCircle2, Mic, Sparkles,
-  ChevronLeft, ChevronRight, Play, Pause, Circle, Wallet
-} from 'lucide-react'
+import { Target, AlertTriangle, Zap, Flame, ChevronDown, Lock, Check, ClipboardList, BookOpen, Activity, Clock, ArrowUpRight, BarChart2, Smartphone, Moon, X, RotateCcw, Calendar as CalendarIcon, Briefcase, Sun, CheckCircle2, Mic, Sparkles, Wallet } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import { isExcludedFromDaily, fetchBudgetLogs, getLocalDailyBudget } from '@/lib/utils/budget'
@@ -21,8 +14,8 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
-import { RANK_CONFIG, SAGA_IMAGES, SAGA_TITLES } from '@/lib/constants'
-import { getLocalDateStr, getEndOfWeek, getStartOfWeek, getDebriefSortTime } from '@/lib/utils/dates'
+import { RANK_CONFIG, SAGA_IMAGES } from '@/lib/constants'
+import { getLocalDateStr, getEndOfWeek, getDebriefSortTime } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 
 const ARC_CONFIG = [
@@ -35,21 +28,6 @@ const ARC_CONFIG = [
   { rank: 'VII',     name: 'The Legacy',             flavor: 'My greatest achievement became the people I inspired and the lives I changed.', minLvl: 78, maxLvl: 99 },
   { rank: 'VIII',    name: 'Beyond',                 flavor: 'There is no finish line. Every summit reveals a higher mountain.', minLvl: 100, maxLvl: 999 },
 ]
-
-const BATTLE_ICONS = {
-  'Phone Addiction':       Smartphone,
-  'Porn Consumption':      Shield,
-  'Inconsistent Execution':Repeat,
-  'Fear of Selling':       DollarSign,
-  'Poor Sleep Discipline': Moon,
-}
-
-const SEVERITY_COLORS = {
-  extreme: '#FF3B3B',
-  high:    'var(--danger)',
-  medium:  'var(--accent-primary)',
-  low:     'var(--info)',
-}
 
 const BRIEFINGS = [
   "The discipline you build in private becomes the edge you show in public.",
@@ -89,10 +67,8 @@ export default function MissionControl() {
   const goalsObj = os.goals || {}
   const mainQuest = goalsObj.mainQuest || null
   const sideQuests = goalsObj.sideQuests || []
-  const longTermGoals = goalsObj.longTermGoals || []
   const habitsObj = os.habits || {}
   const todayLogs = habitsObj.todayLogs || []
-  const habits = habitsObj.habits || []
   const tasksObj = os.tasks || {}
   const tasks = tasksObj.tasks || []
   const addTask = tasksObj.addTask
@@ -105,9 +81,6 @@ export default function MissionControl() {
   const events = calendarObj.events || []
   const xpObj = os.xp || {}
   const dailyMomentum = xpObj.dailyMomentum || null
-  const completeOperation = os.completeOperation
-  const failOperation = os.failOperation
-  const undoFailOperation = os.undoFailOperation
 
   const todayStr = getLocalDateStr()
 
@@ -132,14 +105,8 @@ export default function MissionControl() {
   const [xpToday, setXpToday]         = useState(0)
   const [xpThisWeek, setXpThisWeek]   = useState(0)
   const [weeklyWinRate, setWeeklyWinRate] = useState(0)
-  const [arcExpanded, setArcExpanded] = useState(false)
-  const [sagaRosterOpen, setSagaRosterOpen] = useState(false)
   const [momentumExpanded, setMomentumExpanded] = useState(false)
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
-  const [completedEventIds, setCompletedEventIds] = useState(new Set())
-  const [activeArtworkIndex, setActiveArtworkIndex] = useState(null)
-  const [isAutoCycling, setIsAutoCycling] = useState(true)
-  const [quoteIndex, setQuoteIndex] = useState(0)
 
   const [xpTrajectory, setXpTrajectory] = useState([])
   const [latestDebrief, setLatestDebrief] = useState(null)
@@ -193,27 +160,8 @@ export default function MissionControl() {
     return (tasks || []).filter(t => t.due_date === todayStr && t.status !== 'cancelled')
   }, [tasks, todayStr])
 
-  const displayedSagaIndex = activeArtworkIndex !== null ? activeArtworkIndex : (currentArcIndex >= 0 ? currentArcIndex : 0)
-  const displayedArc = ARC_CONFIG[displayedSagaIndex] || currentArc
 
-  const splitTitle = useMemo(() => {
-    const rawName = displayedArc?.name || 'The Spark'
-    if (rawName === 'The Discipline Rebuild') return { primary: 'THE DISCIPLINE', secondary: 'REBUILD' }
-    const parts = rawName.split(' ')
-    if (parts.length === 1) return { primary: 'SAGA', secondary: parts[0].toUpperCase() }
-    return { primary: parts.slice(0, -1).join(' ').toUpperCase(), secondary: parts[parts.length - 1].toUpperCase() }
-  }, [displayedArc?.name])
 
-  const SAGA_DISCIPLINE_QUOTES = useMemo(() => [
-    displayedArc?.flavor || "I rebuilt my mind, habits, and identity one day at a time.",
-    "Discipline is choosing between what you want now and what you want most.",
-    "Small actions compounded daily become unstoppable momentum.",
-    "Stop chasing motivation. Build ironclad routines and relentless consistency.",
-    "You do not rise to the level of your goals. You fall to the level of your systems.",
-    "The pain of discipline is far less than the pain of regret.",
-    "Master self-command before seeking command over anything else.",
-    "Every day you don't execute is a day you concede ground."
-  ], [displayedArc?.flavor])
 
   const timeAtmosphere = useMemo(() => {
     const h = currentTime.getHours()
@@ -423,18 +371,6 @@ export default function MissionControl() {
     return () => clearInterval(t)
   }, [])
 
-  useEffect(() => {
-    if (!isAutoCycling) return
-    const interval = setInterval(() => {
-      // Each tick re-renders the dashboard: skip while the tab or the hero isn't visible
-      if (document.hidden || window.scrollY > 600 || (document.querySelector('.main-content')?.scrollTop || 0) > 600) return
-      setActiveArtworkIndex(prev => {
-        const base = prev === null ? (currentArcIndex >= 0 ? currentArcIndex : 0) : prev
-        return (base + 1) % ARC_CONFIG.length
-      })
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [isAutoCycling, currentArcIndex])
 
   // (A 10s quote rotation lived here; the quote isn't rendered, and each tick
   // re-rendered the whole dashboard, so it was removed.)
@@ -626,11 +562,6 @@ export default function MissionControl() {
         .eq('user_id', user.id)
         .order('date', { ascending: false })
         .limit(5000)
-
-      const { data: allHabitsData } = await sb
-        .from('habits')
-        .select('id, title')
-        .eq('user_id', user.id)
 
       if (allHabitLogs) {
         // Weekly Win Rate (This week from Monday)
@@ -832,14 +763,6 @@ export default function MissionControl() {
     })
   }
 
-  const toggleEventCompleted = (id) => {
-    setCompletedEventIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
 
   // ── Quick Log Submit Handlers for EOD Recon ──
   const submitEodScreen = async (e) => {
@@ -1069,16 +992,13 @@ export default function MissionControl() {
   ]
 
   const eodCompletedCount = eodItems.filter(i => i.isDone).length
-  const isEodAllDone = eodCompletedCount === eodItems.length
-  const longestStreak = profile?.longest_streak ?? 0
 
   const currentLevel                                           = calculateLevel(totalXp)
-  const { current: xpInLevel, required: xpForNextLevel, percentage: levelPct } = xpToNextLevel(totalXp)
+  const { current: xpInLevel, required: xpForNextLevel } = xpToNextLevel(totalXp)
   const xpNeeded     = Math.max(0, xpForNextLevel - xpInLevel)
   const currentRankConfig = RANK_CONFIG[currentRank.code] || RANK_CONFIG['I']
   const arcColor     = currentRankConfig?.color || '#9CA3AF'
   const sagaAccentColor = currentRankConfig?.color || '#f97316'
-  const momentumStateColor = dailyMomentum?.color || 'var(--warning)'
   const nextArc      = ARC_CONFIG[currentArcIndex + 1] || null
 
   const minSagaXp = currentRankConfig.minXp || 0
@@ -1090,17 +1010,10 @@ export default function MissionControl() {
   const currentSagaImage = SAGA_IMAGES[currentRank.code] || SAGA_IMAGES['I'] || '/sagas/Awakening.png'
 
   // Active artwork & saga display (auto-cycling or user selected)
-  const displayedRankConfig = RANK_CONFIG[displayedArc.rank] || RANK_CONFIG['I']
-  const displayedSagaImage = SAGA_IMAGES[displayedArc.rank] || SAGA_IMAGES['I'] || '/sagas/Awakening.png'
-  const displayedSagaColor = displayedRankConfig?.color || sagaAccentColor
 
-  const handleNextQuote = () => {
-    setQuoteIndex(prev => (prev + 1) % SAGA_DISCIPLINE_QUOTES.length)
-  }
 
   const flameColor = currentStreak >= 30 ? '#F59E0B' : currentStreak >= 7 ? '#f97316' : '#ef4444'
 
-  // todayStr is defined at the top of component
 
   // ── Dynamic Daily Ops Momentum Engine (-10 to +10) ────────────────────────
   // 1. Habits Performance (Completed vs Failed Today)
@@ -1146,8 +1059,6 @@ export default function MissionControl() {
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
 
-  const lastJournalDate = entries?.[0]?.date
-  const journalDoneToday = lastJournalDate === todayStr
 
   let deadlineDays = null
   let deadlineUrgency = 'ok'

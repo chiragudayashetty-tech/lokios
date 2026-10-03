@@ -7,6 +7,7 @@ import { escalatingPenalty, penaltyLabel, AUTOFAIL_BACKFILL_DAYS } from '@/lib/u
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateAndUpdateStreak, applyStreakRewards } from '@/lib/utils/streakCalc'
 import { applyHabitRewards } from '@/lib/utils/gamification'
+import { enqueue, isOffline, registerOfflineHandler } from '@/lib/utils/offlineQueue'
 import { syncWarRoomHabitChange } from '@/lib/utils/warRoomSync'
 
 /**
@@ -152,7 +153,7 @@ export function useHabitsInternal(user) {
   }, [fetchHabits])
 
   // Cycle habit state: none -> completed -> failed -> none
-  const cycleHabitState = useCallback(async (habitId, dateStr, forceStatus = null) => {
+  const cycleHabitState = useCallback(async (habitId, dateStr, forceStatus = null, opts = {}) => {
     if (!user) return null
     const currentTodayStr = getLocalDateStr()
     const targetDate = dateStr || currentTodayStr
@@ -168,7 +169,7 @@ export function useHabitsInternal(user) {
     }
 
     // Skip if we are trying to force a status that is already the current status
-    if (forceStatus && currentStatus === forceStatus) return true;
+    if (forceStatus && currentStatus === forceStatus && !opts.replay) return true;
 
     const procKey = `${habitId}_${targetDate}_cycle`
     if (processingRef.current.has(procKey)) return null
@@ -183,6 +184,13 @@ export function useHabitsInternal(user) {
       }
       return filtered
     })
+
+    // Offline: keep the optimistic tick and sync it when the connection returns
+    if (isOffline() && !opts.replay) {
+      enqueue({ type: 'habit', key: `habit_${habitId}_${targetDate}`, habitId, date: targetDate, status: nextStatus })
+      processingRef.current.delete(procKey)
+      return true
+    }
 
     try {
       const stableSourceId = `habit_${habitId}_${targetDate}`
@@ -288,6 +296,12 @@ export function useHabitsInternal(user) {
   }, [user, habits, monthLogs, todayStr])
 
   // Backward-compat wrapper
+  // Replay ticks made offline once we're back online
+  useEffect(() => {
+    if (!user || !initialized) return
+    registerOfflineHandler('habit', (op) => cycleHabitState(op.habitId, op.date, op.status, { replay: true }))
+  }, [user, initialized, cycleHabitState])
+
   const toggleHabitForDate = useCallback(async (habitId, dateStr, newStatus) => {
     return cycleHabitState(habitId, dateStr, newStatus)
   }, [cycleHabitState])

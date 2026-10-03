@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Trophy, Medal, CalendarDays, Swords, Snowflake, Flame } from 'lucide-react'
+import { Trophy, Medal, CalendarDays, Swords, Snowflake, Flame, Lightbulb } from 'lucide-react'
 import { useGameState } from '@/lib/hooks/useGameState'
 import { masteryTier, nextMasteryTier, MASTERY_TIERS } from '@/lib/utils/xpRules'
 import { shiftDate } from '@/lib/utils/streakCalc'
@@ -41,6 +41,7 @@ export default function ProgressExtras() {
 
   if (!g.ready) return null
   const { records, model, habits, xpRows, season } = g
+  const insights = g.insights()
   const trophies = [
     ...xpRows.filter(r => r.source_type === 'weekly_boss').map(r => ({ icon: Swords, label: 'Boss slain', sub: String(r.description || '').replace(/^.*— /, '').replace(/\s\[#.*\]$/, ''), color: '#FF8A5C' })),
     ...xpRows.filter(r => r.source_type === 'mastery').map(r => ({ icon: Medal, label: String(r.description || '').match(/(Bronze|Silver|Gold|Diamond)/)?.[1] || 'Mastery', sub: String(r.description || '').replace(/^.*— /, '').replace(/\s\(.*$/, ''), color: '#FFD166' })),
@@ -62,6 +63,21 @@ export default function ProgressExtras() {
 
   return (
     <div className="progress-extras">
+      <section className="hud-panel p-5">
+        <div className="arena-card-head mb-3"><Lightbulb size={15} style={{ color: '#FFD166' }} /> Insights <span className="arena-hint ml-auto">from your last 120 days</span></div>
+        {insights.length ? (
+          <div className="insights-list">
+            {insights.map((it, i) => (
+              <div key={it.label} className="insight" style={{ animationDelay: `${i * 60}ms` }}>
+                <span className={`insight-delta ${it.diff >= 0 ? 'is-up' : 'is-down'}`}>{it.diff >= 0 ? '+' : '−'}{Math.round(Math.abs(it.diff) * 100)}%</span>
+                <span className="insight-text">
+                  {it.text.split('**').map((part, j) => (j % 2 ? <b key={j}>{part.trim()}</b> : <span key={j}>{part}</span>))}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : <div className="arena-line">Keep logging for a couple of weeks — patterns appear once there are enough days to compare.</div>}
+      </section>
       <section className="hud-panel p-5">
         <div className="arena-card-head mb-3"><Trophy size={15} style={{ color: '#FFD166' }} /> Personal records</div>
         <div className="records-grid">

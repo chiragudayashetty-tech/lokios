@@ -1,8 +1,10 @@
+import { getSettings, onSettingsChange } from '@/lib/settings'
+
 // Single source of truth for the XP economy (docs/xp-gamification-plan.md).
 // Rules apply going forward only; existing ledger rows are never rewritten.
 
 /** Penalty multipliers by consecutive misses: 1st ×1, 2nd ×1.5, 3rd+ capped at ×2. */
-export const PENALTY_CAP = 2
+export let PENALTY_CAP = 2
 
 export function escalatingPenalty(baseXP, priorMisses = 0) {
   const missStreak = Math.max(1, priorMisses + 1)
@@ -17,13 +19,13 @@ export function penaltyLabel(title, { missStreak, multiplier, penaltyMagnitude }
 }
 
 /** Auto-fail only looks this many days back, so returning after a break can't wipe weeks of XP. */
-export const AUTOFAIL_BACKFILL_DAYS = 7
+export let AUTOFAIL_BACKFILL_DAYS = 7
 
 /** A day counts towards the streak when at least this share of scheduled habits is done. */
-export const STREAK_DAY_THRESHOLD = 0.9
+export let STREAK_DAY_THRESHOLD = 0.9
 
 /** Every scheduled habit done. */
-export const PERFECT_DAY_XP = 50
+export let PERFECT_DAY_XP = 50
 
 /** Streak milestones: re-earnable every new streak run. */
 export const STREAK_MILESTONES = [
@@ -129,4 +131,19 @@ export function seededRoll(key) {
     h = Math.imul(h, 16777619)
   }
   return ((h >>> 0) % 100000) / 100000
+}
+
+// ── Settings page overrides ──────────────────────────────────────────────────
+// The values above are live ES bindings: reassigning them here updates every
+// importer, so saving Settings takes effect immediately without a reload.
+export function applySettings(st = getSettings()) {
+  STREAK_DAY_THRESHOLD = Math.min(1, Math.max(0.5, Number(st.streakThreshold) || 0.9))
+  PENALTY_CAP = Math.min(5, Math.max(1, Number(st.penaltyCap) || 2))
+  AUTOFAIL_BACKFILL_DAYS = Math.min(30, Math.max(0, Math.round(Number(st.autofailDays) ?? 7)))
+  PERFECT_DAY_XP = Math.min(500, Math.max(0, Math.round(Number(st.perfectDayXp) || 0)))
+  if (st.seasonStart) SEASON.start = st.seasonStart
+}
+if (typeof window !== 'undefined') {
+  applySettings()
+  onSettingsChange(applySettings)
 }

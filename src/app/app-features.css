@@ -1,0 +1,61 @@
+/* Offline pill, ghost race, insights, Sunday scorecard and settings. */
+
+/* ── Offline pill ──────────────────────────────────────────────────────── */
+.offline-pill { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; z-index: 1250; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; transform: translateX(-50%); font-size: 12px; font-weight: 600; color: var(--text-primary); background: rgba(20, 24, 38, 0.92); border: 1px solid var(--border-strong); box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.8); }
+
+/* ── Ghost race ────────────────────────────────────────────────────────── */
+.ghost-chart { width: 100%; height: 46px; overflow: visible; }
+.ghost-line { fill: none; stroke: rgba(196, 181, 253, 0.55); stroke-width: 2; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+.ghost-you { fill: none; stroke: var(--accent-primary); stroke-width: 2.5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px var(--accent-glow)); }
+.ghost-dot { fill: #fff; filter: drop-shadow(0 0 6px var(--accent-primary)); }
+
+/* ── Insights ──────────────────────────────────────────────────────────── */
+.insights-list { display: flex; flex-direction: column; gap: 8px; }
+.insight { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); animation: opal-rise 500ms var(--ease-out) backwards; }
+.insight-delta { flex: 0 0 auto; min-width: 54px; padding: 4px 8px; text-align: center; border-radius: 10px; font-family: var(--font-display); font-weight: 800; font-size: 13px; }
+.insight-delta.is-up { color: var(--success); background: var(--success-subtle); }
+.insight-delta.is-down { color: var(--danger); background: var(--danger-subtle); }
+.insight-text { font-size: 13.5px; line-height: 1.5; color: var(--text-secondary); }
+.insight-text b { color: var(--text-primary); }
+
+/* ── Sunday scorecard ──────────────────────────────────────────────────── */
+.scorecard { width: min(420px, 100%); }
+.scorecard-close { position: absolute; top: 14px; right: 14px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; color: var(--text-muted); background: rgba(255, 255, 255, 0.05); }
+.scorecard-grade { display: grid; place-items: center; width: 96px; height: 96px; margin: 14px auto 10px; border-radius: 30px; border: 3px solid; font-family: var(--font-display); font-weight: 800; font-size: 54px; background: rgba(255, 255, 255, 0.03); box-shadow: 0 0 60px -20px currentColor; }
+.scorecard-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 18px 0 12px; }
+.scorecard-stats > div { display: flex; flex-direction: column; padding: 8px 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); }
+.scorecard-stats b { font-family: var(--font-display); font-weight: 800; font-size: 17px; color: var(--text-primary); }
+.scorecard-stats span { font-size: 10.5px; color: var(--text-muted); }
+.scorecard-lines { display: flex; flex-direction: column; gap: 7px; text-align: left; }
+.scorecard-line { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--text-secondary); }
+.scorecard-focus { display: flex; align-items: flex-start; gap: 9px; margin-top: 14px; padding: 12px; text-align: left; border-radius: 14px; font-size: 13px; color: var(--text-secondary); background: var(--accent-subtle); border: 1px solid color-mix(in oklab, var(--accent-primary) 30%, transparent); }
+.scorecard-focus svg { flex: 0 0 auto; margin-top: 1px; color: var(--accent-primary); }
+.scorecard-focus b { color: var(--text-primary); }
+.scorecard-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+.scorecard-actions .btn { width: 100%; margin: 0; }
+
+/* ── Settings ──────────────────────────────────────────────────────────── */
+.settings-page { max-width: 760px; }
+.settings-card { display: flex; flex-direction: column; gap: 4px; padding: 18px 20px !important; margin-bottom: 14px; }
+.settings-card .arena-card-head { margin-bottom: 6px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-top: 1px solid var(--border-subtle); }
+.settings-row:first-of-type { border-top: 0; }
+.settings-row-text { display: flex; flex-direction: column; min-width: 0; }
+.settings-label { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.settings-hint { font-size: 12px; color: var(--text-muted); }
+.settings-control { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.settings-range { width: 140px; accent-color: var(--accent-primary); }
+.settings-value { min-width: 44px; text-align: right; font-family: var(--font-display); font-weight: 800; color: var(--text-primary); }
+.settings-number { width: 100px !important; padding: 7px 10px !important; text-align: right; }
+.settings-date { width: auto !important; padding: 7px 10px !important; }
+.settings-unit { font-size: 12px; color: var(--text-muted); }
+.settings-saved { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--success); background: var(--success-subtle); }
+.settings-toggle { position: relative; width: 46px; height: 26px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color); transition: background 200ms ease; }
+.settings-toggle span { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 240ms var(--ease-spring); }
+.settings-toggle.is-on { background: var(--accent-gradient); border-color: transparent; }
+.settings-toggle.is-on span { transform: translateX(20px); }
+
+@media (max-width: 640px) {
+  .settings-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .scorecard-stats { grid-template-columns: repeat(2, 1fr); }
+}

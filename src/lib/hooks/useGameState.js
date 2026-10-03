@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useOS } from '@/lib/context/OSContext'
+import { useOSSlice } from '@/lib/context/OSContext'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { buildStreakModel, fetchAllLogs, shiftDate, LOOKBACK_DAYS } from '@/lib/utils/streakCalc'
 import {
   computeBoss, applyBossReward, computeSeason, applySeasonRewards, findBet, resolveBet,
-  computeRecords, checkDayRecord, weekStartOf, computeWeekRecap,
+  computeRecords, checkDayRecord, weekStartOf, computeWeekRecap, computeGhostRace, computeInsights,
 } from '@/lib/utils/gamification'
 
 // One shared store so every widget reads the same snapshot with a single fetch.
@@ -34,11 +34,12 @@ const hasRow = (rows, sid) => rows.some(r => r.source_id === sid || String(r.des
 async function load(userId) {
   const supabase = createClient()
   const today = getLocalDateStr()
-  const [{ data: habits }, logs, xpRows, { data: screenLogs }] = await Promise.all([
+  const [{ data: habits }, logs, xpRows, { data: screenLogs }, { data: moods }] = await Promise.all([
     supabase.from('habits').select('*').eq('user_id', userId),
     fetchAllLogs(supabase, userId, shiftDate(today, -LOOKBACK_DAYS)),
     fetchAllXp(supabase, userId),
-    supabase.from('screen_time_logs').select('date, doom_scroll_minutes').eq('user_id', userId),
+    supabase.from('screen_time_logs').select('date, doom_scroll_minutes, focus_hours').eq('user_id', userId),
+    supabase.from('journal_entries').select('date, mood').eq('user_id', userId),
   ])
   const model = buildStreakModel(habits || [], logs, today)
   const weekStart = weekStartOf(today)
@@ -65,10 +66,14 @@ async function load(userId) {
     }
   }
   checkDayRecord(records)
+  const ghost = computeGhostRace(xpRows, weekStart, records.bestWeek?.date, today)
+  let insightsCache = null
 
   return {
     today, habits: habits || [], model, xpRows, boss, season, bet, lastBet, records, weekStart, changed,
     weekRecap: (ws = weekStart) => computeWeekRecap(xpRows, model, habits || [], ws),
+    ghost,
+    insights: () => (insightsCache ||= computeInsights({ model, habits: habits || [], screenLogs: screenLogs || [], moods: moods || [], today })),
   }
 }
 
@@ -94,7 +99,7 @@ function wire(userId) {
 
 /** Shared, lazily loaded game state (streak model, boss, season, bets, records). */
 export function useGameState() {
-  const { auth: { user } = {} } = useOS() || {}
+  const { user } = useOSSlice('auth')
   const [state, setState] = useState(snapshot)
 
   useEffect(() => {

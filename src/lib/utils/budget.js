@@ -1,5 +1,6 @@
 // Budget utilities, categories, and sync handlers
 import { createClient } from '@/lib/supabase/client'
+import { enqueue, isOffline, getQueue, registerOfflineHandler } from '@/lib/utils/offlineQueue'
 import { getLocalDateStr } from '@/lib/utils/dates'
 
 export const BUDGET_CATEGORIES = [
@@ -210,8 +211,11 @@ export async function fetchBudgetLogs(userId) {
     }
 
     if (data && data.length > 0) {
-      saveLocalBudgetLogs(userId, data)
-      return data
+      // Entries made offline aren't on the server yet: keep them in the list
+      const pending = getQueue().filter(op => op.type === 'budget').map(op => op.entry).filter(e => !data.some(d => d.id === e.id))
+      const merged = [...pending, ...data]
+      saveLocalBudgetLogs(userId, merged)
+      return merged
     }
 
     return localLogs
@@ -244,6 +248,11 @@ export async function addBudgetExpense(userId, expense) {
   const updated = [newEntry, ...localLogs]
   saveLocalBudgetLogs(userId, updated)
 
+  if (isOffline()) {
+    enqueue({ type: 'budget', key: `budget_${newEntry.id}`, entry: newEntry })
+    return newEntry
+  }
+
   // Sync to Supabase in background with schema fallback
   try {
     const supabase = createClient()
@@ -264,11 +273,25 @@ export async function addBudgetExpense(userId, expense) {
       await supabase.from('budget_logs').insert(fallbackEntry)
     }
   } catch (e) {
-    // Graceful fallback to local storage
+    // Network failure: keep it locally and retry when back online
+    enqueue({ type: 'budget', key: `budget_${newEntry.id}`, entry: newEntry })
   }
 
   return newEntry
 }
+
+/** Replay a queued expense (same schema fallback as addBudgetExpense). */
+async function replayBudgetEntry({ entry }) {
+  const supabase = createClient()
+  const { error } = await supabase.from('budget_logs').upsert(entry, { onConflict: 'id' })
+  if (error) {
+    const fallback = { ...entry, description: `${entry.description || ''} ${entry.exclude_daily ? '[EXCLUDE_DAILY]' : '[INCLUDE_DAILY]'}`.trim() }
+    delete fallback.exclude_daily
+    const { error: err2 } = await supabase.from('budget_logs').upsert(fallback, { onConflict: 'id' })
+    if (err2) throw err2
+  }
+}
+if (typeof window !== 'undefined') registerOfflineHandler('budget', replayBudgetEntry)
 
 // Delete an expense
 export async function deleteBudgetExpense(userId, id) {

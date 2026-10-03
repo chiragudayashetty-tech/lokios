@@ -111,13 +111,13 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
             />
           </div>
           <div className="flex items-center justify-between text-[10px] text-muted font-mono">
-            <span className="hidden sm:inline font-semibold text-secondary">
+            <span className="hidden sm:inline font-semibold text-secondary whitespace-nowrap">
               {xpProgress.current.toLocaleString()} / {xpProgress.required.toLocaleString()} XP
             </span>
             <span className="sm:hidden font-bold" style={{ color: netColor(todayNet) }}>
               {signed(todayNet)} XP today
             </span>
-            <span>{toNext.toLocaleString()} to Lv. {level + 1}</span>
+            <span className="whitespace-nowrap">{toNext.toLocaleString()} to Lv. {level + 1}</span>
           </div>
         </div>
 
@@ -148,7 +148,7 @@ export default function CharacterCapsuleHUD({ profile, dailyMomentum }) {
 
         {/* ── Streak + next milestone ── */}
         <div
-          className="hidden md:flex items-center gap-2 pl-3 shrink-0"
+          className="hidden xl:flex items-center gap-2 pl-3 shrink-0"
           style={{ borderLeft: '1px solid var(--border-color)' }}
           title={nextMilestone ? `${nextMilestone.days - streak} more day${nextMilestone.days - streak === 1 ? '' : 's'} at 90%+ of habits → +${nextMilestone.xp} XP` : 'Legendary streak'}
         >

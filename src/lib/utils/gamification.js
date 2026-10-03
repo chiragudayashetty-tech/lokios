@@ -306,3 +306,142 @@ export async function awardDebrief(userId, weekStart) {
   await robustAwardXP(userId, DEBRIEF_XP, 'weekly_debrief', `debrief_${weekStart}`, `📝 Weekly debrief completed (week of ${weekStart})`, 'learning')
   emitGame('toast', { icon: 'scroll', title: 'Debrief logged', sub: `+${DEBRIEF_XP} XP · reflection is a rep too`, tone: 'accent' })
 }
+
+// ── Ghost race (#8): this week vs your best week, day by day ────────────────
+
+export function computeGhostRace(xpRows, weekStart, bestWeekStart, today = getLocalDateStr()) {
+  if (!bestWeekStart || bestWeekStart === weekStart) return null
+  const dayIndex = Math.min(6, Math.max(0, Math.round((new Date(`${today}T12:00:00`) - new Date(`${weekStart}T12:00:00`)) / 86400000)))
+  const cumulative = (ws) => {
+    const days = Array.from({ length: 7 }, (_, i) => shift(ws, i))
+    const totals = days.map(d => (xpRows || []).filter(r => !/^bet_/.test(r.source_type || '') && localDay(r.created_at) === d).reduce((s, r) => s + (r.amount || 0), 0))
+    let run = 0
+    return totals.map(v => (run += v))
+  }
+  const you = cumulative(weekStart)
+  const ghost = cumulative(bestWeekStart)
+  return {
+    bestWeekStart,
+    dayIndex,
+    you: you.slice(0, dayIndex + 1),
+    ghost,
+    youNow: you[dayIndex],
+    ghostNow: ghost[dayIndex],
+    diff: you[dayIndex] - ghost[dayIndex],
+    ghostTotal: ghost[6],
+  }
+}
+
+// ── Insights (#13): what actually moves your completion rate ────────────────
+
+const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null)
+const pctTxt = (x) => `${Math.round(x * 100)}%`
+
+/**
+ * Compares average daily completion between groups of days (last 120 days)
+ * and returns the strongest, best-supported effects as plain sentences.
+ */
+export function computeInsights({ model, habits, screenLogs = [], moods = [], today = getLocalDateStr() }) {
+  const days = []
+  for (let i = 1; i <= 120; i++) {
+    const d = shift(today, -i)
+    const st = model.dayStats(d)
+    if (st.ratio !== null && st.scheduled >= 3) days.push({ date: d, ratio: st.ratio })
+  }
+  if (days.length < 14) return []
+  const out = []
+  const compare = (label, yes, no, why) => {
+    if (yes.length < 5 || no.length < 5) return
+    const a = mean(yes), b = mean(no)
+    const diff = a - b
+    if (Math.abs(diff) < 0.06) return
+    out.push({ label, diff, a, b, n: yes.length + no.length, text: why(a, b, diff) })
+  }
+
+  // Keystone habits: other-habit completion on days the habit was done vs missed
+  for (const h of (habits || []).filter(x => x.is_active !== false)) {
+    const yes = [], no = []
+    for (const d of days) {
+      if (!habitsScheduledOn([h], d.date).length) continue
+      const st = model.dayStats(d.date)
+      const doneSet = model.doneByDate.get(d.date) || new Set()
+      const did = doneSet.has(h.id)
+      const others = st.scheduled - 1
+      if (others < 2) continue
+      const othersDone = st.done - (did ? 1 : 0)
+      ;(did ? yes : no).push(othersDone / others)
+    }
+    compare(`keystone_${h.id}`, yes, no, (a, b) => `On days you do **${h.title}**, you finish ${pctTxt(a)} of your other habits — vs ${pctTxt(b)} when you skip it.`)
+  }
+
+  // Sleep the night before → next-day completion
+  const sleep = (habits || []).find(h => /sleep/i.test(h.title || ''))
+  if (sleep) {
+    const yes = [], no = []
+    for (const d of days) {
+      const prev = shift(d.date, -1)
+      if (!habitsScheduledOn([sleep], prev).length) continue
+      ;(model.doneByDate.get(prev)?.has(sleep.id) ? yes : no).push(d.ratio)
+    }
+    compare('sleep_next_day', yes, no, (a, b) => `After nights you complete **${sleep.title}**, your next day hits ${pctTxt(a)} completion vs ${pctTxt(b)}.`)
+  }
+
+  // Doomscrolling
+  const byDate = new Map(days.map(d => [d.date, d.ratio]))
+  const doomYes = [], doomNo = []
+  for (const l of screenLogs) {
+    const r = byDate.get(l.date)
+    if (r == null || l.doom_scroll_minutes == null) continue
+    ;(Number(l.doom_scroll_minutes) <= 60 ? doomYes : doomNo).push(r)
+  }
+  compare('doomscroll', doomYes, doomNo, (a, b) => `Days with **≤ 1h doomscrolling** average ${pctTxt(a)} completion; heavier days only ${pctTxt(b)}.`)
+
+  // Focus hours
+  const focYes = [], focNo = []
+  for (const l of screenLogs) {
+    const r = byDate.get(l.date)
+    if (r == null || l.focus_hours == null) continue
+    ;(Number(l.focus_hours) >= 3 ? focYes : focNo).push(r)
+  }
+  compare('focus', focYes, focNo, (a, b) => `**3h+ focus** days run at ${pctTxt(a)} completion vs ${pctTxt(b)} on lighter days.`)
+
+  // Mood (journal)
+  const moodYes = [], moodNo = []
+  for (const m of moods) {
+    const r = byDate.get(m.date)
+    if (r == null || !m.mood) continue
+    if (Number(m.mood) >= 4) moodYes.push(r)
+    else if (Number(m.mood) <= 2) moodNo.push(r)
+  }
+  compare('mood', moodYes, moodNo, (a, b) => `Good-mood days (journal 4–5) hit ${pctTxt(a)}; low-mood days ${pctTxt(b)}. Protect your mornings.`)
+
+  // Weekday pattern
+  const byDow = Array.from({ length: 7 }, () => [])
+  for (const d of days) byDow[(new Date(`${d.date}T12:00:00`).getDay() + 6) % 7].push(d.ratio)
+  const names = ['Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays', 'Sundays']
+  const avgs = byDow.map((a, i) => ({ i, v: mean(a), n: a.length })).filter(x => x.n >= 3 && x.v != null)
+  if (avgs.length >= 5) {
+    const best = avgs.reduce((a, b) => (b.v > a.v ? b : a))
+    const worst = avgs.reduce((a, b) => (b.v < a.v ? b : a))
+    if (best.v - worst.v >= 0.08) {
+      out.push({ label: 'weekday', diff: best.v - worst.v, text: `**${names[best.i]}** are your strongest day (${pctTxt(best.v)}); **${names[worst.i]}** the weakest (${pctTxt(worst.v)}). Plan lighter there.` })
+    }
+  }
+
+  // Keystone results are similar to each other; keep the top 2 so other kinds of insight show too
+  const sorted = out.sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff))
+  const keystones = sorted.filter(x => x.label.startsWith('keystone_')).slice(0, 2)
+  const others = sorted.filter(x => !x.label.startsWith('keystone_'))
+  return [...keystones, ...others].sort((x, y) => Math.abs(y.diff) - Math.abs(x.diff)).slice(0, 6)
+}
+
+// ── Sunday scorecard (#15) ───────────────────────────────────────────────────
+
+export function gradeWeek(recap) {
+  const c = recap.avgCompletion, s = recap.streakDays
+  if (c >= 95 && s >= 6) return { grade: 'S', color: '#FFD166', line: 'Legendary week. This is the standard now.' }
+  if (c >= 85 && s >= 4) return { grade: 'A', color: 'var(--success)', line: 'Strong week — a couple of tweaks from an S.' }
+  if (c >= 70) return { grade: 'B', color: 'var(--info)', line: 'Solid base. Tighten the weak spots.' }
+  if (c >= 50) return { grade: 'C', color: 'var(--warning)', line: 'Half-built. Pick one habit and protect it.' }
+  return { grade: 'D', color: 'var(--danger)', line: 'Reset week. Small wins first — start tomorrow morning.' }
+}

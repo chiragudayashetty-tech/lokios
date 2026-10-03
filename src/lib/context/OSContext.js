@@ -15,23 +15,45 @@ import { useCalendarInternal } from '@/lib/hooks/useCalendarInternal'
 import { useCharacterStatsInternal } from '@/lib/hooks/useCharacterStatsInternal'
 import { useFocusInternal } from '@/lib/hooks/useFocusInternal'
 import { getThemeForXP } from '@/lib/theme/levelTheme'
+import { hydrateSettingsFromProfile } from '@/lib/settings'
 
 const OSContext = createContext(null)
 
+// Per-slice contexts: a component that only needs habits re-renders only when
+// habits change, instead of on every XP / task / journal update.
+const SLICES = ['auth', 'habits', 'tasks', 'goals', 'xp', 'brainDump', 'journal', 'profile', 'calendar', 'characterStats', 'focus']
+const SliceContexts = Object.fromEntries(SLICES.map(name => [name, createContext(null)]))
+
+/**
+ * The subsystem hooks return a fresh object every render. Keep the previous
+ * object while every field is identical, so slice contexts only change when
+ * that slice's data or callbacks actually changed.
+ */
+function useShallowStable(obj) {
+  const ref = useRef(obj)
+  const prev = ref.current
+  if (prev !== obj) {
+    const keys = Object.keys(obj)
+    const same = prev && keys.length === Object.keys(prev).length && keys.every(k => Object.is(prev[k], obj[k]))
+    if (!same) ref.current = obj
+  }
+  return ref.current
+}
+
 export function OSProvider({ children }) {
-  const auth = useAuth()
+  const auth = useShallowStable(useAuth())
   
   // Initialize all subsystems exactly once at the root level, passing down the single shared auth.user
-  const habits = useHabitsInternal(auth.user)
-  const tasks = useTasksInternal(auth.user)
-  const goals = useGoalsInternal(auth.user)
-  const xp = useXPInternal(auth.user)
-  const brainDump = useBrainDumpInternal(auth.user)
-  const journal = useJournalInternal(auth.user)
-  const profile = useProfileInternal(auth.user)
-  const calendar = useCalendarInternal(auth.user)
-  const characterStats = useCharacterStatsInternal(auth.user)
-  const focus = useFocusInternal(auth.user, true)
+  const habits = useShallowStable(useHabitsInternal(auth.user))
+  const tasks = useShallowStable(useTasksInternal(auth.user))
+  const goals = useShallowStable(useGoalsInternal(auth.user))
+  const xp = useShallowStable(useXPInternal(auth.user))
+  const brainDump = useShallowStable(useBrainDumpInternal(auth.user))
+  const journal = useShallowStable(useJournalInternal(auth.user))
+  const profile = useShallowStable(useProfileInternal(auth.user))
+  const calendar = useShallowStable(useCalendarInternal(auth.user))
+  const characterStats = useShallowStable(useCharacterStatsInternal(auth.user))
+  const focus = useShallowStable(useFocusInternal(auth.user, true))
 
   // Apply rank-derived visual tokens only. XP remains owned by existing profile/RPC flows.
   useEffect(() => {
@@ -41,6 +63,11 @@ export function OSProvider({ children }) {
     if (theme.season) document.documentElement.dataset.season = theme.season
     else delete document.documentElement.dataset.season
   }, [profile?.profile?.total_xp])
+
+  // Settings saved on another device arrive with the profile
+  useEffect(() => {
+    if (profile?.profile) hydrateSettingsFromProfile(profile.profile, auth.user?.id)
+  }, [profile?.profile, auth.user?.id])
 
   // Stable refs so the sync callback always calls the latest functions
   // without causing the useEffect to re-run (infinite loop fix)
@@ -239,7 +266,10 @@ export function OSProvider({ children }) {
 
   return (
     <OSContext.Provider value={osState}>
-      {children}
+      {SLICES.reduceRight((tree, name) => {
+        const Ctx = SliceContexts[name]
+        return <Ctx.Provider value={osState[name]}>{tree}</Ctx.Provider>
+      }, children)}
     </OSContext.Provider>
   )
 }
@@ -250,4 +280,11 @@ export function useOS() {
     throw new Error('useOS must be used within an OSProvider')
   }
   return context
+}
+
+/** Subscribe to one subsystem only, e.g. useOSSlice('habits'). Re-renders only when it changes. */
+export function useOSSlice(name) {
+  const ctx = SliceContexts[name]
+  if (!ctx) throw new Error(`Unknown OS slice: ${name}`)
+  return useContext(ctx) || {}
 }

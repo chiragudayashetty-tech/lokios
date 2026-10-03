@@ -3,18 +3,20 @@
 import { useState, useEffect, useRef, createContext, useContext, useSyncExternalStore } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useOS } from '@/lib/context/OSContext'
+import { useOSSlice } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy, RefreshCw, LogOut, Download, Mic, Wallet, Award, Snowflake
+  Menu, X, Shield, Trophy, RefreshCw, LogOut, Download, Mic, Wallet, Award, Snowflake, Sun, Settings
 } from 'lucide-react'
 import IntelExportModal from '@/components/ui/IntelExportModal'
 import XPToastStack from '@/components/ui/XPToastStack'
 import CharacterCapsuleHUD from '@/components/ui/CharacterCapsuleHUD'
 import LevelUpCelebration from '@/components/ui/LevelUpCelebration'
 import GameOverlays from '@/components/game/GameOverlays'
+import WeeklyScorecard from '@/components/game/WeeklyScorecard'
+import AppServices from '@/components/layout/AppServices'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 import { SAGA_TITLES } from '@/lib/constants'
 import { celebrateAt } from '@/lib/utils/celebrate'
@@ -22,6 +24,7 @@ import { ACTIVE_SEASON } from '@/lib/theme/levelTheme'
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Home', group: 'Plan' },
+  { href: '/today', icon: Sun, label: 'Today', group: 'Plan' },
   { href: '/quests', icon: Crosshair, label: 'Focus', group: 'Plan' },
   { href: '/tasks', icon: CheckSquare, label: 'Tasks', group: 'Plan' },
   { href: '/goals', icon: Target, label: 'Goals', group: 'Plan' },
@@ -34,10 +37,11 @@ const NAV_ITEMS = [
   { href: '/calendar', icon: CalendarDays, label: 'Calendar', group: 'Reflect' },
   { href: '/screen-time', icon: Monitor, label: 'Screen time', group: 'Reflect' },
   { href: '/xp', icon: Trophy, label: 'Progress', group: 'Reflect' },
-  { href: '/profile', icon: User, label: 'Profile', group: 'Account' }
+  { href: '/profile', icon: User, label: 'Profile', group: 'Account' },
+  { href: '/settings', icon: Settings, label: 'Settings', group: 'Account' }
 ]
 const NAV_GROUPS = ['Plan', 'Build', 'Reflect', 'Account']
-const DOCK_HREFS = ['/dashboard', '/quests', '/tasks', '/goals']
+const DOCK_HREFS = ['/dashboard', '/today', '/tasks', '/goals']
 const DOCK_ITEMS = DOCK_HREFS.map(href => NAV_ITEMS.find(item => item.href === href))
 
 const pillSpring = { type: 'spring', stiffness: 520, damping: 38 }
@@ -78,8 +82,10 @@ function AppShellFrame({ children }) {
   const pathname = usePathname()
   const mainRef = useRef(null)
   const hasMounted = useHasMounted()
-  const os = useOS() || {}
-  const { auth = {}, profile: { profile } = {}, xp: { dailyMomentum, feedbackEvents = [], dismissFeedback } = {} } = os
+  // Slice subscriptions: the always-mounted shell ignores habit/task/journal updates
+  const auth = useOSSlice('auth')
+  const { profile } = useOSSlice('profile')
+  const { dailyMomentum, feedbackEvents = [], dismissFeedback } = useOSSlice('xp')
   const { user } = auth
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
@@ -368,6 +374,8 @@ function AppShellFrame({ children }) {
       />
       <XPToastStack events={feedbackEvents} onDismiss={dismissFeedback} />
       <GameOverlays />
+      <WeeklyScorecard />
+      <AppServices />
       <LevelUpCelebration level={level} rankTitle={SAGA_TITLES[rank.code] || rank.name} />
 
       {/* Mobile floating dock */}

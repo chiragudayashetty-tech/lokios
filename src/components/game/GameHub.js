@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Flame, Snowflake, Swords, Trophy, Dices, Gift, Crown } from 'lucide-react'
+import { Flame, Snowflake, Swords, Trophy, Dices, Gift, Crown, Ghost } from 'lucide-react'
 import { useGameState } from '@/lib/hooks/useGameState'
 import { nextStreakMilestone, FREEZE_MAX, BOSS_XP, BET_STAKES, BET_TARGETS, CHEST_CHANCE, PERFECT_DAY_XP, STREAK_DAY_THRESHOLD } from '@/lib/utils/xpRules'
 import { placeBet, weekStreakDays } from '@/lib/utils/gamification'
@@ -85,6 +85,9 @@ export default function GameHub() {
             : <div className="arena-line" style={{ color: 'var(--success)' }}>You survived winter ❄️</div>}
         </div>
 
+        {/* Ghost race */}
+        <GhostCard ghost={g.ghost} />
+
         {/* Weekly bet */}
         <BetCard bet={bet} model={model} weekStart={weekStart} today={today} userId={g.userId} />
 
@@ -147,6 +150,39 @@ function BetCard({ bet, model, weekStart, today, userId }) {
       ) : (
         <div className="arena-line">Bets open Monday–Wednesday. Next week: stake 100–500 XP on 4–7 streak days.</div>
       )}
+    </div>
+  )
+}
+
+/** Race this week's cumulative XP against your best-ever week, day by day. */
+function GhostCard({ ghost }) {
+  if (!ghost) {
+    return (
+      <div className="arena-card">
+        <div className="arena-card-head"><Ghost size={15} style={{ color: '#C4B5FD' }} /> Ghost race</div>
+        <div className="arena-line">This is your best week so far — you are the ghost to beat. 👻</div>
+      </div>
+    )
+  }
+  const W = 160, H = 46
+  const max = Math.max(1, ...ghost.ghost, ...ghost.you)
+  const pts = (arr) => arr.map((v, i) => `${(i / 6) * W},${H - (Math.max(0, v) / max) * H}`).join(' ')
+  const ahead = ghost.diff >= 0
+  const wk = new Date(`${ghost.bestWeekStart}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  return (
+    <div className="arena-card">
+      <div className="arena-card-head"><Ghost size={15} style={{ color: '#C4B5FD' }} /> Ghost race</div>
+      <div className="arena-big" style={{ color: ahead ? 'var(--success)' : 'var(--text-primary)' }}>
+        {ahead ? '+' : ''}{ghost.diff.toLocaleString()}<span>XP vs ghost</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="ghost-chart" preserveAspectRatio="none" aria-hidden="true">
+        <polyline points={pts(ghost.ghost)} className="ghost-line" />
+        <polyline points={pts(ghost.you)} className="ghost-you" />
+        <circle cx={(ghost.dayIndex / 6) * W} cy={H - (Math.max(0, ghost.youNow) / max) * H} r="3.5" className="ghost-dot" />
+      </svg>
+      <div className="arena-line">
+        {ahead ? <>Ahead of your best week (wk of {wk}) 🔥</> : <>{Math.abs(ghost.diff).toLocaleString()} XP behind your wk of {wk} pace</>}
+      </div>
     </div>
   )
 }
