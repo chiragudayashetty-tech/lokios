@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Camera, Snowflake, CalendarDays, Zap, Flame, Sparkles, Swords, Globe, Copy, Check, Pencil, Target, Quote, User as UserIcon, ExternalLink, FileText } from 'lucide-react'
+import { Camera, Snowflake, CalendarDays, Zap, Flame, Sparkles, Swords, Check, Pencil, Target, Quote, User as UserIcon } from 'lucide-react'
 import AppShell from '@/components/layout/AppShell'
 import WinterLoader from '@/components/ui/WinterLoader'
 import SchemaHint from '@/components/ui/SchemaHint'
@@ -10,6 +10,7 @@ import Ring from '@/components/ui/Ring'
 import StatsRadar from '@/components/profile/StatsRadar'
 import TrophyCase from '@/components/profile/TrophyCase'
 import BlueprintCards from '@/components/profile/BlueprintCards'
+import PublicShareCard from '@/components/profile/PublicShareCard'
 import { useOSSlice } from '@/lib/context/OSContext'
 import { useGameState } from '@/lib/hooks/useGameState'
 import { useAchievements } from '@/lib/hooks/useAchievements'
@@ -33,7 +34,6 @@ async function toAvatarBlob(file) {
 }
 
 const initialsOf = (name) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
-const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
 
 function EditableText({ label, icon: Icon, value, placeholder, onSave, rows = 3, disabled }) {
   const [editing, setEditing] = useState(false)
@@ -66,8 +66,6 @@ export default function ProfilePage() {
   const [statRows, setStatRows] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [notice, setNotice] = useState(null)
-  const [slug, setSlug] = useState(null)
-  const [copied, setCopied] = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => {
@@ -88,8 +86,6 @@ export default function ProfilePage() {
   const memberSince = profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : null
   const stats = statRows ? statLevels(statRows) : null
   const main = goals.filter((g) => isActiveGoal(g)).sort((a, b) => (a.type === 'main_quest' ? -1 : 0) - (b.type === 'main_quest' ? -1 : 0))[0]
-  const slugValue = slug ?? profile.public_slug ?? slugify(profile.username || name)
-  const publicUrl = typeof window !== 'undefined' && profile.public_slug ? `${window.location.origin}/p/${profile.public_slug}` : null
 
   const update = async (patch) => {
     const { error } = await createClient().from('profiles').update(patch).eq('id', user.id)
@@ -182,30 +178,7 @@ export default function ProfilePage() {
 
         <TrophyCase />
 
-        {extras && (
-          <section className="pf-card pf-share">
-            <div className="pf-card-head"><Globe size={15} /> Public profile</div>
-            <div className="pf-share-row">
-              <div className="settings-row-text">
-                <span className="settings-label">Share a read-only profile</span>
-                <span className="settings-hint">Shows your name, photo, bio, stats, achievements, portfolio and completed missions. Never budget, journal or tasks.</span>
-              </div>
-              <button type="button" className={`settings-toggle ${profile.is_public ? 'is-on' : ''}`} aria-pressed={!!profile.is_public} aria-label="Public profile" onClick={() => update({ is_public: !profile.is_public, public_slug: profile.public_slug || slugify(slugValue) || null })}><span /></button>
-            </div>
-            <div className="pf-slug">
-              <span className="pf-slug-prefix">/p/</span>
-              <input className="input" value={slugValue} onChange={(e) => setSlug(slugify(e.target.value))} aria-label="Public link" />
-              <button type="button" className="btn btn-secondary btn-sm" disabled={!slugValue || slugValue === profile.public_slug} onClick={async () => { if (await update({ public_slug: slugValue })) { setSlug(null); setNotice({ ok: true, msg: 'Link saved.' }) } }}>Save link</button>
-            </div>
-            {profile.is_public && publicUrl && (
-              <div className="pf-share-links">
-                <a href={publicUrl} target="_blank" rel="noreferrer" className="td-link"><ExternalLink size={13} /> Open public profile</a>
-                <a href={`${publicUrl}/resume`} target="_blank" rel="noreferrer" className="td-link"><FileText size={13} /> Public résumé</a>
-                <button type="button" className="td-link" onClick={() => { navigator.clipboard?.writeText(publicUrl); setCopied(true); setTimeout(() => setCopied(false), 1500) }}>{copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy link</>}</button>
-              </div>
-            )}
-          </section>
-        )}
+        <PublicShareCard profile={profile} userId={user?.id} fallbackName={name} onSaved={fetchProfile} />
 
         <h2 className="pf-section-title">Blueprint</h2>
         <BlueprintCards userId={user?.id} />

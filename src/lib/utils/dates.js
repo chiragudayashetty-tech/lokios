@@ -64,12 +64,22 @@ export function isYesterday(date) {
 /**
  * Get start of week (Monday) for a given date.
  */
-export function getStartOfWeek(date) {
+/** settings.weekStart (1 = Monday, 0 = Sunday), read without importing the settings module. */
+export function getWeekStartPref() {
+  if (typeof window === 'undefined') return 1
+  try {
+    const v = JSON.parse(localStorage.getItem('lokios_settings') || '{}').weekStart
+    return v === 0 ? 0 : 1
+  } catch {
+    return 1
+  }
+}
+
+export function getStartOfWeek(date, weekStart = getWeekStartPref()) {
   const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  const back = (d.getDay() - weekStart + 7) % 7
   const start = new Date(d)
-  start.setDate(diff)
+  start.setDate(d.getDate() - back)
   start.setHours(0, 0, 0, 0)
   return start
 }
