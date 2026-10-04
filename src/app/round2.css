@@ -1194,3 +1194,44 @@
 .xr-actions .btn-primary { flex: 1 1 100%; justify-content: center; }
 .xr-actions .btn-secondary, .xr-actions .btn-ghost { flex: 1 1 0; justify-content: center; }
 .menu-grid.menu-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* ── Achievements as rewards: medals, near-complete, unlock pop-up ─────── */
+.ach-medal { position: relative; display: grid; place-items: center; }
+.ach.is-earned .ach-medal { padding: 4px; border-radius: 50%; background: conic-gradient(from 210deg, color-mix(in oklab, var(--rc) 35%, white), var(--rc), color-mix(in oklab, var(--rc) 55%, black), var(--rc), color-mix(in oklab, var(--rc) 35%, white)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--rc) 18%, transparent), 0 10px 28px -8px var(--rc); }
+.ach.is-earned .ach-icon { width: 54px; height: 54px; border-radius: 50%; color: #fff; background: radial-gradient(circle at 35% 28%, color-mix(in oklab, var(--rc) 55%, white), color-mix(in oklab, var(--rc) 70%, black) 78%); box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.35), inset 0 -6px 12px rgba(0, 0, 0, 0.35); filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.3)); }
+.ach.is-earned .ach-icon svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35)); }
+.ach.is-earned { border-color: color-mix(in oklab, var(--rc) 70%, transparent); }
+.ach.is-earned .ach-sub b { color: var(--rc); font-weight: 800; }
+.ach.is-locked .ach-icon { width: 54px; height: 54px; border-radius: 50%; color: var(--text-muted); background: rgba(255, 255, 255, 0.04); border: 2px dashed rgba(255, 255, 255, 0.1); opacity: 0.75; }
+.ach-lock { position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; color: var(--text-muted); background: var(--bg-secondary); border: 1px solid var(--border-color); }
+.ach.is-close { border-color: color-mix(in oklab, var(--rc) 45%, transparent); }
+.ach.is-close .ach-icon { color: var(--rc); border-color: color-mix(in oklab, var(--rc) 50%, transparent); opacity: 1; animation: ach-pulse 2.4s ease-in-out infinite; }
+.ach.is-close .ach-progress em { color: var(--rc); font-weight: 700; }
+@keyframes ach-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--rc) 0%, transparent); } 50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--rc) 22%, transparent); } }
+.ach--epic.is-earned::after, .ach--legendary.is-earned::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.22) 50%, transparent 65%); background-size: 250% 100%; animation: ach-shimmer 3.2s ease-in-out infinite; pointer-events: none; }
+.ach--lg .ach-icon { width: 84px !important; height: 84px !important; }
+.ach--sm { padding: 10px 6px; gap: 4px; }
+.ach--sm .ach-icon { width: 40px !important; height: 40px !important; }
+.ach--sm .ach-name { font-size: 11px; }
+.ach--sm .ach-sub { display: none; }
+.ach-ring-num { font-family: var(--font-display); font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.ach-gallery .cal-notice code { font-size: 11.5px; }
+
+.ach-pop { position: fixed; inset: 0; z-index: 1400; display: grid; place-items: center; padding: 16px; background: rgba(3, 5, 10, 0.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: ach-pop-fade 220ms ease-out; }
+.ach-pop-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(400px, 100%); padding: 28px 22px 22px; text-align: center; border-radius: 28px; overflow: hidden; background: radial-gradient(120% 70% at 50% 0%, color-mix(in oklab, var(--rc) 28%, transparent), transparent 70%), var(--bg-secondary); border: 1px solid color-mix(in oklab, var(--rc) 50%, transparent); box-shadow: 0 30px 80px -30px color-mix(in oklab, var(--rc) 70%, black); animation: ach-pop-in 420ms cubic-bezier(0.16, 1, 0.3, 1); }
+.ach-pop-rays { position: absolute; top: -120px; left: 50%; width: 420px; height: 420px; margin-left: -210px; background: repeating-conic-gradient(color-mix(in oklab, var(--rc) 16%, transparent) 0deg 10deg, transparent 10deg 24deg); -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 62%); mask-image: radial-gradient(circle, #000 20%, transparent 62%); animation: ach-rays 18s linear infinite; pointer-events: none; }
+.ach-pop-card > :not(.ach-pop-rays) { position: relative; }
+.ach-pop-kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--rc); }
+.ach-pop-card .ach { border: 0; background: transparent; box-shadow: none; cursor: default; }
+.ach-pop-card .ach:hover { transform: none; }
+.ach-pop-card .ach--lg .ach-name, .ach-pop-card .ach--lg .ach-sub { display: none; }
+.ach-pop-title { margin: 0; font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--text-primary); }
+.ach-pop-desc { margin: 0; font-size: 14px; color: var(--text-secondary); }
+.ach-pop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: 100%; }
+.ach-pop-xp { margin-top: 2px; padding: 6px 14px; border-radius: 999px; font-family: var(--font-display); font-size: 18px; font-weight: 800; color: #1b1300; background: linear-gradient(135deg, #ffe29a, #ffb547); box-shadow: 0 10px 24px -10px rgba(255, 181, 71, 0.8); }
+.ach-pop-actions { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 6px; }
+.ach-pop-actions .btn { justify-content: center; width: 100%; }
+@keyframes ach-pop-fade { from { opacity: 0; } }
+@keyframes ach-pop-in { from { opacity: 0; transform: translateY(18px) scale(0.92); } }
+@keyframes ach-rays { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ach-pop-rays, .ach.is-close .ach-icon, .ach--epic.is-earned::after, .ach--legendary.is-earned::after { animation: none !important; } }
