@@ -270,7 +270,7 @@ function AppShellFrame({ children }) {
                   </span>
                 </div>
 
-                <div className="menu-grid">
+                <div className="menu-grid menu-actions">
                   <button
                     onClick={() => { setMobileMenuOpen(false); setExportModalOpen(true) }}
                     className="flex items-center justify-center gap-2 p-3 bg-amber/10 border border-amber/30 rounded-xl text-amber text-sm font-medium"

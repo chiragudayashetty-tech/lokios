@@ -32,10 +32,44 @@ export const DEFAULT_SETTINGS = {
 const KEY = 'lokios_settings'
 const listeners = new Set()
 
+/**
+ * Merge stored values over the defaults, dropping anything null or of the wrong
+ * type (old or hand-edited settings must never replace a default with junk).
+ * Nested objects (theme) are merged key by key; free-form maps (habitReminders,
+ * screenCaps) only need to be plain objects.
+ */
+export function normalizeSettings(raw) {
+  const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+  const out = { ...DEFAULT_SETTINGS }
+  const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v)
+  for (const [k, def] of Object.entries(DEFAULT_SETTINGS)) {
+    let v = src[k]
+    if (v == null) continue
+    if (typeof def === 'number' && typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) v = Number(v)
+    if (typeof def === 'number' && (typeof v !== 'number' || !Number.isFinite(v))) continue
+    if (typeof def === 'boolean' && typeof v !== 'boolean') continue
+    if (typeof def === 'string' && typeof v !== 'string') continue
+    if (isObj(def)) {
+      if (!isObj(v)) continue
+      v = k === 'theme' ? normalizeTheme(v) : v
+    }
+    out[k] = v
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(out.dayBoundary)) out.dayBoundary = DEFAULT_SETTINGS.dayBoundary
+  if (out.weekStart !== 0 && out.weekStart !== 1) out.weekStart = DEFAULT_SETTINGS.weekStart
+  return out
+}
+
+function normalizeTheme(t) {
+  const out = { ...DEFAULT_SETTINGS.theme }
+  for (const [k, def] of Object.entries(DEFAULT_SETTINGS.theme)) if (t[k] != null && typeof t[k] === typeof def) out[k] = t[k]
+  return out
+}
+
 export function getSettings() {
   if (typeof window === 'undefined') return { ...DEFAULT_SETTINGS }
   try {
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(localStorage.getItem(KEY) || '{}')) }
+    return normalizeSettings(JSON.parse(localStorage.getItem(KEY) || '{}'))
   } catch {
     return { ...DEFAULT_SETTINGS }
   }
@@ -67,7 +101,7 @@ export async function saveSettings(patch, userId) {
 /** Adopt settings stored on the profile (called after login / profile fetch). */
 export function hydrateSettingsFromProfile(profile, userId) {
   if (!profile?.settings || typeof profile.settings !== 'object') return
-  const merged = { ...DEFAULT_SETTINGS, ...profile.settings }
+  const merged = normalizeSettings(profile.settings)
   if (JSON.stringify(merged) !== JSON.stringify(getSettings())) writeLocal(merged, userId)
 }
 

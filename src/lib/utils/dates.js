@@ -3,6 +3,9 @@
  * Supported format tokens: YYYY, MM, DD, HH, mm, ss, MMM, MMMM, ddd, dddd
  */
 export function getLocalDateStr(date = new Date()) {
+  // An invalid date (blank or malformed value in a row) yields '' instead of throwing mid-render
+  if (!(date instanceof Date)) date = new Date(date)
+  if (Number.isNaN(date.getTime())) return ''
   const offset = date.getTimezoneOffset()
   const local = new Date(date.getTime() - offset * 60 * 1000)
   return local.toISOString().split('T')[0]
