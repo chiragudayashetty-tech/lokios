@@ -9,5 +9,5 @@ export function useAchievements() {
   const { user } = useOSSlice('auth')
   const [snap, setSnap] = useState(achievementSnapshot)
   useEffect(() => subscribeAchievements(setSnap), [])
-  return snap.userId === user?.id ? snap : { list: [], earned: new Map(), stats: null, missing: false, ready: false }
+  return snap.userId === user?.id ? snap : { list: [], earned: new Map(), stats: null, missing: false, saveError: null, ready: false }
 }

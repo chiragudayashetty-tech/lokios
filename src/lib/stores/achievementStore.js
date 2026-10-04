@@ -11,6 +11,22 @@ import { shiftDate } from '@/lib/utils/streakCalc'
 import { isExcludedFromDaily, getLocalDailyBudget } from '@/lib/utils/budget'
 import { evaluateAchievements, achievementXp, RARITY } from '@/lib/achievements'
 
+/**
+ * Save new unlocks. Older achievements tables may lack the (user_id, achievement_id)
+ * unique key the batch upsert needs; then rows go in one by one (a duplicate is fine).
+ * Returns an error message, or null when everything was saved.
+ */
+async function saveUnlocks(sb, rows) {
+  const { error } = await sb.from('achievements').upsert(rows, { onConflict: 'user_id,achievement_id', ignoreDuplicates: true })
+  if (!error) return null
+  if (!/on conflict|unique or exclusion/i.test(error.message || '')) return error.message
+  for (const r of rows) {
+    const res = await sb.from('achievements').insert(r)
+    if (res.error && res.error.code !== '23505') return res.error.message
+  }
+  return null
+}
+
 /** earned_at placeholder for achievements earned but not yet saved (achievements table missing). */
 export const PENDING = 'pending'
 
@@ -149,24 +165,23 @@ export function syncAchievements(userId, game) {
     const earned = new Map((earnedRes.data || []).map((r) => [r.achievement_id, r.earned_at]))
     const firstSync = earned.size === 0
     const fresh = list.filter((a) => a.earned && !earned.has(a.id))
+    let saveError = null
     if (fresh.length) {
       const now = new Date().toISOString()
-      const { error } = await sb.from('achievements').upsert(fresh.map((a) => ({ user_id: userId, achievement_id: a.id, earned_at: now })), { onConflict: 'user_id,achievement_id', ignoreDuplicates: true })
-      if (!error) {
+      saveError = await saveUnlocks(sb, fresh.map((a) => ({ user_id: userId, achievement_id: a.id, earned_at: now })))
+      if (!saveError) {
         for (const a of fresh) {
           earned.set(a.id, now)
           await robustAwardXP(userId, achievementXp(a), 'achievement', `ach_${a.id}`, `🏆 Achievement: ${a.name} (${RARITY[a.rarity].label})`, 'discipline')
         }
-        if (firstSync && fresh.length > 3) {
-          emitGame('toast', { icon: 'award', title: `${fresh.length} achievements unlocked`, sub: 'From your history — see Progress → Achievements', tone: 'gold', big: true })
-        } else {
-          for (const a of fresh.slice(0, 3)) emitGame('toast', { icon: 'award', title: `Achievement: ${a.name}`, sub: `${RARITY[a.rarity].label} · +${achievementXp(a)} XP`, tone: 'gold', big: a.rarity === 'legendary' })
-          if (fresh.length > 3) emitGame('toast', { icon: 'award', title: `+${fresh.length - 3} more achievements`, sub: 'Progress → Achievements', tone: 'gold' })
-          emitGame('achievement-unlocked', { ids: fresh.map((a) => a.id) })
-        }
+        emitGame('achievement-unlocked', { ids: fresh.map((a) => a.id), history: firstSync && fresh.length > 3 })
+      } else {
+        // Still show them as earned; XP is paid on the first sync that manages to save
+        for (const a of fresh) earned.set(a.id, PENDING)
+        console.warn('Saving achievements failed:', saveError)
       }
     }
-    publish({ list, stats, earned, missing: false, ready: true, userId })
+    publish({ list, stats, earned, missing: false, saveError, ready: true, userId })
   })().catch((e) => console.warn('Achievements sync failed:', e)).finally(() => { running = null })
   return running
 }
