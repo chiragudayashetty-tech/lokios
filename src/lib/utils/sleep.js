@@ -25,7 +25,7 @@ export function durationPoints(minutes) {
 
 /** Consistency points: full within ±30 min of the 7-night median bedtime, 0 beyond ±2h. */
 export function consistencyPoints(bedtimeIso, history = []) {
-  const prior = history.filter((l) => l.bedtime).slice(0, 7).map((l) => bedMinutesFromNoon(l.bedtime))
+  const prior = history.filter((l) => l.bedtime).map((l) => bedMinutesFromNoon(l.bedtime)).filter(Number.isFinite).slice(0, 7)
   if (prior.length < 3) return 25 // not enough nights to judge yet
   const off = Math.abs(bedMinutesFromNoon(bedtimeIso) - median(prior))
   if (off <= 30) return 25
@@ -34,9 +34,9 @@ export function consistencyPoints(bedtimeIso, history = []) {
 
 /** history = previous logs, newest first (the night being scored excluded). */
 export function sleepScore({ bedtime, wake_time: wake, quality }, history = []) {
-  const minutes = Math.max(0, Math.round((new Date(wake) - new Date(bedtime)) / 60000))
+  const minutes = Math.max(0, Math.round((new Date(wake) - new Date(bedtime)) / 60000)) || 0
   const score = Math.round(durationPoints(minutes) + consistencyPoints(bedtime, history) + clamp(Number(quality) || 0, 0, 5) * 5)
-  return { minutes, score: clamp(score, 0, 100) }
+  return { minutes, score: Number.isFinite(score) ? clamp(score, 0, 100) : 0 }
 }
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/
