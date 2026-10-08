@@ -72,11 +72,18 @@ export function useXPInternal(user) {
     const onXp = (e) => {
       const d = e.detail || {}
       if (!d.silent) {
-        const label = String(d.description || d.sourceType || 'XP').replace(/s[#[^]]+]$/, '').replace(/s*([^)]*XP[^)]*)s*$/i, '')
+        const label = String(d.description || (d.sourceType || 'XP').replace(/_/g, ' ')).replace(/s[#[^]]+]$/, '').replace(/s*([^)]*XP[^)]*)s*$/i, '')
         // One toast per award: the same source + amount re-announced within 15s (save + sync echo) is dropped
-        const key = `${d.sourceId || d.sourceType || 'xp'}:${d.amount}`
+        // One pop-up per reward: a source that already showed in the last 24h (this device,
+        // across reloads) stays quiet, so re-syncs and re-settles never repeat "+30 XP".
+        const key = `${d.sourceId || `${d.sourceType || 'xp'}:${d.amount}`}`
         const now = Date.now()
-        if ((recentToasts.current.get(key) || 0) <= now - 15000) {
+        let shown = {}
+        try { shown = JSON.parse(localStorage.getItem('lokios_xp_toasts') || '{}') } catch {}
+        for (const k of Object.keys(shown)) if (shown[k] < now - 86400000) delete shown[k]
+        if (!shown[key] && (recentToasts.current.get(key) || 0) <= now - 15000) {
+          shown[key] = now
+          try { localStorage.setItem('lokios_xp_toasts', JSON.stringify(shown)) } catch {}
           recentToasts.current.set(key, now)
           pushFeedback(`${key}_${now}`, Number(d.amount), label.length > 48 ? label.slice(0, 47) + '…' : label)
         }

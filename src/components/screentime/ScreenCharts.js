@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react'
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from 'recharts'
 import { TrendingDown, TrendingUp, Trophy, AlertTriangle } from 'lucide-react'
 import { getLocalDateStr } from '@/lib/utils/dates'
-import { SCREEN_CATEGORIES, UNCATEGORIZED, categoryMinutes, disciplineScore } from '@/lib/utils/screenIntel'
+import { SCREEN_CATEGORIES, UNCATEGORIZED, categoryMinutes } from '@/lib/utils/screenIntel'
+import { disciplineScore } from '@/lib/utils/screenTimeScore'
 
 const RANGES = [7, 30, 90]
 const axis = { fontSize: 11, fill: 'var(--text-muted)' }
