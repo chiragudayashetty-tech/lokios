@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { isMissingSchema } from '@/lib/utils/schema'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { sleepScore } from '@/lib/utils/sleep'
 
 export const SLEEP_LOG_XP = 10
@@ -36,7 +35,6 @@ export function useSleep(userId, days = 120) {
     const { data, error } = await createClient().from('sleep_logs').upsert(row, { onConflict: 'user_id,date' }).select().single()
     if (error) return { error, missing: isMissingSchema(error) }
     setState((s) => ({ ...s, logs: [data, ...s.logs.filter((l) => l.date !== date)].sort((a, b) => b.date.localeCompare(a.date)) }))
-    await robustAwardXP(userId, SLEEP_LOG_XP, 'sleep_log', `sleep_${date}`, `🌙 Sleep logged — ${Math.floor(minutes / 60)}h ${minutes % 60}m, score ${score}`, 'discipline')
     return { data }
   }, [userId, state.logs])
 

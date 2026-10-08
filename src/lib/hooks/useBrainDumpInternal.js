@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { XP_REWARDS } from '@/lib/constants'
-import { robustAwardXP } from '@/lib/utils/xpFallback'
+import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { isMissingSchema } from '@/lib/utils/schema'
 import { parseCapture, kindOf } from '@/lib/utils/brainDump'
 
@@ -99,14 +99,30 @@ export function useBrainDumpInternal(user) {
     if (error) { console.error('Error adding brain dump item:', error); return { error } }
     if (hasKind === null) setHasKind('kind' in data)
     setItems(prev => [data, ...prev])
-    robustAwardXP(user.id, XP_REWARDS.brain_dump_capture || 2, 'brain_dump', `capture_${data.id}`, 'Brain dump capture', 'discipline').catch(() => {})
     return { data }
   }, [user, hasKind])
 
-  const setKind = useCallback((id, kind) => updateItem(id, { kind, ...(kind === 'inbox' ? { status: 'inbox', converted_to: null } : {}) }), [updateItem])
+  // XP only for finishing an item (done / converted to a task or mission), never for capturing,
+  // and it is taken back if the item is moved back out of the archive.
+  const doneXp = useCallback((id) => user && robustAwardXP(user.id, XP_REWARDS.brain_dump_capture || 2, 'brain_dump', `bd_done_${id}`, 'Brain dump item done', 'discipline').catch(() => {}), [user])
+  const undoXp = useCallback((id) => user && robustRemoveXP(user.id, 'brain_dump', `bd_done_${id}`).catch(() => {}), [user])
+  const setKind = useCallback(async (id, kind) => {
+    const res = await updateItem(id, { kind, ...(kind === 'inbox' ? { status: 'inbox', converted_to: null } : {}) })
+    if (kind === 'archived') doneXp(id)
+    if (kind === 'inbox') undoXp(id)
+    return res
+  }, [updateItem, doneXp, undoXp])
   const trashItem = useCallback((id) => updateItem(id, { kind: 'archived', converted_to: 'trash', status: 'discarded' }), [updateItem])
-  const restoreItem = useCallback((id) => updateItem(id, { kind: 'inbox', converted_to: null, status: 'inbox' }), [updateItem])
-  const markConverted = useCallback((id, ref) => updateItem(id, { kind: 'archived', converted_to: ref, status: 'converted' }), [updateItem])
+  const restoreItem = useCallback(async (id) => {
+    const res = await updateItem(id, { kind: 'inbox', converted_to: null, status: 'inbox' })
+    undoXp(id)
+    return res
+  }, [updateItem, undoXp])
+  const markConverted = useCallback(async (id, ref) => {
+    const res = await updateItem(id, { kind: 'archived', converted_to: ref, status: 'converted' })
+    doneXp(id)
+    return res
+  }, [updateItem, doneXp])
 
   const deleteItem = useCallback(async (id) => {
     if (!user) return false

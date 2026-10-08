@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { Check, AlertTriangle, Flame, Pencil, Zap } from 'lucide-react'
 import Ring from '@/components/ui/Ring'
 import { saveSettings } from '@/lib/settings'
-import { calculateScreenTimeXPPure } from '@/lib/utils/screenTimeScore'
-import { SCREEN_CATEGORIES, UNCATEGORIZED, TARGETS, CAP_LABELS, DEFAULT_CAPS, categoryMinutes, capMinutes, capStreak, disciplineScore } from '@/lib/utils/screenIntel'
+import { calculateScreenTimeXPPure, screenBreakdown } from '@/lib/utils/screenTimeScore'
+import { SCREEN_CATEGORIES, UNCATEGORIZED, CAP_LABELS, DEFAULT_CAPS, categoryMinutes, capMinutes, capStreak, disciplineScore } from '@/lib/utils/screenIntel'
 
+const fmtM = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${Math.round(m % 60)}m` : ''}` : `${Math.round(m)}m`)
 const fmt = (v, unit) => (unit === 'm' ? `${Math.round(v)}m` : `${+v.toFixed(1)}h`)
 
 /** Today: four rings against the XP targets, plus the XP impact of the day. */
@@ -24,22 +25,22 @@ export function TodayRings({ log, dateLabel, isToday = true }) {
       ) : (
         <>
           <div className="si-rings">
-            {TARGETS.map((t) => {
-              const v = t.value(log)
-              const ok = t.lowerIsBetter ? v <= t.target : v >= t.target
-              return (
+            {(() => {
+              const b = screenBreakdown(log)
+              const items = [
+                { id: 'prod', label: 'Productive', v: b.productive, ok: b.productive > 0, ratio: Math.min(1, b.productive / 240), state: b.productive > 0 ? 'rewarded' : 'none yet' },
+                ...b.leisure.map((l) => ({ id: l.id, label: l.label, v: l.used, ok: l.over === 0, ratio: l.limit ? l.used / l.limit : 0, state: l.over ? `${Math.round(l.over)}m over ${l.limit}m` : `within ${l.limit}m` })),
+              ]
+              return items.map((t) => (
                 <div key={t.id} className="si-ring">
-                  <Ring value={v / t.target} size={74} stroke={7} color={ok ? 'var(--success)' : 'var(--danger)'} label={`${t.label} ${fmt(v, t.unit)} of ${fmt(t.target, t.unit)}`}>
-                    <b>{fmt(v, t.unit)}</b>
+                  <Ring value={t.ratio} size={74} stroke={7} color={t.ok ? 'var(--success)' : 'var(--danger)'} label={`${t.label} ${fmtM(t.v)}, ${t.state}`}>
+                    <b>{fmtM(t.v)}</b>
                   </Ring>
                   <span className="si-ring-label">{t.label}</span>
-                  <span className={`si-ring-state ${ok ? 'is-ok' : 'is-bad'}`}>
-                    {ok ? <Check size={11} /> : <AlertTriangle size={11} />}
-                    {t.lowerIsBetter ? `${ok ? 'under' : 'over'} ${fmt(t.target, t.unit)}` : `${ok ? 'hit' : 'below'} ${fmt(t.target, t.unit)}`}
-                  </span>
+                  <span className={`si-ring-state ${t.ok ? 'is-ok' : 'is-bad'}`}>{t.ok ? <Check size={11} /> : <AlertTriangle size={11} />}{t.state}</span>
                 </div>
-              )
-            })}
+              ))
+            })()}
           </div>
           {!isToday && <p className="ms-muted">Today isn&apos;t logged yet — these are your latest numbers.</p>}
           <div className={`si-xp ${xpAmount >= 0 ? 'is-pos' : 'is-neg'}`}>

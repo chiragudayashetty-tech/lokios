@@ -68,3 +68,17 @@ export function scoreTone(score) {
   if (score >= 50) return { label: 'Fair', color: 'var(--warning)' }
   return { label: 'Poor', color: 'var(--danger)' }
 }
+
+/**
+ * Sleep routine rule: asleep before 01:00, awake before 09:00, and 7–9 hours of sleep.
+ * Times are local; a bedtime after 18:00 counts as "before 1am" for the next morning.
+ */
+export function sleepRoutineMet({ bedtime, wake_time: wake }) {
+  const b = new Date(bedtime), w = new Date(wake)
+  if (Number.isNaN(b.getTime()) || Number.isNaN(w.getTime())) return false
+  const bedMin = b.getHours() * 60 + b.getMinutes()
+  const sleptBefore1 = bedMin >= 18 * 60 || bedMin < 60
+  const wokeBefore9 = w.getHours() * 60 + w.getMinutes() < 9 * 60
+  const minutes = (w - b) / 60000
+  return sleptBefore1 && wokeBefore9 && minutes >= 420 && minutes <= 540
+}

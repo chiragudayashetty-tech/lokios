@@ -106,8 +106,8 @@ function LogForm({ userId, date, log, catsMissing, onSaved }) {
         <label><span><Tv size={12} /> Streaming</span><input className="input" type="number" step="0.25" min="0" inputMode="decimal" value={f.streaming} onChange={set('streaming')} placeholder="0" /><small>hours</small></label>
       </div>
       {catsMissing ? <SchemaHint feature="Category tracking" /> : (
-        <details className="si-catform" open={catSum > 0 || undefined}>
-          <summary><ChevronDown size={14} /> Categories <span className="arena-hint">optional · minutes</span></summary>
+        <details className="si-catform" open>
+          <summary><ChevronDown size={14} /> Where the time went <span className="arena-hint">minutes · this decides the score</span></summary>
           <div className="si-fields is-cats">
             {SCREEN_CATEGORIES.map((c) => (
               <label key={c.id}><span><i style={{ background: c.color }} />{c.label}</span><input className="input" type="number" step="5" min="0" inputMode="numeric" value={f.cats[c.id]} onChange={setCat(c.id)} placeholder="0" /></label>

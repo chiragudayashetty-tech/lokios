@@ -63,7 +63,9 @@ export function useGoalsInternal(user) {
 
   // Grouped goal views
   const mainQuests = useMemo(
-    () => goals.filter((g) => g.type === 'main_quest' && g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed'),
+    // Nearest deadline first (no deadline last) so the dashboard shows the most urgent objective
+    () => goals.filter((g) => g.type === 'main_quest' && g.status !== 'completed' && g.status !== 'cancelled' && g.status !== 'failed')
+      .sort((a, b) => String(a.deadline || '9999-12-31').localeCompare(String(b.deadline || '9999-12-31'))),
     [goals]
   )
 

@@ -9,6 +9,7 @@ import NextUpHero from '@/components/today/NextUpHero'
 import TimelineSection from '@/components/today/TimelineSection'
 import EndOfDayReview from '@/components/today/EndOfDayReview'
 import SleepCard from '@/components/today/SleepCard'
+import WeightCard from '@/components/today/WeightCard'
 import { useOS, useOSSlice } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -18,6 +19,7 @@ import { fetchBudgetLogs, isExcludedFromDaily, getLocalDailyBudget } from '@/lib
 import { orderWithChains, chainState } from '@/lib/utils/habitChains'
 import { useGameState } from '@/lib/hooks/useGameState'
 import { useSleep } from '@/lib/hooks/useSleep'
+import { sleepRoutineMet } from '@/lib/utils/sleep'
 import { useDailyReview } from '@/lib/hooks/useDailyReview'
 
 const PROTOCOLS = [
@@ -202,13 +204,15 @@ export default function TodayPage() {
     if (item.kind === 'task' && !item.done) return withBusy(item.id, () => completeOperation?.(item.id))
   }
 
-  // Sleep ≥ 70 auto-ticks a "Sleep" habit for that date
+  // A good night ticks the sleep routine habit(s) for that date; the habit pays the XP.
   const saveSleep = async (entry) => {
     const res = await sleep.save(entry)
-    if (res?.data && res.data.score >= 70) {
-      const sleepHabit = habitsScheduledOn(habits.filter(h => h.is_active !== false && /sleep/i.test(h.title || '')), entry.date)[0]
-      const done = todayLogs.some(l => l.habit_id === sleepHabit?.id && l.date === entry.date && (!l.status || l.status === 'completed'))
-      if (sleepHabit && !done && entry.date === today) await cycleHabitState?.(sleepHabit.id, entry.date, 'completed')
+    if (res?.data && sleepRoutineMet(entry)) {
+      const routine = habitsScheduledOn(habits.filter(h => h.is_active !== false && /sleep|wake/i.test(h.title || '')), entry.date)
+      for (const h of routine) {
+        const done = todayLogs.some(l => l.habit_id === h.id && l.date === entry.date && (!l.status || l.status === 'completed'))
+        if (!done && entry.date === today) await cycleHabitState?.(h.id, entry.date, 'completed')
+      }
     }
     return res
   }
@@ -269,6 +273,7 @@ export default function TodayPage() {
         {!sleep.loading && (
           <SleepCard key={`${today}_${sleep.logs.find(l => l.date === today)?.id || 'new'}`} today={today} logs={sleep.logs} missing={sleep.missing} onSave={saveSleep} compact={appHour >= 14 || today !== calendarToday} />
         )}
+        <WeightCard userId={user?.id} today={today} />
 
         <div className="tdy-timeline">
           {SECTIONS.map(sec => (

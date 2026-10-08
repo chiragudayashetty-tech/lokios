@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useRef, useState, useEffect, useMemo } from 'react'
+import { useDraft } from '@/lib/hooks/useDraft'
 import AppShell from '@/components/layout/AppShell'
 import WinterLoader from '@/components/ui/WinterLoader'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -220,7 +221,12 @@ export default function SpeakingPracticePage() {
 
   // Topics & Active State
   const [topics] = useState(CURATED_TOPICS)
-  const [selectedTopic, setSelectedTopic] = useState(CURATED_TOPICS[30] || CURATED_TOPICS[0]) // Default to Phase 2 (Day 31)
+  // The topic stays put (saved on this device) once shuffled or picked, until the session
+  // is logged or you shuffle again — reloads on window focus no longer replace it.
+  const [selectedTopic, setSelectedTopic] = useDraft('speaking_topic', CURATED_TOPICS[30] || CURATED_TOPICS[0])
+  const [topicLocked, setTopicLocked] = useDraft('speaking_topic_locked', false)
+  const topicLockedRef = useRef(false)
+  useEffect(() => { topicLockedRef.current = topicLocked }, [topicLocked])
   const [activePhase, setActivePhase] = useState(2) // Default to Phase 2
   const [selectedSituation, setSelectedSituation] = useState(null)
   const [isCustomTopic, setIsCustomTopic] = useState(false)
@@ -352,7 +358,7 @@ export default function SpeakingPracticePage() {
         // Set default next topic based on uncompleted topics
         const completedTopicTitles = new Set(merged.map(h => h.topic))
         const nextTopic = CURATED_TOPICS.find(t => !completedTopicTitles.has(t.topic))
-        if (nextTopic) {
+        if (nextTopic && !topicLockedRef.current) {
           setSelectedTopic(nextTopic)
         }
       } catch (err) {
@@ -420,6 +426,7 @@ export default function SpeakingPracticePage() {
       if (count > 10) {
         clearInterval(interval)
         setIsShuffling(false)
+        setTopicLocked(true)
       }
     }, 80)
   }
@@ -434,6 +441,7 @@ export default function SpeakingPracticePage() {
       category: customCategoryInput.trim() || 'Custom Topic',
       phase: history.length < 30 ? 1 : 2
     })
+    setTopicLocked(true)
     setIsCustomTopic(false)
   }
 
@@ -474,6 +482,7 @@ export default function SpeakingPracticePage() {
     const updatedLocal = [newLog, ...localLogs.filter(l => l.date !== todayStr)]
     localStorage.setItem(`lokios_speaking_logs_${user.id}`, JSON.stringify(updatedLocal))
     setHistory(updatedLocal)
+    setTopicLocked(false) // logged: the next visit offers a new topic
     setSubmitSuccess(true)
     setDriveLink('')
     setNotes('')
@@ -920,6 +929,7 @@ export default function SpeakingPracticePage() {
                           key={topicNum}
                           onClick={() => {
                             setSelectedTopic(t)
+                            setTopicLocked(true)
                             setIsCustomTopic(false)
                           }}
                           className={`w-7 h-7 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center relative ${

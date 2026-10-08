@@ -159,7 +159,7 @@ function GhostCard({ ghost }) {
   if (!ghost) {
     return (
       <div className="arena-card">
-        <div className="arena-card-head"><Ghost size={15} style={{ color: '#C4B5FD' }} /> Ghost race</div>
+        <div className="arena-card-head"><Ghost size={15} style={{ color: '#C4B5FD' }} /> Ghost battle</div>
         <div className="arena-line">This is your best week so far — you are the ghost to beat. 👻</div>
       </div>
     )
@@ -171,7 +171,7 @@ function GhostCard({ ghost }) {
   const wk = new Date(`${ghost.bestWeekStart}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
   return (
     <div className="arena-card">
-      <div className="arena-card-head"><Ghost size={15} style={{ color: '#C4B5FD' }} /> Ghost race</div>
+      <div className="arena-card-head"><Ghost size={15} style={{ color: '#C4B5FD' }} /> Ghost battle</div>
       <div className="arena-big" style={{ color: ahead ? 'var(--success)' : 'var(--text-primary)' }}>
         {ahead ? '+' : ''}{ghost.diff.toLocaleString()}<span>XP vs ghost</span>
       </div>
@@ -180,9 +180,22 @@ function GhostCard({ ghost }) {
         <polyline points={pts(ghost.you)} className="ghost-you" />
         <circle cx={(ghost.dayIndex / 6) * W} cy={H - (Math.max(0, ghost.youNow) / max) * H} r="3.5" className="ghost-dot" />
       </svg>
-      <div className="arena-line">
-        {ahead ? <>Ahead of your best week (wk of {wk}) 🔥</> : <>{Math.abs(ghost.diff).toLocaleString()} XP behind your wk of {wk} pace</>}
-      </div>
+      {(() => {
+        // Battle framing: your XP vs the ghost's full week; the bar is the ghost's remaining HP
+        const daysLeft = 6 - ghost.dayIndex
+        const toWin = Math.max(0, ghost.ghostTotal - ghost.youNow + 1)
+        const hp = ghost.ghostTotal > 0 ? Math.max(0, Math.min(1, 1 - ghost.youNow / ghost.ghostTotal)) : 0
+        return (
+          <>
+            <div className="ghost-hp" aria-label={`Ghost HP ${Math.round(hp * 100)}%`}><i style={{ width: `${hp * 100}%` }} /><span>Ghost HP {Math.round(hp * 100)}%</span></div>
+            <div className="arena-line">
+              {toWin === 0
+                ? <>Ghost defeated — you beat your wk of {wk} 🏆</>
+                : <>{ahead ? 'Ahead of pace 🔥 ' : `${Math.abs(ghost.diff).toLocaleString()} XP behind pace · `}{toWin.toLocaleString()} XP to beat it{daysLeft > 0 ? ` (${Math.ceil(toWin / (daysLeft + 1)).toLocaleString()}/day for ${daysLeft + 1} days)` : ' today'}</>}
+            </div>
+          </>
+        )
+      })()}
     </div>
   )
 }
