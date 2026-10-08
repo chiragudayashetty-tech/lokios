@@ -12,7 +12,9 @@ const STATE_STYLE = {
   'AT RISK': { color: 'var(--danger)', Icon: ShieldAlert },
   RECOVERY: { color: 'var(--info)', Icon: Shield },
   SURGING: { color: 'var(--success)', Icon: Flame },
-  STEADY: { color: 'var(--accent-primary)', Icon: Shield },
+  STEADY: { color: 'var(--warning)', Icon: Shield },
+  BUILDING: { color: 'var(--warning)', Icon: Shield },
+  SLIPPING: { color: 'var(--danger)', Icon: ShieldAlert },
 }
 
 function netColor(n) {
