@@ -791,7 +791,6 @@ export default function MissionControl() {
     setTodayScreenTime(saved)
     await syncScreenTimeXP(user.id, saved)
     await profileHook?.fetchProfile?.()
-    fetchMetrics()
   }
 
   const submitEodJournal = async (e) => {
@@ -2265,7 +2264,7 @@ export default function MissionControl() {
                   >
                     <div className="flex flex-col gap-2 font-mono text-[9px] text-slate-400 tracking-wider">
                       <div className="flex justify-between items-center py-1 border-b border-white/5">
-                        <span>Habits Today ({habitsCompletedToday}/{habitsCompletedToday + habitsFailedToday})</span> 
+                        <span>Habits Today ({scheduledToday.filter(h => doneIds.has(h.id)).length}/{scheduledToday.length})</span> 
                         <span className="font-bold" style={{ color: habitComponent > 0 ? '#34d399' : habitComponent < 0 ? '#f87171' : 'inherit' }}>
                           {habitComponent > 0 ? '+' : ''}{habitComponent.toFixed(1)}
                         </span>
