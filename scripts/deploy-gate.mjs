@@ -3,7 +3,8 @@
 // preview deployments always build so changes can be tested during the week.
 //
 // Overrides:
-// - put [deploy-now] in the commit message (or the PR title when merging) for an emergency fix
+// - put [deploy-now] in the commit message for an emergency fix. On GitHub, the PR title
+//   must contain it BEFORE you click Merge (the merge message is copied from the title then)
 // - DEPLOY_GATE=off in the Vercel project's environment variables disables the freeze
 
 const env = process.env.VERCEL_ENV
