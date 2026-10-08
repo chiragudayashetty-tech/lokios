@@ -14,7 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
-import { disciplineScore } from '@/lib/utils/screenTimeScore'
+import { computeMomentum, weeklyWinRate as weeklyWinRateOf, publishMomentum } from '@/lib/utils/momentumScore'
 import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { RANK_CONFIG, SAGA_IMAGES } from '@/lib/constants'
 import { getLocalDateStr, getEndOfWeek, getDebriefSortTime } from '@/lib/utils/dates'
@@ -106,7 +106,7 @@ export default function MissionControl() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [xpToday, setXpToday]         = useState(0)
   const [xpThisWeek, setXpThisWeek]   = useState(0)
-  const [weeklyWinRate, setWeeklyWinRate] = useState(0)
+  const [weekHabitLogs, setWeekHabitLogs] = useState([])
   const [momentumExpanded, setMomentumExpanded] = useState(false)
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
 
@@ -566,17 +566,8 @@ export default function MissionControl() {
         .limit(5000)
 
       if (allHabitLogs) {
-        // Weekly Win Rate (This week from Monday)
-        const recentLogs = allHabitLogs.filter(l => l.date >= currentMondayStr)
-        const uniqueDaysWithCompletion = new Set(
-          recentLogs.filter(log => log.status === 'completed').map(log => log.date)
-        ).size
-        
-        // Calculate days elapsed in the current week so far (Monday = 1 day elapsed)
-        let daysElapsed = new Date().getDay()
-        if (daysElapsed === 0) daysElapsed = 7 // Sunday is the 7th day
-        
-        setWeeklyWinRate(Math.round((uniqueDaysWithCompletion / daysElapsed) * 100))
+        // This week's check-ins (from Monday) for the weekly win rate
+        setWeekHabitLogs(allHabitLogs.filter(l => l.date >= currentMondayStr))
       }
 
       // ── Digital Addiction Widget ──
@@ -1016,38 +1007,14 @@ export default function MissionControl() {
   const flameColor = currentStreak >= 30 ? '#F59E0B' : currentStreak >= 7 ? '#f97316' : '#ef4444'
 
 
-  // ── Daily momentum (-10 to +10): each factor is scaled and capped so no single
-  // backlog or lucky streak dominates; label and colour come from this same score.
-  // 1. Habits (±4): share of today's scheduled habits done, minus failures
-  const scheduledToday       = habitsScheduledOn((habitsObj.habits || []).filter(h => h.is_active !== false), todayStr)
-  const doneIds              = new Set((todayLogs || []).filter(l => l.date === todayStr && (l.status === 'completed' || !l.status)).map(l => l.habit_id))
-  const habitsFailedToday    = (todayLogs || []).filter(l => l.date === todayStr && l.status === 'failed').length
-  const habitsDoneShare      = scheduledToday.length ? scheduledToday.filter(h => doneIds.has(h.id)).length / scheduledToday.length : null
-  const habitComponent       = habitsDoneShare == null ? 0 : Math.max(-4, Math.min(4, (habitsDoneShare * 4) - Math.min(4, habitsFailedToday * 1)))
-
-  // 2. Tasks (±2.5): +0.75 per task done today (max +2.5), −0.5 per overdue task (max −2)
-  const tasksCompletedToday  = (tasks || []).filter(t => t.status === 'completed' && t.completed_at && getLocalDateStr(new Date(t.completed_at)) === todayStr).length
-  const tasksOverdue         = (tasks || []).filter(t => !['completed', 'cancelled', 'failed'].includes(t.status) && t.due_date && t.due_date < todayStr).length
-  const opsComponent         = Math.min(2.5, tasksCompletedToday * 0.75) - Math.min(2, tasksOverdue * 0.5)
-
-  // 3. Missions (±1.5): finished today vs past-deadline active missions
-  const allGoals             = goalsObj.goals || []
-  const missionsCompleted    = allGoals.filter(g => g.status === 'completed' && g.completed_at && getLocalDateStr(new Date(g.completed_at)) === todayStr).length
-  const missionsStalled      = allGoals.filter(g => !['completed', 'cancelled', 'failed'].includes(g.status) && g.deadline && g.deadline < todayStr).length
-  const missionsComponent    = Math.min(1.5, missionsCompleted * 1.5) - Math.min(1.5, missionsStalled * 0.5)
-
-  // 4. Streak (0…+1.5) and weekly win rate (−1…+1.5)
-  const streakComponent      = currentStreak >= 14 ? 1.5 : currentStreak >= 7 ? 1.0 : currentStreak >= 1 ? 0.5 : 0
-  const winRateComponent     = weeklyWinRate >= 80 ? 1.5 : weeklyWinRate >= 60 ? 0.75 : weeklyWinRate >= 40 ? 0 : -1
-
-  // 5. Digital discipline (±1.5) from the screen-time score (0–100)
-  const screenScore          = todayScreenTime ? disciplineScore(todayScreenTime) : null
-  const screenComponent      = screenScore == null ? 0 : Math.round(((screenScore - 50) / 50) * 1.5 * 10) / 10
-
-  const rawMomentum          = habitComponent + opsComponent + missionsComponent + streakComponent + winRateComponent + screenComponent
-  const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
-  const momentumColor        = momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)'
-  const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 2 ? 'BUILDING' : momentumScore >= 0 ? 'STEADY' : 'SLIPPING'
+  // ── Daily momentum (-10 to +10): shared engine, also feeds the header pill
+  const mondayStr            = (() => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return getLocalDateStr(d) })()
+  // Earlier days from the fetched week, today from the live habit logs (so a tick counts instantly)
+  const weekLogs             = [...weekHabitLogs.filter(l => l.date !== todayStr), ...(todayLogs || []).filter(l => l.date === todayStr)]
+  const weeklyWinRate        = weeklyWinRateOf(habitsObj.habits || [], weekLogs, todayStr, mondayStr)
+  const momentum             = computeMomentum({ habits: habitsObj.habits || [], habitLogs: todayLogs || [], tasks: tasks || [], goals: goalsObj.goals || [], streak: currentStreak, winRate: weeklyWinRate, screenLog: todayScreenTime, todayStr })
+  const { score: momentumScore, color: momentumColor, label: momentumText } = momentum
+  useEffect(() => { if (habitsObj.habits) publishMomentum(momentum, todayStr) }, [momentum.score, momentum.label, todayStr]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
@@ -2238,7 +2205,7 @@ export default function MissionControl() {
                 <div className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-2xl bg-white/[0.03] border border-white/10">
                   <Zap size={13} className="text-cyan-400" />
                   <span className="font-mono font-bold text-white text-xs">
-                    {weeklyWinRate}% <span className="text-[9px] text-slate-400 font-normal">win rate</span>
+                    {weeklyWinRate ?? '—'}{weeklyWinRate == null ? '' : '%'} <span className="text-[9px] text-slate-400 font-normal">win rate</span>
                   </span>
                 </div>
               </div>
@@ -2264,40 +2231,40 @@ export default function MissionControl() {
                   >
                     <div className="flex flex-col gap-2 font-mono text-[9px] text-slate-400 tracking-wider">
                       <div className="flex justify-between items-center py-1 border-b border-white/5">
-                        <span>Habits Today ({scheduledToday.filter(h => doneIds.has(h.id)).length}/{scheduledToday.length})</span> 
-                        <span className="font-bold" style={{ color: habitComponent > 0 ? '#34d399' : habitComponent < 0 ? '#f87171' : 'inherit' }}>
-                          {habitComponent > 0 ? '+' : ''}{habitComponent.toFixed(1)}
+                        <span>Habits Today ({momentum.habits.done}/{momentum.habits.scheduled})</span> 
+                        <span className="font-bold" style={{ color: momentum.habits.part > 0 ? '#34d399' : momentum.habits.part < 0 ? '#f87171' : 'inherit' }}>
+                          {momentum.habits.part > 0 ? '+' : ''}{momentum.habits.part.toFixed(1)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1 border-b border-white/5">
-                        <span>Operations ({tasksCompletedToday} done / {tasksOverdue} overdue)</span> 
-                        <span className="font-bold" style={{ color: opsComponent > 0 ? '#34d399' : opsComponent < 0 ? '#f87171' : 'inherit' }}>
-                          {opsComponent > 0 ? '+' : ''}{opsComponent.toFixed(1)}
+                        <span>Operations ({momentum.tasks.done} done / {momentum.tasks.overdue} overdue)</span> 
+                        <span className="font-bold" style={{ color: momentum.tasks.part > 0 ? '#34d399' : momentum.tasks.part < 0 ? '#f87171' : 'inherit' }}>
+                          {momentum.tasks.part > 0 ? '+' : ''}{momentum.tasks.part.toFixed(1)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1 border-b border-white/5">
-                        <span>Missions ({missionsCompleted} done / {missionsStalled} stalled)</span> 
-                        <span className="font-bold" style={{ color: missionsComponent > 0 ? '#34d399' : missionsComponent < 0 ? '#f87171' : 'inherit' }}>
-                          {missionsComponent > 0 ? '+' : ''}{missionsComponent.toFixed(1)}
+                        <span>Missions ({momentum.missions.done} done / {momentum.missions.stalled} stalled)</span> 
+                        <span className="font-bold" style={{ color: momentum.missions.part > 0 ? '#34d399' : momentum.missions.part < 0 ? '#f87171' : 'inherit' }}>
+                          {momentum.missions.part > 0 ? '+' : ''}{momentum.missions.part.toFixed(1)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1 border-b border-white/5">
                         <span>Streak Inertia ({currentStreak}d)</span> 
-                        <span className="font-bold" style={{ color: streakComponent > 0 ? '#34d399' : 'inherit' }}>
-                          {streakComponent > 0 ? '+' : ''}{streakComponent.toFixed(1)}
+                        <span className="font-bold" style={{ color: momentum.streak.part > 0 ? '#34d399' : 'inherit' }}>
+                          {momentum.streak.part > 0 ? '+' : ''}{momentum.streak.part.toFixed(1)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-1 border-b border-white/5">
-                        <span>Weekly Win Rate ({weeklyWinRate}%)</span> 
-                        <span className="font-bold" style={{ color: winRateComponent > 0 ? '#34d399' : winRateComponent < 0 ? '#f87171' : 'inherit' }}>
-                          {winRateComponent > 0 ? '+' : ''}{winRateComponent.toFixed(1)}
+                        <span>Weekly Win Rate ({weeklyWinRate == null ? '—' : `${weeklyWinRate}%`})</span> 
+                        <span className="font-bold" style={{ color: momentum.winRate.part > 0 ? '#34d399' : momentum.winRate.part < 0 ? '#f87171' : 'inherit' }}>
+                          {momentum.winRate.part > 0 ? '+' : ''}{momentum.winRate.part.toFixed(1)}
                         </span>
                       </div>
                       {todayScreenTime && (
                         <div className="flex justify-between items-center py-1">
-                          <span>Screen Intel ({todayScreenTime.total_hours}h / {todayScreenTime.doom_scroll_minutes || 0}m doom)</span> 
-                          <span className="font-bold" style={{ color: screenComponent > 0 ? '#34d399' : screenComponent < 0 ? '#f87171' : 'inherit' }}>
-                            {screenComponent > 0 ? '+' : ''}{screenComponent.toFixed(1)}
+                          <span>Digital discipline ({momentum.screen.score ?? '—'}/100)</span> 
+                          <span className="font-bold" style={{ color: momentum.screen.part > 0 ? '#34d399' : momentum.screen.part < 0 ? '#f87171' : 'inherit' }}>
+                            {momentum.screen.part > 0 ? '+' : ''}{momentum.screen.part.toFixed(1)}
                           </span>
                         </div>
                       )}

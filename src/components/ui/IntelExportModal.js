@@ -1,12 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { FileDown, Eye, Share2, Check, ChevronLeft, ChevronRight, Database } from 'lucide-react'
+import { FileDown, Eye, Share2, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import { getLocalDateStr, getStartOfWeek } from '@/lib/utils/dates'
-import { REPORT_SECTIONS, DEFAULT_SECTIONS } from '@/lib/report/reportData'
-import { exportAnalysisZip } from '@/lib/utils/dataPortability'
-import { useOSSlice } from '@/lib/context/OSContext'
+import { REPORT_KINDS } from '@/lib/report/reportData'
 
 const MODES = [{ id: 'week', label: 'Weekly' }, { id: 'month', label: 'Monthly' }, { id: 'custom', label: 'Custom' }]
 
@@ -28,20 +26,18 @@ function rangeFor(mode, offset, custom) {
 
 const fmt = (ds, o = { month: 'short', day: 'numeric' }) => new Date(`${ds}T12:00:00`).toLocaleDateString('en-US', o)
 
-/** Report launcher (#42): pick a period, sections and theme → /report (print = Download PDF). */
+/** Report launcher (#42): pick a period, report card or full report, and theme → /report (print = Download PDF). */
 export default function IntelExportModal({ isOpen, onClose }) {
-  const { user } = useOSSlice('auth')
-  const [dataBusy, setDataBusy] = useState(null)
   const [mode, setMode] = useState('week')
   const [offset, setOffset] = useState(0)
   const [custom, setCustom] = useState(() => { const t = new Date(); const f = new Date(); f.setDate(t.getDate() - 29); return { from: getLocalDateStr(f), to: getLocalDateStr(t) } })
-  const [sections, setSections] = useState(DEFAULT_SECTIONS)
+  const [kind, setKind] = useState('card')
   const [theme, setTheme] = useState('light')
   const [copied, setCopied] = useState(false)
 
   const range = rangeFor(mode, offset, custom)
-  const valid = range.from && range.to && range.from <= range.to && sections.length > 0
-  const query = useMemo(() => new URLSearchParams({ from: range.from, to: range.to, sections: sections.join(','), theme }).toString(), [range.from, range.to, sections, theme])
+  const valid = range.from && range.to && range.from <= range.to
+  const query = useMemo(() => new URLSearchParams({ from: range.from, to: range.to, kind, theme }).toString(), [range.from, range.to, kind, theme])
   const label = mode === 'week' ? (offset === 0 ? 'This week' : offset === -1 ? 'Last week' : `Week of ${fmt(range.from)}`)
     : mode === 'month' ? fmt(range.from, { month: 'long', year: 'numeric' }) : 'Custom range'
 
@@ -49,11 +45,10 @@ export default function IntelExportModal({ isOpen, onClose }) {
   const share = async () => {
     const url = `${window.location.origin}/report?${query}`
     try {
-      if (navigator.share) await navigator.share({ title: `ChiragOS report · ${label}`, url })
+      if (navigator.share) await navigator.share({ title: `ChiragOS ${kind === 'full' ? 'full report' : 'report card'} · ${label}`, url })
       else { await navigator.clipboard?.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500) }
     } catch {}
   }
-  const toggle = (id) => setSections((s) => (s.includes(id) ? s.filter((x) => x !== id) : DEFAULT_SECTIONS.filter((x) => x === id || s.includes(x))))
 
   return (
     <Sheet open={!!isOpen} onClose={onClose} title="Export a report">
@@ -76,10 +71,11 @@ export default function IntelExportModal({ isOpen, onClose }) {
         )}
 
         <div className="xr-block">
-          <div className="xr-head"><span>Sections</span><button type="button" className="td-link" onClick={() => setSections(sections.length === DEFAULT_SECTIONS.length ? ['summary'] : DEFAULT_SECTIONS)}>{sections.length === DEFAULT_SECTIONS.length ? 'Summary only' : 'Select all'}</button></div>
-          <div className="xr-chips">
-            {REPORT_SECTIONS.map((s) => <button key={s.id} type="button" aria-pressed={sections.includes(s.id)} className={`tk-chip ${sections.includes(s.id) ? 'is-on' : ''}`} onClick={() => toggle(s.id)}>{sections.includes(s.id) && <Check size={12} />}{s.label}</button>)}
+          <div className="xr-head"><span>Report</span></div>
+          <div className="set-seg" role="radiogroup" aria-label="Report type">
+            {REPORT_KINDS.map((k) => <button key={k.id} type="button" role="radio" aria-checked={kind === k.id} className={kind === k.id ? 'is-on' : ''} onClick={() => setKind(k.id)}>{k.label}</button>)}
           </div>
+          <p className="xr-hint">{REPORT_KINDS.find((k) => k.id === kind).hint}</p>
         </div>
 
         <div className="xr-block">
@@ -87,14 +83,6 @@ export default function IntelExportModal({ isOpen, onClose }) {
           <div className="set-seg" role="radiogroup" aria-label="Report theme">
             {[{ id: 'light', label: 'Light (print)' }, { id: 'dark', label: 'Dark' }].map((t) => <button key={t.id} type="button" role="radio" aria-checked={theme === t.id} className={theme === t.id ? 'is-on' : ''} onClick={() => setTheme(t.id)}>{t.label}</button>)}
           </div>
-        </div>
-
-        <div className="xr-block">
-          <div className="xr-head"><span>All your data</span></div>
-          <button type="button" className="btn btn-secondary" disabled={!user?.id || dataBusy === 'busy'} onClick={async () => { setDataBusy('busy'); try { const r = await exportAnalysisZip(user.id); setDataBusy(`${r.files} files · ${r.days} days`) } catch { setDataBusy('failed') } }}>
-            <Database size={15} /> {dataBusy === 'busy' ? 'Preparing…' : 'Download all data (CSV, zip)'}
-          </button>
-          <p className="xr-hint">{dataBusy && dataBusy !== 'busy' ? `Downloaded: ${dataBusy}.` : 'Every habit, task, journal entry, log and XP record as CSV, plus daily_summary.csv (one row per day) for analysis.'}</p>
         </div>
 
         <p className="xr-hint">Download opens the report in a new tab with the print dialog — choose “Save as PDF”.</p>

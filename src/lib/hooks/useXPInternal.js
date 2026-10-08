@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { calculateDailyMomentum } from '@/lib/utils/dailyMomentum'
+import { readMomentum } from '@/lib/utils/momentumScore'
+
+// Header pill shows the dashboard's momentum score (one engine); XP history only fills the sparkline.
+const withScore = (m) => { const s = readMomentum(); return s ? { ...m, state: s.label, color: s.color, score: s.score } : m }
 import { backfillRecentScreenTimeXP } from '@/lib/utils/screenTimeXP'
 
 export function useXPInternal(user) {
@@ -46,12 +50,18 @@ export function useXPInternal(user) {
       console.warn('Failed to load daily momentum:', error)
       return
     }
-    setDailyMomentum(calculateDailyMomentum(data || []))
+    setDailyMomentum(withScore(calculateDailyMomentum(data || [])))
   }, [user])
 
   useEffect(() => {
     fetchMomentum()
   }, [fetchMomentum])
+
+  useEffect(() => {
+    const sync = () => setDailyMomentum((m) => withScore(m))
+    window.addEventListener('lokios:momentum', sync)
+    return () => window.removeEventListener('lokios:momentum', sync)
+  }, [])
 
   const pushFeedback = useCallback((id, amount, source) => {
     if (!Number.isFinite(amount) || amount === 0 || seenEventIds.current.has(id)) return

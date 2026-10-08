@@ -5,6 +5,7 @@ import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { categoryMinutes, SCREEN_CATEGORIES, UNCATEGORIZED } from '@/lib/utils/screenIntel'
 import { ACHIEVEMENTS } from '@/lib/achievements'
 import { progressOf } from '@/lib/utils/missions'
+import { disciplineScore } from '@/lib/utils/screenTimeScore'
 
 export const REPORT_SECTIONS = [
   { id: 'summary', label: 'Summary' },
@@ -20,6 +21,12 @@ export const REPORT_SECTIONS = [
   { id: 'achievements', label: 'Achievements' },
 ]
 export const DEFAULT_SECTIONS = REPORT_SECTIONS.map((s) => s.id)
+
+// Two reports: a one-page report card, and the long one for analysis.
+export const REPORT_KINDS = [
+  { id: 'card', label: 'Report card', hint: 'Short: grades per area, analysis and achievements.' },
+  { id: 'full', label: 'Full report', hint: 'Long: every habit, task, mission, journal entry, sleep night, weigh-in, book, spend and review with dates.' },
+]
 
 const PAGE = 1000
 const DAY = 86400000
@@ -40,7 +47,7 @@ export function parseReportParams(sp = {}) {
   if (from > to) [from, to] = [to, from]
   if (daysBetween(from, to) > 366) from = addDays(to, -365)
   const wanted = String(sp.sections || '').split(',').filter((s) => DEFAULT_SECTIONS.includes(s))
-  return { from, to, sections: wanted.length ? wanted : DEFAULT_SECTIONS, theme: sp.theme === 'dark' ? 'dark' : 'light', print: sp.print === '1' }
+  return { from, to, kind: sp.kind === 'full' ? 'full' : 'card', sections: wanted.length ? wanted : DEFAULT_SECTIONS, theme: sp.theme === 'dark' ? 'dark' : 'light', print: sp.print === '1' }
 }
 
 async function paged(q) {
@@ -58,24 +65,27 @@ export async function fetchReport(userId, { from, to }) {
   const len = daysBetween(from, to)
   const prevFrom = addDays(from, -len)
   const byDate = (t, f = prevFrom, sel = '*') => paged(() => sb.from(t).select(sel).eq('user_id', userId).gte('date', f).lte('date', to).order('date'))
-  const [xp, habitLogs, habits, tasks, goals, milestones, screen, sleep, budget, journal, work, workLogs, speaking, achievements, profile] = await Promise.all([
+  const [xp, habitLogs, habits, tasks, goals, milestones, screen, sleep, budget, journal, work, workLogs, speaking, achievements, profile, weight, books, reviews] = await Promise.all([
     paged(() => sb.from('xp_history').select('amount, source_type, stat_category, created_at').eq('user_id', userId).gte('created_at', startIso(prevFrom)).lte('created_at', endIso(to)).order('created_at')),
     byDate('habit_logs', prevFrom, 'habit_id, date, status'),
     paged(() => sb.from('habits').select('*').eq('user_id', userId)),
-    paged(() => sb.from('tasks').select('id, title, status, completed_at, due_date, difficulty, goal_id').eq('user_id', userId)),
+    paged(() => sb.from('tasks').select('*').eq('user_id', userId)),
     paged(() => sb.from('goals').select('*').eq('user_id', userId)),
-    paged(() => sb.from('goal_milestones').select('id, goal_id, title, done_at, target_date').eq('user_id', userId)),
-    byDate('screen_time_logs', from),
-    byDate('sleep_logs', from),
-    byDate('budget_logs', from),
-    byDate('journal_entries', from, 'date, mood'),
-    byDate('work_hours_logs', from),
-    byDate('work_logs', from, 'date, title'),
-    byDate('speaking_logs', from, 'date, topic, rating'),
+    paged(() => sb.from('goal_milestones').select('*').eq('user_id', userId)),
+    byDate('screen_time_logs', prevFrom),
+    byDate('sleep_logs', prevFrom),
+    byDate('budget_logs', prevFrom),
+    byDate('journal_entries', prevFrom),
+    byDate('work_hours_logs', prevFrom),
+    byDate('work_logs', from),
+    byDate('speaking_logs', prevFrom),
     paged(() => sb.from('achievements').select('achievement_id, earned_at').eq('user_id', userId)),
     sb.from('profiles').select('full_name, username, total_xp, longest_streak').eq('id', userId).maybeSingle().then((r) => r.data),
+    paged(() => sb.from('weight_logs').select('*').eq('user_id', userId).lte('date', to).order('date')),
+    paged(() => sb.from('books_completed').select('*').eq('user_id', userId)),
+    byDate('daily_reviews', from),
   ])
-  return summarise({ from, to, prevFrom, len, xp, habitLogs, habits, tasks, goals, milestones, screen, sleep, budget, journal, work, workLogs, speaking, achievements, profile })
+  return summarise({ from, to, prevFrom, len, xp, habitLogs, habits, tasks, goals, milestones, screen, sleep, budget, journal, work, workLogs, speaking, achievements, profile, weight, books, reviews })
 }
 
 function habitStats(habits, logs, from, to) {
@@ -171,5 +181,129 @@ export function summarise(d) {
     journal: { entries: journal.length, avgMood: avg(journal.filter((j) => j.mood != null), (j) => j.mood), daily: dates.map((ds) => { const js = journal.filter((j) => j.date === ds && j.mood != null); return { date: ds, label: label(ds), mood: js.length ? +(avg(js, (j) => j.mood)).toFixed(1) : null } }) },
     work: { days: work.length, hours: sum(work, (l) => l.total_hours_worked), focused: sum(work, (l) => l.focused_hours), deep: sum(work, (l) => l.deep_execution_hours), logs: d.workLogs.filter((l) => inRange(l.date) && l.title).slice(-12).reverse(), speaking: d.speaking.filter((l) => inRange(l.date)) },
     achievements: earned,
+    ...details(d, { inRange, inPrev, dates, label, habits, habitsPrev, tasksDone, tasksDonePrev, overdue, sleep, screen }),
   }
+}
+
+const clock = (iso) => { if (!iso) return null; const t = new Date(iso); return Number.isNaN(t.getTime()) ? null : t.toTimeString().slice(0, 5) }
+const isDebrief = (l) => /^weekly debrief/i.test(l.title || '')
+
+/** Everything the long report lists row by row, plus the report card's grades and analysis. */
+function details(d, { inRange, inPrev, dates, habits, habitsPrev, tasksDone, tasksDonePrev, overdue, sleep, screen }) {
+  const { from, to, len } = d
+  const goalTitle = new Map(d.goals.map((g) => [g.id, g.title]))
+
+  // Tasks touched in the period: created, due or completed in it, or still open
+  const taskRows = d.tasks
+    .filter((t) => inRange(dayOf(t.created_at)) || inRange(dayOf(t.completed_at)) || inRange(t.due_date) || (!['completed', 'cancelled', 'failed'].includes(t.status) && dayOf(t.created_at) <= to))
+    .map((t) => ({ id: t.id, title: t.title, mission: goalTitle.get(t.goal_id) || '', status: t.status || 'todo', created: dayOf(t.created_at), due: t.due_date || null, completed: t.status === 'completed' ? dayOf(t.completed_at) : null }))
+    .sort((a, b) => String(a.completed || a.due || a.created || '9999').localeCompare(String(b.completed || b.due || b.created || '9999')))
+
+  // Missions: started before the period ended and not closed before it began
+  const missionRows = d.goals
+    .filter((g) => (dayOf(g.created_at) || from) <= to && !(g.completed_at && dayOf(g.completed_at) < from && g.status === 'completed'))
+    .map((g) => {
+      const ms = d.milestones.filter((m) => m.goal_id === g.id)
+      return {
+        id: g.id, title: g.title, type: g.type, status: g.status, created: dayOf(g.created_at), deadline: g.deadline || null,
+        completed: g.status === 'completed' ? dayOf(g.completed_at) : null,
+        progress: progressOf(g, ms, d.tasks.filter((t) => t.goal_id === g.id)),
+        milestones: ms.sort((a, b) => (a.position ?? 0) - (b.position ?? 0)).map((m) => ({ title: m.title, target: m.target_date || null, done: dayOf(m.done_at) })),
+      }
+    })
+    .sort((a, b) => String(a.deadline || '9999').localeCompare(String(b.deadline || '9999')))
+
+  // Work
+  const workDays = d.work.filter((l) => inRange(l.date)).sort((a, b) => a.date.localeCompare(b.date))
+  const workPrevHours = sum(d.work.filter((l) => inPrev(l.date)), (l) => l.total_hours_worked)
+  const logs = d.workLogs.filter((l) => inRange(l.date)).sort((a, b) => a.date.localeCompare(b.date))
+  const speaking = d.speaking.filter((l) => inRange(l.date)).sort((a, b) => a.date.localeCompare(b.date))
+  const speakingPrev = d.speaking.filter((l) => inPrev(l.date)).length
+
+  // Journal, reviews
+  const journal = d.journal.filter((j) => inRange(j.date)).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.created_at).localeCompare(String(b.created_at)))
+  const journalDays = new Set(journal.map((j) => j.date)).size
+  const reviews = d.reviews.filter((r) => inRange(r.date)).sort((a, b) => a.date.localeCompare(b.date))
+
+  // Sleep nights
+  const nights = [...sleep].sort((a, b) => a.date.localeCompare(b.date)).map((l) => ({ date: l.date, bed: clock(l.bedtime), wake: clock(l.wake_time), minutes: l.duration_minutes, score: l.score }))
+  const goodNights = nights.filter((n) => n.minutes >= 420 && n.minutes <= 540).length
+  const sleepPrev = d.sleep.filter((l) => inPrev(l.date))
+
+  // Weight: last weigh-in before the period is the baseline
+  const wIn = d.weight.filter((w) => inRange(w.date)).sort((a, b) => a.date.localeCompare(b.date))
+  const wBefore = d.weight.filter((w) => w.date < from).sort((a, b) => a.date.localeCompare(b.date)).pop()
+  const wStart = wBefore || wIn[0]
+  const wEnd = wIn[wIn.length - 1]
+  const weight = { entries: wIn.map((w) => ({ date: w.date, kg: Number(w.weight_kg) })), start: wStart ? Number(wStart.weight_kg) : null, end: wEnd ? Number(wEnd.weight_kg) : null }
+  weight.change = weight.start != null && weight.end != null ? +(weight.end - weight.start).toFixed(1) : null
+
+  // Books, budget entries
+  const books = d.books.filter((b) => inRange(String(b.date_completed || '').slice(0, 10))).sort((a, b) => String(a.date_completed).localeCompare(String(b.date_completed)))
+  const spend = d.budget.filter((l) => inRange(l.date)).sort((a, b) => a.date.localeCompare(b.date) || String(a.created_at).localeCompare(String(b.created_at)))
+  const spentPrev = sum(d.budget.filter((l) => inPrev(l.date)), (l) => l.amount)
+  const noSpendDays = dates.filter((ds) => !spend.some((l) => l.date === ds && Number(l.amount) > 0) && spend.some((l) => l.date === ds)).length
+
+  // Screen discipline
+  const scores = screen.map((l) => disciplineScore(l)).filter((x) => x != null)
+  const screenScore = scores.length ? Math.round(avg(scores, (x) => x)) : null
+  const screenPrevScores = d.screen.filter((l) => inPrev(l.date)).map((l) => disciplineScore(l)).filter((x) => x != null)
+  const screenPrev = screenPrevScores.length ? Math.round(avg(screenPrevScores, (x) => x)) : null
+
+  // ── Report card grades (0–100 each)
+  const workHours = sum(workDays, (l) => l.total_hours_worked)
+  const missionsActive = missionRows.filter((m) => !['completed', 'failed', 'cancelled'].includes(m.status))
+  const missionsLate = missionsActive.filter((m) => m.deadline && m.deadline < to).length
+  const tasksDueInPeriod = d.tasks.filter((t) => inRange(t.due_date))
+  const tasksDueDone = tasksDueInPeriod.filter((t) => t.status === 'completed' && dayOf(t.completed_at) <= t.due_date).length
+  const pct = (a, b) => (b ? Math.round((a / b) * 100) : null)
+  const grades = [
+    { id: 'habits', label: 'Habits', score: habits.rate, detail: habits.rate == null ? 'nothing scheduled' : `${habits.rate}% of check-ins · ${habits.perfectDays} perfect day${habits.perfectDays === 1 ? '' : 's'}` },
+    { id: 'tasks', label: 'Tasks', score: tasksDone.length || tasksDueInPeriod.length ? Math.max(0, Math.min(100, (pct(tasksDueDone, tasksDueInPeriod.length) ?? 80) - overdue * 5)) : null, detail: `${tasksDone.length} done · ${tasksDueDone}/${tasksDueInPeriod.length} on time · ${overdue} overdue` },
+    { id: 'missions', label: 'Missions', score: missionsActive.length || missionRows.length ? Math.max(0, Math.min(100, Math.round(avg(missionsActive.length ? missionsActive : missionRows, (m) => m.progress)) - missionsLate * 15 + missionRows.filter((m) => inRange(m.completed)).length * 20)) : null, detail: `${missionRows.filter((m) => inRange(m.completed)).length} completed · ${missionsActive.length} active · ${missionsLate} past deadline` },
+    { id: 'work', label: 'Work', score: workDays.length ? Math.min(100, Math.round((workHours / len / 6) * 100)) : null, detail: `${fmt1(workHours)}h over ${workDays.length} day${workDays.length === 1 ? '' : 's'} · ${fmt1(workHours / len)}h/day` },
+    { id: 'sleep', label: 'Sleep', score: nights.length ? pct(goodNights, len) : null, detail: nights.length ? `${goodNights}/${len} nights in 7–9h · avg ${fmt1(avg(nights, (n) => n.minutes) / 60)}h` : 'not logged' },
+    { id: 'screen', label: 'Digital discipline', score: screenScore, detail: screenScore == null ? 'not logged' : `avg ${screenScore}/100 over ${scores.length} day${scores.length === 1 ? '' : 's'}` },
+    { id: 'journal', label: 'Journal & reviews', score: pct(Math.max(journalDays, reviews.length), len), detail: `${journalDays}/${len} days journaled · ${reviews.length} daily review${reviews.length === 1 ? '' : 's'}` },
+    { id: 'speaking', label: 'Speaking', score: Math.min(100, pct(speaking.length, len) ?? 0), detail: `${speaking.length} session${speaking.length === 1 ? '' : 's'}${speaking.length ? ` · avg rating ${fmt1(avg(speaking, (l) => l.rating))}` : ''}` },
+  ].map((g) => ({ ...g, grade: letter(g.score) }))
+  const graded = grades.filter((g) => g.score != null)
+  const overall = graded.length ? Math.round(avg(graded, (g) => g.score)) : null
+
+  // ── Analysis: plain-language findings from the numbers above
+  const notes = []
+  const best = [...graded].sort((a, b) => b.score - a.score)[0]
+  const worst = [...graded].sort((a, b) => a.score - b.score)[0]
+  if (best) notes.push({ tone: 'good', text: `Strongest area: ${best.label} (${best.grade}, ${best.detail}).` })
+  if (worst && worst !== best) notes.push({ tone: 'bad', text: `Weakest area: ${worst.label} (${worst.grade}, ${worst.detail}). Fix this first.` })
+  if (habits.rate != null && habitsPrev.rate != null) notes.push({ tone: habits.rate >= habitsPrev.rate ? 'good' : 'bad', text: `Habit completion ${habits.rate >= habitsPrev.rate ? 'up' : 'down'} ${Math.abs(habits.rate - habitsPrev.rate)} pts vs the previous ${len} days (${habitsPrev.rate}% → ${habits.rate}%).` })
+  if (habits.rows.length > 1) { const top = habits.rows[0]; const low = habits.rows[habits.rows.length - 1]; if (top.rate !== low.rate) notes.push({ tone: 'neutral', text: `Most consistent habit: ${top.title} (${top.rate}%). Least: ${low.title} (${low.rate}%).` }) }
+  if (tasksDonePrev || tasksDone.length) notes.push({ tone: tasksDone.length >= tasksDonePrev ? 'good' : 'bad', text: `${tasksDone.length} tasks completed vs ${tasksDonePrev} in the previous period.` })
+  if (overdue) notes.push({ tone: 'bad', text: `${overdue} task${overdue === 1 ? ' is' : 's are'} overdue at the end of the period.` })
+  if (missionsLate) notes.push({ tone: 'bad', text: `${missionsLate} active mission${missionsLate === 1 ? ' is' : 's are'} past deadline.` })
+  if (workDays.length && workPrevHours) notes.push({ tone: workHours >= workPrevHours ? 'good' : 'bad', text: `Worked ${fmt1(workHours)}h vs ${fmt1(workPrevHours)}h in the previous period.` })
+  if (nights.length) { const late = nights.filter((n) => n.bed && n.bed >= '01:00' && n.bed < '12:00').length; notes.push({ tone: late ? 'bad' : 'good', text: late ? `${late} night${late === 1 ? '' : 's'} in bed after 1am.` : 'Every logged night in bed before 1am.' }) }
+  if (sleepPrev.length && nights.length) { const a = avg(nights, (n) => n.minutes); const b = avg(sleepPrev, (l) => l.duration_minutes); if (a != null && b != null && Math.abs(a - b) >= 15) notes.push({ tone: a > b ? 'good' : 'bad', text: `Sleep averaged ${fmt1(a / 60)}h vs ${fmt1(b / 60)}h before.` }) }
+  if (screenScore != null && screenPrev != null) notes.push({ tone: screenScore >= screenPrev ? 'good' : 'bad', text: `Digital discipline ${screenScore}/100 vs ${screenPrev}/100 before.` })
+  if (weight.change != null && weight.entries.length) notes.push({ tone: 'neutral', text: `Weight ${weight.change > 0 ? 'up' : weight.change < 0 ? 'down' : 'unchanged'}${weight.change ? ` ${Math.abs(weight.change)} kg` : ''} (${weight.start} → ${weight.end} kg).` })
+  const spent = sum(spend, (l) => l.amount)
+  if (spentPrev || spent) notes.push({ tone: spent <= spentPrev ? 'good' : 'bad', text: `Spent ₹${Math.round(spent).toLocaleString('en-IN')} vs ₹${Math.round(spentPrev).toLocaleString('en-IN')} before${noSpendDays ? ` · ${noSpendDays} no-spend day${noSpendDays === 1 ? '' : 's'}` : ''}.` })
+  if (speakingPrev || speaking.length) notes.push({ tone: speaking.length >= speakingPrev ? 'good' : 'bad', text: `${speaking.length} speaking session${speaking.length === 1 ? '' : 's'} vs ${speakingPrev} before.` })
+  if (books.length) notes.push({ tone: 'good', text: `Finished ${books.length} book${books.length === 1 ? '' : 's'}: ${books.map((b) => b.title).join(', ')}.` })
+
+  return {
+    card: { grades, overall, overallGrade: letter(overall), notes },
+    detail: {
+      tasks: taskRows, missions: missionRows,
+      work: { days: workDays, logs: logs.filter((l) => !isDebrief(l)), hours: workHours },
+      debriefs: logs.filter(isDebrief),
+      speaking, journal, reviews, nights, weight, books, spend, noSpendDays,
+    },
+  }
+}
+
+const fmt1 = (n) => (n == null || Number.isNaN(n) ? '—' : (+n).toFixed(1))
+export function letter(score) {
+  if (score == null) return '—'
+  return score >= 90 ? 'A+' : score >= 80 ? 'A' : score >= 70 ? 'B' : score >= 60 ? 'C' : score >= 45 ? 'D' : 'F'
 }
