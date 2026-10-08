@@ -11,7 +11,6 @@ export const SCREEN_CATEGORIES = [
 ]
 export const UNCATEGORIZED = { id: 'uncategorized', label: 'Uncategorized', color: '#5b5a73' }
 
-export { disciplineScore } from '@/lib/utils/screenTimeScore'
 
 /** Minutes per category for a log; the rest of the total is "uncategorized". */
 export function categoryMinutes(log) {

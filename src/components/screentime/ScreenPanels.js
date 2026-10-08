@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { Check, AlertTriangle, Flame, Pencil, Zap } from 'lucide-react'
 import Ring from '@/components/ui/Ring'
 import { saveSettings } from '@/lib/settings'
-import { calculateScreenTimeXPPure, screenBreakdown } from '@/lib/utils/screenTimeScore'
-import { SCREEN_CATEGORIES, UNCATEGORIZED, CAP_LABELS, DEFAULT_CAPS, categoryMinutes, capMinutes, capStreak, disciplineScore } from '@/lib/utils/screenIntel'
+import { calculateScreenTimeXPPure, screenBreakdown, disciplineScore } from '@/lib/utils/screenTimeScore'
+import { SCREEN_CATEGORIES, UNCATEGORIZED, CAP_LABELS, DEFAULT_CAPS, categoryMinutes, capMinutes, capStreak } from '@/lib/utils/screenIntel'
 
 const fmtM = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${Math.round(m % 60)}m` : ''}` : `${Math.round(m)}m`)
 const fmt = (v, unit) => (unit === 'm' ? `${Math.round(v)}m` : `${+v.toFixed(1)}h`)
