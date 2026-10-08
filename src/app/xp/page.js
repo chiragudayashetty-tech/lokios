@@ -189,6 +189,7 @@ export default function XPDashboard() {
   // Timeline Area Chart Data (aggregate by day)
   const timelineMap = {}
   timeline.forEach(item => {
+    if (item.source_type === 'achievement') return // achievement bonuses count in the total, not on the day they unlocked
     const d = getLocalDateStr(new Date(item.created_at))
     if (!timelineMap[d]) timelineMap[d] = 0
     timelineMap[d] += item.amount

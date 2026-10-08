@@ -1235,3 +1235,19 @@
 @keyframes ach-pop-in { from { opacity: 0; transform: translateY(18px) scale(0.92); } }
 @keyframes ach-rays { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ach-pop-rays, .ach.is-close .ach-icon, .ach--epic.is-earned::after, .ach--legendary.is-earned::after { animation: none !important; } }
+.wt-card { flex-wrap: wrap; }
+.wt-card .slp-compact-sub { display: inline-flex; align-items: center; gap: 4px; }
+.wt-form { display: flex; gap: 6px; margin-left: auto; }
+.wt-form .input { width: 86px; min-height: 0; height: 36px; padding: 0 10px; }
+.wt-form .btn { min-height: 0; height: 36px; }
+
+/* Task complete / fail pop-ups on phones: never under the dock or keyboard */
+.modal-overlay.tm-overlay { z-index: 1300 !important; }
+@media (max-width: 640px) {
+  .tm-overlay { align-items: flex-end; padding: 8px 8px max(8px, env(safe-area-inset-bottom)); }
+  .tm { max-height: calc(100dvh - 16px - env(safe-area-inset-top)); overflow-y: auto; overscroll-behavior: contain; border-radius: 22px 22px 18px 18px; }
+  .tm textarea, .tm input { font-size: 16px; } /* stops iOS zooming the page on focus */
+}
+.ghost-hp { position: relative; height: 16px; margin: 6px 0 2px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(196, 181, 253, 0.25); }
+.ghost-hp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8b7cf6, #c4b5fd); transition: width 600ms ease; }
+.ghost-hp span { position: relative; display: block; text-align: center; font-size: 10px; font-weight: 800; line-height: 14px; letter-spacing: 0.06em; color: #fff; }

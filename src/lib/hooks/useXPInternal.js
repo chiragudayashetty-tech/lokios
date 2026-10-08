@@ -10,6 +10,7 @@ export function useXPInternal(user) {
   const supabase = createClient()
   const [dailyMomentum, setDailyMomentum] = useState(() => calculateDailyMomentum())
   const [feedbackEvents, setFeedbackEvents] = useState([])
+  const recentToasts = useRef(new Map())
   const seenEventIds = useRef(new Set())
   const hasBackfilledScreenTime = useRef(false)
 
@@ -35,7 +36,7 @@ export function useXPInternal(user) {
     start.setDate(start.getDate() - 6)
     const { data, error } = await createClient()
       .from('xp_history')
-      .select('amount, created_at')
+      .select('amount, created_at, source_type')
       .eq('user_id', user.id)
       .gte('created_at', start.toISOString())
       .order('created_at', { ascending: false })
@@ -72,7 +73,13 @@ export function useXPInternal(user) {
       const d = e.detail || {}
       if (!d.silent) {
         const label = String(d.description || d.sourceType || 'XP').replace(/s[#[^]]+]$/, '').replace(/s*([^)]*XP[^)]*)s*$/i, '')
-        pushFeedback(`${d.sourceId || 'xp'}_${Date.now()}`, Number(d.amount), label.length > 48 ? label.slice(0, 47) + '…' : label)
+        // One toast per award: the same source + amount re-announced within 15s (save + sync echo) is dropped
+        const key = `${d.sourceId || d.sourceType || 'xp'}:${d.amount}`
+        const now = Date.now()
+        if ((recentToasts.current.get(key) || 0) <= now - 15000) {
+          recentToasts.current.set(key, now)
+          pushFeedback(`${key}_${now}`, Number(d.amount), label.length > 48 ? label.slice(0, 47) + '…' : label)
+        }
       }
       clearTimeout(timer)
       timer = setTimeout(() => { fetchMomentum() }, 400)

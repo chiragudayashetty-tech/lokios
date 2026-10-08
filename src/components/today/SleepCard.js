@@ -5,7 +5,6 @@ import { BedDouble, Sunrise, Moon, Star } from 'lucide-react'
 import Ring from '@/components/ui/Ring'
 import SchemaHint from '@/components/ui/SchemaHint'
 import { sleepScore, sleepWindow, hhmmOf, formatDuration, scoreTone } from '@/lib/utils/sleep'
-import { SLEEP_LOG_XP } from '@/lib/hooks/useSleep'
 
 /** Morning "How did you sleep?" card (#24). One log per wake-up date; editable. */
 export default function SleepCard({ today, logs, missing, onSave, compact = false }) {
@@ -42,7 +41,7 @@ export default function SleepCard({ today, logs, missing, onSave, compact = fals
             <span className="slp-icon"><BedDouble size={18} /></span>
             <div className="slp-compact-text">
               <span className="slp-compact-title">How did you sleep?</span>
-              <span className="slp-compact-sub">Log last night · +{SLEEP_LOG_XP} XP</span>
+              <span className="slp-compact-sub">Log last night · ticks your sleep routine</span>
             </div>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(true)}>Log</button>
           </>
@@ -63,7 +62,7 @@ export default function SleepCard({ today, logs, missing, onSave, compact = fals
 
   return (
     <section className="slp">
-      <div className="slp-head"><BedDouble size={16} /> How did you sleep? {!todays && <span className="eod-xp">+{SLEEP_LOG_XP} XP</span>}</div>
+      <div className="slp-head"><BedDouble size={16} /> How did you sleep?</div>
       <div className="slp-grid">
         <div className="slp-inputs">
           <label className="slp-time"><span><Moon size={13} /> Bedtime</span><input type="time" className="input" value={bed} onChange={(e) => setBed(e.target.value)} /></label>

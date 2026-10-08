@@ -14,6 +14,8 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
+import { disciplineScore } from '@/lib/utils/screenTimeScore'
+import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { RANK_CONFIG, SAGA_IMAGES } from '@/lib/constants'
 import { getLocalDateStr, getEndOfWeek, getDebriefSortTime } from '@/lib/utils/dates'
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
@@ -1015,46 +1017,38 @@ export default function MissionControl() {
   const flameColor = currentStreak >= 30 ? '#F59E0B' : currentStreak >= 7 ? '#f97316' : '#ef4444'
 
 
-  // ── Dynamic Daily Ops Momentum Engine (-10 to +10) ────────────────────────
-  // 1. Habits Performance (Completed vs Failed Today)
-  const habitsCompletedToday = (todayLogs || []).filter(l => l.date === todayStr && l.status === 'completed').length
+  // ── Daily momentum (-10 to +10): each factor is scaled and capped so no single
+  // backlog or lucky streak dominates; label and colour come from this same score.
+  // 1. Habits (±4): share of today's scheduled habits done, minus failures
+  const scheduledToday       = habitsScheduledOn((habitsObj.habits || []).filter(h => h.is_active !== false), todayStr)
+  const doneIds              = new Set((todayLogs || []).filter(l => l.date === todayStr && (l.status === 'completed' || !l.status)).map(l => l.habit_id))
   const habitsFailedToday    = (todayLogs || []).filter(l => l.date === todayStr && l.status === 'failed').length
-  const habitComponent       = (habitsCompletedToday * 1.5) - (habitsFailedToday * 1.5)
+  const habitsDoneShare      = scheduledToday.length ? scheduledToday.filter(h => doneIds.has(h.id)).length / scheduledToday.length : null
+  const habitComponent       = habitsDoneShare == null ? 0 : Math.max(-4, Math.min(4, (habitsDoneShare * 4) - Math.min(4, habitsFailedToday * 1)))
 
-  // 2. Operations / Tasks (Completed Today vs Overdue / Procrastinated)
-  const tasksCompletedToday  = (tasks || []).filter(t => t.status === 'completed' && t.completed_at?.startsWith(todayStr)).length
-  const tasksOverdue         = (tasks || []).filter(t => t.status === 'pending' && t.due_date && t.due_date < todayStr).length
-  const opsComponent         = (tasksCompletedToday * 1.0) - (tasksOverdue * 1.0)
+  // 2. Tasks (±2.5): +0.75 per task done today (max +2.5), −0.5 per overdue task (max −2)
+  const tasksCompletedToday  = (tasks || []).filter(t => t.status === 'completed' && t.completed_at && getLocalDateStr(new Date(t.completed_at)) === todayStr).length
+  const tasksOverdue         = (tasks || []).filter(t => !['completed', 'cancelled', 'failed'].includes(t.status) && t.due_date && t.due_date < todayStr).length
+  const opsComponent         = Math.min(2.5, tasksCompletedToday * 0.75) - Math.min(2, tasksOverdue * 0.5)
 
-  // 3. Missions / Goals (Completed vs Stalled / Overdue)
-  const missionsCompleted    = (sideQuests || []).filter(g => g.status === 'completed').length
-  const missionsStalled      = (sideQuests || []).filter(g => g.status !== 'completed' && g.deadline && g.deadline < todayStr).length
-  const missionsComponent    = (missionsCompleted * 2.0) - (missionsStalled * 1.5)
+  // 3. Missions (±1.5): finished today vs past-deadline active missions
+  const allGoals             = goalsObj.goals || []
+  const missionsCompleted    = allGoals.filter(g => g.status === 'completed' && g.completed_at && getLocalDateStr(new Date(g.completed_at)) === todayStr).length
+  const missionsStalled      = allGoals.filter(g => !['completed', 'cancelled', 'failed'].includes(g.status) && g.deadline && g.deadline < todayStr).length
+  const missionsComponent    = Math.min(1.5, missionsCompleted * 1.5) - Math.min(1.5, missionsStalled * 0.5)
 
-  // 4. Streak & Weekly Win Rate Inertia
-  const streakComponent      = currentStreak >= 14 ? 3.0 : currentStreak >= 7 ? 2.0 : currentStreak >= 1 ? 1.0 : 0.0
-  const winRateComponent     = weeklyWinRate >= 80 ? 3.0 : weeklyWinRate >= 60 ? 1.5 : weeklyWinRate >= 40 ? 0.0 : -3.0
+  // 4. Streak (0…+1.5) and weekly win rate (−1…+1.5)
+  const streakComponent      = currentStreak >= 14 ? 1.5 : currentStreak >= 7 ? 1.0 : currentStreak >= 1 ? 0.5 : 0
+  const winRateComponent     = weeklyWinRate >= 80 ? 1.5 : weeklyWinRate >= 60 ? 0.75 : weeklyWinRate >= 40 ? 0 : -1
 
-  // 5. Digital Discipline / Screen Intel Component (-2.0 to +2.0)
-  let screenComponent = 0
-  if (todayScreenTime) {
-    const stHours = parseFloat(todayScreenTime.total_hours) || 0
-    const stDoom = parseInt(todayScreenTime.doom_scroll_minutes) || 0
-    if (stHours <= 4 && stDoom <= 30) {
-      screenComponent = 2.0
-    } else if (stHours <= 6 && stDoom <= 60) {
-      screenComponent = 1.5
-    } else if (stHours > 8 || stDoom > 120) {
-      screenComponent = -2.0
-    } else if (stHours > 6.5 || stDoom > 80) {
-      screenComponent = -1.5
-    }
-  }
+  // 5. Digital discipline (±1.5) from the screen-time score (0–100)
+  const screenScore          = todayScreenTime ? disciplineScore(todayScreenTime) : null
+  const screenComponent      = screenScore == null ? 0 : Math.round(((screenScore - 50) / 50) * 1.5 * 10) / 10
 
   const rawMomentum          = habitComponent + opsComponent + missionsComponent + streakComponent + winRateComponent + screenComponent
   const momentumScore        = Math.max(-10, Math.min(10, parseFloat(rawMomentum.toFixed(1))))
-  const momentumColor        = dailyMomentum?.color || (momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)')
-  const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 0 ? 'STEADY' : 'DECLINING'
+  const momentumColor        = momentumScore >= 5 ? 'var(--success)' : momentumScore >= 0 ? 'var(--warning)' : 'var(--danger)'
+  const momentumText         = momentumScore >= 5 ? 'SURGING' : momentumScore >= 2 ? 'BUILDING' : momentumScore >= 0 ? 'STEADY' : 'SLIPPING'
 
   const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24)
   const briefing = BRIEFINGS[dayOfYear % BRIEFINGS.length]
@@ -2182,7 +2176,7 @@ export default function MissionControl() {
                     background: `${momentumColor}15`
                   }}
                 >
-                  {dailyMomentum?.state || momentumText}
+                  {momentumText}
                 </span>
               </div>
 

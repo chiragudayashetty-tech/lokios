@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { useDraft } from '@/lib/hooks/useDraft'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import IntelExportModal from '@/components/ui/IntelExportModal'
@@ -69,21 +70,21 @@ export default function WorkPage() {
   // ----------------------------------------------------
   // INDIVIDUAL FIELD TIME UNITS ('h' | 'm')
   // ----------------------------------------------------
-  const [unitTotalWorked, setUnitTotalWorked] = useState('h')
-  const [unitBeyondTatva, setUnitBeyondTatva] = useState('h')
-  const [unitFocused, setUnitFocused] = useState('h')
-  const [unitUnfocused, setUnitUnfocused] = useState('h')
+  const [unitTotalWorked, setUnitTotalWorked] = useDraft('work_unitTotalWorked', 'h')
+  const [unitBeyondTatva, setUnitBeyondTatva] = useDraft('work_unitBeyondTatva', 'h')
+  const [unitFocused, setUnitFocused] = useDraft('work_unitFocused', 'h')
+  const [unitUnfocused, setUnitUnfocused] = useDraft('work_unitUnfocused', 'h')
 
   // FORM INPUT VALUES
-  const [valTotalWorked, setValTotalWorked] = useState('')
-  const [valBeyondTatva, setValBeyondTatva] = useState('')
-  const [valFocused, setValFocused] = useState('')
-  const [valUnfocused, setValUnfocused] = useState('')
-  const [workWhatDidYouDo, setWorkWhatDidYouDo] = useState('')
-  const [workNotes, setWorkNotes] = useState('')
-  const [workTypes, setWorkTypes] = useState([]) // selected work type tags
-  const [customWorkType, setCustomWorkType] = useState('')
-  const [focusLevel, setFocusLevel] = useState(3) // 1=😠, 2=🙁, 3=😐 (Focused), 4=🙂, 5=😄
+  const [valTotalWorked, setValTotalWorked] = useDraft('work_valTotalWorked', '')
+  const [valBeyondTatva, setValBeyondTatva] = useDraft('work_valBeyondTatva', '')
+  const [valFocused, setValFocused] = useDraft('work_valFocused', '')
+  const [valUnfocused, setValUnfocused] = useDraft('work_valUnfocused', '')
+  const [workWhatDidYouDo, setWorkWhatDidYouDo] = useDraft('work_workWhatDidYouDo', '')
+  const [workNotes, setWorkNotes] = useDraft('work_workNotes', '')
+  const [workTypes, setWorkTypes] = useDraft('work_workTypes', []) // selected work type tags
+  const [customWorkType, setCustomWorkType] = useDraft('work_customWorkType', '')
+  const [focusLevel, setFocusLevel] = useDraft('work_focusLevel', 3) // 1=😠, 2=🙁, 3=😐 (Focused), 4=🙂, 5=😄
 
   const FOCUS_LEVEL_OPTIONS = [
     { level: 1, emoji: '😠', label: 'Very Distracted', color: '#ef4444' },
@@ -274,9 +275,19 @@ export default function WorkPage() {
     return num.toString()
   }
 
-  // Populate forms when date or field unit changes
+  // Populate the form when the date (or a field unit) changes. Reloads of the saved logs —
+  // e.g. coming back to this page — never wipe or overwrite what you were typing.
+  const populatedFor = useRef(null)
+  const formHasDraft = !!(valTotalWorked || valBeyondTatva || valFocused || valUnfocused || workWhatDidYouDo || workNotes)
   useEffect(() => {
     const w = workLogs.find(l => l.date === selectedDate)
+    const key = `${selectedDate}|${w ? 'saved' : 'none'}|${unitTotalWorked}${unitBeyondTatva}${unitFocused}${unitUnfocused}`
+    const prev = populatedFor.current
+    if (prev === key) return
+    populatedFor.current = key
+    const sameDate = prev && prev.split('|')[0] === selectedDate
+    // First load, or the saved log just arrived for the same day: keep an unsaved draft
+    if ((prev === null || sameDate) && formHasDraft && !(prev && prev.split('|')[2] !== key.split('|')[2])) return
     if (w) {
       setValTotalWorked(toInputValue(w.total_hours_worked ?? w.duration_hours, unitTotalWorked))
       setValBeyondTatva(toInputValue(w.beyond_tatva_hours, unitBeyondTatva))
@@ -302,7 +313,7 @@ export default function WorkPage() {
       setWorkNotes('')
       setWorkTypes([])
     }
-  }, [selectedDate, workLogs, unitTotalWorked, unitBeyondTatva, unitFocused, unitUnfocused])
+  }, [selectedDate, workLogs, unitTotalWorked, unitBeyondTatva, unitFocused, unitUnfocused]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toHours = (val, unit) => {
     const num = parseFloat(val) || 0

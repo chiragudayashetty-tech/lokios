@@ -235,7 +235,7 @@ export async function resolveBet(userId, bet, model) {
 export function computeRecords(xpRows, model, screenLogs = [], today = getLocalDateStr()) {
   const byDay = new Map()
   for (const r of xpRows || []) {
-    if (/^bet_/.test(r.source_type || '')) continue
+    if (/^(bet_|achievement)/.test(r.source_type || '')) continue
     const d = localDay(r.created_at)
     byDay.set(d, (byDay.get(d) || 0) + (r.amount || 0))
   }
@@ -275,7 +275,7 @@ export function checkDayRecord(records) {
 /** Week recap used by the debrief: XP, streak days, perfect days, best and weakest habits. */
 export function computeWeekRecap(xpRows, model, habits, weekStart) {
   const days = Array.from({ length: 7 }, (_, i) => shift(weekStart, i))
-  const inWeek = (xpRows || []).filter(r => days.includes(localDay(r.created_at)) && !/^bet_/.test(r.source_type || ''))
+  const inWeek = (xpRows || []).filter(r => days.includes(localDay(r.created_at)) && !/^(bet_|achievement)/.test(r.source_type || ''))
   const gained = inWeek.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0)
   const lost = inWeek.filter(r => r.amount < 0).reduce((s, r) => s + r.amount, 0)
   const stats = days.map(d => ({ date: d, ...model.dayStats(d) }))
@@ -314,7 +314,7 @@ export function computeGhostRace(xpRows, weekStart, bestWeekStart, today = getLo
   const dayIndex = Math.min(6, Math.max(0, Math.round((new Date(`${today}T12:00:00`) - new Date(`${weekStart}T12:00:00`)) / 86400000)))
   const cumulative = (ws) => {
     const days = Array.from({ length: 7 }, (_, i) => shift(ws, i))
-    const totals = days.map(d => (xpRows || []).filter(r => !/^bet_/.test(r.source_type || '') && localDay(r.created_at) === d).reduce((s, r) => s + (r.amount || 0), 0))
+    const totals = days.map(d => (xpRows || []).filter(r => !/^(bet_|achievement)/.test(r.source_type || '') && localDay(r.created_at) === d).reduce((s, r) => s + (r.amount || 0), 0))
     let run = 0
     return totals.map(v => (run += v))
   }

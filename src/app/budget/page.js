@@ -205,6 +205,15 @@ function SpendingView() {
     setIsSubmitting(false)
   }
 
+  // "No spending today": a ₹0 entry so the day counts as logged (and under budget)
+  const handleZeroSpend = async () => {
+    if (!user || isSubmitting || selectedDateLogs.length) return
+    setIsSubmitting(true)
+    const created = await addBudgetExpense(user.id, { date: selectedDate, amount: 0, category: 'other', custom_category: 'No spend', description: 'No spending today', exclude_daily: false })
+    if (created) setLogs(prev => [created, ...prev])
+    setIsSubmitting(false)
+  }
+
   // Handle Delete Expense
   const handleDeleteExpense = (id, desc) => {
     setConfirmModal({
@@ -620,6 +629,11 @@ function SpendingView() {
                   <Plus size={16} />
                   {isSubmitting ? 'LOGGING...' : successNotice ? 'EXPENSE RECORDED ✓' : 'LOG EXPENSE'}
                 </button>
+                {selectedDateLogs.length === 0 && (
+                  <button type="button" onClick={handleZeroSpend} disabled={isSubmitting} className="btn btn-ghost w-full py-2 font-mono text-xs uppercase font-bold">
+                    ₹0 · No spending {selectedDate === getLocalDateStr() ? 'today' : 'this day'}
+                  </button>
+                )}
                 {successNotice && (
                   <div className="font-mono text-xs text-emerald-400 text-center animate-pulse">
                     ✓ Logged successfully to budget ledger!

@@ -1,10 +1,12 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { FileDown, Eye, Share2, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FileDown, Eye, Share2, Check, ChevronLeft, ChevronRight, Database } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import { getLocalDateStr, getStartOfWeek } from '@/lib/utils/dates'
 import { REPORT_SECTIONS, DEFAULT_SECTIONS } from '@/lib/report/reportData'
+import { exportAnalysisZip } from '@/lib/utils/dataPortability'
+import { useOSSlice } from '@/lib/context/OSContext'
 
 const MODES = [{ id: 'week', label: 'Weekly' }, { id: 'month', label: 'Monthly' }, { id: 'custom', label: 'Custom' }]
 
@@ -28,6 +30,8 @@ const fmt = (ds, o = { month: 'short', day: 'numeric' }) => new Date(`${ds}T12:0
 
 /** Report launcher (#42): pick a period, sections and theme → /report (print = Download PDF). */
 export default function IntelExportModal({ isOpen, onClose }) {
+  const { user } = useOSSlice('auth')
+  const [dataBusy, setDataBusy] = useState(null)
   const [mode, setMode] = useState('week')
   const [offset, setOffset] = useState(0)
   const [custom, setCustom] = useState(() => { const t = new Date(); const f = new Date(); f.setDate(t.getDate() - 29); return { from: getLocalDateStr(f), to: getLocalDateStr(t) } })
@@ -83,6 +87,14 @@ export default function IntelExportModal({ isOpen, onClose }) {
           <div className="set-seg" role="radiogroup" aria-label="Report theme">
             {[{ id: 'light', label: 'Light (print)' }, { id: 'dark', label: 'Dark' }].map((t) => <button key={t.id} type="button" role="radio" aria-checked={theme === t.id} className={theme === t.id ? 'is-on' : ''} onClick={() => setTheme(t.id)}>{t.label}</button>)}
           </div>
+        </div>
+
+        <div className="xr-block">
+          <div className="xr-head"><span>All your data</span></div>
+          <button type="button" className="btn btn-secondary" disabled={!user?.id || dataBusy === 'busy'} onClick={async () => { setDataBusy('busy'); try { const r = await exportAnalysisZip(user.id); setDataBusy(`${r.files} files · ${r.days} days`) } catch { setDataBusy('failed') } }}>
+            <Database size={15} /> {dataBusy === 'busy' ? 'Preparing…' : 'Download all data (CSV, zip)'}
+          </button>
+          <p className="xr-hint">{dataBusy && dataBusy !== 'busy' ? `Downloaded: ${dataBusy}.` : 'Every habit, task, journal entry, log and XP record as CSV, plus daily_summary.csv (one row per day) for analysis.'}</p>
         </div>
 
         <p className="xr-hint">Download opens the report in a new tab with the print dialog — choose “Save as PDF”.</p>
