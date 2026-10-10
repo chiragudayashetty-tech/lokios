@@ -14,6 +14,8 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
+import { WorldCard } from '@/components/world/WorldView'
+import { useWorldData } from '@/lib/world/useWorldData'
 import { computeMomentum, weeklyWinRate as weeklyWinRateOf, publishMomentum } from '@/lib/utils/momentumScore'
 import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { RANK_CONFIG, SAGA_IMAGES } from '@/lib/constants'
@@ -108,6 +110,7 @@ export default function MissionControl() {
   const [xpThisWeek, setXpThisWeek]   = useState(0)
   const [weekHabitLogs, setWeekHabitLogs] = useState([])
   const [editingPriority, setEditingPriority] = useState(null)
+  const { data: worldData } = useWorldData(user?.id)
   const [momentumExpanded, setMomentumExpanded] = useState(false)
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
 
@@ -1836,6 +1839,9 @@ export default function MissionControl() {
             </div>
 
 
+
+            {/* LIVING ISLAND */}
+            <WorldCard data={worldData} />
 
             {/* NEXT WEEK PRIORITIES // WEEKLY DEBRIEF WIDGET */}
             <div className="dashboard-card p-5 sm:p-6" style={{ borderLeft: '4px solid var(--info)' }}>
