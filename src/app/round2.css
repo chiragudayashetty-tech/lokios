@@ -308,6 +308,10 @@
 .tdy-row.is-late { border-color: color-mix(in oklab, var(--danger) 40%, transparent); }
 .tdy-row.is-boss { border-color: rgba(255, 138, 92, 0.45); box-shadow: 0 0 26px -16px rgba(255, 138, 92, 0.8); }
 .tdy-row.is-done { opacity: 0.6; }
+.tdy-row.is-failed { opacity: 0.75; border-color: rgba(248, 113, 113, 0.35); }
+.tdy-row.is-failed .tdy-row-title { text-decoration: line-through; text-decoration-color: rgba(248, 113, 113, 0.6); }
+.tdy-row-check.is-failed { color: #fff; background: #e5484d; border-color: transparent; }
+.tdy-failed-tag { color: #fca5a5; background: rgba(229, 72, 77, 0.15); border: 1px solid rgba(229, 72, 77, 0.4); }
 .tdy-row.is-done .tdy-row-title { text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.3); }
 .tdy-row-check { display: grid; place-items: center; flex: 0 0 auto; width: 34px; height: 34px; border-radius: 11px; color: transparent; background: rgba(255, 255, 255, 0.04); border: 1.5px solid var(--border-strong); transition: transform 180ms var(--ease-spring), background 180ms ease, color 180ms ease; }
 .tdy-row-check:hover { color: var(--text-muted); border-color: var(--accent-primary); }

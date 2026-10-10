@@ -113,6 +113,7 @@ export default function TodayPage() {
     const scheduled = habitsScheduledOn(active, today)
     const logs = todayLogs.filter(l => l.date === today)
     const doneIds = new Set(logs.filter(l => !l.status || l.status === 'completed').map(l => l.habit_id))
+    const failedIds = new Set(logs.filter(l => l.status === 'failed').map(l => l.habit_id))
     const restIds = new Set(logs.filter(l => ['rest', 'blocked', 'skipped'].includes(l.status)).map(l => l.habit_id))
     const dayHabits = scheduled.filter(h => !restIds.has(h.id))
     const chains = chainState(active, logs, today)
@@ -123,7 +124,7 @@ export default function TodayPage() {
       const inSec = dayHabits.filter(h => (h.time_of_day || 'anytime') === sec.id)
       for (const { habit: h, linked } of orderWithChains(inSec, active)) {
         items.push({
-          kind: 'habit', id: h.id, title: h.title, habit: h, section: sec.id, done: doneIds.has(h.id), linked,
+          kind: 'habit', id: h.id, title: h.title, habit: h, section: sec.id, done: doneIds.has(h.id), failed: !doneIds.has(h.id) && failedIds.has(h.id), linked,
           boss: h.id === bossId, chainRun: doneIds.has(h.id) ? chains.run.get(h.id) || 0 : 0,
           sub: `Habit · +${h.xp_per_completion || 25} XP${h.after_habit_id && linked ? ' · after ' + (active.find(x => x.id === h.after_habit_id)?.title || '') : ''}`,
         })
@@ -135,15 +136,18 @@ export default function TodayPage() {
     const dayTasks = [
       ...open.filter(t => due(t) && due(t) <= today),
       ...tasks.filter(t => t.status === 'completed' && t.completed_at && getAppDateStr(new Date(t.completed_at)) === today),
+      // Failed today (e.g. from Focus): shown so the day's record is complete
+      ...tasks.filter(t => t.status === 'failed' && (t.completed_at || t.updated_at) && getAppDateStr(new Date(t.completed_at || t.updated_at)) === today),
     ]
     for (const t of dayTasks) {
       const block = blocks.get(t.id)
-      const late = t.status !== 'completed' && due(t) < today
+      const failed = t.status === 'failed'
+      const late = !failed && t.status !== 'completed' && due(t) < today
       items.push({
-        kind: 'task', id: t.id, title: t.title, task: t, done: t.status === 'completed', late,
+        kind: 'task', id: t.id, title: t.title, task: t, done: t.status === 'completed', failed, late,
         section: block ? sectionForHour(new Date(block).getHours()) : 'anytime',
         time: block ? formatTimeOf(block) : null, start: block ? new Date(block).getTime() : null,
-        sub: late ? `Task · due ${due(t)}` : 'Task · due today',
+        sub: failed ? 'Task · failed' : late ? `Task · due ${due(t)}` : 'Task · due today',
       })
     }
 
@@ -162,7 +166,7 @@ export default function TodayPage() {
         if (it.linked && groups.length) groups[groups.length - 1].push(it)
         else groups.push([it])
       }
-      const key = (g) => ({ done: g.every(x => x.done) ? 1 : 0, start: g[0].start ?? Infinity, late: g[0].late ? 0 : 1 })
+      const key = (g) => ({ done: g.every(x => x.done || x.failed) ? 1 : 0, start: g[0].start ?? Infinity, late: g[0].late ? 0 : 1 })
       bySection[id] = groups
         .map((g, i) => ({ g, i, k: key(g) }))
         .sort((a, b) => (a.k.done - b.k.done) || (a.k.start - b.k.start) || (a.k.late - b.k.late) || (a.i - b.i))
@@ -170,7 +174,7 @@ export default function TodayPage() {
     }
 
     // Next up: overdue task > boss habit > earliest-time habit > due task > unlogged protocol
-    const pending = items.filter(i => !i.done)
+    const pending = items.filter(i => !i.done && !i.failed)
     const candidates = [
       ...pending.filter(i => i.kind === 'task' && i.late),
       ...pending.filter(i => i.kind === 'habit' && i.boss),
@@ -200,7 +204,7 @@ export default function TodayPage() {
   }
 
   const toggleItem = (item) => {
-    if (item.kind === 'habit') return withBusy(item.id, () => cycleHabitState?.(item.id, today, item.done ? 'none' : 'completed'))
+    if (item.kind === 'habit') return withBusy(item.id, () => cycleHabitState?.(item.id, today, item.done || item.failed ? 'none' : 'completed'))
     if (item.kind === 'task' && !item.done) return withBusy(item.id, () => completeOperation?.(item.id))
   }
 
