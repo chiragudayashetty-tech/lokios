@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Target, AlertTriangle, Zap, Flame, ChevronDown, Lock, Check, ClipboardList, BookOpen, Activity, Clock, ArrowUpRight, BarChart2, Smartphone, Moon, X, RotateCcw, Calendar as CalendarIcon, Briefcase, Sun, CheckCircle2, Mic, Sparkles, Wallet } from 'lucide-react'
+import { Target, AlertTriangle, Zap, Flame, ChevronDown, Lock, Check, ClipboardList, BookOpen, Activity, Clock, ArrowUpRight, BarChart2, Smartphone, Moon, X, RotateCcw, Pencil, Calendar as CalendarIcon, Briefcase, Sun, CheckCircle2, Mic, Sparkles, Wallet } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import { isExcludedFromDaily, fetchBudgetLogs, getLocalDailyBudget } from '@/lib/utils/budget'
@@ -107,6 +107,7 @@ export default function MissionControl() {
   const [xpToday, setXpToday]         = useState(0)
   const [xpThisWeek, setXpThisWeek]   = useState(0)
   const [weekHabitLogs, setWeekHabitLogs] = useState([])
+  const [editingPriority, setEditingPriority] = useState(null)
   const [momentumExpanded, setMomentumExpanded] = useState(false)
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
 
@@ -1851,7 +1852,7 @@ export default function MissionControl() {
 
               {debriefPriorityList.length > 0 ? (
                 (() => {
-                  const updateDebriefWorkLog = async (priorityTitle, newTag) => {
+                  const updateDebriefWorkLog = async (priorityTitle, newTag, newTitle) => {
                     if (!user) return
                     const sb = createClient()
                     const curDebrief = latestDebriefRef.current || latestDebrief
@@ -1876,22 +1877,29 @@ export default function MissionControl() {
                     } catch (err) {}
 
                     const lines = currentDesc.split('\n')
-                    let matched = false
-                    const updatedLines = lines.map(line => {
-                      const cleanLine = line
-                        .replace(/\[DONE\]|\[FAILED\]/gi, '')
-                        .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
-                        .replace(/^\d+[\.\)]\s*/, '')
-                        .trim()
-                        .toLowerCase()
-
-                      if (!matched && (cleanLine === cleanTarget || cleanLine.includes(cleanTarget) || cleanTarget.includes(cleanLine))) {
-                        matched = true
+                    const cleanOf = (line) => line
+                      .replace(/\[DONE\]|\[FAILED\]/gi, '')
+                      .replace(/^[-*•]\s*(\[[ xXvV✓✕]\])?\s*/, '')
+                      .replace(/^\d+[\.\)]\s*/, '')
+                      .trim()
+                      .toLowerCase()
+                    // Only lines in the priorities section (if there is one); blank lines and headers never match
+                    const startIdx = Math.max(0, lines.findIndex(l => /priorit/i.test(l) && /^\s*#/.test(l)))
+                    const candidate = (l, i) => i >= startIdx && cleanOf(l) && !/^\s*#/.test(l)
+                    let targetIdx = lines.findIndex((l, i) => candidate(l, i) && cleanOf(l) === cleanTarget)
+                    if (targetIdx === -1) targetIdx = lines.findIndex((l, i) => candidate(l, i) && (cleanOf(l).includes(cleanTarget) || cleanTarget.includes(cleanOf(l))))
+                    const updatedLines = lines.map((line, i) => {
+                      if (i === targetIdx) {
                         const prefixMatch = line.match(/^(\s*\d+[\.\)]\s*|\s*[-*•]\s*)?/)?.[0] || ''
                         const pureLine = line
                           .replace(/\[DONE\]|\[FAILED\]/gi, '')
                           .replace(/^(\s*\d+[\.\)]\s*|\s*[-*•]\s*)?/, '')
                           .trim()
+                        if (newTitle) {
+                          // Rename: keep the line's number/bullet and its [DONE]/[FAILED] tag
+                          const tag = line.match(/\[DONE\]|\[FAILED\]/i)?.[0]
+                          return `${prefixMatch}${newTitle}${tag ? ` ${tag}` : ''}`
+                        }
                         return newTag ? `${prefixMatch}${pureLine} ${newTag}` : `${prefixMatch}${pureLine}`
                       }
                       return line
@@ -2006,6 +2014,18 @@ export default function MissionControl() {
                           await profileHook?.fetchProfile?.()
                         }
 
+                        const isEditing = editingPriority?.id === gt.id
+                        const handleRename = async (e) => {
+                          e?.preventDefault?.()
+                          const next = (editingPriority?.text || '').replace(/\s+/g, ' ').trim()
+                          setEditingPriority(null)
+                          if (!next || next === goalTitleText) return
+                          const ids = gt.matchingTaskIds && gt.matchingTaskIds.length > 0 ? gt.matchingTaskIds : (gt.taskId ? [gt.taskId] : [])
+                          for (const tid of ids) await createClient().from('tasks').update({ title: next }).eq('id', tid).eq('user_id', user.id)
+                          await updateDebriefWorkLog(goalTitleText, null, next)
+                          if (fetchTasks) await fetchTasks()
+                        }
+
                         return (
                           <div key={gt.id} className={`flex items-start sm:items-center justify-between gap-3 p-3 rounded-2xl border transition-all w-full max-w-full overflow-hidden ${
                             isDone ? 'border-emerald-500/30 bg-emerald-950/20' : isFailed ? 'border-rose-500/30 bg-rose-950/20' : 'border-white/10 bg-white/[0.02] hover:border-white/20'
@@ -2043,6 +2063,21 @@ export default function MissionControl() {
                                   </>
                                 )}
                               </div>
+                              {isEditing ? (
+                                <form onSubmit={handleRename} className="flex items-center gap-1.5 flex-1 min-w-0">
+                                  <textarea
+                                    autoFocus
+                                    rows={2}
+                                    value={editingPriority.text}
+                                    onChange={(e) => setEditingPriority({ id: gt.id, text: e.target.value })}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleRename(e); if (e.key === 'Escape') setEditingPriority(null) }}
+                                    className="input flex-1 min-w-0 font-mono text-xs py-1.5 px-2"
+                                    aria-label="Priority text"
+                                  />
+                                  <button type="submit" title="Save" aria-label="Save" className="w-7 h-7 rounded-xl flex items-center justify-center border border-emerald-500/40 text-emerald-400 shrink-0 active:scale-95"><Check size={13} /></button>
+                                  <button type="button" onClick={() => setEditingPriority(null)} title="Cancel" aria-label="Cancel" className="w-7 h-7 rounded-xl flex items-center justify-center border border-white/10 text-slate-400 shrink-0 active:scale-95"><X size={13} /></button>
+                                </form>
+                              ) : (
                               <span className={`font-mono leading-snug break-words whitespace-normal flex-1 min-w-0 transition-all ${
                                 isLongTitle ? 'text-[11px]' : 'text-xs'
                               } ${
@@ -2054,6 +2089,12 @@ export default function MissionControl() {
                               }`}>
                                 {goalTitleText}
                               </span>
+                              )}
+                              {!isEditing && (
+                                <button type="button" onClick={() => setEditingPriority({ id: gt.id, text: goalTitleText })} title="Edit priority" aria-label="Edit priority" className="w-7 h-7 rounded-xl flex items-center justify-center border border-white/10 hover:border-cyan-400 text-slate-400 hover:text-cyan-400 shrink-0 active:scale-95 self-center">
+                                  <Pencil size={12} />
+                                </button>
+                              )}
                             </div>
                             {isDone ? (
                               <span className="font-mono text-[8px] font-bold text-emerald-300 uppercase shrink-0 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 whitespace-nowrap self-center">DONE (+25 XP)</span>
