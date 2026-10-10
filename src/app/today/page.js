@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Briefcase, Monitor, Mic, Wallet, Sun, Sunrise, CloudSun, Sunset, Infinity as InfinityIcon, Flame, Swords, Gift } from 'lucide-react'
+import { BookOpen, Briefcase, Monitor, Mic, Wallet, Sun, Sunrise, CloudSun, Sunset, Infinity as InfinityIcon, Flame, Swords, Gift, Camera } from 'lucide-react'
 import AppShell from '@/components/layout/AppShell'
 import WinterLoader from '@/components/ui/WinterLoader'
 import Ring from '@/components/ui/Ring'
@@ -10,7 +10,7 @@ import TimelineSection from '@/components/today/TimelineSection'
 import EndOfDayReview from '@/components/today/EndOfDayReview'
 import SleepCard from '@/components/today/SleepCard'
 import WeightCard from '@/components/today/WeightCard'
-import TodayMoment from '@/components/moments/TodayMoment'
+import CaptureSheet from '@/components/moments/CaptureSheet'
 import { useOS, useOSSlice } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -29,6 +29,7 @@ const PROTOCOLS = [
   { id: 'screen', label: 'Screen time', href: '/screen-time', icon: Monitor },
   { id: 'speaking', label: 'Speaking practice', href: '/speaking', icon: Mic },
   { id: 'budget', label: 'Budget', href: '/budget', icon: Wallet },
+  { id: 'moment', label: 'Daily moment', href: '/moments', icon: Camera, capture: true },
 ]
 
 const SECTIONS = [
@@ -41,7 +42,7 @@ const ORDER = { morning: 0, afternoon: 1, evening: 2, anytime: 3 }
 const sectionForHour = (h) => (h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening')
 
 /** Today's protocol log status, fetched directly (one small query each). */
-function useProtocolStatus(userId, today) {
+function useProtocolStatus(userId, today, tick = 0) {
   const [status, setStatus] = useState(null)
   useEffect(() => {
     if (!userId) return
@@ -53,16 +54,17 @@ function useProtocolStatus(userId, today) {
       has(sb.from('work_logs').select('id').eq('user_id', userId).eq('date', today).not('title', 'ilike', 'Weekly Debrief%').limit(1)),
       has(sb.from('screen_time_logs').select('id').eq('user_id', userId).eq('date', today).limit(1)),
       has(sb.from('speaking_logs').select('id').eq('user_id', userId).eq('date', today).limit(1)),
+      has(sb.from('daily_moments').select('id').eq('user_id', userId).eq('date', today).limit(1)),
       fetchBudgetLogs(userId).then(logs => {
         const todays = (logs || []).filter(l => l.date === today)
         const spent = todays.filter(l => !isExcludedFromDaily(l)).reduce((s, l) => s + (parseFloat(l.amount) || 0), 0)
         return { logged: todays.length > 0, spent, limit: getLocalDailyBudget(userId) }
       }).catch(() => ({ logged: false })),
-    ]).then(([journal, work, screen, speaking, budget]) => {
-      if (!cancelled) setStatus({ journal, work, screen, speaking, budget: budget.logged })
+    ]).then(([journal, work, screen, speaking, moment, budget]) => {
+      if (!cancelled) setStatus({ journal, work, screen, speaking, moment, budget: budget.logged })
     })
     return () => { cancelled = true }
-  }, [userId, today])
+  }, [userId, today, tick])
   return status
 }
 
@@ -92,7 +94,9 @@ export default function TodayPage() {
   const today = getAppDateStr(now)
   const calendarToday = getLocalDateStr(now)
   const appHour = getAppHour(now)
-  const protocols = useProtocolStatus(user?.id, today)
+  const [protocolTick, setProtocolTick] = useState(0)
+  const [captureOpen, setCaptureOpen] = useState(false)
+  const protocols = useProtocolStatus(user?.id, today, protocolTick)
   const blocks = useTaskBlocks(user?.id, today)
   const sleep = useSleep(user?.id)
   const review = useDailyReview(user?.id, today)
@@ -154,7 +158,7 @@ export default function TodayPage() {
 
     for (const p of PROTOCOLS) {
       if (!protocols) break
-      items.push({ kind: 'protocol', id: p.id, title: p.label, href: p.href, section: 'evening', done: !!protocols[p.id], sub: protocols[p.id] ? 'Logged' : 'Log before bed' })
+      items.push({ kind: 'protocol', id: p.id, title: p.label, href: p.href, capture: p.capture, section: 'evening', done: !!protocols[p.id], sub: protocols[p.id] ? (p.capture ? 'Captured' : 'Logged') : p.capture ? 'Photo or 5s video' : 'Log before bed' })
     }
 
     // Within a section: pending first (time-blocked by time), done at the end.
@@ -207,6 +211,7 @@ export default function TodayPage() {
   const toggleItem = (item) => {
     if (item.kind === 'habit') return withBusy(item.id, () => cycleHabitState?.(item.id, today, item.done || item.failed ? 'none' : 'completed'))
     if (item.kind === 'task' && !item.done) return withBusy(item.id, () => completeOperation?.(item.id))
+    if (item.kind === 'protocol' && item.capture) { if (item.done) window.location.href = '/moments'; else setCaptureOpen(true) }
   }
 
   // A good night ticks the sleep routine habit(s) for that date; the habit pays the XP.
@@ -279,7 +284,6 @@ export default function TodayPage() {
           <SleepCard key={`${today}_${sleep.logs.find(l => l.date === today)?.id || 'new'}`} today={today} logs={sleep.logs} missing={sleep.missing} onSave={saveSleep} compact={appHour >= 14 || today !== calendarToday} />
         )}
         <WeightCard userId={user?.id} today={today} />
-        <TodayMoment userId={user?.id} today={today} />
 
         <div className="tdy-timeline">
           {SECTIONS.map(sec => (
@@ -300,6 +304,7 @@ export default function TodayPage() {
           <EndOfDayReview key={review.review?.id || 'new'} review={review.review} missing={review.missing} onSave={review.save} />
         )}
       </div>
+      {captureOpen && <CaptureSheet open userId={user?.id} date={today} onClose={() => setCaptureOpen(false)} onSaved={() => { setCaptureOpen(false); setProtocolTick((t) => t + 1) }} />}
     </AppShell>
   )
 }

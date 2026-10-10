@@ -1,4 +1,5 @@
 // Moments: one photo or ≤5 s video per day. Private bucket, signed URLs.
+import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export const MAX_MS = 5000
@@ -151,4 +152,16 @@ export async function listMoments(userId, from, to) {
     for (const s of signed || []) if (s.signedUrl) urls.set(s.path, s.signedUrl)
   }
   return { rows: rows.map((r) => ({ ...r, url: urls.get(r.path) || null, thumb: urls.get(r.thumb_path) || (r.kind === 'photo' ? urls.get(r.path) : null) })) }
+}
+
+/** Today's moment row (or null) plus a reload — for protocol pills and cards. */
+export function useTodayMoment(userId, date) {
+  const [row, setRow] = useState(undefined)
+  const reload = useCallback(async () => {
+    if (!userId) return
+    const { rows } = await listMoments(userId, date, date)
+    setRow(rows[0] || null)
+  }, [userId, date])
+  useEffect(() => { reload() }, [reload]) // eslint-disable-line react-hooks/set-state-in-effect
+  return [row, reload]
 }
