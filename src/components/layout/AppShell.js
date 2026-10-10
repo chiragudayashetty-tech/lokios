@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home, Crosshair, Target, CheckSquare, Lightbulb,
   BookOpen, Briefcase, CalendarDays, Monitor, User,
-  Menu, X, Shield, Trophy, RefreshCw, LogOut, Download, Mic, Wallet, Award, Snowflake, Sun, Settings, Palmtree, Film
+  Menu, X, Shield, Trophy, RefreshCw, LogOut, Download, Mic, Wallet, Award, Snowflake, Sun, Settings, Film
 } from 'lucide-react'
 import IntelExportModal from '@/components/ui/IntelExportModal'
 import XPToastStack from '@/components/ui/XPToastStack'
@@ -35,7 +35,6 @@ const NAV_ITEMS = [
   { href: '/brain-dump', icon: Lightbulb, label: 'Brain dump', group: 'Reflect' },
   { href: '/journal', icon: BookOpen, label: 'Journal', group: 'Reflect' },
   { href: '/portfolio-log', icon: Award, label: 'Portfolio', group: 'Reflect' },
-  { href: '/world', icon: Palmtree, label: 'Island', group: 'Reflect' },
   { href: '/moments', icon: Film, label: 'Moments', group: 'Reflect' },
   { href: '/calendar', icon: CalendarDays, label: 'Calendar', group: 'Reflect' },
   { href: '/screen-time', icon: Monitor, label: 'Screen time', group: 'Reflect' },

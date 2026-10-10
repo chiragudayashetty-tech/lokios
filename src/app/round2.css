@@ -1256,57 +1256,6 @@
 .ghost-hp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8b7cf6, #c4b5fd); transition: width 600ms ease; }
 .ghost-hp span { position: relative; display: block; text-align: center; font-size: 10px; font-weight: 800; line-height: 14px; letter-spacing: 0.06em; color: #fff; }
 
-/* ── Living island (/world + Home card) ── */
-.wd-page { max-width: 880px; }
-.wd-head h1 { margin: 0 0 4px; font-size: 1.6rem; font-weight: 800; }
-.wd-head p { margin: 0 0 14px; color: var(--text-muted); font-size: 13px; }
-.wd { display: flex; flex-direction: column; gap: 12px; }
-.wd-stage { position: relative; border-radius: 18px; overflow: hidden; border: 1px solid var(--border-subtle, rgba(255,255,255,0.08)); }
-.wd-scene { display: block; width: 100%; height: auto; image-rendering: pixelated; }
-.wd-obj { cursor: pointer; }
-.wd-obj:hover, .wd-obj.is-picked { filter: brightness(1.18) drop-shadow(0 0 2px #fff); }
-.wd-badge { position: absolute; left: 10px; top: 10px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,0.38); backdrop-filter: blur(6px); }
-.wd-details { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 3px; padding: 10px 34px 10px 12px; border-radius: 12px; font-size: 12.5px; color: #fff; background: rgba(8,10,20,0.78); backdrop-filter: blur(8px); max-height: 60%; overflow: auto; }
-.wd-details b { font-size: 14px; }
-.wd-details ul { margin: 2px 0 0; padding-left: 16px; color: rgba(255,255,255,0.8); }
-.wd-details .is-bad { color: #fca5a5; } .wd-details .is-good { color: #86efac; }
-.wd-x { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 22px; height: 22px; min-height: 0; padding: 0; border-radius: 999px; color: #fff; background: rgba(255,255,255,0.12); border: 0; }
-.wd-time { display: flex; align-items: center; gap: 10px; }
-.wd-time input[type=range] { flex: 1; accent-color: var(--accent-primary); }
-.wd-when { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
-.wd-when span { color: var(--text-muted); font-size: 12px; }
-.wd-changes { margin: 0; padding: 8px 12px; list-style: none; border-radius: 10px; font-size: 12px; color: var(--success); background: color-mix(in oklab, var(--success) 10%, transparent); }
-.wd-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.wd-stats > div { display: flex; flex-direction: column; gap: 1px; padding: 10px; border-radius: 12px; background: var(--bg-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-subtle, rgba(255,255,255,0.08)); }
-.wd-stats b { font-size: 18px; } .wd-stats span { font-size: 11px; color: var(--text-muted); } .wd-stats svg { color: var(--text-muted); }
-.wd-rules { font-size: 12.5px; color: var(--text-secondary); }
-.wd-rules summary { cursor: pointer; font-weight: 600; }
-.wd-rules ul { margin: 8px 0 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
-.wd-rules svg { vertical-align: -2px; }
-.wd-card { display: block; padding: 0 !important; overflow: hidden; text-decoration: none !important; color: inherit; }
-.wd-card .wd-scene { pointer-events: none; }
-.wd-card-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; font-size: 12px; color: var(--text-muted); }
-.wd-card-foot span { display: inline-flex; align-items: center; gap: 5px; }
-.wd-card-go { font-weight: 700; color: var(--accent-primary); }
-@media (max-width: 640px) { .wd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (prefers-reduced-motion: no-preference) {
-  .wd-wave { animation: wd-wave 3s ease-in-out infinite; }
-  .wd-boat { animation: wd-bob 2.6s ease-in-out infinite; }
-  .wd-cloud { animation: wd-drift 18s linear infinite alternate; }
-  .wd-rain { animation: wd-rain 0.9s linear infinite; }
-  .wd-star { animation: wd-twinkle 2.4s ease-in-out infinite; }
-  .wd-flag { animation: wd-flag 1.2s steps(2) infinite; }
-  .wd-hook { animation: wd-hook 2s ease-in-out infinite; }
-}
-.wd-fog { opacity: 0.38; }
-@keyframes wd-wave { 50% { transform: translateX(4px); opacity: 0.2; } }
-@keyframes wd-bob { 50% { transform: translateY(1.5px); } }
-@keyframes wd-drift { to { transform: translateX(26px); } }
-@keyframes wd-rain { from { transform: translateY(-20px); } to { transform: translateY(60px); } }
-@keyframes wd-twinkle { 50% { opacity: 0.2; } }
-@keyframes wd-flag { 50% { transform: scaleX(0.75); } }
-@keyframes wd-hook { 50% { transform: translateY(5px); } }
-
 /* ── Moments ── */
 .mo-page { max-width: 760px; }
 .mo-head h1 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 1.6rem; font-weight: 800; }

@@ -16,13 +16,13 @@ function Row({ item, busy, onToggle }) {
   return (
     <motion.div layout {...rowAnim} className={cls}>
       {item.linked && <span className="tdy-row-link" aria-hidden />}
-      {item.kind === 'protocol' && !item.done ? (
+      {item.kind === 'protocol' && !item.done && !item.capture ? (
         <Link href={item.href} className="tdy-row-check is-link" aria-label={`Log ${item.title}`}><ArrowRight size={15} /></Link>
       ) : (
         <button
           type="button"
           className={`tdy-row-check ${item.done ? 'is-done' : item.failed ? 'is-failed' : ''}`}
-          disabled={busy || ((item.done || item.failed) && item.kind !== 'habit')}
+          disabled={busy || ((item.done || item.failed) && item.kind !== 'habit' && !item.capture)}
           onClick={() => onToggle(item)}
           data-celebrate={item.done || item.failed ? undefined : ''}
           aria-label={item.done ? `Undo ${item.title}` : item.failed ? `Clear failed ${item.title}` : `Complete ${item.title}`}
