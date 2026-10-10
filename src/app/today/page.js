@@ -10,6 +10,7 @@ import TimelineSection from '@/components/today/TimelineSection'
 import EndOfDayReview from '@/components/today/EndOfDayReview'
 import SleepCard from '@/components/today/SleepCard'
 import WeightCard from '@/components/today/WeightCard'
+import TodayMoment from '@/components/moments/TodayMoment'
 import { useOS, useOSSlice } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -278,6 +279,7 @@ export default function TodayPage() {
           <SleepCard key={`${today}_${sleep.logs.find(l => l.date === today)?.id || 'new'}`} today={today} logs={sleep.logs} missing={sleep.missing} onSave={saveSleep} compact={appHour >= 14 || today !== calendarToday} />
         )}
         <WeightCard userId={user?.id} today={today} />
+        <TodayMoment userId={user?.id} today={today} />
 
         <div className="tdy-timeline">
           {SECTIONS.map(sec => (
