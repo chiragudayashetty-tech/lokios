@@ -197,7 +197,7 @@ export function useTasksInternal(user) {
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
 
-      // Time blocks for this task: mark completed, +5 XP when finished on time (#40)
+      // Time blocks for this task: mark completed (#40) — no extra XP on top of the task's own
       settleTaskBlocks(user.id, task).catch(() => {})
 
       // AUTO-CLONING ENGINE FOR RECURRING TASKS

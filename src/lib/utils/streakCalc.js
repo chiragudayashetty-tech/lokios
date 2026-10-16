@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { STREAK_DAY_THRESHOLD, STREAK_MILESTONES, PERFECT_DAY_XP, habitsScheduledOn, FREEZE_START_DATE, FREEZE_EVERY_DAYS, FREEZE_MAX } from '@/lib/utils/xpRules'
-import { applyChestReward } from '@/lib/utils/gamification'
 
 export const LOOKBACK_DAYS = 400
 const EXCUSED = new Set(['rest', 'blocked', 'skipped'])
@@ -168,20 +167,29 @@ const awardedThisSession = new Set()
 /**
  * Streak milestones (keyed per run, so they're re-earned after a rebuild), the
  * Perfect Day bonus for `dateStr` (revoked if a habit is un-ticked) and the
- * Perfect Day mystery chest. Award calls are idempotent; the Set only avoids
+ * (no chest any more). Award calls are idempotent; the Set only avoids
  * repeat network calls.
  */
 export async function applyStreakRewards(userId, streak, dateStr = getLocalDateStr()) {
   if (!userId || !streak) return
   const { current, runStart, dayStats } = streak
 
-  if (runStart) {
+  if (runStart && current >= STREAK_MILESTONES[0].days) {
+    // The run's start date moves as habits are ticked (the 90% rule), so it can't be the key.
+    // A milestone pays once per genuine run: never again while an earlier award for the same
+    // milestone is younger than the milestone itself (a new 7-day run needs 7 more days).
+    const history = await milestoneHistory(userId)
+    const today = getLocalDateStr()
     for (const m of STREAK_MILESTONES) {
       if (current < m.days) break
-      const sourceId = `streak_${m.days}_${runStart}`
+      const windowStart = shiftDate(today, -(m.days - 1))
+      const recent = history.filter((r) => r.days === m.days && r.date >= windowStart)
+      if (recent.length) continue
+      const sourceId = `streak_${m.days}_${today}`
       if (awardedThisSession.has(sourceId)) continue
       awardedThisSession.add(sourceId)
       await robustAwardXP(userId, m.xp, 'streak_milestone', sourceId, `${m.label} — +${m.xp} XP bonus`, 'discipline')
+      history.push({ days: m.days, date: today, sourceId })
     }
   }
 
@@ -193,5 +201,22 @@ export async function applyStreakRewards(userId, streak, dateStr = getLocalDateS
   } else {
     await robustRemoveXP(userId, 'perfect_day', perfectId)
   }
-  await applyChestReward(userId, dateStr, isPerfect)
+}
+
+let cleaned = false
+/** Past streak_milestone awards, newest first; removes repeats paid inside one milestone window (once per session). */
+async function milestoneHistory(userId) {
+  const { data } = await createClient().from('xp_history').select('source_id, created_at').eq('user_id', userId).eq('source_type', 'streak_milestone').order('created_at', { ascending: true }).limit(2000)
+  const rows = (data || []).map((r) => ({ sourceId: r.source_id, days: Number(String(r.source_id || '').split('_')[1]) || 0, date: getLocalDateStr(new Date(r.created_at)) }))
+  if (!cleaned) {
+    cleaned = true
+    const kept = []
+    for (const r of rows) {
+      const dup = kept.find((k) => k.days === r.days && r.date < shiftDate(k.date, r.days))
+      if (dup) await robustRemoveXP(userId, 'streak_milestone', r.sourceId)
+      else kept.push(r)
+    }
+    return kept
+  }
+  return rows
 }

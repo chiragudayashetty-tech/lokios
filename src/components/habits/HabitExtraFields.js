@@ -49,7 +49,7 @@ export default function HabitExtraFields({ value, onChange, habitId = null, habi
           </select>
         </label>
       </div>
-      {value.after_habit_id && <p className="hx-hint">Doing it right after its predecessor pays +5 XP per link, and +25 for a chain of 3+ in order.</p>}
+      {value.after_habit_id && <p className="hx-hint">Shown right after its predecessor on Today, so the stack runs in order.</p>}
     </div>
   )
 }

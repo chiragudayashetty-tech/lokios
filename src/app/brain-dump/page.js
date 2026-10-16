@@ -23,7 +23,6 @@ const TABS = [
   { id: 'idea', label: 'Ideas', icon: Lightbulb },
   { id: 'archived', label: 'Archive', icon: Archive },
 ]
-const INBOX_ZERO_XP = 15
 
 export default function BrainDumpPage() {
   const { user } = useOSSlice('auth')
@@ -52,8 +51,7 @@ export default function BrainDumpPage() {
     if (prevInbox.current > 0 && n === 0 && user?.id) {
       setZero(true)
       celebrateBig()
-      robustAwardXP(user.id, INBOX_ZERO_XP, 'inbox_zero', `inbox_zero_${today}`, '📥 Inbox zero', 'discipline')
-      emitGame('toast', { icon: 'inbox', title: 'Inbox zero!', sub: `Everything processed · +${INBOX_ZERO_XP} XP`, tone: 'gold' })
+      emitGame('toast', { icon: 'inbox', title: 'Inbox zero!', sub: 'Everything processed', tone: 'gold' })
     }
     prevInbox.current = n
   }, [inbox.length, loading, user?.id, today])
@@ -123,7 +121,7 @@ export default function BrainDumpPage() {
             <div className={`bd-zero ${zero ? 'is-party' : ''}`}>
               <PartyPopper size={34} />
               <h2>Inbox zero</h2>
-              <p>{zero ? `Everything processed — +${INBOX_ZERO_XP} XP.` : 'Nothing waiting. Capture the next thought above.'}</p>
+              <p>{zero ? 'Everything processed.' : 'Nothing waiting. Capture the next thought above.'}</p>
             </div>
           )
         ) : (

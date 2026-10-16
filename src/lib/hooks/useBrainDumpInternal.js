@@ -102,10 +102,8 @@ export function useBrainDumpInternal(user) {
     return { data }
   }, [user, hasKind])
 
-  // XP only for finishing an item (done / converted to a task or mission), never for capturing,
-  // and it is taken back if the item is moved back out of the archive.
-  const doneXp = useCallback((id) => user && robustAwardXP(user.id, XP_REWARDS.brain_dump_capture || 2, 'brain_dump', `bd_done_${id}`, 'Brain dump item done', 'discipline').catch(() => {}), [user])
-  const undoXp = useCallback((id) => user && robustRemoveXP(user.id, 'brain_dump', `bd_done_${id}`).catch(() => {}), [user])
+  const doneXp = useCallback(() => {}, []) // brain dump pays no XP — the converted task or mission does
+  const undoXp = useCallback(() => {}, [])
   const setKind = useCallback(async (id, kind) => {
     const res = await updateItem(id, { kind, ...(kind === 'inbox' ? { status: 'inbox', converted_to: null } : {}) })
     if (kind === 'archived') doneXp(id)

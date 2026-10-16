@@ -1,4 +1,4 @@
-// Game layer: chests, critical hits, first win, mastery, weekly boss, season pass,
+// Game layer: weekly boss, season pass (badges only), bets, debrief — no random or free XP,
 // bets, personal records and the weekly debrief reward.
 // Every reward uses a stable source id, so awards are idempotent and revocable.
 
@@ -34,23 +34,7 @@ export function chestRoll(dateStr) {
   return { hit, mult, xp: Math.round(CHEST_BASE_XP * mult) }
 }
 
-export async function applyChestReward(userId, dateStr, isPerfect) {
-  if (!inGameEra(dateStr)) return
-  const roll = chestRoll(dateStr)
-  const sourceId = `chest_${dateStr}`
-  if (isPerfect && roll.hit) {
-    await robustAwardXP(userId, roll.xp, 'mystery_chest', sourceId, `🎁 Mystery chest ×${roll.mult} — Perfect day bonus`, 'discipline', backdate(dateStr))
-    const seenKey = `lokios_chest_seen_${dateStr}`
-    let seen = false
-    try { seen = !!localStorage.getItem(seenKey); localStorage.setItem(seenKey, '1') } catch {}
-    if (!seen) emitGame('chest', { xp: roll.xp, mult: roll.mult, date: dateStr })
-  } else if (isPerfect) {
-    emitGame('toast', { icon: 'trophy', title: 'Perfect day!', sub: 'No chest this time — tomorrow is a new roll', tone: 'gold' })
-    await robustRemoveXP(userId, 'mystery_chest', sourceId)
-  } else {
-    await robustRemoveXP(userId, 'mystery_chest', sourceId)
-  }
-}
+export async function applyChestReward() {} // removed: random XP on perfect days
 
 // ── Per-completion rewards: first win, critical hit, mastery tier-up ────────
 
@@ -62,43 +46,9 @@ function baseXpOf(habit) {
  * Called after a habit toggle with the fresh streak model.
  * completed / wasCompleted describe the habit's status for dateStr.
  */
-export async function applyHabitRewards({ userId, habit, dateStr, completed, wasCompleted, model }) {
-  if (!userId || !habit || !model || !inGameEra(dateStr)) return
-  const today = getLocalDateStr()
-  const base = baseXpOf(habit)
-  const stats = model.dayStats(dateStr)
-
-  // First win of the day ×2 (today only)
-  if (dateStr === today) {
-    const firstId = `first_win_${dateStr}`
-    if (completed && !wasCompleted && stats.totalDone === 1) {
-      await robustAwardXP(userId, base, 'first_win', firstId, `⚡ First win of the day ×2 — ${habit.title}`, habit.stat_category || 'discipline')
-      emitGame('toast', { icon: 'zap', title: 'First win ×2', sub: `${habit.title} · +${base} bonus`, tone: 'accent' })
-    } else if (!completed && stats.totalDone === 0) {
-      await robustRemoveXP(userId, 'first_win', firstId)
-    }
-  }
-
-  // Critical hit: 1 in 20, deterministic per habit + date
-  const critId = `crit_${habit.id}_${dateStr}`
-  if (seededRoll(critId) < CRIT_CHANCE) {
-    if (completed && !wasCompleted) {
-      await robustAwardXP(userId, base, 'critical_hit', critId, `💥 Critical hit ×2 — ${habit.title}`, habit.stat_category || 'discipline', backdate(dateStr))
-      emitGame('crit', { title: habit.title, xp: base })
-    } else if (!completed) {
-      await robustRemoveXP(userId, 'critical_hit', critId)
-    }
-  }
-
-  // Mastery tier-up (paid only when crossing a tier from now on)
-  if (completed && !wasCompleted) {
-    const count = model.doneCountByHabit.get(habit.id) || 0
-    const tier = MASTERY_TIERS.find(t => t.at === count)
-    if (tier) {
-      await robustAwardXP(userId, tier.xp, 'mastery', `mastery_${habit.id}_${tier.id}`, `🏅 ${tier.label} mastery — ${habit.title} (${tier.at} completions)`, habit.stat_category || 'discipline')
-      emitGame('toast', { icon: 'medal', title: `${tier.label} mastery!`, sub: `${habit.title} · ${tier.at} completions · +${tier.xp} XP`, tone: 'gold' })
-    }
-  }
+export async function applyHabitRewards() {
+  // Removed: first-win ×2, random critical hits and mastery tier bonuses paid XP on top of the
+  // habit's own XP for nothing extra done. A completion now pays exactly its habit XP.
 }
 
 // ── Weekly boss ──────────────────────────────────────────────────────────────
@@ -188,13 +138,13 @@ export async function applySeasonRewards(userId, season, xpRows) {
     const t = season.tiers[i]
     const sid = `season_${season.id}_tier_${i + 1}`
     if (ledgerHas(xpRows, sid)) continue
-    await robustAwardXP(userId, t.xp, `season_${season.id}`, sid, `❄️ ${season.name} tier ${i + 1}: ${t.title}`, 'discipline')
+    // tiers unlock as badges only; they no longer pay XP on top of the XP that unlocked them
     newest = { n: i + 1, t }
   }
   if (!newest) return
   const key = `lokios_season_${season.id}_toast_${newest.n}`
   try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1') } catch {}
-  emitGame('toast', { icon: 'snowflake', title: `Season tier ${newest.n}: ${newest.t.title}`, sub: `${season.name} pass · +${newest.t.xp} XP`, tone: 'accent', big: newest.n === season.tiers.length })
+  emitGame('toast', { icon: 'snowflake', title: `Season tier ${newest.n}: ${newest.t.title}`, sub: `${season.name} pass · badge unlocked`, tone: 'accent', big: newest.n === season.tiers.length })
 }
 
 // ── Bets ─────────────────────────────────────────────────────────────────────
