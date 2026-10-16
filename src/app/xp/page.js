@@ -15,6 +15,8 @@ import { RANK_CONFIG, SAGA_TITLES, SAGA_IMAGES } from '@/lib/constants'
 import { cleanupAllDuplicateXP, fetchAllXpHistory, stripSidMarker } from '@/lib/utils/xpFallback'
 
 import ProgressTabs from '@/components/progress/ProgressTabs'
+import BonusLedger from '@/components/progress/BonusLedger'
+import { isBonusXP } from '@/lib/utils/xpRules'
 // 10-Segment LED Meter for Momentum Card (Compact)
 function SegmentedMomentumBar({ percentage = 78 }) {
   const activeSegments = Math.round((Math.max(0, Math.min(100, percentage)) / 100) * 10)
@@ -189,7 +191,7 @@ export default function XPDashboard() {
   // Timeline Area Chart Data (aggregate by day)
   const timelineMap = {}
   timeline.forEach(item => {
-    if (item.source_type === 'achievement') return // achievement bonuses count in the total, not on the day they unlocked
+    if (isBonusXP(item)) return // cumulative bonuses count in the total, not on the day they landed
     const d = getLocalDateStr(new Date(item.created_at))
     if (!timelineMap[d]) timelineMap[d] = 0
     timelineMap[d] += item.amount
@@ -268,7 +270,7 @@ export default function XPDashboard() {
   const scopedTimeline = useMemo(() => {
     if (isAllHistoryMode) return timeline
     return timeline.filter(item => {
-      if (!item.created_at) return false
+      if (!item.created_at || isBonusXP(item)) return false // bonuses live in the Bonus XP ledger
       const itemDate = getLocalDateStr(new Date(item.created_at))
       return itemDate === selectedDate
     })
@@ -875,6 +877,7 @@ export default function XPDashboard() {
           </HudPanel>
         </div>
 
+        <BonusLedger rows={timeline} />
         <ProgressTabs />
       </div>
     </AppShell>

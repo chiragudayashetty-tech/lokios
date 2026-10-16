@@ -1,4 +1,5 @@
 'use client'
+import { dailyXP } from '@/lib/utils/xpRules'
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -192,14 +193,14 @@ export default function JournalPage() {
     const endStr = getLocalDateStr(endOfWeek)
 
     Promise.all([
-      supabase.from('xp_history').select('amount').eq('user_id', user.id).gte('created_at', startStr).lte('created_at', endStr + 'T23:59:59.999Z'),
+      supabase.from('xp_history').select('amount, source_type').eq('user_id', user.id).gte('created_at', startStr).lte('created_at', endStr + 'T23:59:59.999Z'),
       supabase.from('habit_logs').select('status').eq('user_id', user.id).gte('date', startStr).lte('date', endStr).eq('status', 'completed'),
       supabase.from('tasks').select('id').eq('user_id', user.id).gte('completed_at', startStr).lte('completed_at', endStr + 'T23:59:59.999Z').eq('status', 'completed'),
       supabase.from('goals').select('id').eq('user_id', user.id).gte('completed_at', startStr).lte('completed_at', endStr + 'T23:59:59.999Z').eq('status', 'completed'),
       supabase.from('work_logs').select('*').eq('user_id', user.id).ilike('title', 'Weekly Debrief%').order('created_at', { ascending: false })
     ]).then(([xpRes, habitRes, taskRes, goalRes, historyRes]) => {
       setStats({
-        xp: (xpRes.data || []).reduce((s, l) => s + l.amount, 0),
+        xp: dailyXP(xpRes.data).reduce((s, l) => s + l.amount, 0),
         habits: (habitRes.data || []).length,
         tasks: (taskRes.data || []).length,
         missions: (goalRes.data || []).length

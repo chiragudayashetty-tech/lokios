@@ -16,6 +16,7 @@ import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
 import CaptureSheet from '@/components/moments/CaptureSheet'
 import { useTodayMoment } from '@/lib/moments/moments'
+import { dailyXP } from '@/lib/utils/xpRules'
 import { computeMomentum, weeklyWinRate as weeklyWinRateOf, publishMomentum } from '@/lib/utils/momentumScore'
 import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { RANK_CONFIG, SAGA_IMAGES } from '@/lib/constants'
@@ -446,9 +447,9 @@ export default function MissionControl() {
       const thirtyDaysAgoStr = getLocalDateStr(thirtyDaysAgo)
 
       // 1. Fetch XP Data (Last 30 Days)
-      const { data: xpData } = await sb
+      let { data: xpData } = await sb
         .from('xp_history')
-        .select('amount, created_at')
+        .select('amount, created_at, source_type')
         .eq('user_id', user.id)
         .gte('created_at', `${thirtyDaysAgoStr}T00:00:00.000Z`)
         .order('created_at', { ascending: false })
@@ -531,6 +532,7 @@ export default function MissionControl() {
       }
         
       if (xpData) {
+        xpData = dailyXP(xpData) // achievements, season tiers, milestones… count in the total, not in a day
         // Today & This Week (NET XP including penalties)
         setXpThisWeek(xpData.filter(r => {
           const rDateStr = getLocalDateStr(new Date(r.created_at))

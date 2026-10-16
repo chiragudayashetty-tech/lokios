@@ -1,7 +1,7 @@
 // /report (#42): fetch one period (+ the previous period of equal length for deltas) and summarise it.
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
-import { habitsScheduledOn } from '@/lib/utils/xpRules'
+import { habitsScheduledOn, isBonusXP } from '@/lib/utils/xpRules'
 import { categoryMinutes, SCREEN_CATEGORIES, UNCATEGORIZED } from '@/lib/utils/screenIntel'
 import { ACHIEVEMENTS } from '@/lib/achievements'
 import { progressOf } from '@/lib/utils/missions'
@@ -119,8 +119,8 @@ export function summarise(d) {
   const label = (ds) => new Date(`${ds}T12:00:00`).toLocaleDateString('en-US', len > 14 ? { month: 'short', day: 'numeric' } : { weekday: 'short', day: 'numeric' })
 
   // XP
-  const xpCur = d.xp.filter((r) => inRange(dayOf(r.created_at)))
-  const xpPrev = d.xp.filter((r) => inPrev(dayOf(r.created_at)))
+  const xpCur = d.xp.filter((r) => !isBonusXP(r) && inRange(dayOf(r.created_at)))
+  const xpPrev = d.xp.filter((r) => !isBonusXP(r) && inPrev(dayOf(r.created_at)))
   const xpByDay = new Map()
   for (const r of xpCur) { const k = dayOf(r.created_at); xpByDay.set(k, (xpByDay.get(k) || 0) + (Number(r.amount) || 0)) }
   const bySource = new Map()
