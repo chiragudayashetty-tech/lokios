@@ -16,6 +16,7 @@ import CharacterCapsuleHUD from '@/components/ui/CharacterCapsuleHUD'
 import LevelUpCelebration from '@/components/ui/LevelUpCelebration'
 import GameOverlays from '@/components/game/GameOverlays'
 import WeeklyScorecard from '@/components/game/WeeklyScorecard'
+import EstimatePrompt from '@/components/game/EstimatePrompt'
 import AppServices from '@/components/layout/AppServices'
 import MissionOverlays from '@/components/goals/MissionOverlays'
 import AchievementService from '@/components/achievements/AchievementService'
@@ -385,6 +386,7 @@ function AppShellFrame({ children }) {
       <MissionOverlays />
       <AchievementService />
       <WeeklyScorecard />
+      <EstimatePrompt />
       <AppServices />
       <LevelUpCelebration level={level} rankTitle={SAGA_TITLES[rank.code] || rank.name} />
 

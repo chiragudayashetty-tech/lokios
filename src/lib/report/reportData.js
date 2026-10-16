@@ -38,6 +38,9 @@ const startIso = (ds) => new Date(`${ds}T00:00:00`).toISOString()
 const endIso = (ds) => new Date(`${ds}T23:59:59.999`).toISOString()
 const sum = (arr, f = (x) => x) => arr.reduce((s, x) => s + (Number(f(x)) || 0), 0)
 const avg = (arr, f) => (arr.length ? sum(arr, f) / arr.length : null)
+// Journal moods are saved as words ("good") on the Journal page and as 1–5 elsewhere
+const MOOD_WORDS = { terrible: 1, awful: 1, bad: 2, low: 2, neutral: 3, okay: 3, ok: 3, good: 4, great: 5, excellent: 5, amazing: 5 }
+export const moodNum = (m) => { if (m == null || m === '') return null; const n = Number(m); if (Number.isFinite(n) && n > 0) return Math.min(5, n); return MOOD_WORDS[String(m).toLowerCase().trim()] ?? null }
 
 /** Normalise query params; defaults to the last 7 days. */
 export function parseReportParams(sp = {}) {
@@ -152,12 +155,13 @@ export function summarise(d) {
   })
 
   // Sleep
-  const sleep = d.sleep.filter((l) => inRange(l.date))
+  // only real nights — placeholder rows with no times/duration used to count as 0 h
+  const sleep = d.sleep.filter((l) => inRange(l.date) && (Number(l.duration_minutes) > 0 || (l.bedtime && l.wake_time)))
   const bedMins = sleep.filter((l) => l.bedtime).map((l) => { const t = new Date(l.bedtime); let m = t.getHours() * 60 + t.getMinutes(); if (m < 12 * 60) m += 24 * 60; return m })
   const avgBed = bedMins.length ? Math.round(avg(bedMins, (x) => x)) % (24 * 60) : null
 
   // Budget
-  const spend = d.budget.filter((l) => inRange(l.date))
+  const spend = d.budget.filter((l) => inRange(l.date) && Number(l.amount) > 0) // ₹0 'no spend' markers aren't entries
   const byCat = new Map()
   for (const l of spend) { const c = l.category || 'other'; byCat.set(c, (byCat.get(c) || 0) + (Number(l.amount) || 0)) }
   const daily = spend.filter((l) => !l.exclude_daily)
@@ -178,7 +182,7 @@ export function summarise(d) {
     screen: { logged: screen.length, avgTotal: avg(screen, (l) => l.total_hours), avgDoom: avg(screen, (l) => l.doom_scroll_minutes), avgFocus: avg(screen, (l) => l.focus_hours), daily: screenDaily, hasCats: screen.some((l) => l.categories && Object.keys(l.categories).length) },
     sleep: { logged: sleep.length, avgMinutes: avg(sleep, (l) => l.duration_minutes), avgScore: avg(sleep.filter((l) => l.score != null), (l) => l.score), avgBed, daily: dates.map((ds) => { const l = sleep.find((x) => x.date === ds); return { date: ds, label: label(ds), hours: l ? +(l.duration_minutes / 60).toFixed(1) : null } }) },
     budget: { total: sum(spend, (l) => l.amount), dailyAvg: sum(daily, (l) => l.amount) / len, entries: spend.length, byCategory: [...byCat.entries()].map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount) },
-    journal: { entries: journal.length, avgMood: avg(journal.filter((j) => j.mood != null), (j) => j.mood), daily: dates.map((ds) => { const js = journal.filter((j) => j.date === ds && j.mood != null); return { date: ds, label: label(ds), mood: js.length ? +(avg(js, (j) => j.mood)).toFixed(1) : null } }) },
+    journal: { entries: journal.length, avgMood: avg(journal.filter((j) => moodNum(j.mood) != null), (j) => moodNum(j.mood)), daily: dates.map((ds) => { const js = journal.filter((j) => j.date === ds && moodNum(j.mood) != null); return { date: ds, label: label(ds), mood: js.length ? +(avg(js, (j) => moodNum(j.mood))).toFixed(1) : null } }) },
     work: { days: work.length, hours: sum(work, (l) => l.total_hours_worked), focused: sum(work, (l) => l.focused_hours), deep: sum(work, (l) => l.deep_execution_hours), logs: d.workLogs.filter((l) => inRange(l.date) && l.title).slice(-12).reverse(), speaking: d.speaking.filter((l) => inRange(l.date)) },
     achievements: earned,
     ...details(d, { inRange, inPrev, dates, label, habits, habitsPrev, tasksDone, tasksDonePrev, overdue, sleep, screen }),
@@ -247,9 +251,9 @@ function details(d, { inRange, inPrev, dates, habits, habitsPrev, tasksDone, tas
 
   // Books, budget entries
   const books = d.books.filter((b) => inRange(String(b.date_completed || '').slice(0, 10))).sort((a, b) => String(a.date_completed).localeCompare(String(b.date_completed)))
-  const spend = d.budget.filter((l) => inRange(l.date)).sort((a, b) => a.date.localeCompare(b.date) || String(a.created_at).localeCompare(String(b.created_at)))
+  const spend = d.budget.filter((l) => inRange(l.date) && Number(l.amount) > 0).sort((a, b) => a.date.localeCompare(b.date) || String(a.created_at).localeCompare(String(b.created_at)))
   const spentPrev = sum(d.budget.filter((l) => inPrev(l.date)), (l) => l.amount)
-  const noSpendDays = dates.filter((ds) => !spend.some((l) => l.date === ds && Number(l.amount) > 0) && spend.some((l) => l.date === ds)).length
+  const noSpendDays = dates.filter((ds) => d.budget.some((l) => l.date === ds) && !d.budget.some((l) => l.date === ds && Number(l.amount) > 0)).length
 
   // Screen discipline
   const scores = screen.map((l) => disciplineScore(l)).filter((x) => x != null)

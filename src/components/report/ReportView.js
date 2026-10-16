@@ -6,7 +6,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceL
 import { ArrowLeft, Printer, Share2, Sun, Moon, ArrowUpRight, ArrowDownRight, Minus, Check } from 'lucide-react'
 import { useOSSlice } from '@/lib/context/OSContext'
 import { useIsClient } from '@/lib/hooks/useMediaQuery'
-import { fetchReport, parseReportParams } from '@/lib/report/reportData'
+import { fetchReport, parseReportParams, moodNum } from '@/lib/report/reportData'
 import { SCREEN_CATEGORIES, UNCATEGORIZED } from '@/lib/utils/screenIntel'
 import { formatMoney } from '@/lib/utils/money'
 import { RARITY } from '@/lib/achievements'
@@ -17,11 +17,12 @@ const BLUE = '#3987e5'
 const fmtH = (h) => (h == null ? '—' : `${(+h).toFixed(1)}h`)
 const fmtMin = (m) => (m == null ? '—' : m >= 60 ? `${Math.floor(m / 60)}h ${Math.round(m % 60)}m` : `${Math.round(m)}m`)
 const fmtClock = (mins) => (mins == null ? '—' : `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`)
-const fmtDate = (ds, o = { month: 'short', day: 'numeric' }) => new Date(`${ds}T12:00:00`).toLocaleDateString('en-US', o)
+const fmtDate = (ds, o = { month: 'short', day: 'numeric' }) => { const d = new Date(`${String(ds || '').slice(0, 10)}T12:00:00`); return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-US', o) }
 
 function Delta({ cur, prev, unit = '%', invert = false }) {
   if (prev == null || cur == null) return null
   if (!prev) return cur ? <span className="rp-delta">new this period</span> : null
+  if (Math.abs(prev) < 5 || Math.abs(cur / prev) > 5) return <span className="rp-delta">{prev} in the previous period</span>
   const pct = Math.round(((cur - prev) / Math.abs(prev)) * 100)
   const Icon = pct > 0 ? ArrowUpRight : pct < 0 ? ArrowDownRight : Minus
   const good = invert ? pct < 0 : pct > 0
@@ -122,6 +123,7 @@ export default function ReportView({ search }) {
   )
 }
 
+const moodLabel = (m) => { const n = moodNum(m); return n == null ? String(m) : Number.isNaN(Number(m)) ? `${m} (${n}/5)` : `${n}/5` }
 const fmtD = (ds) => <span className="rp-nw">{ds ? fmtDate(ds) : '—'}</span>
 const STATUS = { completed: 'Done', pending: 'To do', in_progress: 'In progress', todo: 'To do', active: 'Active', paused: 'Paused', failed: 'Failed', cancelled: 'Cancelled' }
 const status = (s) => STATUS[s] || String(s || '—').replace(/_/g, ' ')
@@ -183,7 +185,7 @@ function HabitGrid({ grid, dates }) {
             <thead>
               <tr><th />{dates.slice(a, b).map((d) => <th key={d} className={new Date(`${d}T12:00:00`).getDay() === 1 ? 'is-mon' : ''}>{+d.slice(8)}</th>)}<th className="num">Done</th></tr>
             </thead>
-            <tbody>{grid.map((h) => {
+            <tbody>{grid.filter((h) => h.cells.slice(a, b).some((c) => c !== 'off')).map((h) => {
               const cells = h.cells.slice(a, b)
               const done = cells.filter((c) => c === 'done').length
               const sched = cells.filter((c) => c !== 'off').length
@@ -305,7 +307,7 @@ function FullReport({ r, c }) {
             {!day.entries.length && !day.review && <p className="rp-muted">No entry</p>}
             {day.entries.map((j, i) => (
               <div key={j.id || i} className="rp-jentry">
-                {(j.mood != null || j.title) && <b>{j.title || ''}{j.title && j.mood != null ? ' · ' : ''}{j.mood != null ? `Mood ${j.mood}/5` : ''}</b>}
+                {((j.mood != null && j.mood !== '') || j.title) && <b>{j.title || ''}{j.title && j.mood != null && j.mood !== '' ? ' · ' : ''}{j.mood != null && j.mood !== '' ? `Mood ${moodLabel(j.mood)}` : ''}</b>}
                 {j.main ? <p>{j.main}</p> : <p className="rp-muted">(no text)</p>}
                 {j.extra.map((x) => <p key={x.label}><span className="rp-jlabel">{x.label}:</span> {x.text}</p>)}
               </div>

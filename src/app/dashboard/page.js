@@ -17,6 +17,7 @@ import { syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
 import CaptureSheet from '@/components/moments/CaptureSheet'
 import { useTodayMoment } from '@/lib/moments/moments'
 import { dailyXP } from '@/lib/utils/xpRules'
+import DisciplineGames from '@/components/game/DisciplineGames'
 import { computeMomentum, weeklyWinRate as weeklyWinRateOf, publishMomentum } from '@/lib/utils/momentumScore'
 import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { RANK_CONFIG, SAGA_IMAGES } from '@/lib/constants'
@@ -1396,6 +1397,7 @@ export default function MissionControl() {
 
         {/* Arena: streak & freezes, weekly boss, season pass, bets, perfect-day chest */}
         <GameHub />
+        <DisciplineGames />
 
         {/* ══════════════════════════════════════════════════════════════════
             DAILY PROTOCOL STATUS FLOATING DECK (INSTANT MODAL LAUNCH)
