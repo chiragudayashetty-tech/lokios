@@ -40,8 +40,6 @@ export const ACHIEVEMENTS = [
   { id: 'mastery_diamond', name: 'Mastery Diamond', description: 'Reach Diamond mastery on any habit', category: 'Habits', rarity: 'legendary', icon: 'Gem', check: (s) => flag(s.masteryDiamond > 0) },
   { id: 'chain_full', name: 'Chain Reaction', description: 'Complete a habit chain of 3+ in order', category: 'Habits', rarity: 'rare', icon: 'Link2', check: (s) => count(s.fullChains, 1) },
   { id: 'chain_10', name: 'Stacked', description: '10 complete habit chains', category: 'Habits', rarity: 'epic', icon: 'Link2', check: (s) => count(s.fullChains, 10) },
-  { id: 'crit_5', name: 'Lucky Strikes', description: 'Land 5 critical hits', category: 'Habits', rarity: 'rare', icon: 'Target', check: (s) => count(s.crits, 5) },
-  { id: 'chest_3', name: 'Treasure Hunter', description: 'Open 3 mystery chests', category: 'Habits', rarity: 'rare', icon: 'Gift', check: (s) => count(s.chests, 3) },
 
   // ── Tasks ──
   { id: 'tasks_1', name: 'Shipped', description: 'Complete your first task', category: 'Tasks', rarity: 'common', icon: 'CheckSquare', check: (s) => count(s.tasksDone, 1) },
