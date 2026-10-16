@@ -1,5 +1,5 @@
 // Honoring a time block (#40): when a task is completed, its calendar blocks
-// are marked completed; finishing inside the block shows a toast (no extra XP).
+// are marked completed and a block finished on time pays +5 XP (block_<eventId>).
 
 import { createClient } from '@/lib/supabase/client'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
@@ -17,9 +17,12 @@ export async function settleTaskBlocks(userId, task) {
   for (const ev of data) {
     if (!ev.completed) await sb.from('calendar_events').update({ completed: true }).eq('id', ev.id)
     const end = new Date(ev.end_time || ev.start_time).getTime()
-    if (now <= end) honored++ // on time — the task's own XP is the reward (no extra block bonus)
+    if (now <= end) {
+      await robustAwardXP(userId, BLOCK_XP, 'time_block', `block_${ev.id}`, `⏱️ Honored time block — ${task.title}`, 'discipline')
+      honored++
+    }
   }
-  if (honored) emitGame('toast', { icon: 'calendar', title: 'Block honored', sub: `${task.title} · finished inside its time block`, tone: 'success' })
+  if (honored) emitGame('toast', { icon: 'calendar', title: 'Block honored', sub: `${task.title} · +${BLOCK_XP * honored} XP`, tone: 'success' })
 }
 
 /** Reopening a task un-honors its blocks. */

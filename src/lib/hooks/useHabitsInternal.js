@@ -6,6 +6,7 @@ import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { escalatingPenalty, penaltyLabel, AUTOFAIL_BACKFILL_DAYS } from '@/lib/utils/xpRules'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateAndUpdateStreak, applyStreakRewards } from '@/lib/utils/streakCalc'
+import { applyHabitRewards } from '@/lib/utils/gamification'
 import { enqueue, isOffline, registerOfflineHandler } from '@/lib/utils/offlineQueue'
 import { syncWarRoomHabitChange } from '@/lib/utils/warRoomSync'
 import { applyChainRewards } from '@/lib/utils/habitChains'
@@ -276,6 +277,8 @@ export function useHabitsInternal(user) {
         // Streak (>= 90% of scheduled habits), re-earnable milestones and the Perfect Day bonus
         const streak = await calculateAndUpdateStreak(user.id, habitId)
         await applyStreakRewards(user.id, streak, targetDate)
+        // First win x2, critical hits and mastery tier-ups
+        await applyHabitRewards({ userId: user.id, habit, dateStr: targetDate, completed: nextStatus === 'completed', wasCompleted: currentStatus === 'completed', model: streak })
         // Habit chains: bonus for doing this habit right after its predecessor
         const beforeLogs = monthLogs.filter(l => l.date === targetDate)
         const afterLogs = beforeLogs.filter(l => l.habit_id !== habitId)

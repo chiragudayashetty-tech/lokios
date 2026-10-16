@@ -9,6 +9,7 @@ import { readMomentum } from '@/lib/utils/momentumScore'
 // Header pill shows the dashboard's momentum score (one engine); XP history only fills the sparkline.
 const withScore = (m) => { const s = readMomentum(); return s ? { ...m, state: s.label, color: s.color, score: s.score } : m }
 import { backfillRecentScreenTimeXP } from '@/lib/utils/screenTimeXP'
+import { cleanupLegacyXP } from '@/lib/utils/xpCleanup'
 
 export function useXPInternal(user) {
   const supabase = createClient()
@@ -32,6 +33,8 @@ export function useXPInternal(user) {
       } catch (e) {
         console.warn('Screen time XP backfill skipped:', e)
       }
+      // One-time: take back XP the current rules wouldn't have paid (runs once per account)
+      await cleanupLegacyXP(user.id)
     }
 
     // Local midnight six days ago (a "YYYY-MM-DDT00:00Z" string would be UTC midnight)
