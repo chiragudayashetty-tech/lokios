@@ -24,8 +24,8 @@ export const DEFAULT_SECTIONS = REPORT_SECTIONS.map((s) => s.id)
 
 // Two reports: a one-page report card, and the long one for analysis.
 export const REPORT_KINDS = [
-  { id: 'card', label: 'Report card', hint: 'Short: grades per area, analysis and achievements.' },
-  { id: 'full', label: 'Full report', hint: 'Long: every habit, task, mission, journal entry, sleep night, weigh-in, book, spend and review with dates.' },
+  { id: 'card', label: 'Report card', hint: 'Short: statistics only — habits, tasks, sleep, journal and more as “x / y days”, grades and achievements.' },
+  { id: 'full', label: 'Full report', hint: 'Long: every journal entry, the full habit chart (every habit × every day), work days and logs, tasks and missions with deployed / due / completed dates, speaking summary, sleep, weight, books, budget and reviews.' },
 ]
 
 const PAGE = 1000
@@ -291,13 +291,64 @@ function details(d, { inRange, inPrev, dates, habits, habitsPrev, tasksDone, tas
   if (speakingPrev || speaking.length) notes.push({ tone: speaking.length >= speakingPrev ? 'good' : 'bad', text: `${speaking.length} speaking session${speaking.length === 1 ? '' : 's'} vs ${speakingPrev} before.` })
   if (books.length) notes.push({ tone: 'good', text: `Finished ${books.length} book${books.length === 1 ? '' : 's'}: ${books.map((b) => b.title).join(', ')}.` })
 
+  // ── Short report: plain counts, "x / y days"
+  const habitDays = habits.daily.filter((x) => x.rate != null)
+  const activeDays = habitDays.filter((x) => x.rate > 0).length
+  const workDaysN = workDays.filter((l) => Number(l.total_hours_worked) > 0).length
+  const lateBeds = nights.filter((n) => n.bed && n.bed >= '01:00' && n.bed < '12:00').length
+  const screenOk = screen.filter((l) => { const sc = disciplineScore(l); return sc != null && sc >= 50 }).length
+  const speakDays = new Set(speaking.map((l) => l.date)).size
+  const stats = [
+    { id: 'habits', label: 'Habit check-ins', value: `${sum(habits.rows, (r) => r.done)} / ${sum(habits.rows, (r) => r.scheduled)}`, sub: habits.rate == null ? 'nothing scheduled' : `${habits.rate}%` },
+    { id: 'habitdays', label: 'Days with habits done', value: `${activeDays} / ${habitDays.length || len}`, sub: `${habits.perfectDays} perfect day${habits.perfectDays === 1 ? '' : 's'}` },
+    { id: 'tasks', label: 'Tasks completed', value: tasksDone.length, sub: `${tasksDonePrev} previous period` },
+    { id: 'ontime', label: 'Tasks on time', value: `${tasksDueDone} / ${tasksDueInPeriod.length}`, sub: `${overdue} overdue now` },
+    { id: 'missions', label: 'Missions completed', value: missionRows.filter((m) => inRange(m.completed)).length, sub: `${missionsActive.length} active · ${missionsLate} late` },
+    { id: 'work', label: 'Work days', value: `${workDaysN} / ${len}`, sub: `${fmt1(workHours)}h · ${fmt1(workHours / len)}h/day` },
+    { id: 'sleep', label: 'Nights 7–9h', value: `${goodNights} / ${nights.length}`, sub: nights.length ? `avg ${fmt1(avg(nights, (n) => n.minutes) / 60)}h · ${lateBeds} after 1am` : 'not logged' },
+    { id: 'journal', label: 'Days journaled', value: `${journalDays} / ${len}`, sub: `${reviews.length} daily review${reviews.length === 1 ? '' : 's'}` },
+    { id: 'speaking', label: 'Speaking days', value: `${speakDays} / ${len}`, sub: `${speaking.length} session${speaking.length === 1 ? '' : 's'}` },
+    { id: 'screen', label: 'Disciplined screen days', value: `${screenOk} / ${screen.length}`, sub: screenScore == null ? 'not logged' : `avg ${screenScore}/100` },
+    { id: 'weight', label: 'Weight', value: weight.end == null ? '—' : `${weight.end} kg`, sub: weight.change == null ? 'not logged' : `${weight.change > 0 ? '+' : ''}${weight.change} kg` },
+    { id: 'spend', label: 'Spent', value: `₹${Math.round(spent).toLocaleString('en-IN')}`, sub: `${noSpendDays} / ${len} no-spend days` },
+    { id: 'books', label: 'Books finished', value: books.length, sub: books.length ? books.map((b) => b.title).join(', ') : '—' },
+  ]
+
+  // ── Speaking: two-sentence analysis
+  let speakingNote
+  if (!speaking.length) speakingNote = `No speaking practice logged in these ${len} days${speakingPrev ? `, down from ${speakingPrev} session${speakingPrev === 1 ? '' : 's'} in the previous period` : ''}. Even two short sessions a week would rebuild the habit.`
+  else {
+    const days = [...new Set(speaking.map((l) => l.date))].sort()
+    let gap = 0
+    for (let k = 1; k < days.length; k++) gap = Math.max(gap, Math.round((new Date(`${days[k]}T12:00:00`) - new Date(`${days[k - 1]}T12:00:00`)) / 86400000) - 1)
+    gap = Math.max(gap, Math.round((new Date(`${to}T12:00:00`) - new Date(`${days[days.length - 1]}T12:00:00`)) / 86400000))
+    const rated = speaking.filter((l) => l.rating != null)
+    const ratedPrev = d.speaking.filter((l) => inPrev(l.date) && l.rating != null)
+    const r = rated.length ? avg(rated, (l) => l.rating) : null
+    const rp = ratedPrev.length ? avg(ratedPrev, (l) => l.rating) : null
+    speakingNote = `You practised on ${days.length} of ${len} days (${Math.round((days.length / len) * 100)}%), ${speaking.length >= speakingPrev ? 'up' : 'down'} from ${speakingPrev} session${speakingPrev === 1 ? '' : 's'} in the previous period, with the longest break ${gap} day${gap === 1 ? '' : 's'}. ${r != null ? `Your average self-rating was ${fmt1(r)}/5${rp != null ? ` (${r >= rp ? 'up' : 'down'} from ${fmt1(rp)})` : ''}` : 'Sessions were not rated'}${days.length / len < 0.3 ? ' — frequency, not quality, is the gap to close.' : ' — keep the rhythm going.'}`
+  }
+
+  // ── Habit grid: every habit × every day
+  const doneKey = new Set(d.habitLogs.filter((l) => !l.status || l.status === 'completed').map((l) => `${l.habit_id}|${l.date}`))
+  const failKey = new Set(d.habitLogs.filter((l) => l.status === 'failed').map((l) => `${l.habit_id}|${l.date}`))
+  const gridHabits = d.habits.filter((h) => habits.rows.some((r) => r.id === h.id))
+  const habitGrid = gridHabits.map((h) => ({
+    id: h.id, title: h.title,
+    cells: dates.map((ds) => {
+      const sched = habitsScheduledOn([h], ds).length > 0 && (!h.created_at || h.created_at.slice(0, 10) <= ds)
+      const k = `${h.id}|${ds}`
+      return doneKey.has(k) ? 'done' : failKey.has(k) ? 'failed' : sched ? (ds < (getLocalDateStr()) ? 'missed' : 'open') : 'off'
+    }),
+  }))
+
   return {
-    card: { grades, overall, overallGrade: letter(overall), notes },
+    card: { grades, overall, overallGrade: letter(overall), notes, stats },
     detail: {
       tasks: taskRows, missions: missionRows,
       work: { days: workDays, logs: logs.filter((l) => !isDebrief(l)), hours: workHours },
       debriefs: logs.filter(isDebrief),
-      speaking, journal, reviews, nights, weight, books, spend, noSpendDays,
+      speaking, speakingNote, habitGrid, journal, reviews, nights, weight, books, spend, noSpendDays,
     },
   }
 }

@@ -92,6 +92,24 @@ body:has(.rp-root) { background: var(--rp-bg, #f3f3f5); }
 .rp-foot { margin: 24px 0 0; padding-top: 8px; font-size: 10px; color: var(--rp-muted); text-align: center; border-top: 1px solid var(--rp-border); }
 
 .rp-mt { margin-top: 10px; }
+.rp-h3 { margin: 14px 0 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rp-muted); }
+.rp-para { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--rp-text-2); }
+.rp-grid-wrap { margin-bottom: 10px; overflow-x: auto; break-inside: avoid; }
+.rp-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9px; }
+.rp-grid th { padding: 2px 0; font-weight: 600; color: var(--rp-muted); text-align: center; }
+.rp-grid th.is-mon { color: var(--rp-text); }
+.rp-grid th:first-child, .rp-grid-name { width: 92px; }
+.rp-grid th:last-child, .rp-grid td.num { width: 38px; text-align: right; padding-right: 2px; font-weight: 700; color: var(--rp-text); }
+.rp-grid-name { padding: 2px 6px 2px 0; text-align: left; font-size: 10px; color: var(--rp-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-grid td { height: 15px; padding: 0; text-align: center; font-weight: 800; border: 1px solid var(--rp-paper); }
+.rp-grid td.is-done { color: #fff; background: var(--rp-good); }
+.rp-grid td.is-failed { color: #fff; background: var(--rp-bad); }
+.rp-grid td.is-missed { color: var(--rp-muted); background: var(--rp-border); }
+.rp-grid td.is-open { background: var(--rp-soft); }
+.rp-grid td.is-off { background: transparent; }
+.rp-grid tr { break-inside: avoid; }
+/* Phones lock html/body to the screen height for the app shell; the report must scroll and print in full */
+html:has(.rp-root), body:has(.rp-root) { height: auto !important; min-height: 100% !important; overflow: visible !important; position: static !important; overscroll-behavior-y: auto !important; }
 .rp-nw { white-space: nowrap; }
 .rp-table td.is-bad { color: var(--rp-bad); font-weight: 600; }
 .rp-detail { font-size: 11px; color: var(--rp-muted); }
@@ -130,6 +148,9 @@ body:has(.rp-root) { background: var(--rp-bg, #f3f3f5); }
 
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
+  html, body { height: auto !important; overflow: visible !important; position: static !important; }
+  .rp-root, .rp-sheet { overflow: visible !important; height: auto !important; }
+  .rp-grid-wrap { overflow: visible; }
   /* Dark paper: Chromium leaves page margins white, so the dark page has none and the sheet pads every fragment */
   @page rp-dark { size: A4 portrait; margin: 0; }
   .rp-root[data-theme='dark'] { page: rp-dark; }
@@ -145,3 +166,4 @@ body:has(.rp-root) { background: var(--rp-bg, #f3f3f5); }
   .rp-kpis.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
   .rp-chart .recharts-wrapper, .rp-chart .recharts-surface { width: 100% !important; }
 }
+.rp-root .rp-grade { color: #fff !important; -webkit-text-fill-color: #fff !important; }
