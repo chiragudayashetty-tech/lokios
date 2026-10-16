@@ -200,8 +200,7 @@ export function useTasksInternal(user) {
 
       // Estimate duel: ask for the real time, or score it right away if it's already filled in
       if (updated?.estimate_minutes > 0) {
-        if (updated.actual_minutes > 0) settleDuel(user.id, updated).catch(() => {})
-        else if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('lokios:estimate-ask', { detail: { id: updated.id, title: updated.title, estimate: updated.estimate_minutes } }))
+        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('lokios:estimate-ask', { detail: { id: updated.id, title: updated.title, estimate: updated.estimate_minutes, max: updated.estimate_max_minutes, logged: updated.actual_minutes || 0 } }))
       }
 
       // Time blocks for this task: mark completed, +5 XP when finished on time (#40)

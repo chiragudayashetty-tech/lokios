@@ -7,10 +7,13 @@ import Sheet from '@/components/ui/Sheet'
 import SchemaHint from '@/components/ui/SchemaHint'
 import { createClient } from '@/lib/supabase/client'
 import { parseTaskNotes } from '@/lib/utils/dates'
+import { duelScore, estimateLabel, similarTask } from '@/lib/games/discipline'
+import { useOSSlice } from '@/lib/context/OSContext'
 import { PRIORITIES, CATEGORY_LABELS, taskXp, dueOf, shiftDay, newSubtaskId, subtaskProgress } from '@/lib/utils/taskBoard'
 
 const PRIORITY_ORDER = ['EASY', 'MEDIUM', 'HARD', 'EXTREME', 'NONE']
-const ESTIMATES = [15, 30, 45, 60, 90, 120]
+const ESTIMATES = [30, 60, 120, 180, 300, 480]
+const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}` : `${m}m`)
 const NO_SUBTASKS = []
 
 /** Rebuild the stored description: keep tags and completion / failure notes around the edited text. */
@@ -40,6 +43,7 @@ function draftFrom(task) {
     milestone_id: task?.milestone_id || '',
     estimate_minutes: task?.estimate_minutes ?? '',
     actual_minutes: task?.actual_minutes ?? '',
+    estimate_max_minutes: task?.estimate_max_minutes ?? '',
   }
 }
 
@@ -85,6 +89,9 @@ export default function TaskDrawer({ task, goals, today, schemaReady, onClose, p
   const subs = dragOrder || subtasks
   const isDone = task?.status === 'completed'
   const isOpenTask = task && !['completed', 'cancelled', 'failed'].includes(task.status)
+  const { tasks: allTasks = [] } = useOSSlice('tasks') || {}
+  const similar = useMemo(() => (task ? similarTask({ ...task, title: draft.title }, allTasks) : null), [task, draft.title, allTasks])
+  const estLabelDraft = estimateLabel({ estimate_minutes: Number(draft.estimate_minutes) || 0, estimate_max_minutes: Number(draft.estimate_max_minutes) || 0 })
   const xp = task ? taskXp(task, today) : null
   const set = (k) => (e) => setDraft((d) => ({ ...d, [k]: e?.target ? e.target.value : e }))
 
@@ -102,6 +109,7 @@ export default function TaskDrawer({ task, goals, today, schemaReady, onClose, p
       const num = (v) => (v === '' || v == null ? null : Math.max(0, parseInt(v, 10) || 0))
       if (num(draft.estimate_minutes) !== (task.estimate_minutes ?? null)) p.estimate_minutes = num(draft.estimate_minutes)
       if (num(draft.actual_minutes) !== (task.actual_minutes ?? null)) p.actual_minutes = num(draft.actual_minutes)
+      if (num(draft.estimate_max_minutes) !== (task.estimate_max_minutes ?? null)) p.estimate_max_minutes = num(draft.estimate_max_minutes)
     }
     return p
   }
@@ -246,23 +254,33 @@ export default function TaskDrawer({ task, goals, today, schemaReady, onClose, p
               </div>
             </div>
 
-            <div className="td-grid">
-              <div className="td-field">
-                <label className="td-label" htmlFor="td-est">Estimate (min)</label>
-                <input id="td-est" type="number" min="0" step="5" inputMode="numeric" className="input" value={draft.estimate_minutes} onChange={set('estimate_minutes')} placeholder="e.g. 45" />
-                <div className="td-row td-mt">
-                  {ESTIMATES.map((m) => <button key={m} type="button" className={`td-pill ${Number(draft.estimate_minutes) === m ? 'is-on' : ''}`} onClick={() => set('estimate_minutes')(m)}>{m >= 60 ? `${m / 60}h` : `${m}m`}</button>)}
-                </div>
+            <div className="td-field">
+              <label className="td-label" htmlFor="td-est">Estimate <span className="td-hint">leave empty if you can’t tell — no estimate, no duel</span></label>
+              <div className="td-row">
+                <input id="td-est" type="number" min="0" step="5" inputMode="numeric" className="input td-num" value={draft.estimate_minutes} onChange={set('estimate_minutes')} placeholder="min" aria-label="Estimate minutes (or range start)" />
+                <span className="td-to">to</span>
+                <input type="number" min="0" step="5" inputMode="numeric" className="input td-num" value={draft.estimate_max_minutes} onChange={set('estimate_max_minutes')} placeholder="max (optional)" aria-label="Range end in minutes" />
+                <span className="td-hint">{estimateLabel({ estimate_minutes: Number(draft.estimate_minutes) || 0, estimate_max_minutes: Number(draft.estimate_max_minutes) || 0 }) || ''}</span>
               </div>
-              <div className="td-field">
-                <label className="td-label" htmlFor="td-act">Actual (min)</label>
-                <input id="td-act" type="number" min="0" step="5" inputMode="numeric" className="input" value={draft.actual_minutes} onChange={set('actual_minutes')} placeholder="Time spent" />
-                {draft.estimate_minutes && draft.actual_minutes ? (
-                  <p className={`td-delta ${Number(draft.actual_minutes) > Number(draft.estimate_minutes) ? 'is-over' : 'is-under'}`}>
-                    {Number(draft.actual_minutes) > Number(draft.estimate_minutes) ? `${draft.actual_minutes - draft.estimate_minutes}m over estimate` : `${draft.estimate_minutes - draft.actual_minutes}m under estimate`}
-                  </p>
-                ) : null}
+              <div className="td-row td-mt">
+                {ESTIMATES.map((m) => <button key={m} type="button" className={`td-pill ${Number(draft.estimate_minutes) === m ? 'is-on' : ''}`} onClick={() => set('estimate_minutes')(m)}>{m >= 60 ? `${m / 60}h` : `${m}m`}</button>)}
               </div>
+              {similar && <p className="td-hint td-mt">Last similar: “{similar.title}” took {fmtMin(similar.actual_minutes)}{similar.estimate_minutes ? ` (estimated ${estimateLabel(similar)})` : ''}</p>}
+            </div>
+            <div className="td-field">
+              <label className="td-label" htmlFor="td-act">Time logged <span className="td-hint">add each work session — it adds up</span></label>
+              <div className="td-row">
+                <b className="td-logged">{fmtMin(Number(draft.actual_minutes) || 0)}</b>
+                {estLabelDraft && <span className="td-hint">of {estLabelDraft}</span>}
+                {[15, 30, 60, 120].map((m) => <button key={m} type="button" className="td-pill" onClick={() => set('actual_minutes')((Number(draft.actual_minutes) || 0) + m)}>+{m >= 60 ? `${m / 60}h` : `${m}m`}</button>)}
+                <input id="td-act" type="number" min="0" step="5" inputMode="numeric" className="input td-num" value={draft.actual_minutes} onChange={set('actual_minutes')} placeholder="total" aria-label="Total time logged in minutes" />
+              </div>
+              {draft.estimate_minutes && draft.actual_minutes ? (() => {
+                const sc = duelScore(draft.estimate_minutes, draft.actual_minutes, draft.estimate_max_minutes)
+                const hi = Number(draft.estimate_max_minutes) > Number(draft.estimate_minutes) ? Number(draft.estimate_max_minutes) : Number(draft.estimate_minutes)
+                const left = hi - Number(draft.actual_minutes)
+                return <p className={`td-delta ${left < 0 ? 'is-over' : 'is-under'}`}>{left >= 0 ? `${fmtMin(left)} left in your estimate` : `${fmtMin(-left)} over your estimate`}{task.status === 'completed' && sc ? ` · ${sc.verdict}${sc.xp ? ` +${sc.xp} XP` : ''}` : ''}</p>
+              })() : null}
             </div>
           </>
         ) : (

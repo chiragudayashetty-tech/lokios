@@ -81,19 +81,43 @@ export async function settleLightsOut(userId, pledges, sleepLogs, today = getLoc
 }
 
 // ── Estimate duel ────────────────────────────────────────────────────────
-export function duelScore(estimate, actual) {
-  const e = Number(estimate), a = Number(actual)
+/**
+ * Single estimate: within 20% +25, within 50% +10. Range estimate (e.g. 2–5h, for work you can't
+ * pin down): landing inside it +10 — honest about uncertainty, but a sharp guess pays more.
+ */
+export function duelScore(estimate, actual, max = null) {
+  const e = Number(estimate), a = Number(actual), hi = Number(max)
   if (!(e > 0) || !(a > 0)) return null
+  if (hi > e) {
+    if (a >= e && a <= hi) return { off: 0, xp: 10, verdict: 'Inside your range', range: true }
+    const edge = a < e ? e : hi
+    return { off: Math.abs(a - edge) / edge, xp: 0, verdict: a > hi ? 'Over your range' : 'Under your range', range: true }
+  }
   const off = Math.abs(a - e) / e
   return { off, xp: off <= 0.2 ? 25 : off <= 0.5 ? 10 : 0, verdict: off <= 0.2 ? 'Bullseye' : off <= 0.5 ? 'Close' : a > e ? 'Way over' : 'Way under' }
+}
+export const estimateLabel = (t) => { const f = (m) => (m >= 60 ? `${+(m / 60).toFixed(1)}h` : `${m}m`); return t?.estimate_minutes ? (t.estimate_max_minutes > t.estimate_minutes ? `${f(t.estimate_minutes)}–${f(t.estimate_max_minutes)}` : f(t.estimate_minutes)) : null }
+
+/** Last finished task that looks like this one (shared words in the title) with a real time. */
+export function similarTask(task, tasks) {
+  const words = (s) => new Set(String(s || '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !['the', 'and', 'for', 'with'].includes(w)))
+  const mine = words(task?.title)
+  if (!mine.size) return null
+  let best = null
+  for (const t of tasks || []) {
+    if (t.id === task.id || t.status !== 'completed' || !(t.actual_minutes > 0)) continue
+    const shared = [...words(t.title)].filter((w) => mine.has(w)).length
+    if (shared >= 2 || (shared === 1 && mine.size === 1)) if (!best || shared > best.shared || (shared === best.shared && String(t.completed_at) > String(best.t.completed_at))) best = { t, shared }
+  }
+  return best?.t || null
 }
 
 /** Award (or re-award after an edit) the duel for a completed task with both numbers. */
 export async function settleDuel(userId, task) {
   if (!userId || !task || task.status !== 'completed') return null
-  const s = duelScore(task.estimate_minutes, task.actual_minutes)
+  const s = duelScore(task.estimate_minutes, task.actual_minutes, task.estimate_max_minutes)
   await robustRemoveXP(userId, 'estimate_duel', `estimate_${task.id}`)
-  if (s?.xp) await robustAwardXP(userId, s.xp, 'estimate_duel', `estimate_${task.id}`, `🎯 Estimate duel · ${s.verdict}: ${task.title} (${task.estimate_minutes}m est · ${task.actual_minutes}m real)`, 'discipline')
+  if (s?.xp) await robustAwardXP(userId, s.xp, 'estimate_duel', `estimate_${task.id}`, `🎯 Estimate duel · ${s.verdict}: ${task.title} (${estimateLabel(task)} est · ${task.actual_minutes}m real)`, 'discipline')
   return s
 }
 
@@ -104,7 +128,7 @@ export function calibration(tasks) {
   if (!rows.length) return null
   const ratios = rows.map((t) => t.actual_minutes / t.estimate_minutes).sort((a, b) => a - b)
   const median = ratios[Math.floor(ratios.length / 2)]
-  const hits = rows.filter((t) => duelScore(t.estimate_minutes, t.actual_minutes).off <= 0.2).length
+  const hits = rows.filter((t) => duelScore(t.estimate_minutes, t.actual_minutes, t.estimate_max_minutes)?.xp > 0).length
   return { n: rows.length, median: +median.toFixed(2), hitRate: Math.round((hits / rows.length) * 100), recent: rows.slice(0, 5) }
 }
 
@@ -139,7 +163,7 @@ export async function loadDiscipline(userId, today = getLocalDateStr()) {
   const [habits, habitLogs, tasks, work, sessions, pledges, sleep, goals] = await Promise.all([
     safe(sb.from('habits').select('*').eq('user_id', userId)),
     safe(sb.from('habit_logs').select('habit_id, date, status').eq('user_id', userId).gte('date', monday)),
-    safe(sb.from('tasks').select('id, title, status, completed_at, estimate_minutes, actual_minutes').eq('user_id', userId)),
+    safe(sb.from('tasks').select('*').eq('user_id', userId)),
     safe(sb.from('work_hours_logs').select('*').eq('user_id', userId).gte('date', monday)),
     safe(sb.from('fuel_sessions').select('*').eq('user_id', userId).gte('date', monday).order('created_at')),
     safe(sb.from('game_pledges').select('*').eq('user_id', userId).eq('kind', 'lights_out').gte('date', since).order('date')),
