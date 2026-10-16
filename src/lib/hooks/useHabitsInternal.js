@@ -118,6 +118,17 @@ export function useHabitsInternal(user) {
       const realLogs = logsRes.data || []
       const fetchedHabits = habitsRes.data || []
 
+      // Sleep is scored from the sleep log now (7–9 h, before 12, up before 9:30) — retire the
+      // old "Sleep Routine" habit so it stops counting in habits, streaks and Focus. History stays.
+      for (const h of fetchedHabits) {
+        if (h.is_active !== false && /sleep\s*routine/i.test(h.title || '')) {
+          h.is_active = false
+          h.stopped_at = h.stopped_at || new Date().toISOString()
+          supabase.from('habits').update({ is_active: false, stopped_at: h.stopped_at }).eq('id', h.id).eq('user_id', user.id)
+            .then(({ error }) => { if (error) supabase.from('habits').update({ is_active: false }).eq('id', h.id).eq('user_id', user.id) })
+        }
+      }
+
       // Read local custom order map
       const savedOrderMap = new Map()
       if (typeof window !== 'undefined' && user?.id) {

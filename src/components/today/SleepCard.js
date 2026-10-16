@@ -4,9 +4,19 @@ import { useMemo, useState } from 'react'
 import { BedDouble, Sunrise, Moon, Star } from 'lucide-react'
 import Ring from '@/components/ui/Ring'
 import SchemaHint from '@/components/ui/SchemaHint'
-import { sleepScore, sleepWindow, hhmmOf, formatDuration, scoreTone } from '@/lib/utils/sleep'
+import { sleepScore, sleepWindow, hhmmOf, formatDuration, scoreTone, sleepXp } from '@/lib/utils/sleep'
 
 /** Morning "How did you sleep?" card (#24). One log per wake-up date; editable. */
+function SleepXpRow({ sx }) {
+  if (!sx) return null
+  return (
+    <div className="slp-xp" aria-label={`Sleep XP ${sx.xp} of ${sx.max}`}>
+      {sx.parts.map((p) => <span key={p.id} className={p.ok ? 'is-ok' : p.near ? 'is-near' : p.miss ? 'is-bad' : 'is-miss'}>{p.label} · {p.detail} <b>{p.xp > 0 ? `+${p.xp}` : p.xp}</b></span>)}
+      <b className="slp-xp-total">{sx.xp > 0 ? '+' : ''}{sx.xp} XP</b>
+    </div>
+  )
+}
+
 export default function SleepCard({ today, logs, missing, onSave, compact = false }) {
   const todays = logs.find((l) => l.date === today)
   const history = useMemo(() => logs.filter((l) => l.date < today), [logs, today])
@@ -32,7 +42,7 @@ export default function SleepCard({ today, logs, missing, onSave, compact = fals
             <Ring value={todays.score / 100} size={42} stroke={5} color={tone.color}><b className="slp-ring-num">{todays.score}</b></Ring>
             <div className="slp-compact-text">
               <span className="slp-compact-title">Slept {formatDuration(todays.duration_minutes)}</span>
-              <span className="slp-compact-sub">{tone.label} · {hhmmOf(todays.bedtime)} → {hhmmOf(todays.wake_time)}</span>
+              <span className="slp-compact-sub">{tone.label} · {hhmmOf(todays.bedtime)} → {hhmmOf(todays.wake_time)}{(() => { const sx = sleepXp(todays); return sx ? ` · ${sx.xp > 0 ? '+' : ''}${sx.xp} XP` : '' })()}</span>
             </div>
             <button type="button" className="td-link" onClick={() => setOpen(true)}>Edit</button>
           </>
@@ -76,6 +86,7 @@ export default function SleepCard({ today, logs, missing, onSave, compact = fals
           <span className="slp-score-sub">{win ? `${formatDuration(preview.minutes)} · ${tone.label}` : 'Set both times'}</span>
         </div>
       </div>
+      {win && <SleepXpRow sx={sleepXp(win)} />}
       <div className="eod-scale" role="radiogroup" aria-label="Sleep quality">
         <span className="eod-scale-label">Quality</span>
         <div className="eod-scale-row">

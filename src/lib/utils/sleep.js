@@ -82,3 +82,29 @@ export function sleepRoutineMet({ bedtime, wake_time: wake }) {
   const minutes = (w - b) / 60000
   return sleptBefore1 && wokeBefore9 && minutes >= 420 && minutes <= 540
 }
+
+/**
+ * Sleep XP for one night, from the log (−30 … +40). Priorities:
+ *  1. 7–9 h asleep: +20 · 6.5–7 / 9–9.5 h: +10 · 6–6.5 / 9.5–10 h: 0 · under 6 / over 10 h: −10
+ *  2. asleep before 00:00: +10 · 00:00–00:30: +5 · 00:30–01:00: 0 · after 01:00: −10
+ *  3. up before 09:30: +10 · 09:30–10:00: +5 · 10:00–10:30: 0 · after 10:30: −10
+ */
+export const SLEEP_XP = { duration: 20, durationNear: 10, bed: 10, bedNear: 5, wake: 10, wakeNear: 5, miss: -10 }
+const band = (ok, near, neutral, full, half) => (ok ? full : near ? half : neutral ? 0 : SLEEP_XP.miss)
+export function sleepXp({ bedtime, wake_time: wake }) {
+  const b = new Date(bedtime), w = new Date(wake)
+  if (Number.isNaN(b.getTime()) || Number.isNaN(w.getTime()) || w <= b) return null
+  const minutes = Math.round((w - b) / 60000)
+  const bm = b.getHours() * 60 + b.getMinutes()
+  const after = bm >= 12 * 60 ? -1 : bm // minutes past midnight; evening bedtimes = -1
+  const wm = w.getHours() * 60 + w.getMinutes()
+  const parts = [
+    { id: 'duration', label: '7–9 h asleep', detail: formatDuration(minutes), full: SLEEP_XP.duration,
+      xp: band(minutes >= 420 && minutes <= 540, (minutes >= 390 && minutes < 420) || (minutes > 540 && minutes <= 570), (minutes >= 360 && minutes < 390) || (minutes > 570 && minutes <= 600), SLEEP_XP.duration, SLEEP_XP.durationNear) },
+    { id: 'bed', label: 'Asleep before 12', detail: hhmmOf(bedtime), full: SLEEP_XP.bed,
+      xp: band(after < 0 || after === 0, after > 0 && after <= 30, after > 30 && after <= 60, SLEEP_XP.bed, SLEEP_XP.bedNear) },
+    { id: 'wake', label: 'Up before 9:30', detail: hhmmOf(wake), full: SLEEP_XP.wake,
+      xp: band(wm < 570, wm >= 570 && wm <= 600, wm > 600 && wm <= 630, SLEEP_XP.wake, SLEEP_XP.wakeNear) },
+  ].map((p) => ({ ...p, ok: p.xp === p.full, near: p.xp > 0 && p.xp < p.full, miss: p.xp < 0 }))
+  return { minutes, parts, xp: parts.reduce((s, p) => s + p.xp, 0), max: SLEEP_XP.duration + SLEEP_XP.bed + SLEEP_XP.wake }
+}
