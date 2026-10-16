@@ -147,3 +147,15 @@ if (typeof window !== 'undefined') {
   applySettings()
   onSettingsChange(applySettings)
 }
+
+/**
+ * Bonus XP: cumulative rewards (achievements, season tiers, streak milestones, mastery,
+ * weekly boss, bets, savings goals). They count toward total XP and level, but never toward a
+ * single day — no daily charts, momentum, ghost battle or "today" numbers. They are listed
+ * month by month in the Bonus XP ledger instead.
+ */
+export const BONUS_XP_RX = /^(achievement|season_|streak_milestone|mastery|weekly_boss|bet_|savings_jar)/
+export const isBonusXP = (row) => BONUS_XP_RX.test(row?.source_type || '')
+export const dailyXP = (rows) => (rows || []).filter((r) => !isBonusXP(r))
+export const BONUS_XP_LABELS = { achievement: 'Achievement', season: 'Season pass', streak_milestone: 'Streak milestone', mastery: 'Habit mastery', weekly_boss: 'Weekly boss', bet: 'Weekly bet', savings_jar: 'Savings goal' }
+export const bonusKind = (t = '') => (t.startsWith('season_') ? 'season' : t.startsWith('bet_') ? 'bet' : t)

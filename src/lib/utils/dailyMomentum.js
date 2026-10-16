@@ -1,3 +1,4 @@
+import { isBonusXP } from '@/lib/utils/xpRules'
 /**
  * Derive a temporary momentum state from XP history.
  * This is intentionally pure: it never creates, updates, or deletes XP.
@@ -9,7 +10,7 @@ export function calculateDailyMomentum(history = [], now = new Date()) {
   threeDayStart.setDate(threeDayStart.getDate() - 2)
   const threeDayStartStr = localDate(threeDayStart)
 
-  history = history.filter(entry => entry.source_type !== 'achievement') // bonuses don't inflate a day
+  history = history.filter(entry => !isBonusXP(entry)) // cumulative bonuses don't inflate a day
   const recent = history.filter(entry => {
     const date = new Date(entry.created_at)
     return !Number.isNaN(date.getTime()) && localDate(date) >= threeDayStartStr && localDate(date) <= todayStr
