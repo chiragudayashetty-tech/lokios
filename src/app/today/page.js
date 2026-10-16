@@ -12,6 +12,9 @@ import SleepCard from '@/components/today/SleepCard'
 import WeightCard from '@/components/today/WeightCard'
 import CaptureSheet from '@/components/moments/CaptureSheet'
 import DisciplineGames from '@/components/game/DisciplineGames'
+import { estimateLabel } from '@/lib/games/discipline'
+
+const fmtLogged = (m) => (m >= 60 ? `${+(m / 60).toFixed(1)}h` : `${m}m`)
 import { useOS, useOSSlice } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -153,7 +156,7 @@ export default function TodayPage() {
         kind: 'task', id: t.id, title: t.title, task: t, done: t.status === 'completed', failed, late,
         section: block ? sectionForHour(new Date(block).getHours()) : 'anytime',
         time: block ? formatTimeOf(block) : null, start: block ? new Date(block).getTime() : null,
-        sub: failed ? 'Task · failed' : late ? `Task · due ${due(t)}` : 'Task · due today',
+        sub: (failed ? 'Task · failed' : late ? `Task · due ${due(t)}` : 'Task · due today') + (t.estimate_minutes ? ` · est ${estimateLabel(t)}${t.actual_minutes ? ` · ${fmtLogged(t.actual_minutes)} logged` : ''}` : t.actual_minutes ? ` · ${fmtLogged(t.actual_minutes)} logged` : ''),
       })
     }
 
