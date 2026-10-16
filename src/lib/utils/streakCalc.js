@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
+import { applyChestReward } from '@/lib/utils/gamification'
 import { STREAK_DAY_THRESHOLD, STREAK_MILESTONES, PERFECT_DAY_XP, habitsScheduledOn, FREEZE_START_DATE, FREEZE_EVERY_DAYS, FREEZE_MAX } from '@/lib/utils/xpRules'
 
 export const LOOKBACK_DAYS = 400
@@ -167,7 +168,7 @@ const awardedThisSession = new Set()
 /**
  * Streak milestones (keyed per run, so they're re-earned after a rebuild), the
  * Perfect Day bonus for `dateStr` (revoked if a habit is un-ticked) and the
- * (no chest any more). Award calls are idempotent; the Set only avoids
+ * Perfect Day mystery chest. Award calls are idempotent; the Set only avoids
  * repeat network calls.
  */
 export async function applyStreakRewards(userId, streak, dateStr = getLocalDateStr()) {
@@ -201,6 +202,7 @@ export async function applyStreakRewards(userId, streak, dateStr = getLocalDateS
   } else {
     await robustRemoveXP(userId, 'perfect_day', perfectId)
   }
+  await applyChestReward(userId, dateStr, isPerfect)
 }
 
 let cleaned = false

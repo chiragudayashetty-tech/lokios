@@ -9,6 +9,8 @@ import { emitGame } from '@/lib/utils/gamification'
 
 export const CHAIN_LINK_XP = 5
 export const CHAIN_FULL_XP = 25
+export const CHAIN_MIN_GAP_MS = 2 * 60 * 1000
+export const CHAIN_MAX_GAP_MS = 2 * 60 * 60 * 1000
 export const CHAIN_MIN_LENGTH = 3
 
 const byId = (habits) => new Map((habits || []).map((h) => [h.id, h]))
@@ -94,7 +96,10 @@ export function chainState(habits, logs, dateStr) {
     guard.add(id)
     const p = map.get(id)?.after_habit_id
     let r = 1
-    if (p && map.has(p) && times.has(p) && times.get(p) < times.get(id)) {
+    const gap = p && times.has(p) ? times.get(id) - times.get(p) : -1
+    // A real link: done 2 min – 2 h after its predecessor, both with real log times.
+    // Ticking a stack in one go (seconds apart) or hours apart isn't doing them back-to-back.
+    if (p && map.has(p) && times.get(p) > 0 && times.get(id) > 0 && gap >= CHAIN_MIN_GAP_MS && gap <= CHAIN_MAX_GAP_MS) {
       valid.add(id)
       r = runOf(p, guard) + 1
     }
@@ -115,7 +120,31 @@ export function chainState(habits, logs, dateStr) {
 }
 
 /** Award / revoke chain bonuses for whatever changed between two log snapshots of one date. */
-export async function applyChainRewards() {
-  // Removed: +5 per chain link / chain-complete bonus. The app can only see the order habits
-  // were ticked in, not whether they were really done back-to-back, so it was free XP.
+export async function applyChainRewards({ userId, habits, beforeLogs, afterLogs, dateStr }) {
+  if (!userId || !(habits || []).some((h) => h.after_habit_id)) return
+  if (dateStr !== getLocalDateStr()) return // only live, same-day stacks — no bonus for backfilled days
+  const before = chainState(habits, beforeLogs, dateStr)
+  const after = chainState(habits, afterLogs, dateStr)
+  const map = byId(habits)
+  const isToday = dateStr === getLocalDateStr()
+  const backdate = isToday ? null : `${dateStr}T12:00:00`
+
+  for (const id of after.valid) {
+    if (before.valid.has(id)) continue
+    const h = map.get(id), p = map.get(h?.after_habit_id)
+    await robustAwardXP(userId, CHAIN_LINK_XP, 'habit_chain', `chain_${id}_${dateStr}`, `🔗 Chain ×${after.run.get(id)} — ${p?.title} → ${h?.title}`, h?.stat_category || 'discipline', backdate)
+    if (isToday) emitGame('toast', { icon: 'link', title: `Chain ×${after.run.get(id)}!`, sub: `${p?.title} → ${h?.title} · +${CHAIN_LINK_XP} XP`, tone: 'accent' })
+  }
+  for (const id of before.valid) {
+    if (!after.valid.has(id)) await robustRemoveXP(userId, 'habit_chain', `chain_${id}_${dateStr}`)
+  }
+  for (const root of after.fullRoots) {
+    if (before.fullRoots.has(root)) continue
+    const r = map.get(root)
+    await robustAwardXP(userId, CHAIN_FULL_XP, 'habit_chain_full', `chain_full_${root}_${dateStr}`, `⛓️ Chain complete — ${r?.title} stack`, r?.stat_category || 'discipline', backdate)
+    if (isToday) emitGame('toast', { icon: 'trophy', title: 'Chain complete!', sub: `${r?.title} stack in order · +${CHAIN_FULL_XP} XP`, tone: 'gold' })
+  }
+  for (const root of before.fullRoots) {
+    if (!after.fullRoots.has(root)) await robustRemoveXP(userId, 'habit_chain_full', `chain_full_${root}_${dateStr}`)
+  }
 }

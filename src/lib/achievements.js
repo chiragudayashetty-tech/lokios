@@ -32,6 +32,7 @@ export const ACHIEVEMENTS = [
 
   // ── Habits ──
   { id: 'first_blood', name: 'First Blood', description: 'Complete your first habit', category: 'Habits', rarity: 'common', icon: 'Zap', check: (s) => count(s.habitDone, 1) },
+  { id: 'chest_3', name: 'Treasure Hunter', description: 'Open 3 mystery chests', category: 'Habits', rarity: 'rare', icon: 'Gift', check: (s) => count(s.chests, 3) },
   { id: 'habits_50', name: 'Momentum', description: '50 habit completions', category: 'Habits', rarity: 'common', icon: 'Repeat', check: (s) => count(s.habitDone, 50) },
   { id: 'centurion', name: 'Centurion', description: '100 habit completions', category: 'Habits', rarity: 'rare', icon: 'Repeat', check: (s) => count(s.habitDone, 100) },
   { id: 'habits_500', name: 'Machine', description: '500 habit completions', category: 'Habits', rarity: 'epic', icon: 'Cog', check: (s) => count(s.habitDone, 500) },

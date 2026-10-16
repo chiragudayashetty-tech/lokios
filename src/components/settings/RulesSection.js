@@ -18,7 +18,7 @@ export default function RulesSection({ s, update }) {
       <Row label="Auto-fail look-back" hint="Missed habits older than this are never penalised (protects you after a break)">
         <NumberField label="Auto-fail look-back" value={s.autofailDays} min={0} max={30} step={1} onCommit={(v) => update({ autofailDays: v })} /><span className="settings-unit">days</span>
       </Row>
-      <Row label="Perfect day bonus" hint="XP for completing every scheduled habit">
+      <Row label="Perfect day bonus" hint="XP for completing every scheduled habit (also rolls the 25% mystery chest)">
         <NumberField label="Perfect day bonus" value={s.perfectDayXp} min={0} max={500} step={5} onCommit={(v) => update({ perfectDayXp: v })} /><span className="settings-unit">XP</span>
       </Row>
       <Row label="Season start" hint="The season pass counts XP gained from this date">

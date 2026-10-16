@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Flame, Snowflake, Swords, Trophy, Dices, Gift, Crown, Ghost } from 'lucide-react'
 import { useGameState } from '@/lib/hooks/useGameState'
-import { nextStreakMilestone, FREEZE_MAX, BOSS_XP, BET_STAKES, BET_TARGETS, PERFECT_DAY_XP, STREAK_DAY_THRESHOLD } from '@/lib/utils/xpRules'
+import { nextStreakMilestone, FREEZE_MAX, BOSS_XP, BET_STAKES, BET_TARGETS, CHEST_CHANCE, PERFECT_DAY_XP, STREAK_DAY_THRESHOLD } from '@/lib/utils/xpRules'
 import { placeBet, weekStreakDays } from '@/lib/utils/gamification'
 
 const Bar = ({ value, color = 'var(--opal-gradient)' }) => (
@@ -78,7 +78,7 @@ export default function GameHub() {
           <div className="arena-big">{season.tier}<span>/ {season.tiers.length}</span></div>
           <div className="arena-line">{season.title ? <>Title: <b>{season.title}</b></> : 'Earn XP to reach tier 1'}</div>
           <div className="arena-tiers">
-            {season.tiers.map((t, i) => <span key={t.at} className={i < season.tier ? 'is-on' : ''} title={`${t.title} · ${t.at} XP`} />)}
+            {season.tiers.map((t, i) => <span key={t.at} className={i < season.tier ? 'is-on' : ''} title={`${t.title} · ${t.at} XP · +${t.xp}`} />)}
           </div>
           {season.next
             ? <><Bar value={season.progress} /><div className="arena-line">{(season.next.at - season.gained).toLocaleString()} XP → <b>{season.next.title}</b></div></>
@@ -99,7 +99,7 @@ export default function GameHub() {
           <div className="arena-line">
             {todayStats.perfect && todayStats.scheduled
               ? <span style={{ color: 'var(--success)' }}>Perfect day ✓ +{PERFECT_DAY_XP} XP</span>
-              : <>Finish all for <b>+{PERFECT_DAY_XP} XP</b></>}
+              : <>Finish all for <b>+{PERFECT_DAY_XP} XP</b> and a {Math.round(CHEST_CHANCE * 100)}% mystery chest</>}
           </div>
           <div className="arena-line arena-hint">First habit each day pays ×2 · 1 in 20 completions crit ×2</div>
         </div>
