@@ -124,14 +124,15 @@ export function badNightRun(date, logs = []) {
   return run
 }
 
-/** Sleep XP with the escalation: penalties double for every bad night in a row (×1, ×2, ×4, … no cap). */
+/** Sleep XP with the escalation: penalties double for every bad night in a row (×1, ×2, ×4, then capped at ×5). */
+export const SLEEP_PENALTY_CAP = 5
 export function sleepXpEscalated(night, history = []) {
   const sx = sleepXp(night)
   if (!sx) return null
   const penalty = sx.parts.reduce((s, p) => s + Math.min(0, p.xp), 0)
   if (!penalty) return { ...sx, multiplier: 1, streak: 0, penalty: 0 }
   const streak = badNightRun(night.date, history) + 1
-  const multiplier = 2 ** (streak - 1)
+  const multiplier = Math.min(SLEEP_PENALTY_CAP, 2 ** (streak - 1))
   const bonus = sx.parts.reduce((s, p) => s + Math.max(0, p.xp), 0)
   return { ...sx, xp: bonus + penalty * multiplier, multiplier, streak, penalty: penalty * multiplier }
 }
