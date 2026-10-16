@@ -131,7 +131,7 @@ function Grade({ g }) {
   return <span className={`rp-grade is-${g === '—' ? 'na' : g[0].toLowerCase()}`}>{g}</span>
 }
 
-/** Short report: one grade per area, analysis and achievements. */
+/** Short report: statistics only — counts as "x / y days", one grade per area, achievements. */
 function CardReport({ r }) {
   const { card } = r
   return (
@@ -140,14 +140,19 @@ function CardReport({ r }) {
         <div className="rp-overall">
           <Grade g={card.overallGrade} />
           <div>
-            <b>{card.overall == null ? 'Not enough data' : `${card.overall}/100`}</b>
-            <span>Average of {card.grades.filter((g) => g.score != null).length} graded areas</span>
+            <b>{card.overall == null ? '—' : `${card.overall}/100`}</b>
+            <span>{r.len} days · {card.grades.filter((g) => g.score != null).length} areas graded</span>
           </div>
+        </div>
+      </Section>
+      <Section title="By the numbers">
+        <div className="rp-kpis">
+          {card.stats.map((x) => <Kpi key={x.id} label={x.label} value={x.value} sub={x.sub} />)}
         </div>
       </Section>
       <Section title="Grades">
         <table className="rp-table rp-grades">
-          <thead><tr><th>Area</th><th className="num">Grade</th><th className="rp-barcol">Score</th><th>Detail</th></tr></thead>
+          <thead><tr><th>Area</th><th className="num">Grade</th><th className="rp-barcol">Score</th><th>Numbers</th></tr></thead>
           <tbody>{card.grades.map((g) => (
             <tr key={g.id}><td><b>{g.label}</b></td><td className="num"><Grade g={g.grade} /></td>
               <td className="rp-barcol">{g.score == null ? <span className="rp-muted">—</span> : <div className="rp-barwrap"><span className="rp-bar"><i style={{ width: `${g.score}%` }} /></span><span className="num">{g.score}</span></div>}</td>
@@ -155,16 +160,45 @@ function CardReport({ r }) {
           ))}</tbody>
         </table>
       </Section>
-      <Section title="Analysis">
-        {card.notes.length === 0 ? <p className="rp-muted">Log more data for an analysis.</p> : (
-          <ul className="rp-notes">{card.notes.map((n, i) => <li key={i} className={`is-${n.tone}`}>{n.tone === 'good' ? <ArrowUpRight size={13} /> : n.tone === 'bad' ? <ArrowDownRight size={13} /> : <Minus size={13} />}<span>{n.text}</span></li>)}</ul>
-        )}
-      </Section>
       <Section title="Achievements" note={`${r.achievements.length} unlocked`}>
         {r.achievements.length === 0 ? <p className="rp-muted">None unlocked in this period.</p> : (
-          <ul className="rp-list">{r.achievements.map((a) => <li key={a.id}><span><b>{a.name}</b> — {a.description}</span><time>{RARITY[a.rarity]?.label || a.rarity} · {fmtDate(a.earned_at.slice(0, 10))}</time></li>)}</ul>
+          <ul className="rp-list">{r.achievements.map((a) => <li key={a.id}><span><b>{a.name}</b></span><time>{RARITY[a.rarity]?.label || a.rarity} · {fmtDate(a.earned_at.slice(0, 10))}</time></li>)}</ul>
         )}
       </Section>
+    </>
+  )
+}
+
+const CELL = { done: '✓', failed: '✕', missed: '·', open: '', off: '' }
+/** Every habit × every day, split into blocks of up to 31 days so it fits the page. */
+function HabitGrid({ grid, dates }) {
+  if (!grid.length) return null
+  const blocks = []
+  for (let i = 0; i < dates.length; i += 31) blocks.push([i, Math.min(dates.length, i + 31)])
+  return (
+    <>
+      {blocks.map(([a, b]) => (
+        <div key={a} className="rp-grid-wrap">
+          <table className="rp-grid">
+            <thead>
+              <tr><th />{dates.slice(a, b).map((d) => <th key={d} className={new Date(`${d}T12:00:00`).getDay() === 1 ? 'is-mon' : ''}>{+d.slice(8)}</th>)}<th className="num">Done</th></tr>
+            </thead>
+            <tbody>{grid.map((h) => {
+              const cells = h.cells.slice(a, b)
+              const done = cells.filter((c) => c === 'done').length
+              const sched = cells.filter((c) => c !== 'off').length
+              return (
+                <tr key={h.id}>
+                  <td className="rp-grid-name">{h.title}</td>
+                  {cells.map((c, i) => <td key={i} className={`is-${c}`}>{CELL[c]}</td>)}
+                  <td className="num">{done}/{sched}</td>
+                </tr>
+              )
+            })}</tbody>
+          </table>
+          <p className="rp-muted">{fmtDate(dates[a])} – {fmtDate(dates[b - 1])} · ✓ done · ✕ failed · · missed · blank = not scheduled</p>
+        </div>
+      ))}
     </>
   )
 }
@@ -206,7 +240,10 @@ function FullReport({ r, c }) {
                 <tr key={h.id}><td>{h.title}</td><td className="num">{h.done}/{h.scheduled}</td><td className="rp-barcol"><div className="rp-barwrap"><span className="rp-bar"><i style={{ width: `${h.rate}%` }} /></span><span className="num">{h.rate}%</span></div></td></tr>
               ))}</tbody>
             </table>
-            <table className="rp-table rp-mt">
+            <h3 className="rp-h3">Full chart · every habit, every day</h3>
+            <HabitGrid grid={d.habitGrid} dates={r.dates} />
+            <h3 className="rp-h3">Daily completion</h3>
+            <table className="rp-table">
               <thead><tr><th>Date</th><th className="num">Completion</th></tr></thead>
               <tbody>{r.habits.daily.map((x) => <tr key={x.date}><td>{fmtDate(x.date, { weekday: 'short', month: 'short', day: 'numeric' })}</td><td className="num">{x.rate == null ? '—' : `${x.rate}%`}</td></tr>)}</tbody>
             </table>
@@ -217,7 +254,7 @@ function FullReport({ r, c }) {
       <Section title="Missions" note={`${d.missions.length} in period`}>
         {d.missions.length === 0 ? <p className="rp-muted">No missions.</p> : (
           <table className="rp-table">
-            <thead><tr><th>Mission</th><th>Status</th><th>Started</th><th>Deadline</th><th>Completed</th><th className="num">Progress</th></tr></thead>
+            <thead><tr><th>Mission</th><th>Status</th><th>Deployed</th><th>Deadline</th><th>Completed</th><th className="num">Progress</th></tr></thead>
             <tbody>{d.missions.map((m) => (
               <tr key={m.id}>
                 <td><b>{m.title}</b>{m.milestones.length > 0 && <ul className="rp-sub">{m.milestones.map((x, i) => <li key={i}>{x.done ? '✓' : '○'} {x.title}{x.target ? ` · target ${fmtDate(x.target)}` : ''}{x.done ? ` · done ${fmtDate(x.done)}` : ''}</li>)}</ul>}</td>
@@ -231,10 +268,14 @@ function FullReport({ r, c }) {
       <Section title="Tasks" note={`${r.tasks.done.length} completed · ${d.tasks.length} listed`}>
         {d.tasks.length === 0 ? <p className="rp-muted">No tasks in this period.</p> : (
           <table className="rp-table">
-            <thead><tr><th>Task</th><th>Mission</th><th>Status</th><th>Added</th><th>Due</th><th>Completed</th></tr></thead>
-            <tbody>{d.tasks.map((t) => (
-              <tr key={t.id}><td>{t.title}</td><td>{t.mission || '—'}</td><td>{status(t.status)}</td><td>{fmtD(t.created)}</td><td className={t.due && !t.completed && t.due < r.to ? 'is-bad' : ''}>{fmtD(t.due)}</td><td>{fmtD(t.completed)}</td></tr>
-            ))}</tbody>
+            <thead><tr><th>Task</th><th>Mission</th><th>Status</th><th>Deployed</th><th>Due</th><th>Completed</th><th className="num">Late</th></tr></thead>
+            <tbody>{d.tasks.map((t) => {
+              const ref = t.completed || (t.due && t.due < r.to ? r.to : null)
+              const late = t.due && ref ? Math.round((new Date(`${ref}T12:00:00`) - new Date(`${t.due}T12:00:00`)) / 86400000) : null
+              return (
+                <tr key={t.id}><td>{t.title}</td><td>{t.mission || '—'}</td><td>{status(t.status)}</td><td>{fmtD(t.created)}</td><td className={t.due && !t.completed && t.due < r.to ? 'is-bad' : ''}>{fmtD(t.due)}</td><td>{fmtD(t.completed)}</td><td className={`num ${late > 0 ? 'is-bad' : ''}`}>{late == null ? '—' : late > 0 ? `${late}d` : 'on time'}</td></tr>
+              )
+            })}</tbody>
           </table>
         )}
       </Section>
@@ -254,12 +295,7 @@ function FullReport({ r, c }) {
       </Section>
 
       <Section title="Speaking practice" note={`${d.speaking.length} session${d.speaking.length === 1 ? '' : 's'}`}>
-        {d.speaking.length === 0 ? <p className="rp-muted">No speaking sessions.</p> : (
-          <table className="rp-table">
-            <thead><tr><th>Date</th><th>Topic</th><th>Category</th><th className="num">Rating</th></tr></thead>
-            <tbody>{d.speaking.map((s, i) => <tr key={s.id || i}><td>{fmtDate(s.date)}</td><td>{s.topic || '—'}{s.notes ? <div className="rp-detail">{s.notes}</div> : null}</td><td>{s.category || '—'}</td><td className="num">{s.rating ?? '—'}</td></tr>)}</tbody>
-          </table>
-        )}
+        <p className="rp-para">{d.speakingNote}</p>
       </Section>
 
       <Section title="Journal" note={`${d.journal.length} entr${d.journal.length === 1 ? 'y' : 'ies'}${r.journal.avgMood != null ? ` · avg mood ${r.journal.avgMood.toFixed(1)}/5` : ''}`}>
