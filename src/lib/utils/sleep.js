@@ -108,3 +108,31 @@ export function sleepXp({ bedtime, wake_time: wake }) {
   ].map((p) => ({ ...p, ok: p.xp === p.full, near: p.xp > 0 && p.xp < p.full, miss: p.xp < 0 }))
   return { minutes, parts, xp: parts.reduce((s, p) => s + p.xp, 0), max: SLEEP_XP.duration + SLEEP_XP.bed + SLEEP_XP.wake }
 }
+
+/**
+ * Consecutive bad nights (any penalty part) ending the night before `date`. Unlogged nights are
+ * skipped — they don't break the run — so not logging is no way out. A clean night ends it.
+ */
+export function badNightRun(date, logs = []) {
+  let run = 0
+  for (const l of [...logs].filter((x) => x.date < date && x.bedtime && x.wake_time).sort((a, b) => b.date.localeCompare(a.date))) {
+    const sx = sleepXp(l)
+    if (!sx) continue
+    if (sx.parts.some((p) => p.xp < 0)) run++
+    else break
+  }
+  return run
+}
+
+/** Sleep XP with the escalation: penalties double for every bad night in a row (×1, ×2, ×4, then capped at ×5). */
+export const SLEEP_PENALTY_CAP = 5
+export function sleepXpEscalated(night, history = []) {
+  const sx = sleepXp(night)
+  if (!sx) return null
+  const penalty = sx.parts.reduce((s, p) => s + Math.min(0, p.xp), 0)
+  if (!penalty) return { ...sx, multiplier: 1, streak: 0, penalty: 0 }
+  const streak = badNightRun(night.date, history) + 1
+  const multiplier = Math.min(SLEEP_PENALTY_CAP, 2 ** (streak - 1))
+  const bonus = sx.parts.reduce((s, p) => s + Math.max(0, p.xp), 0)
+  return { ...sx, xp: bonus + penalty * multiplier, multiplier, streak, penalty: penalty * multiplier }
+}
