@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
+import { settleDuel } from '@/lib/games/discipline'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { escalatingPenalty } from '@/lib/utils/xpRules'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -197,6 +198,12 @@ export function useTasksInternal(user) {
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
 
+      // Estimate duel: ask for the real time, or score it right away if it's already filled in
+      if (updated?.estimate_minutes > 0) {
+        if (updated.actual_minutes > 0) settleDuel(user.id, updated).catch(() => {})
+        else if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('lokios:estimate-ask', { detail: { id: updated.id, title: updated.title, estimate: updated.estimate_minutes } }))
+      }
+
       // Time blocks for this task: mark completed, +5 XP when finished on time (#40)
       settleTaskBlocks(user.id, task).catch(() => {})
 
@@ -282,6 +289,7 @@ export function useTasksInternal(user) {
 
       // Remove XP
       await robustRemoveXP(user.id, 'task_complete', id)
+      await robustRemoveXP(user.id, 'estimate_duel', `estimate_${id}`)
       unsettleTaskBlocks(user.id, id).catch(() => {})
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
@@ -407,6 +415,7 @@ export function useTasksInternal(user) {
       if (error) throw error
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      if (updates && ('actual_minutes' in updates || 'estimate_minutes' in updates) && updated?.status === 'completed') settleDuel(user.id, updated).catch(() => {})
       return updated
     } catch (error) {
       console.error('Error editing task:', error)
@@ -506,6 +515,7 @@ export function useTasksInternal(user) {
       return { error, missingSchema }
     }
     setTasks((prev) => prev.map((t) => (t.id === id ? data : t)))
+    if (('actual_minutes' in patch || 'estimate_minutes' in patch) && data?.status === 'completed') settleDuel(user.id, data).catch(() => {})
     return { data }
   }, [user])
 

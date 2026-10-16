@@ -11,6 +11,7 @@ import EndOfDayReview from '@/components/today/EndOfDayReview'
 import SleepCard from '@/components/today/SleepCard'
 import WeightCard from '@/components/today/WeightCard'
 import CaptureSheet from '@/components/moments/CaptureSheet'
+import DisciplineGames from '@/components/game/DisciplineGames'
 import { useOS, useOSSlice } from '@/lib/context/OSContext'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -284,6 +285,7 @@ export default function TodayPage() {
           <SleepCard key={`${today}_${sleep.logs.find(l => l.date === today)?.id || 'new'}`} today={today} logs={sleep.logs} missing={sleep.missing} onSave={saveSleep} compact={appHour >= 14 || today !== calendarToday} />
         )}
         <WeightCard userId={user?.id} today={today} />
+        <DisciplineGames compact />
 
         <div className="tdy-timeline">
           {SECTIONS.map(sec => (
