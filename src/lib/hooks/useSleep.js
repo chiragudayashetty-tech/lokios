@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { isMissingSchema } from '@/lib/utils/schema'
-import { sleepScore } from '@/lib/utils/sleep'
+import { sleepScore, sleepXp } from '@/lib/utils/sleep'
+import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 
 export const SLEEP_LOG_XP = 10
 
@@ -35,7 +36,12 @@ export function useSleep(userId, days = 120) {
     const { data, error } = await createClient().from('sleep_logs').upsert(row, { onConflict: 'user_id,date' }).select().single()
     if (error) return { error, missing: isMissingSchema(error) }
     setState((s) => ({ ...s, logs: [data, ...s.logs.filter((l) => l.date !== date)].sort((a, b) => b.date.localeCompare(a.date)) }))
-    return { data }
+    // Sleep XP from the log itself (re-scored when the night is edited)
+    const sx = sleepXp({ bedtime, wake_time })
+    const sid = `sleep_${date}`
+    await robustRemoveXP(userId, 'sleep_score', sid)
+    if (sx?.xp) await robustAwardXP(userId, sx.xp, 'sleep_score', sid, `😴 Sleep ${date}: ${sx.parts.filter((p) => p.xp).map((p) => `${p.label} ${p.xp > 0 ? '+' : ''}${p.xp}`).join(' · ')}`, 'strength', `${date}T08:00:00`)
+    return { data, sleepXp: sx }
   }, [userId, state.logs])
 
   return { ...state, save, reload: load }

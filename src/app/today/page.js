@@ -24,7 +24,6 @@ import { fetchBudgetLogs, isExcludedFromDaily, getLocalDailyBudget } from '@/lib
 import { orderWithChains, chainState } from '@/lib/utils/habitChains'
 import { useGameState } from '@/lib/hooks/useGameState'
 import { useSleep } from '@/lib/hooks/useSleep'
-import { sleepRoutineMet } from '@/lib/utils/sleep'
 import { useDailyReview } from '@/lib/hooks/useDailyReview'
 
 const PROTOCOLS = [
@@ -220,15 +219,7 @@ export default function TodayPage() {
 
   // A good night ticks the sleep routine habit(s) for that date; the habit pays the XP.
   const saveSleep = async (entry) => {
-    const res = await sleep.save(entry)
-    if (res?.data && sleepRoutineMet(entry)) {
-      const routine = habitsScheduledOn(habits.filter(h => h.is_active !== false && /sleep|wake/i.test(h.title || '')), entry.date)
-      for (const h of routine) {
-        const done = todayLogs.some(l => l.habit_id === h.id && l.date === entry.date && (!l.status || l.status === 'completed'))
-        if (!done && entry.date === today) await cycleHabitState?.(h.id, entry.date, 'completed')
-      }
-    }
-    return res
+    return sleep.save(entry) // the sleep log is scored on its own (see sleepXp) — no sleep habit to tick
   }
 
   if ((habitsLoading || tasksLoading) && !habits.length && !tasks.length) {

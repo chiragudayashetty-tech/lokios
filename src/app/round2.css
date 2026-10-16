@@ -1379,3 +1379,11 @@
 .td-num { width: 96px; min-height: 0; height: 34px; }
 .td-to { font-size: 12px; color: var(--text-muted); }
 .td-logged { font-size: 16px; font-weight: 800; color: var(--text-primary); }
+
+.slp-xp { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0 4px; }
+.slp-xp span { padding: 3px 9px; border-radius: 999px; font-size: 11.5px; border: 1px solid var(--border-subtle, rgba(255,255,255,0.1)); color: var(--text-secondary); }
+.slp-xp span.is-ok { color: #86efac; border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.08); }
+.slp-xp span.is-near { color: #fcd34d; border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.08); }
+.slp-xp span.is-miss { color: var(--text-muted); }
+.slp-xp-total { margin-left: auto; font-size: 13px; color: var(--text-primary); }
+.slp-xp span.is-bad { color: #fca5a5; border-color: rgba(229,72,77,0.4); background: rgba(229,72,77,0.08); }
