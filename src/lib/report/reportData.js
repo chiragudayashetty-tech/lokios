@@ -221,7 +221,14 @@ function details(d, { inRange, inPrev, dates, habits, habitsPrev, tasksDone, tas
   const speakingPrev = d.speaking.filter((l) => inPrev(l.date)).length
 
   // Journal, reviews
-  const journal = d.journal.filter((j) => inRange(j.date)).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.created_at).localeCompare(String(b.created_at)))
+  // every text field an entry may carry (the Journal page writes what_did_i_do; the dashboard writes content)
+  const JOURNAL_SKIP = new Set(['id', 'user_id', 'date', 'created_at', 'updated_at', 'mood', 'word_count', 'energy'])
+  const journalText = (j) => {
+    const main = j.content || j.what_did_i_do || j.reflection || j.description || ''
+    const extra = Object.entries(j).filter(([k, v]) => !JOURNAL_SKIP.has(k) && typeof v === 'string' && v.trim() && !['content', 'what_did_i_do', 'reflection', 'description', 'title'].includes(k) && !/^[0-9a-f-]{36}$/.test(v))
+    return { main, extra: extra.map(([k, v]) => ({ label: k.replace(/_/g, ' '), text: v })) }
+  }
+  const journal = d.journal.filter((j) => inRange(j.date)).map((j) => ({ ...j, ...journalText(j) })).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.created_at).localeCompare(String(b.created_at)))
   const journalDays = new Set(journal.map((j) => j.date)).size
   const reviews = d.reviews.filter((r) => inRange(r.date)).sort((a, b) => a.date.localeCompare(b.date))
 
@@ -348,7 +355,7 @@ function details(d, { inRange, inPrev, dates, habits, habitsPrev, tasksDone, tas
       tasks: taskRows, missions: missionRows,
       work: { days: workDays, logs: logs.filter((l) => !isDebrief(l)), hours: workHours },
       debriefs: logs.filter(isDebrief),
-      speaking, speakingNote, habitGrid, journal, reviews, nights, weight, books, spend, noSpendDays,
+      speaking, speakingNote, habitGrid, journal, journalDays: dates.map((ds) => ({ date: ds, entries: journal.filter((j) => j.date === ds), review: reviews.find((r) => r.date === ds) || null })), reviews, nights, weight, books, spend, noSpendDays,
     },
   }
 }

@@ -298,10 +298,27 @@ function FullReport({ r, c }) {
         <p className="rp-para">{d.speakingNote}</p>
       </Section>
 
-      <Section title="Journal" note={`${d.journal.length} entr${d.journal.length === 1 ? 'y' : 'ies'}${r.journal.avgMood != null ? ` · avg mood ${r.journal.avgMood.toFixed(1)}/5` : ''}`}>
-        {d.journal.length === 0 ? <p className="rp-muted">No journal entries.</p> : (
-          <ul className="rp-entries">{d.journal.map((j, i) => <li key={j.id || i}><time>{fmtDate(j.date, { weekday: 'short', month: 'short', day: 'numeric' })}{j.mood != null ? ` · mood ${j.mood}/5` : ''}</time>{j.title && <b>{j.title}</b>}{j.content && <p>{j.content}</p>}</li>)}</ul>
-        )}
+      <Section title="Journal" note={`${d.journal.length} entr${d.journal.length === 1 ? 'y' : 'ies'} · ${d.journalDays.filter((x) => x.entries.length).length}/${r.len} days${r.journal.avgMood != null ? ` · avg mood ${r.journal.avgMood.toFixed(1)}/5` : ''}`}>
+        <ul className="rp-entries rp-journal">{d.journalDays.map((day) => (
+          <li key={day.date} className={day.entries.length || day.review ? '' : 'is-empty'}>
+            <time>{fmtDate(day.date, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</time>
+            {!day.entries.length && !day.review && <p className="rp-muted">No entry</p>}
+            {day.entries.map((j, i) => (
+              <div key={j.id || i} className="rp-jentry">
+                {(j.mood != null || j.title) && <b>{j.title || ''}{j.title && j.mood != null ? ' · ' : ''}{j.mood != null ? `Mood ${j.mood}/5` : ''}</b>}
+                {j.main ? <p>{j.main}</p> : <p className="rp-muted">(no text)</p>}
+                {j.extra.map((x) => <p key={x.label}><span className="rp-jlabel">{x.label}:</span> {x.text}</p>)}
+              </div>
+            ))}
+            {day.review && (
+              <div className="rp-jentry">
+                <b>Daily review{day.review.mood != null ? ` · mood ${day.review.mood}/5` : ''}{day.review.energy != null ? ` · energy ${day.review.energy}/5` : ''}</b>
+                {day.review.win && <p><span className="rp-jlabel">Win:</span> {day.review.win}</p>}
+                {day.review.intention && <p><span className="rp-jlabel">Intention:</span> {day.review.intention}</p>}
+              </div>
+            )}
+          </li>
+        ))}</ul>
       </Section>
 
       <Section title="Daily reviews" note={`${d.reviews.length}`}>
