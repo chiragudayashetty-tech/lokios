@@ -13,6 +13,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveCo
 import { useOS, useOSSlice } from '@/lib/context/OSContext'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { createClient } from '@/lib/supabase/client'
+import { isVacationDay } from '@/lib/utils/vacation'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { QUEST_CATEGORIES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -384,6 +385,7 @@ export default function DailyOps() {
       : [0, 1, 2, 3, 4, 5, 6]
 
     if (!freqDays.includes(dateObj.getDay())) return 'rest'
+    if (isVacationDay(dateStr)) return 'rest' // vacation: everything rests
     
     return 'none'
   }

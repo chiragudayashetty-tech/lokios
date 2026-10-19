@@ -96,7 +96,7 @@ export async function applyHabitRewards({ userId, habit, dateStr, completed, was
 /** The week's boss: the habit with the lowest completion rate over the 14 days before the week. */
 export function computeBoss(model, habits, today = getLocalDateStr()) {
   const weekStart = weekStartOf(today)
-  const active = (habits || []).filter(h => h.is_active !== false && (!h.created_at || String(h.created_at).slice(0, 10) < weekStart))
+  const active = (habits || []).filter(h => h.is_active !== false && !/sleep\s*routine/i.test(h.title || '') && (!h.created_at || String(h.created_at).slice(0, 10) < weekStart))
   if (!active.length) return null
 
   let worst = null
