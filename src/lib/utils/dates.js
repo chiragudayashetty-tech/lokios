@@ -6,9 +6,32 @@ export function getLocalDateStr(date = new Date()) {
   // An invalid date (blank or malformed value in a row) yields '' instead of throwing mid-render
   if (!(date instanceof Date)) date = new Date(date)
   if (Number.isNaN(date.getTime())) return ''
+  // "Now" during an extended day (Today → Extend day) still belongs to that day until 04:00
+  if (Math.abs(date.getTime() - Date.now()) < 5000) {
+    const ext = extendedDayAt(date)
+    if (ext) return ext
+  }
+  return plainDateStr(date)
+}
+
+function plainDateStr(date) {
   const offset = date.getTimezoneOffset()
   const local = new Date(date.getTime() - offset * 60 * 1000)
   return local.toISOString().split('T')[0]
+}
+
+/** Extend mode: the day stays open until this hour of the next morning, never later. */
+export const EXTEND_UNTIL_HOUR = 4
+
+/** The extended day (YYYY-MM-DD) that `now` still belongs to, or '' when none is active. */
+export function extendedDayAt(now = new Date()) {
+  if (typeof window === 'undefined' || now.getHours() >= EXTEND_UNTIL_HOUR) return ''
+  let ext = ''
+  try { ext = JSON.parse(localStorage.getItem('lokios_settings') || '{}').extendedDay || '' } catch { return '' }
+  if (!ext) return ''
+  const y = new Date(now)
+  y.setDate(y.getDate() - 1)
+  return plainDateStr(y) === ext ? ext : ''
 }
 
 export function formatDate(date, format = 'YYYY-MM-DD') {

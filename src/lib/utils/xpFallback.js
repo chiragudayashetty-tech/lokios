@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { isVacationDay } from '@/lib/utils/vacation'
 import { getLocalDateStr, getStartOfWeek } from '@/lib/utils/dates'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
 
@@ -116,6 +117,8 @@ function resolveOccurredOn(sourceId, customCreatedAt) {
  */
 export async function robustAwardXP(userId, amount, sourceType, sourceId, description, statCategory = 'discipline', customCreatedAt = null) {
   if (!userId) return false
+  // Vacation day: nothing costs XP
+  if (Number(amount) < 0 && isVacationDay(resolveOccurredOn(sourceId, customCreatedAt))) return true
   if (rpcAvailable !== false && sourceId) {
     const { error } = await createClient().rpc('award_xp', {
       p_amount: Math.round(Number(amount) || 0),
@@ -144,6 +147,7 @@ export async function robustAwardXP(userId, amount, sourceType, sourceId, descri
  * Never deletes by type or by description.
  */
 export async function robustRemoveXP(userId, sourceType, sourceId, fixedAmount = null, description = null) {
+  if (fixedAmount && isVacationDay(resolveOccurredOn(sourceId))) fixedAmount = null // no deductions on vacation
   if (!userId) return false
   if (rpcAvailable !== false) {
     const supabase = createClient()

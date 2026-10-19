@@ -157,3 +157,9 @@
 .today-empty { padding: 18px; text-align: center; font-size: 13px; color: var(--text-muted); border-radius: 18px; border: 1px dashed var(--border-color); }
 .game-toast--danger .game-toast-icon { color: #fff; background: linear-gradient(135deg, var(--danger), #ff8a5c); box-shadow: 0 8px 18px -8px var(--danger-glow); }
 .game-toast--success .game-toast-icon { color: #062014; background: linear-gradient(135deg, #3ddc97, #2fc7c9); box-shadow: 0 8px 18px -8px var(--success-glow); }
+
+/* Day modes: extend day + vacation */
+.dm-card { display: grid; gap: 10px; margin-bottom: 12px; }
+.dm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.dm-row span { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dm-vacation { margin-bottom: 12px; text-align: center; }

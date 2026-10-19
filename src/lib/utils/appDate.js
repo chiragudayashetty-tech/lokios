@@ -1,7 +1,7 @@
 // "App day" helpers that respect Settings → day boundary (#45): with a 03:00
 // boundary, 01:30 on Tuesday still counts as Monday.
 
-import { getLocalDateStr } from '@/lib/utils/dates'
+import { getLocalDateStr, extendedDayAt, EXTEND_UNTIL_HOUR } from '@/lib/utils/dates'
 import { getSettings } from '@/lib/settings'
 
 /** Minutes after midnight when the app day rolls over (0 = midnight). */
@@ -13,6 +13,8 @@ export function dayBoundaryMinutes(settings = getSettings()) {
 
 /** The app's current date string (YYYY-MM-DD), shifted back before the day boundary. */
 export function getAppDateStr(now = new Date(), settings) {
+  const ext = extendedDayAt(now)
+  if (ext) return ext
   const shift = dayBoundaryMinutes(settings)
   if (!shift) return getLocalDateStr(now)
   return getLocalDateStr(new Date(now.getTime() - shift * 60000))
@@ -20,7 +22,7 @@ export function getAppDateStr(now = new Date(), settings) {
 
 /** Hour of the app day (0–23, may exceed 23 after midnight before the boundary). */
 export function getAppHour(now = new Date(), settings) {
-  const shift = dayBoundaryMinutes(settings)
+  const shift = extendedDayAt(now) ? EXTEND_UNTIL_HOUR * 60 : dayBoundaryMinutes(settings)
   const h = now.getHours() + now.getMinutes() / 60
   return shift && h * 60 < shift ? h + 24 : h
 }
