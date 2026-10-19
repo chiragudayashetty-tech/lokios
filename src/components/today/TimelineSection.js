@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, ChevronDown, Swords, Link2, AlertTriangle, ArrowRight, Clock, X } from 'lucide-react'
+import { Check, ChevronDown, Swords, Link2, AlertTriangle, ArrowRight, Clock, X, Leaf } from 'lucide-react'
 
 const rowAnim = {
   initial: { opacity: 0, y: 6 },
@@ -12,11 +12,13 @@ const rowAnim = {
 }
 
 function Row({ item, busy, onToggle }) {
-  const cls = ['tdy-row', item.done && 'is-done', item.failed && 'is-failed', item.late && 'is-late', item.boss && !item.done && 'is-boss', item.linked && 'is-linked'].filter(Boolean).join(' ')
+  const cls = ['tdy-row', item.done && 'is-done', item.failed && 'is-failed', item.rest && 'is-rest', item.late && 'is-late', item.boss && !item.done && 'is-boss', item.linked && 'is-linked'].filter(Boolean).join(' ')
   return (
     <motion.div layout {...rowAnim} className={cls}>
       {item.linked && <span className="tdy-row-link" aria-hidden />}
-      {item.kind === 'protocol' && !item.done && !item.capture ? (
+      {item.rest ? (
+        <span className="tdy-row-check is-rest" aria-label={`${item.title} — rest day`}><Leaf size={15} strokeWidth={2.5} /></span>
+      ) : item.kind === 'protocol' && !item.done && !item.capture ? (
         <Link href={item.href} className="tdy-row-check is-link" aria-label={`Log ${item.title}`}><ArrowRight size={15} /></Link>
       ) : (
         <button
@@ -52,7 +54,7 @@ function Row({ item, busy, onToggle }) {
  * the current block is highlighted.
  */
 export default function TimelineSection({ section, items, phase, expanded, onToggleExpand, onToggleItem, busy }) {
-  const done = items.filter((i) => i.done).length
+  const done = items.filter((i) => i.done || i.rest).length
   const failed = items.filter((i) => i.failed).length
   const total = items.length
   const allDone = total > 0 && done === total

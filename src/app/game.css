@@ -163,3 +163,6 @@
 .dm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; }
 .dm-row span { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .dm-vacation { margin-bottom: 12px; text-align: center; }
+.tdy-row-check.is-rest { color: #34d399; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); }
+.tdy-row.is-rest .tdy-row-title { opacity: 0.7; }
+.dm-vacation b { display: inline-flex; align-items: center; gap: 6px; color: #34d399; }

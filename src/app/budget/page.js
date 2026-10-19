@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { isVacationDay } from '@/lib/utils/vacation'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
@@ -273,8 +274,9 @@ function SpendingView() {
     return todayBillsLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
   }, [todayBillsLogs])
 
-  const todayRemaining = dailyBudget - todayTotal
-  const todayProgressPct = Math.min(100, Math.round((todayTotal / dailyBudget) * 100))
+  const noLimitToday = isVacationDay(todayStr) // vacation: log freely, no daily allowance
+  const todayRemaining = noLimitToday ? 0 : dailyBudget - todayTotal
+  const todayProgressPct = noLimitToday ? 0 : Math.min(100, Math.round((todayTotal / dailyBudget) * 100))
 
   // This month totals
   const currentMonth = todayStr.substring(0, 7)
@@ -333,7 +335,7 @@ function SpendingView() {
         billsAmount: billsSpend,
         totalAmount: totalSpend,
         target: dailyBudget,
-        isOver: dailySpend > dailyBudget,
+        isOver: !isVacationDay(dateStr) && dailySpend > dailyBudget,
         count: dayLogs.length
       })
     }
@@ -759,7 +761,7 @@ function SpendingView() {
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                 todayRemaining >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
               }`}>
-                {todayRemaining >= 0 ? 'ON TARGET' : 'OVER BUDGET'}
+                {noLimitToday ? 'NO LIMIT · VACATION' : todayRemaining >= 0 ? 'ON TARGET' : 'OVER BUDGET'}
               </span>
             </div>
             <div className="font-display text-2xl font-bold text-white mb-2">
@@ -834,12 +836,12 @@ function SpendingView() {
             <div className={`font-display text-2xl font-bold mb-2 ${
               todayRemaining >= 0 ? 'text-emerald-400' : 'text-rose-400'
             }`}>
-              {todayRemaining >= 0
+              {noLimitToday ? 'No limit' : todayRemaining >= 0
                 ? `₹${todayRemaining.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
                 : `-₹${Math.abs(todayRemaining).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
             </div>
             <div className="font-mono text-[10px] text-muted">
-              {todayRemaining >= 0 ? 'Available within target' : 'Exceeded daily threshold'}
+              {noLimitToday ? 'Vacation day — spend is logged, not capped' : todayRemaining >= 0 ? 'Available within target' : 'Exceeded daily threshold'}
             </div>
           </div>
 

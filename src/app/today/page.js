@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Briefcase, Monitor, Mic, Wallet, Sun, Sunrise, CloudSun, Sunset, Infinity as InfinityIcon, Flame, Swords, Gift, Camera } from 'lucide-react'
+import { BookOpen, Briefcase, Monitor, Mic, Wallet, Sun, Sunrise, CloudSun, Sunset, Infinity as InfinityIcon, Flame, Swords, Gift, Camera, Leaf } from 'lucide-react'
 import AppShell from '@/components/layout/AppShell'
 import WinterLoader from '@/components/ui/WinterLoader'
 import Ring from '@/components/ui/Ring'
@@ -171,6 +171,9 @@ export default function TodayPage() {
       items.push({ kind: 'protocol', id: p.id, title: p.label, href: p.href, capture: p.capture, section: 'evening', done: !!protocols[p.id], sub: protocols[p.id] ? (p.capture ? 'Captured' : 'Logged') : p.capture ? 'Photo or 5s video' : 'Log before bed' })
     }
 
+    // Vacation: everything still open rests (leaf); the budget stays loggable
+    if (onVacation) for (const it of items) if (!it.done && !it.failed && it.id !== 'budget') { it.rest = true; it.sub = 'Rest day' }
+
     // Within a section: pending first (time-blocked by time), done at the end.
     // A habit chain moves as one block so its connector lines stay intact.
     const bySection = Object.fromEntries(SECTIONS.map(s => [s.id, []]))
@@ -181,7 +184,7 @@ export default function TodayPage() {
         if (it.linked && groups.length) groups[groups.length - 1].push(it)
         else groups.push([it])
       }
-      const key = (g) => ({ done: g.every(x => x.done || x.failed) ? 1 : 0, start: g[0].start ?? Infinity, late: g[0].late ? 0 : 1 })
+      const key = (g) => ({ done: g.every(x => x.done || x.failed || x.rest) ? 1 : 0, start: g[0].start ?? Infinity, late: g[0].late ? 0 : 1 })
       bySection[id] = groups
         .map((g, i) => ({ g, i, k: key(g) }))
         .sort((a, b) => (a.k.done - b.k.done) || (a.k.start - b.k.start) || (a.k.late - b.k.late) || (a.i - b.i))
@@ -189,7 +192,7 @@ export default function TodayPage() {
     }
 
     // Next up: overdue task > boss habit > earliest-time habit > due task > unlogged protocol
-    const pending = items.filter(i => !i.done && !i.failed)
+    const pending = items.filter(i => !i.done && !i.failed && !i.rest)
     const candidates = [
       ...pending.filter(i => i.kind === 'task' && i.late),
       ...pending.filter(i => i.kind === 'habit' && i.boss),
@@ -200,8 +203,9 @@ export default function TodayPage() {
 
     const habitTotal = dayHabits.length
     const habitDone = dayHabits.filter(h => doneIds.has(h.id)).length
-    return { items, bySection, candidates, total: items.length, done: items.length - pending.length, left: pending.length, habitTotal, habitDone }
-  }, [habits, todayLogs, tasks, today, blocks, protocols, game.boss])
+    const counted = items.filter(i => !i.rest).length
+    return { items, bySection, candidates, total: counted, done: counted - pending.length, left: pending.length, habitTotal, habitDone }
+  }, [habits, todayLogs, tasks, today, blocks, protocols, game.boss, onVacation])
 
   const hero = model.candidates.find(c => !skipped.includes(`${c.kind}_${c.id}`)) || model.candidates[0] || null
 
@@ -275,7 +279,7 @@ export default function TodayPage() {
         <DayModes userId={user?.id} level={calculateLevel(profile?.total_xp || 0)} today={today} onChange={() => setNow(new Date())} />
 
         {onVacation ? (
-          <section className="dg-card dm-vacation"><b>🌴 Vacation day</b><p className="dg-sub">Focus is off. No habits, no penalties, the streak is paused. Enjoy it — you earned it.</p></section>
+          <section className="dg-card dm-vacation"><b><Leaf size={15} /> Rest day</b><p className="dg-sub">Everything rests today — habits, tasks, journal, work, screen time, speaking. Budget still logs, with no limit. No penalties, the streak is paused.</p></section>
         ) : <>
         <NextUpHero
           item={hero}
@@ -295,7 +299,7 @@ export default function TodayPage() {
         <WeightCard userId={user?.id} today={today} />
         {!onVacation && <DisciplineGames compact />}
 
-        {!onVacation && <div className="tdy-timeline">
+        <div className="tdy-timeline">
           {SECTIONS.map(sec => (
             <TimelineSection
               key={sec.id}
@@ -308,7 +312,7 @@ export default function TodayPage() {
               busy={busy}
             />
           ))}
-        </div>}
+        </div>
 
         {reviewVisible && !review.loading && (
           <EndOfDayReview key={review.review?.id || 'new'} review={review.review} missing={review.missing} onSave={review.save} />
