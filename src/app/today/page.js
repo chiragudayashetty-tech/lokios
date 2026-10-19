@@ -12,6 +12,10 @@ import SleepCard from '@/components/today/SleepCard'
 import WeightCard from '@/components/today/WeightCard'
 import CaptureSheet from '@/components/moments/CaptureSheet'
 import DisciplineGames from '@/components/game/DisciplineGames'
+import DayModes from '@/components/today/DayModes'
+import { isVacationDay } from '@/lib/utils/vacation'
+import { calculateLevel } from '@/lib/utils/xp'
+import { onSettingsChange } from '@/lib/settings'
 import { estimateLabel } from '@/lib/games/discipline'
 
 const fmtLogged = (m) => (m >= 60 ? `${+(m / 60).toFixed(1)}h` : `${m}m`)
@@ -89,6 +93,7 @@ function useTaskBlocks(userId, today) {
 
 export default function TodayPage() {
   const { user } = useOSSlice('auth')
+  const { profile } = useOSSlice('profile')
   const { habits = [], monthLogs: todayLogs = [], cycleHabitState, loading: habitsLoading } = useOSSlice('habits')
   const { tasks = [], loading: tasksLoading } = useOSSlice('tasks')
   const { completeOperation } = useOS()
@@ -111,10 +116,12 @@ export default function TodayPage() {
   // Keep "now" fresh so the current section and review prompt move with the clock
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60000)
-    return () => clearInterval(t)
+    const off = onSettingsChange(() => setNow(new Date())) // extend / vacation flips the day
+    return () => { clearInterval(t); off() }
   }, [])
 
   const currentSection = sectionForHour(appHour)
+  const onVacation = isVacationDay(today)
 
   const model = useMemo(() => {
     const active = habits.filter(h => h.is_active !== false)
@@ -265,6 +272,11 @@ export default function TodayPage() {
           )}
         </div>
 
+        <DayModes userId={user?.id} level={calculateLevel(profile?.total_xp || 0)} today={today} onChange={() => setNow(new Date())} />
+
+        {onVacation ? (
+          <section className="dg-card dm-vacation"><b>🌴 Vacation day</b><p className="dg-sub">Focus is off. No habits, no penalties, the streak is paused. Enjoy it — you earned it.</p></section>
+        ) : <>
         <NextUpHero
           item={hero}
           busy={hero ? busy.has(hero.id) : false}
@@ -275,13 +287,15 @@ export default function TodayPage() {
           onReview={() => { setShowReview(true); setTimeout(() => document.getElementById('eod')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) }}
         />
 
+        </>}
+
         {!sleep.loading && (
           <SleepCard key={`${today}_${sleep.logs.find(l => l.date === today)?.id || 'new'}`} today={today} logs={sleep.logs} missing={sleep.missing} onSave={saveSleep} compact={appHour >= 14 || today !== calendarToday} />
         )}
         <WeightCard userId={user?.id} today={today} />
-        <DisciplineGames compact />
+        {!onVacation && <DisciplineGames compact />}
 
-        <div className="tdy-timeline">
+        {!onVacation && <div className="tdy-timeline">
           {SECTIONS.map(sec => (
             <TimelineSection
               key={sec.id}
@@ -294,7 +308,7 @@ export default function TodayPage() {
               busy={busy}
             />
           ))}
-        </div>
+        </div>}
 
         {reviewVisible && !review.loading && (
           <EndOfDayReview key={review.review?.id || 'new'} review={review.review} missing={review.missing} onSave={review.save} />

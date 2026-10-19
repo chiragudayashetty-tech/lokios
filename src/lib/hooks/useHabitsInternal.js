@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { escalatingPenalty, penaltyLabel, AUTOFAIL_BACKFILL_DAYS } from '@/lib/utils/xpRules'
+import { isVacationDay } from '@/lib/utils/vacation'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { calculateAndUpdateStreak, applyStreakRewards } from '@/lib/utils/streakCalc'
 import { applyHabitRewards } from '@/lib/utils/gamification'
@@ -667,6 +668,7 @@ export function useHabitsInternal(user) {
         for (let d = new Date(startDate); ; d.setDate(d.getDate() + 1)) {
           const dateStr = getLocalDateStr(d)
           if (dateStr >= todayStr) break // NEVER auto-fail today or future dates!
+          if (isVacationDay(dateStr)) continue // vacation: nothing is failed
           
           const dayOfWeek = d.getDay()
           const freqDays = h.frequency_days || [0, 1, 2, 3, 4, 5, 6]

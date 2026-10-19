@@ -27,6 +27,8 @@ export const DEFAULT_SETTINGS = {
   streakNudgeTime: '22:00',
   theme: { season: 'auto', accent: 'level', snow: true, motion: 'auto', density: 'comfortable' },
   screenCaps: { social: 60, video: 60, games: 30, doom: 60 }, // daily caps in minutes (#44)
+  extendedDay: '',           // Today → Extend day: this date stays open until 04:00 next morning
+  vacationDays: [],          // claimed vacation dates (earned: 1 per 3 levels, max 5 banked)
 }
 
 const KEY = 'lokios_settings'
@@ -49,7 +51,10 @@ export function normalizeSettings(raw) {
     if (typeof def === 'number' && (typeof v !== 'number' || !Number.isFinite(v))) continue
     if (typeof def === 'boolean' && typeof v !== 'boolean') continue
     if (typeof def === 'string' && typeof v !== 'string') continue
-    if (isObj(def)) {
+    if (Array.isArray(def)) {
+      if (!Array.isArray(v)) continue
+      v = v.filter((x) => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x))
+    } else if (isObj(def)) {
       if (!isObj(v)) continue
       v = k === 'theme' ? normalizeTheme(v) : v
     }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
+import { isVacationDay } from '@/lib/utils/vacation'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { applyChestReward } from '@/lib/utils/gamification'
 import { STREAK_DAY_THRESHOLD, STREAK_MILESTONES, PERFECT_DAY_XP, habitsScheduledOn, FREEZE_START_DATE, FREEZE_EVERY_DAYS, FREEZE_MAX } from '@/lib/utils/xpRules'
@@ -90,8 +91,8 @@ export function buildStreakModel(habits = [], logs = [], todayStr = getLocalDate
   while (cursor <= todayStr) {
     const stats = dayStats(cursor)
     const freezeEra = cursor >= FREEZE_START_DATE
-    if (stats.ratio === null) {
-      // nothing scheduled: neither extends nor breaks
+    if (stats.ratio === null || isVacationDay(cursor)) {
+      // nothing scheduled, or a vacation day: neither extends nor breaks
     } else if (stats.qualifies) {
       if (run === 0) { runStart = cursor; earnedInRun = 0 }
       run++
