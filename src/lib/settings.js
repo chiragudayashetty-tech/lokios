@@ -71,8 +71,12 @@ function normalizeTheme(t) {
   return out
 }
 
+// Server side (Claude connector): the owner's profile settings, loaded per call
+let serverSettings = null
+export function setServerSettings(raw) { serverSettings = raw ? normalizeSettings(raw) : null }
+
 export function getSettings() {
-  if (typeof window === 'undefined') return { ...DEFAULT_SETTINGS }
+  if (typeof window === 'undefined') return serverSettings ? { ...serverSettings } : { ...DEFAULT_SETTINGS }
   try {
     return normalizeSettings(JSON.parse(localStorage.getItem(KEY) || '{}'))
   } catch {
