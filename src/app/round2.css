@@ -1324,3 +1324,15 @@ body.overlay-open .mobile-nav { opacity: 0 !important; pointer-events: none !imp
 .tk-inbox { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 16px; background: rgba(255, 255, 255, 0.02); display: grid; gap: 10px; }
 .tk-inbox-head { display: flex; align-items: center; gap: 8px; width: 100%; font-size: 13.5px; color: var(--text-primary); }
 .tk-inbox-hint { color: var(--text-muted); font-size: 12px; }
+
+/* Restart lock */
+.rs-lock { display: grid; place-items: center; min-height: 70vh; }
+.rs-card { max-width: 520px; text-align: center; padding: 28px 22px; border: 1px solid var(--border-subtle); border-radius: 24px; background: rgba(255, 255, 255, 0.03); }
+.rs-card h1 { margin: 12px 0 4px; font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; color: var(--text-primary); }
+.rs-card p { margin: 0 0 10px; color: var(--text-secondary); font-size: 14px; line-height: 1.55; }
+.rs-card .rs-count { color: var(--accent-primary); font-weight: 700; font-size: 15px; }
+.rs-card .rs-sub { color: var(--text-muted); font-size: 13px; }
+.rs-icon { display: inline-grid; place-items: center; width: 54px; height: 54px; border-radius: 18px; color: var(--accent-primary); background: color-mix(in oklab, var(--accent-primary) 14%, transparent); }
+.rs-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 16px 0 12px; }
+.rs-links .btn { display: inline-flex; align-items: center; gap: 6px; }
+.rs-locked { display: inline-flex; align-items: center; gap: 6px; font-size: 12px !important; color: var(--text-muted) !important; }

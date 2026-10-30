@@ -10,35 +10,11 @@ import { TodayRings, CategoryBreakdown, CapsCard } from '@/components/screentime
 import { createClient } from '@/lib/supabase/client'
 import { useOSSlice } from '@/lib/context/OSContext'
 import { useSettings } from '@/lib/hooks/useSettings'
-import { calculateScreenTimeXP, syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
+import { saveScreenTimeAction } from '@/lib/actions/screenTimeLog'
 import { getAppDateStr } from '@/lib/utils/appDate'
 import { emitGame } from '@/lib/utils/gamification'
 import { isMissingSchema } from '@/lib/utils/schema'
 import { SCREEN_CATEGORIES } from '@/lib/utils/screenIntel'
-
-/** Phone Addiction battle: each metric over its limit heals the enemy, under it deals damage. */
-async function updatePhoneBattle(supabase, userId, { total, doom, streaming }) {
-  let hpChange = 0
-  hpChange += total <= 6 ? -5 : 10
-  hpChange += doom <= 60 ? -5 : 10
-  hpChange += streaming <= 2 ? -5 : 10
-  const { data: bp } = await supabase.from('user_blueprints').select('*').eq('user_id', userId).single()
-  if (!bp?.battles) return ''
-  let note = ''
-  let changed = false
-  const battles = bp.battles.map((battle) => {
-    const name = battle.name?.toLowerCase() || ''
-    if (battle.status === 'defeated' || !(name.includes('phone') || name.includes('screen') || name.includes('addiction'))) return battle
-    changed = true
-    const oldHp = battle.hp ?? 100
-    const hp = Math.max(0, Math.min(100, oldHp + hpChange))
-    if (hp === 0 && oldHp > 0) note = ' · Phone war won'
-    else note = hpChange < 0 ? ` · ${hpChange} enemy HP` : ` · +${hpChange} enemy heal`
-    return { ...battle, hp, status: hp === 0 ? 'defeated' : battle.status }
-  })
-  if (changed) await supabase.from('user_blueprints').update({ battles }).eq('id', bp.id)
-  return note
-}
 
 function LogForm({ userId, date, log, catsMissing, onSaved }) {
   const [f, setF] = useState(() => ({
@@ -62,34 +38,17 @@ function LogForm({ userId, date, log, catsMissing, onSaved }) {
     setSaving(true)
     setError(null)
     try {
-      const supabase = createClient()
-      const cats = Object.fromEntries(Object.entries(f.cats).map(([k, v]) => [k, parseInt(v, 10) || 0]).filter(([, v]) => v > 0))
-      const payload = {
-        user_id: userId,
-        date,
+      const res = await saveScreenTimeAction({
+        userId, date, catsMissing,
         total_hours: parseFloat(f.total) || 0,
         focus_hours: parseFloat(f.focus) || 0,
         doom_scroll_minutes: parseInt(f.doom, 10) || 0,
         streaming_hours: parseFloat(f.streaming) || 0,
         notes: f.notes,
-      }
-      const full = catsMissing ? payload : { ...payload, categories: Object.keys(cats).length ? cats : null }
-
-      const { data: existing } = await supabase.from('screen_time_logs').select('id').eq('user_id', userId).eq('date', date).maybeSingle()
-      const write = (row) => (existing
-        ? supabase.from('screen_time_logs').update(row).eq('id', existing.id).select().single()
-        : supabase.from('screen_time_logs').insert(row).select().single())
-      let res = await write(full)
-      if (res.error && full !== payload && isMissingSchema(res.error)) res = await write(payload)
+        categories: Object.fromEntries(Object.entries(f.cats).map(([k, v]) => [k, parseInt(v, 10) || 0])),
+      })
       if (res.error) { setError(res.error.message); return }
-      const savedId = res.data?.id || existing?.id
-
-      const { xpAmount, finalReason } = calculateScreenTimeXP(payload)
-      const note = await updatePhoneBattle(supabase, userId, { total: payload.total_hours, doom: payload.doom_scroll_minutes, streaming: payload.streaming_hours })
-      if (savedId) {
-        await syncScreenTimeXP(userId, { id: savedId, ...payload })
-        if (xpAmount !== 0) emitGame('toast', { icon: 'zap', title: `${xpAmount > 0 ? '+' : ''}${xpAmount} XP · screen time`, sub: finalReason + note, tone: xpAmount > 0 ? 'success' : 'danger' })
-      }
+      if (res.xp !== 0) emitGame('toast', { icon: 'zap', title: `${res.xp > 0 ? '+' : ''}${res.xp} XP · screen time`, sub: res.reason + res.note, tone: res.xp > 0 ? 'success' : 'danger' })
       onSaved()
     } finally {
       setSaving(false)

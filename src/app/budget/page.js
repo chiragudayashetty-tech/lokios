@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { isVacationDay } from '@/lib/utils/vacation'
+import { isClaimedVacationDay } from '@/lib/utils/vacation'
 import AppShell from '@/components/layout/AppShell'
 import HudPanel from '@/components/ui/HudPanel'
 import TacticalProgress from '@/components/ui/ProgressBar'
@@ -274,7 +274,7 @@ function SpendingView() {
     return todayBillsLogs.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0)
   }, [todayBillsLogs])
 
-  const noLimitToday = isVacationDay(todayStr) // vacation: log freely, no daily allowance
+  const noLimitToday = isClaimedVacationDay(todayStr) // vacation: log freely, no daily allowance
   const todayRemaining = noLimitToday ? 0 : dailyBudget - todayTotal
   const todayProgressPct = noLimitToday ? 0 : Math.min(100, Math.round((todayTotal / dailyBudget) * 100))
 
@@ -335,7 +335,7 @@ function SpendingView() {
         billsAmount: billsSpend,
         totalAmount: totalSpend,
         target: dailyBudget,
-        isOver: !isVacationDay(dateStr) && dailySpend > dailyBudget,
+        isOver: !isClaimedVacationDay(dateStr) && dailySpend > dailyBudget,
         count: dayLogs.length
       })
     }

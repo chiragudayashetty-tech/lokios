@@ -6,6 +6,7 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { applyHabitStatus } from '@/lib/actions/habitStatus'
 import { completeTaskAction } from '@/lib/actions/taskComplete'
 import { saveSleepAction } from '@/lib/actions/sleepLog'
+import { saveScreenTimeAction } from '@/lib/actions/screenTimeLog'
 import { addBudgetExpense, BUDGET_CATEGORIES, isExcludedFromDaily, getCategoryById } from '@/lib/utils/budget'
 import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { progressOf } from '@/lib/utils/missions'
@@ -146,6 +147,29 @@ export function registerTools(server, asOwner) {
     return { date: day, duration_minutes: res.data.duration_minutes, score: res.data.score, xp: sx?.xp ?? 0, breakdown: sx?.parts?.map((p) => `${p.label} ${p.detail}: ${p.xp > 0 ? '+' : ''}${p.xp}`), penalty_multiplier: sx?.multiplier || 1 }
   }, write)
 
+  tool('log_screen_time', 'Log screen time', 'Log a day\'s iPhone screen time (replaces that day\'s entry), usually read from a Screen Time screenshot the owner sends. Map apps to categories in minutes: social (Instagram, Snapchat, X, Facebook, Reddit), video (YouTube, Netflix, Hotstar, Prime), messaging (WhatsApp, Messages, Telegram), productivity (Notion, Docs, Mail, editing apps, ChatGPT/Claude), games, other. Pays or costs screen-time XP like the app. If the screenshot is "Today" and the day is not over, say so to the owner.', {
+    total_hours: z.number().min(0).max(24), date: dateArg.optional().describe('The day the screenshot covers (default today)'),
+    social: z.number().int().min(0).max(1440).optional(), video: z.number().int().min(0).max(1440).optional(), messaging: z.number().int().min(0).max(1440).optional(),
+    productivity: z.number().int().min(0).max(1440).optional(), games: z.number().int().min(0).max(1440).optional(), other: z.number().int().min(0).max(1440).optional(),
+    focus_hours: z.number().min(0).max(24).optional().describe('Default: productivity minutes / 60'),
+    doom_scroll_minutes: z.number().int().min(0).max(1440).optional().describe('Default: social minutes'),
+    streaming_hours: z.number().min(0).max(24).optional().describe('Default: video minutes / 60'),
+    notes: z.string().max(1000).optional(),
+  }, async (a, sb, uid) => {
+    const day = a.date || getLocalDateStr()
+    const q = (x) => Math.round(x * 4) / 4 // the Screen time form works in quarter hours
+    const categories = { social: a.social || 0, video: a.video || 0, messaging: a.messaging || 0, productivity: a.productivity || 0, games: a.games || 0, other: a.other || 0 }
+    const res = await saveScreenTimeAction({
+      userId: uid, date: day, total_hours: q(a.total_hours),
+      focus_hours: q(a.focus_hours ?? categories.productivity / 60),
+      doom_scroll_minutes: a.doom_scroll_minutes ?? categories.social,
+      streaming_hours: q(a.streaming_hours ?? categories.video / 60),
+      notes: a.notes || '', categories,
+    })
+    if (res.error) throw new Error(`screen time: ${res.error.message}`)
+    return { date: day, total_hours: a.total_hours, categories_minutes: categories, xp: res.xp, reason: res.reason, battle: res.note || null }
+  }, write)
+
   tool('log_expense', 'Log expense', `Log spending in the budget (₹). Categories: ${BUDGET_CATEGORIES.map((c) => c.id).join(', ')}. Subscriptions and utilities don't count toward the daily allowance unless include_in_daily is set.`, {
     amount: z.number().positive().max(10000000), category: z.string().default('other'), description: z.string().max(500).optional(),
     date: dateArg.optional(), include_in_daily: z.boolean().optional(),
@@ -172,7 +196,7 @@ export function registerTools(server, asOwner) {
     return { saved: true, date: day, updated_existing: !!existing, journal: saved }
   }, write)
 
-  tool('add_brain_dump', 'Add to brain dump', 'Capture a thought, idea or note into the brain dump inbox.', {
+  tool('add_brain_dump', 'Add to inbox', 'Capture a thought, idea or note into the Inbox at the top of Tasks (the old brain dump).', {
     content: z.string().min(1).max(5000), type: z.enum(['note', 'idea', 'task', 'goal', 'random']).default('note'),
   }, async ({ content, type }, sb, uid) => {
     const row = must(await sb.from('brain_dump').insert({ user_id: uid, content, type }).select().single(), 'brain_dump')

@@ -3,11 +3,15 @@
 // the day neither extends nor breaks the streak.
 import { getSettings, saveSettings } from '@/lib/settings'
 import { getLocalDateStr } from '@/lib/utils/dates'
+import { isLockDay } from '@/lib/utils/restart'
 
 export const VACATION = { levelsPerDay: 3, maxBank: 5, maxAheadDays: 30 }
 
 export const vacationDays = (settings = getSettings()) => settings.vacationDays || []
-export const isVacationDay = (date, settings) => !!date && vacationDays(settings).includes(date)
+/** Claimed vacation days only (the budget's no-limit rule). */
+export const isClaimedVacationDay = (date, settings) => !!date && vacationDays(settings).includes(date)
+/** Rest days: claimed vacation or the restart lock — no penalties, no auto-fails, streak paused. */
+export const isVacationDay = (date, settings) => isClaimedVacationDay(date, settings) || isLockDay(date)
 
 /** earned = lifetime days from levels, available = what can be claimed now (bank capped at 5). */
 export function vacationStatus(level, settings = getSettings()) {

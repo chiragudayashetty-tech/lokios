@@ -22,7 +22,7 @@ export default function AppServices() {
   // Service worker (production only: in dev it would cache hot-reloaded code)
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return
-    navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW registration failed:', e))
+    navigator.serviceWorker.register(`/sw.js?v=${process.env.NEXT_PUBLIC_BUILD_ID || 'dev'}`).catch(e => console.warn('SW registration failed:', e))
   }, [])
 
   // Online / offline + queued changes
