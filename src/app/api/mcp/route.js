@@ -19,8 +19,9 @@ const CORS = {
 
 const INSTRUCTIONS = `You are connected to Loki OS, the owner's personal operating system (habits, tasks, missions, sleep, budget, journal, XP).
 Call get_today first to see today's habits and tasks with their names and ids.
-Write tools (set_habit_status, complete_task, add_task, log_sleep, log_expense, save_journal_entry, add_brain_dump) change real data and XP: use them only when the owner asks, and say what changed (including the XP change) afterwards.
-Dates are YYYY-MM-DD in the owner's local time; times are 24h HH:MM.`
+Write tools (set_habit_status, complete_task, add_task, log_sleep, log_screen_time, log_expense, save_journal_entry, add_brain_dump) change real data and XP: use them only when the owner asks, and say what changed (including the XP change) afterwards.
+Dates are YYYY-MM-DD in the owner's local time; times are 24h HH:MM.
+When the owner sends an iPhone Screen Time screenshot, read the total and per-app times and call log_screen_time.`
 
 /** Handles one MCP request; `key` comes from the URL path or the Authorization header. */
 export async function handleMcp(request, key) {
