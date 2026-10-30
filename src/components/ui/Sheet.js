@@ -20,7 +20,8 @@ export default function Sheet({ open, onClose, title, subtitle, children, footer
     window.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+    document.body.classList.add('overlay-open') // hides the phone nav so the sheet's buttons are reachable
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; document.body.classList.remove('overlay-open') }
   }, [open, onClose])
 
   if (!client) return null

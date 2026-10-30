@@ -10,12 +10,11 @@ import TimelineSection from '@/components/today/TimelineSection'
 import EndOfDayReview from '@/components/today/EndOfDayReview'
 import SleepCard from '@/components/today/SleepCard'
 import WeightCard from '@/components/today/WeightCard'
-import DisciplineGames from '@/components/game/DisciplineGames'
 import DayModes from '@/components/today/DayModes'
 import { isVacationDay } from '@/lib/utils/vacation'
 import { calculateLevel } from '@/lib/utils/xp'
 import { onSettingsChange } from '@/lib/settings'
-import { estimateLabel } from '@/lib/games/discipline'
+import { estimateLabel } from '@/lib/utils/taskEstimate'
 
 const fmtLogged = (m) => (m >= 60 ? `${+(m / 60).toFixed(1)}h` : `${m}m`)
 import { useOS, useOSSlice } from '@/lib/context/OSContext'
@@ -291,7 +290,6 @@ export default function TodayPage() {
           <SleepCard key={`${today}_${sleep.logs.find(l => l.date === today)?.id || 'new'}`} today={today} logs={sleep.logs} missing={sleep.missing} onSave={saveSleep} compact={appHour >= 14 || today !== calendarToday} />
         )}
         <WeightCard userId={user?.id} today={today} />
-        {!onVacation && <DisciplineGames compact />}
 
         <div className="tdy-timeline">
           {SECTIONS.map(sec => (

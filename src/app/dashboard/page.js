@@ -15,7 +15,6 @@ import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
 import { dailyXP } from '@/lib/utils/xpRules'
-import DisciplineGames from '@/components/game/DisciplineGames'
 import { computeMomentum, weeklyWinRate as weeklyWinRateOf, publishMomentum } from '@/lib/utils/momentumScore'
 import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { RANK_CONFIG, SAGA_IMAGES } from '@/lib/constants'
@@ -1393,7 +1392,6 @@ export default function MissionControl() {
 
         {/* Arena: streak & freezes, weekly boss, season pass, bets, perfect-day chest */}
         <GameHub />
-        <DisciplineGames />
 
         {/* ══════════════════════════════════════════════════════════════════
             DAILY PROTOCOL STATUS FLOATING DECK (INSTANT MODAL LAUNCH)
@@ -1617,26 +1615,15 @@ export default function MissionControl() {
                     <span>Tasks</span>
                     <ArrowUpRight size={10} />
                   </Link>
-                  <span className="text-slate-600 text-xs">·</span>
-                  <Link
-                    href="/calendar"
-                    className="font-mono text-[9px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
-                  >
-                    <span>Calendar</span>
-                    <ArrowUpRight size={10} />
-                  </Link>
                 </div>
               </div>
 
               {todayCalendarEvents.length === 0 && todayTasksScheduled.length === 0 ? (
                 <div className="p-5 text-center rounded-2xl bg-white/[0.02] border border-dashed border-white/10">
-                  <p className="font-mono text-[11px] text-slate-400 mb-2.5">No scheduled operations or calendar events for today.</p>
+                  <p className="font-mono text-[11px] text-slate-400 mb-2.5">No tasks scheduled for today.</p>
                   <div className="flex items-center justify-center gap-2">
                     <Link href="/tasks" className="btn btn-secondary btn-sm font-mono text-[9px] rounded-xl">
                       + ADD TASK
-                    </Link>
-                    <Link href="/calendar" className="btn btn-secondary btn-sm font-mono text-[9px] rounded-xl">
-                      + ADD EVENT
                     </Link>
                   </div>
                 </div>

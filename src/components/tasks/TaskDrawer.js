@@ -7,7 +7,7 @@ import Sheet from '@/components/ui/Sheet'
 import SchemaHint from '@/components/ui/SchemaHint'
 import { createClient } from '@/lib/supabase/client'
 import { parseTaskNotes } from '@/lib/utils/dates'
-import { estimateLabel, similarTask } from '@/lib/games/discipline'
+import { estimateLabel, similarTask } from '@/lib/utils/taskEstimate'
 import { useOSSlice } from '@/lib/context/OSContext'
 import { PRIORITIES, CATEGORY_LABELS, taskXp, dueOf, shiftDay, newSubtaskId, subtaskProgress } from '@/lib/utils/taskBoard'
 

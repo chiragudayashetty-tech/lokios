@@ -9,6 +9,7 @@ import SchemaHint from '@/components/ui/SchemaHint'
 import TaskBoard from '@/components/tasks/TaskBoard'
 import TaskList from '@/components/tasks/TaskList'
 import TaskDrawer from '@/components/tasks/TaskDrawer'
+import TaskInbox from '@/components/tasks/TaskInbox'
 import { CompleteTaskModal, FailTaskModal, NewTaskSheet } from '@/components/tasks/TaskModals'
 import { useOS, useOSSlice } from '@/lib/context/OSContext'
 import { useIsPhone } from '@/lib/hooks/useMediaQuery'
@@ -76,7 +77,7 @@ export default function TasksPage() {
     })
   }
 
-  const requestComplete = (task) => setProofTask(task)
+  const requestComplete = (task) => { setOpenId(null); setProofTask(task) }
 
   const submitComplete = async (task, url, note) => {
     await completeOperation(task.id, url, note)
@@ -213,6 +214,8 @@ export default function TasksPage() {
         </div>
 
         {boardSchema === false && <SchemaHint feature="Card order, subtasks and estimates" />}
+
+        <TaskInbox goals={goals} today={today} schemaReady={boardSchema} addTask={addTask} />
 
         {view === 'board' ? (
           <TaskBoard

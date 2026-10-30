@@ -6,8 +6,8 @@ import Link from 'next/link'
 import { useOSSlice } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Home, Crosshair, Target, CheckSquare, Lightbulb,
-  BookOpen, Briefcase, CalendarDays, Monitor, User,
+  Home, Crosshair, Target, CheckSquare,
+  BookOpen, Briefcase, Monitor, User,
   Menu, X, Shield, Trophy, RefreshCw, LogOut, Download, Mic, Wallet, Award, Snowflake, Sun, Settings
 } from 'lucide-react'
 import IntelExportModal from '@/components/ui/IntelExportModal'
@@ -32,10 +32,8 @@ const NAV_ITEMS = [
   { href: '/work', icon: Briefcase, label: 'Work log', group: 'Build' },
   { href: '/speaking', icon: Mic, label: 'Speaking', group: 'Build' },
   { href: '/budget', icon: Wallet, label: 'Budget', group: 'Build' },
-  { href: '/brain-dump', icon: Lightbulb, label: 'Brain dump', group: 'Reflect' },
   { href: '/journal', icon: BookOpen, label: 'Journal', group: 'Reflect' },
   { href: '/portfolio-log', icon: Award, label: 'Portfolio', group: 'Reflect' },
-  { href: '/calendar', icon: CalendarDays, label: 'Calendar', group: 'Reflect' },
   { href: '/screen-time', icon: Monitor, label: 'Screen time', group: 'Reflect' },
   { href: '/xp', icon: Trophy, label: 'Progress', group: 'Reflect' },
   { href: '/profile', icon: User, label: 'Profile', group: 'Account' },

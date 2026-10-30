@@ -5,7 +5,7 @@
 //  • first win of the day logged at/after 10:00 — first win now needs an early start
 //  • habit chain links / full chains that fail the 2 min – 2 h rule, or were backfilled
 //  • streak milestones paid again inside the same milestone window (the moving-run-start bug)
-// v2 (separate flag): the estimate duel and ship-day pledge were retired — their XP is taken back.
+// v3 (separate flag): retired games — estimate duel, ship-day pledge, lights-out bet, fuel tank — their XP is taken back.
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { robustRemoveXP, fetchAllXpHistory } from '@/lib/utils/xpFallback'
@@ -77,10 +77,10 @@ export async function cleanupLegacyXP(userId) {
   }
 }
 
-const KEY2 = (uid) => `lokios_xp_cleanup_v2_${uid}`
-const RETIRED = new Set(['estimate_duel', 'ship_day', 'ship_push'])
+const KEY2 = (uid) => `lokios_xp_cleanup_v3_${uid}`
+const RETIRED = new Set(['estimate_duel', 'ship_day', 'ship_push', 'lights_out', 'fuel_overdraft'])
 
-/** Removes all XP from retired games (estimate duel, ship-day pledge). Runs once per device. */
+/** Removes all XP from retired games. Runs once per device. */
 export async function cleanupRetiredGamesXP(userId) {
   if (!userId) return 0
   try { if (localStorage.getItem(KEY2(userId))) return 0 } catch {}

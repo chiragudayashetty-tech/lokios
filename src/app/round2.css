@@ -1316,3 +1316,11 @@
 .slp-xp span.is-miss { color: var(--text-muted); }
 .slp-xp-total { margin-left: auto; font-size: 13px; color: var(--text-primary); }
 .slp-xp span.is-bad { color: #fca5a5; border-color: rgba(229,72,77,0.4); background: rgba(229,72,77,0.08); }
+
+/* Phone: while a sheet or pop-up is open the bottom nav steps aside, so footer buttons are never covered */
+body.overlay-open .mobile-nav { opacity: 0 !important; pointer-events: none !important; transform: translateY(120%) !important; transition: opacity .15s, transform .2s; }
+
+/* Tasks → Inbox (the old brain dump) */
+.tk-inbox { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 16px; background: rgba(255, 255, 255, 0.02); display: grid; gap: 10px; }
+.tk-inbox-head { display: flex; align-items: center; gap: 8px; width: 100%; font-size: 13.5px; color: var(--text-primary); }
+.tk-inbox-hint { color: var(--text-muted); font-size: 12px; }
