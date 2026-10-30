@@ -4,7 +4,8 @@
 // - other same-origin GETs (icons, saga art): stale-while-revalidate
 // Supabase/API calls are never cached (the app's offline queue handles writes).
 
-const VERSION = 'v1'
+// One cache set per deploy (?v=<build id> on registration); activate drops every older set.
+const VERSION = new URL(self.location.href).searchParams.get('v') || 'v1'
 const STATIC = `lokios-static-${VERSION}`
 const PAGES = `lokios-pages-${VERSION}`
 const ASSETS = `lokios-assets-${VERSION}`

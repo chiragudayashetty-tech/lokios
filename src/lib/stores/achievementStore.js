@@ -8,7 +8,7 @@ import { robustAwardXP } from '@/lib/utils/xpFallback'
 import { emitGame } from '@/lib/utils/gamification'
 import { calculateLevel } from '@/lib/utils/xp'
 import { shiftDate } from '@/lib/utils/streakCalc'
-import { isVacationDay } from '@/lib/utils/vacation'
+import { isClaimedVacationDay } from '@/lib/utils/vacation'
 import { isExcludedFromDaily, getLocalDailyBudget } from '@/lib/utils/budget'
 import { evaluateAchievements, achievementXp, RARITY } from '@/lib/achievements'
 
@@ -130,7 +130,7 @@ export function buildAchievementStats(game, x, userId) {
     betsWon: countRows(xpRows, /^bet_payout$/),
     bigBetWon: xpRows.some((r) => r.source_type === 'bet_payout' && (r.amount || 0) >= 1000),
     budgetDays: spendByDay.size,
-    underBudgetDays: [...spendByDay.entries()].filter(([d, v]) => isVacationDay(d) || v <= limit).length,
+    underBudgetDays: [...spendByDay.entries()].filter(([d, v]) => isClaimedVacationDay(d) || v <= limit).length,
     jarsDone: (x.jars.data || []).length,
     journal: x.journal.count || 0,
     reviews: x.reviews.count || 0,

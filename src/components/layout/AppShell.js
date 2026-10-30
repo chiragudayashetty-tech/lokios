@@ -17,6 +17,8 @@ import LevelUpCelebration from '@/components/ui/LevelUpCelebration'
 import GameOverlays from '@/components/game/GameOverlays'
 import WeeklyScorecard from '@/components/game/WeeklyScorecard'
 import AppServices from '@/components/layout/AppServices'
+import RestartLock from '@/components/layout/RestartLock'
+import { isLockedPath } from '@/lib/utils/restart'
 import MissionOverlays from '@/components/goals/MissionOverlays'
 import AchievementService from '@/components/achievements/AchievementService'
 import { calculateLevel, getRankForXp } from '@/lib/utils/xp'
@@ -368,7 +370,7 @@ function AppShellFrame({ children }) {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          {children}
+          {isLockedPath(pathname || '/') ? <RestartLock /> : children}
         </motion.div>
       </main>
 
