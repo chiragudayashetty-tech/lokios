@@ -5,6 +5,7 @@
 //  • first win of the day logged at/after 10:00 — first win now needs an early start
 //  • habit chain links / full chains that fail the 2 min – 2 h rule, or were backfilled
 //  • streak milestones paid again inside the same milestone window (the moving-run-start bug)
+// v3 (separate flag): retired games — estimate duel, ship-day pledge, lights-out bet, fuel tank — their XP is taken back.
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { robustRemoveXP, fetchAllXpHistory } from '@/lib/utils/xpFallback'
@@ -73,5 +74,26 @@ export async function cleanupLegacyXP(userId) {
     return 0
   } finally {
     running = false
+  }
+}
+
+const KEY2 = (uid) => `lokios_xp_cleanup_v3_${uid}`
+const RETIRED = new Set(['estimate_duel', 'ship_day', 'ship_push', 'lights_out', 'fuel_overdraft'])
+
+/** Removes all XP from retired games. Runs once per device. */
+export async function cleanupRetiredGamesXP(userId) {
+  if (!userId) return 0
+  try { if (localStorage.getItem(KEY2(userId))) return 0 } catch {}
+  try {
+    const rows = await fetchAllXpHistory(createClient(), userId, 'source_type, source_id, amount', true)
+    let total = 0
+    for (const r of rows.filter((x) => RETIRED.has(x.source_type) && x.source_id)) {
+      if (await robustRemoveXP(userId, r.source_type, r.source_id)) total += Number(r.amount) || 0
+    }
+    try { localStorage.setItem(KEY2(userId), JSON.stringify({ at: new Date().toISOString(), xp: total })) } catch {}
+    return total
+  } catch (e) {
+    console.warn('Retired-games XP clean-up skipped:', e)
+    return 0
   }
 }

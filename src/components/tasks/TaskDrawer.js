@@ -7,7 +7,7 @@ import Sheet from '@/components/ui/Sheet'
 import SchemaHint from '@/components/ui/SchemaHint'
 import { createClient } from '@/lib/supabase/client'
 import { parseTaskNotes } from '@/lib/utils/dates'
-import { duelScore, estimateLabel, similarTask } from '@/lib/games/discipline'
+import { estimateLabel, similarTask } from '@/lib/utils/taskEstimate'
 import { useOSSlice } from '@/lib/context/OSContext'
 import { PRIORITIES, CATEGORY_LABELS, taskXp, dueOf, shiftDay, newSubtaskId, subtaskProgress } from '@/lib/utils/taskBoard'
 
@@ -276,10 +276,9 @@ export default function TaskDrawer({ task, goals, today, schemaReady, onClose, p
                 <input id="td-act" type="number" min="0" step="5" inputMode="numeric" className="input td-num" value={draft.actual_minutes} onChange={set('actual_minutes')} placeholder="total" aria-label="Total time logged in minutes" />
               </div>
               {draft.estimate_minutes && draft.actual_minutes ? (() => {
-                const sc = duelScore(draft.estimate_minutes, draft.actual_minutes, draft.estimate_max_minutes)
                 const hi = Number(draft.estimate_max_minutes) > Number(draft.estimate_minutes) ? Number(draft.estimate_max_minutes) : Number(draft.estimate_minutes)
                 const left = hi - Number(draft.actual_minutes)
-                return <p className={`td-delta ${left < 0 ? 'is-over' : 'is-under'}`}>{left >= 0 ? `${fmtMin(left)} left in your estimate` : `${fmtMin(-left)} over your estimate`}{task.status === 'completed' && sc ? ` · ${sc.verdict}${sc.xp ? ` +${sc.xp} XP` : ''}` : ''}</p>
+                return <p className={`td-delta ${left < 0 ? 'is-over' : 'is-under'}`}>{left >= 0 ? `${fmtMin(left)} left in your estimate` : `${fmtMin(-left)} over your estimate`}</p>
               })() : null}
             </div>
           </>

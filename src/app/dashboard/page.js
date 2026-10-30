@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Target, AlertTriangle, Zap, Flame, ChevronDown, Lock, Check, ClipboardList, BookOpen, Activity, Clock, ArrowUpRight, BarChart2, Smartphone, Moon, X, RotateCcw, Pencil, Calendar as CalendarIcon, Briefcase, Sun, CheckCircle2, Mic, Sparkles, Wallet, Camera } from 'lucide-react'
+import { Target, AlertTriangle, Zap, Flame, ChevronDown, Lock, Check, ClipboardList, BookOpen, Activity, Clock, ArrowUpRight, BarChart2, Smartphone, Moon, X, RotateCcw, Pencil, Calendar as CalendarIcon, Briefcase, Sun, CheckCircle2, Mic, Sparkles, Wallet } from 'lucide-react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import { isExcludedFromDaily, fetchBudgetLogs, getLocalDailyBudget } from '@/lib/utils/budget'
@@ -14,10 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { calculateLevel, xpToNextLevel, getRankForXp } from '@/lib/utils/xp'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { syncScreenTimeXP } from '@/lib/utils/screenTimeXP'
-import CaptureSheet from '@/components/moments/CaptureSheet'
-import { useTodayMoment } from '@/lib/moments/moments'
 import { dailyXP } from '@/lib/utils/xpRules'
-import DisciplineGames from '@/components/game/DisciplineGames'
 import { computeMomentum, weeklyWinRate as weeklyWinRateOf, publishMomentum } from '@/lib/utils/momentumScore'
 import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { RANK_CONFIG, SAGA_IMAGES } from '@/lib/constants'
@@ -112,8 +109,6 @@ export default function MissionControl() {
   const [xpThisWeek, setXpThisWeek]   = useState(0)
   const [weekHabitLogs, setWeekHabitLogs] = useState([])
   const [editingPriority, setEditingPriority] = useState(null)
-  const [momentRow, reloadMoment] = useTodayMoment(user?.id, getLocalDateStr())
-  const [momentOpen, setMomentOpen] = useState(false)
   const [momentumExpanded, setMomentumExpanded] = useState(false)
   const [priorityStatusMap, setPriorityStatusMap] = useState({})
 
@@ -1397,7 +1392,6 @@ export default function MissionControl() {
 
         {/* Arena: streak & freezes, weekly boss, season pass, bets, perfect-day chest */}
         <GameHub />
-        <DisciplineGames />
 
         {/* ══════════════════════════════════════════════════════════════════
             DAILY PROTOCOL STATUS FLOATING DECK (INSTANT MODAL LAUNCH)
@@ -1416,7 +1410,7 @@ export default function MissionControl() {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
               <span className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-white font-bold">
-                DAILY PROTOCOLS ({eodCompletedCount + (momentRow ? 1 : 0)} / {eodItems.length + 1 + (isDebriefDoneThisWeek ? 1 : 0)} LOGGED)
+                DAILY PROTOCOLS ({eodCompletedCount} / {eodItems.length + (isDebriefDoneThisWeek ? 1 : 0)} LOGGED)
               </span>
             </div>
             <span className="font-mono text-[9px] text-slate-400 uppercase font-semibold">
@@ -1496,29 +1490,6 @@ export default function MissionControl() {
               </div>
             </Link>
 
-            {/* Daily Moment: one photo or ≤5 s video */}
-            <button
-              type="button"
-              onClick={() => (momentRow ? (window.location.href = '/moments') : setMomentOpen(true))}
-              className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between group relative overflow-hidden active:scale-95 ${
-                momentRow ? 'bg-emerald-950/30 border-emerald-500/40 text-white shadow-[0_0_15px_rgba(16,185,129,0.15)]' : 'bg-white/[0.02] border-white/10 hover:border-white/20 text-slate-300 hover:bg-white/[0.05]'
-              }`}
-            >
-              {momentRow?.thumb && <img src={momentRow.thumb} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30" />}
-              <div className="flex items-center justify-between w-full mb-2 relative">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${momentRow ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-slate-400'}`}>
-                  <Camera size={16} />
-                </div>
-                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[8px] font-bold uppercase tracking-wider ${momentRow ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-white/5 text-slate-400'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${momentRow ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : 'bg-slate-500'}`} />
-                  <span>{momentRow ? 'DONE' : '+ CAPTURE'}</span>
-                </div>
-              </div>
-              <div className="relative">
-                <div className="font-display font-bold text-xs uppercase tracking-wide truncate text-white">Daily Moment</div>
-                <div className="font-mono text-[9px] text-slate-400 truncate mt-0.5">{momentRow ? (momentRow.caption || 'Captured today') : 'Photo or 5s video'}</div>
-              </div>
-            </button>
           </div>
 
           {/* Daily Budget Protocol Quick Bar / Widget */}
@@ -1644,26 +1615,15 @@ export default function MissionControl() {
                     <span>Tasks</span>
                     <ArrowUpRight size={10} />
                   </Link>
-                  <span className="text-slate-600 text-xs">·</span>
-                  <Link
-                    href="/calendar"
-                    className="font-mono text-[9px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
-                  >
-                    <span>Calendar</span>
-                    <ArrowUpRight size={10} />
-                  </Link>
                 </div>
               </div>
 
               {todayCalendarEvents.length === 0 && todayTasksScheduled.length === 0 ? (
                 <div className="p-5 text-center rounded-2xl bg-white/[0.02] border border-dashed border-white/10">
-                  <p className="font-mono text-[11px] text-slate-400 mb-2.5">No scheduled operations or calendar events for today.</p>
+                  <p className="font-mono text-[11px] text-slate-400 mb-2.5">No tasks scheduled for today.</p>
                   <div className="flex items-center justify-center gap-2">
                     <Link href="/tasks" className="btn btn-secondary btn-sm font-mono text-[9px] rounded-xl">
                       + ADD TASK
-                    </Link>
-                    <Link href="/calendar" className="btn btn-secondary btn-sm font-mono text-[9px] rounded-xl">
-                      + ADD EVENT
                     </Link>
                   </div>
                 </div>
@@ -2632,7 +2592,6 @@ export default function MissionControl() {
           </div>
         )}
       </AnimatePresence>
-      {momentOpen && <CaptureSheet open userId={user?.id} date={getLocalDateStr()} onClose={() => setMomentOpen(false)} onSaved={() => { setMomentOpen(false); reloadMoment() }} />}
     </AppShell>
   )
 }

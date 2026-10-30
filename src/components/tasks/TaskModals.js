@@ -1,13 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, X, AlertTriangle, CheckCircle2, Flag, Repeat } from 'lucide-react'
 import Sheet from '@/components/ui/Sheet'
 import { taskXp, PRIORITIES, CATEGORY_LABELS } from '@/lib/utils/taskBoard'
 
+// Portaled to <body> so it always sits above the task drawer (also a portal) and the phone nav.
 function ModalShell({ open, onClose, tone = 'accent', children, label }) {
-  return (
+  useEffect(() => {
+    if (!open) return
+    document.body.classList.add('overlay-open')
+    return () => document.body.classList.remove('overlay-open')
+  }, [open])
+  if (typeof document === 'undefined') return null
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className="modal-overlay tm-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }} role="dialog" aria-modal="true" aria-label={label}>
@@ -16,7 +24,8 @@ function ModalShell({ open, onClose, tone = 'accent', children, label }) {
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
 
