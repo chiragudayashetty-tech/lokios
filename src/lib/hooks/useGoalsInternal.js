@@ -6,7 +6,6 @@ import { XP_REWARDS } from '@/lib/constants'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { isMissingSchema } from '@/lib/utils/schema'
-import { onDeadlineChange, onMissionShipped, onMissionUnshipped } from '@/lib/games/discipline'
 
 // Map goal/mission category IDs to canonical stat_category keys for XP radar and charts
 const GOAL_CATEGORY_TO_STAT = {
@@ -124,19 +123,13 @@ export function useGoalsInternal(user) {
     if (!user) return null
 
     try {
-      // Ship-day pledge: moving a deadline later costs XP and is counted
-      const before = goals.find((g) => g.id === id)
-      const pledge = data && 'deadline' in data && before ? await onDeadlineChange(user.id, before, data.deadline) : {}
-      let { data: updated, error } = await supabase
+      const { data: updated, error } = await supabase
         .from('goals')
-        .update({ ...data, ...pledge })
+        .update(data)
         .eq('id', id)
         .eq('user_id', user.id)
         .select()
         .single()
-      if (error && Object.keys(pledge).length && isMissingSchema(error)) {
-        ;({ data: updated, error } = await supabase.from('goals').update(data).eq('id', id).eq('user_id', user.id).select().single())
-      }
 
       if (error) throw error
       setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
@@ -172,7 +165,6 @@ export function useGoalsInternal(user) {
         .single()
 
       if (error) throw error
-      onMissionShipped(user.id, goal).catch(() => {}) // ship-day pledge bonus
 
       if (proofUrl || (completionNote && completionNote.trim())) {
         // Auto-create Portfolio Log
@@ -239,7 +231,6 @@ export function useGoalsInternal(user) {
 
   const undoCompleteGoal = useCallback(async (id) => {
     if (!user) return null
-    onMissionUnshipped(user.id, { id }).catch(() => {})
 
     try {
       // Fetch tasks to calculate true progress

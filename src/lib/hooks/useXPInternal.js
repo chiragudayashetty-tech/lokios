@@ -9,7 +9,7 @@ import { readMomentum } from '@/lib/utils/momentumScore'
 // Header pill shows the dashboard's momentum score (one engine); XP history only fills the sparkline.
 const withScore = (m) => { const s = readMomentum(); return s ? { ...m, state: s.label, color: s.color, score: s.score } : m }
 import { backfillRecentScreenTimeXP } from '@/lib/utils/screenTimeXP'
-import { cleanupLegacyXP } from '@/lib/utils/xpCleanup'
+import { cleanupLegacyXP, cleanupRetiredGamesXP } from '@/lib/utils/xpCleanup'
 
 export function useXPInternal(user) {
   const supabase = createClient()
@@ -35,6 +35,7 @@ export function useXPInternal(user) {
       }
       // One-time: take back XP the current rules wouldn't have paid (runs once per account)
       await cleanupLegacyXP(user.id)
+      await cleanupRetiredGamesXP(user.id)
     }
 
     // Local midnight six days ago (a "YYYY-MM-DDT00:00Z" string would be UTC midnight)

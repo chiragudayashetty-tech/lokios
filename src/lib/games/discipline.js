@@ -1,4 +1,4 @@
-// Discipline games: lights-out bet, FC fuel tank (earned play time), estimate duel, ship-day pledge.
+// Discipline games: lights-out bet and FC fuel tank (earned play time).
 // All their XP is bonus XP (see BONUS_XP_RX) — it moves the total, never a single day's number.
 import { createClient } from '@/lib/supabase/client'
 import { getLocalDateStr, getStartOfWeek } from '@/lib/utils/dates'
@@ -80,22 +80,7 @@ export async function settleLightsOut(userId, pledges, sleepLogs, today = getLoc
   return out
 }
 
-// ── Estimate duel ────────────────────────────────────────────────────────
-/**
- * Single estimate: within 20% +25, within 50% +10. Range estimate (e.g. 2–5h, for work you can't
- * pin down): landing inside it +10 — honest about uncertainty, but a sharp guess pays more.
- */
-export function duelScore(estimate, actual, max = null) {
-  const e = Number(estimate), a = Number(actual), hi = Number(max)
-  if (!(e > 0) || !(a > 0)) return null
-  if (hi > e) {
-    if (a >= e && a <= hi) return { off: 0, xp: 10, verdict: 'Inside your range', range: true }
-    const edge = a < e ? e : hi
-    return { off: Math.abs(a - edge) / edge, xp: 0, verdict: a > hi ? 'Over your range' : 'Under your range', range: true }
-  }
-  const off = Math.abs(a - e) / e
-  return { off, xp: off <= 0.2 ? 25 : off <= 0.5 ? 10 : 0, verdict: off <= 0.2 ? 'Bullseye' : off <= 0.5 ? 'Close' : a > e ? 'Way over' : 'Way under' }
-}
+// ── Task estimates (shown on tasks; no XP) ─────────────────────────────
 export const estimateLabel = (t) => { const f = (m) => (m >= 60 ? `${+(m / 60).toFixed(1)}h` : `${m}m`); return t?.estimate_minutes ? (t.estimate_max_minutes > t.estimate_minutes ? `${f(t.estimate_minutes)}–${f(t.estimate_max_minutes)}` : f(t.estimate_minutes)) : null }
 
 /** Last finished task that looks like this one (shared words in the title) with a real time. */
@@ -112,55 +97,13 @@ export function similarTask(task, tasks) {
   return best?.t || null
 }
 
-/** Award (or re-award after an edit) the duel for a completed task with both numbers. */
-export async function settleDuel(userId, task) {
-  if (!userId || !task || task.status !== 'completed') return null
-  const s = duelScore(task.estimate_minutes, task.actual_minutes, task.estimate_max_minutes)
-  await robustRemoveXP(userId, 'estimate_duel', `estimate_${task.id}`)
-  if (s?.xp) await robustAwardXP(userId, s.xp, 'estimate_duel', `estimate_${task.id}`, `🎯 Estimate duel · ${s.verdict}: ${task.title} (${estimateLabel(task)} est · ${task.actual_minutes}m real)`, 'discipline')
-  return s
-}
-
-/** How your estimates usually land: median actual/estimate over the last 20 dueled tasks. */
-export function calibration(tasks) {
-  const rows = tasks.filter((t) => t.status === 'completed' && t.estimate_minutes > 0 && t.actual_minutes > 0)
-    .sort((a, b) => String(b.completed_at).localeCompare(String(a.completed_at))).slice(0, 20)
-  if (!rows.length) return null
-  const ratios = rows.map((t) => t.actual_minutes / t.estimate_minutes).sort((a, b) => a - b)
-  const median = ratios[Math.floor(ratios.length / 2)]
-  const hits = rows.filter((t) => duelScore(t.estimate_minutes, t.actual_minutes, t.estimate_max_minutes)?.xp > 0).length
-  return { n: rows.length, median: +median.toFixed(2), hitRate: Math.round((hits / rows.length) * 100), recent: rows.slice(0, 5) }
-}
-
-// ── Ship-day pledge ──────────────────────────────────────────────────────
-export const SHIP = { push: 25, onTime: 100, onTimeAfterPush: 40 }
-
-/** Patch fields + penalty when a mission's deadline moves later. Returns extra fields for the update. */
-export async function onDeadlineChange(userId, goal, nextDeadline) {
-  const prev = goal?.deadline ? String(goal.deadline).slice(0, 10) : null
-  const next = nextDeadline ? String(nextDeadline).slice(0, 10) : null
-  if (!prev || !next || next <= prev) return {}
-  const pushes = (goal.deadline_pushes || 0) + 1
-  await robustAwardXP(userId, -SHIP.push, 'ship_push', `ship_push_${goal.id}_${pushes}`, `📦 Ship date pushed (${pushes}×): ${goal.title} ${prev} → ${next} (−${SHIP.push} XP)`, 'discipline')
-  return { deadline_pushes: pushes, original_deadline: goal.original_deadline || prev }
-}
-
-export async function onMissionShipped(userId, goal) {
-  const due = goal?.deadline ? String(goal.deadline).slice(0, 10) : null
-  if (!due || getLocalDateStr() > due) return 0
-  const xp = goal.deadline_pushes ? SHIP.onTimeAfterPush : SHIP.onTime
-  await robustAwardXP(userId, xp, 'ship_day', `ship_${goal.id}`, `📦 Shipped on the pledged day${goal.deadline_pushes ? ` (after ${goal.deadline_pushes} push${goal.deadline_pushes === 1 ? '' : 'es'})` : ''}: ${goal.title}`, 'discipline')
-  return xp
-}
-export const onMissionUnshipped = (userId, goal) => robustRemoveXP(userId, 'ship_day', `ship_${goal.id}`)
-
 // ── One load for the cards ───────────────────────────────────────────────
 export async function loadDiscipline(userId, today = getLocalDateStr()) {
   const sb = createClient()
   const monday = getLocalDateStr(getStartOfWeek(new Date(`${today}T12:00:00`), 1))
   const since = addDays(today, -21)
   const safe = (p) => p.then((r) => (r.error ? { data: null, missing: /relation|schema|does not exist/i.test(r.error.message) } : r)).catch(() => ({ data: null }))
-  const [habits, habitLogs, tasks, work, sessions, pledges, sleep, goals] = await Promise.all([
+  const [habits, habitLogs, tasks, work, sessions, pledges, sleep] = await Promise.all([
     safe(sb.from('habits').select('*').eq('user_id', userId)),
     safe(sb.from('habit_logs').select('habit_id, date, status').eq('user_id', userId).gte('date', monday)),
     safe(sb.from('tasks').select('*').eq('user_id', userId)),
@@ -168,21 +111,16 @@ export async function loadDiscipline(userId, today = getLocalDateStr()) {
     safe(sb.from('fuel_sessions').select('*').eq('user_id', userId).gte('date', monday).order('created_at')),
     safe(sb.from('game_pledges').select('*').eq('user_id', userId).eq('kind', 'lights_out').gte('date', since).order('date')),
     safe(sb.from('sleep_logs').select('date, bedtime, wake_time').eq('user_id', userId).gte('date', since)),
-    safe(sb.from('goals').select('*').eq('user_id', userId)),
   ])
   let pl = pledges.data || []
   const settled = pl.length ? await settleLightsOut(userId, pl, sleep.data || [], today) : []
   if (settled.length) pl = pl.map((p) => settled.find((x) => x.id === p.id) || p)
   const fuel = fuelState({ habits: habits.data || [], habitLogs: habitLogs.data || [], tasks: tasks.data || [], workDays: work.data || [], sessions: sessions.data || [] }, today)
-  const ships = (goals.data || []).filter((g) => g.deadline && !['completed', 'failed', 'cancelled'].includes(g.status))
-    .map((g) => ({ id: g.id, title: g.title, deadline: String(g.deadline).slice(0, 10), pushes: g.deadline_pushes || 0, original: g.original_deadline }))
-    .sort((a, b) => a.deadline.localeCompare(b.deadline))
   return {
-    fuel, ships, settled,
+    fuel, settled,
     pledgeToday: pl.find((p) => p.date === today) || null,
     lastPledge: [...pl].reverse().find((p) => p.status !== 'open') || null,
     pledgeHistory: pl.filter((p) => p.status !== 'open').slice(-14),
-    calibration: calibration(tasks.data || []),
     needsMigration: !!(sessions.missing || pledges.missing),
   }
 }

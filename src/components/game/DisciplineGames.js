@@ -1,14 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Fuel, Moon, Target, Package, AlertTriangle, Check, X, Trash2 } from 'lucide-react'
+import { Fuel, Moon, AlertTriangle, Check, X, Trash2 } from 'lucide-react'
 import { useOSSlice } from '@/lib/context/OSContext'
 import { getLocalDateStr } from '@/lib/utils/dates'
-import { loadDiscipline, logPlay, deletePlay, setLightsOut, overdraftPenalty, FUEL, STAKES, LIGHTS_GRACE_MIN, SHIP } from '@/lib/games/discipline'
+import { loadDiscipline, logPlay, deletePlay, setLightsOut, overdraftPenalty, FUEL, STAKES, LIGHTS_GRACE_MIN } from '@/lib/games/discipline'
 
 const fmtM = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}` : `${m}m`)
 const fmtD = (ds) => new Date(`${ds}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-const daysTo = (ds) => Math.round((new Date(`${ds}T12:00:00`) - new Date(`${getLocalDateStr()}T12:00:00`)) / 86400000)
 
 function FuelTank({ fuel, userId, onChange, compact }) {
   const [busy, setBusy] = useState(false)
@@ -95,37 +94,7 @@ function LightsOut({ data, userId, onChange }) {
   )
 }
 
-function EstimateDuel({ cal }) {
-  return (
-    <section className="dg-card">
-      <div className="dg-head"><Target size={15} /> Estimate duel <span className="dg-hint">set an estimate on a task, log real time when done</span></div>
-      {!cal ? <p className="dg-sub">No duels yet. Add an estimate to a task; when you complete it you’ll be asked how long it really took. Within 20% = +25 XP, within 50% = +10.</p> : (
-        <>
-          <p className="dg-row"><b className="dg-big">{cal.median}×</b><span>{cal.median > 1.1 ? `you underestimate — things take ${cal.median}× your guess` : cal.median < 0.9 ? `you overestimate — things take ${cal.median}× your guess` : 'your estimates are on point'} · {cal.hitRate}% bullseyes · last {cal.n}</span></p>
-          <ul className="dg-list">{cal.recent.map((t) => <li key={t.id}><span>{t.title}</span><em>{t.estimate_minutes}m → {t.actual_minutes}m</em></li>)}</ul>
-          {cal.median > 1.1 && <p className="dg-sub">Tip: multiply your next estimate by {cal.median} before you set the deadline.</p>}
-        </>
-      )}
-    </section>
-  )
-}
-
-function ShipPledges({ ships }) {
-  return (
-    <section className="dg-card">
-      <div className="dg-head"><Package size={15} /> Ship-day pledges <span className="dg-hint">a mission’s deadline is the promise</span></div>
-      {!ships.length ? <p className="dg-sub">No active mission has a deadline. Set one to pledge a ship day.</p> : (
-        <ul className="dg-list">{ships.slice(0, 5).map((s) => {
-          const d = daysTo(s.deadline)
-          return <li key={s.id}><span>{s.title}</span><em className={d < 0 ? 'is-bad' : d <= 2 ? 'is-warn' : ''}>{fmtD(s.deadline)} · {d < 0 ? `${-d}d late` : d === 0 ? 'today' : `${d}d`}{s.pushes ? ` · pushed ${s.pushes}×` : ''}</em></li>
-        })}</ul>
-      )}
-      <p className="dg-rules">Moving a deadline later: −{SHIP.push} XP each time. Shipping on the day: +{SHIP.onTime} XP (+{SHIP.onTimeAfterPush} if it was pushed).</p>
-    </section>
-  )
-}
-
-/** The four discipline games. `compact` (Today) shows the fuel tank and lights-out only. */
+/** Discipline games: fuel tank and lights-out bet. */
 export default function DisciplineGames({ compact = false }) {
   const { user } = useOSSlice('auth')
   const [data, setData] = useState(null)
@@ -143,8 +112,6 @@ export default function DisciplineGames({ compact = false }) {
       <div className="dg-grid">
         <FuelTank fuel={data.fuel} userId={user?.id} onChange={refresh} compact={compact} />
         <LightsOut data={data} userId={user?.id} onChange={refresh} />
-        {!compact && <EstimateDuel cal={data.calibration} />}
-        {!compact && <ShipPledges ships={data.ships} />}
       </div>
     </div>
   )

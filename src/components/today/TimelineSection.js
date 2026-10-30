@@ -18,13 +18,13 @@ function Row({ item, busy, onToggle }) {
       {item.linked && <span className="tdy-row-link" aria-hidden />}
       {item.rest ? (
         <span className="tdy-row-check is-rest" aria-label={`${item.title} — rest day`}><Leaf size={15} strokeWidth={2.5} /></span>
-      ) : item.kind === 'protocol' && !item.done && !item.capture ? (
+      ) : item.kind === 'protocol' && !item.done ? (
         <Link href={item.href} className="tdy-row-check is-link" aria-label={`Log ${item.title}`}><ArrowRight size={15} /></Link>
       ) : (
         <button
           type="button"
           className={`tdy-row-check ${item.done ? 'is-done' : item.failed ? 'is-failed' : ''}`}
-          disabled={busy || ((item.done || item.failed) && item.kind !== 'habit' && !item.capture)}
+          disabled={busy || ((item.done || item.failed) && item.kind !== 'habit')}
           onClick={() => onToggle(item)}
           data-celebrate={item.done || item.failed ? undefined : ''}
           aria-label={item.done ? `Undo ${item.title}` : item.failed ? `Clear failed ${item.title}` : `Complete ${item.title}`}

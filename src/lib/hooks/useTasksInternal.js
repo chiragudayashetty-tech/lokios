@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { XP_REWARDS, DIFFICULTY_LEVELS } from '@/lib/constants'
-import { settleDuel } from '@/lib/games/discipline'
 import { robustAwardXP, robustRemoveXP } from '@/lib/utils/xpFallback'
 import { escalatingPenalty } from '@/lib/utils/xpRules'
 import { getLocalDateStr } from '@/lib/utils/dates'
@@ -110,10 +109,6 @@ export function useTasksInternal(user) {
       const { updated, clone } = await completeTaskAction({ userId: user.id, task, proofUrl, completionNote })
       setTasks((prev) => [...prev.map((t) => (t.id === id ? updated : t)), ...(clone ? [clone] : [])])
 
-      // Estimate duel: ask for the real time, or score it right away if it's already filled in
-      if (updated?.estimate_minutes > 0) {
-        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('lokios:estimate-ask', { detail: { id: updated.id, title: updated.title, estimate: updated.estimate_minutes, max: updated.estimate_max_minutes, logged: updated.actual_minutes || 0 } }))
-      }
 
       return updated
     } catch (error) {
@@ -264,7 +259,6 @@ export function useTasksInternal(user) {
       if (error) throw error
 
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
-      if (updates && ('actual_minutes' in updates || 'estimate_minutes' in updates) && updated?.status === 'completed') settleDuel(user.id, updated).catch(() => {})
       return updated
     } catch (error) {
       console.error('Error editing task:', error)
@@ -364,7 +358,6 @@ export function useTasksInternal(user) {
       return { error, missingSchema }
     }
     setTasks((prev) => prev.map((t) => (t.id === id ? data : t)))
-    if (('actual_minutes' in patch || 'estimate_minutes' in patch) && data?.status === 'completed') settleDuel(user.id, data).catch(() => {})
     return { data }
   }, [user])
 
