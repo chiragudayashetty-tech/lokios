@@ -7,6 +7,7 @@ import { applyHabitStatus } from '@/lib/actions/habitStatus'
 import { completeTaskAction } from '@/lib/actions/taskComplete'
 import { saveSleepAction } from '@/lib/actions/sleepLog'
 import { saveScreenTimeAction } from '@/lib/actions/screenTimeLog'
+import { addBusinessExpense, BIZ_CATEGORIES, PAYMENT_MODES, monthSummary } from '@/lib/utils/businessExpenses'
 import { addBudgetExpense, BUDGET_CATEGORIES, isExcludedFromDaily, getCategoryById } from '@/lib/utils/budget'
 import { habitsScheduledOn } from '@/lib/utils/xpRules'
 import { progressOf } from '@/lib/utils/missions'
@@ -66,7 +67,7 @@ export function registerTools(server, asOwner) {
   })
 
   tool('get_history', 'Loki OS history', 'Rows from one area over a date range (default last 14 days): habit_logs, tasks, sleep_logs, budget_logs, journal_entries, work_logs, xp_history, goals.', {
-    area: z.enum(['habit_logs', 'tasks', 'sleep_logs', 'budget_logs', 'journal_entries', 'work_logs', 'xp_history', 'goals']),
+    area: z.enum(['habit_logs', 'tasks', 'sleep_logs', 'budget_logs', 'business_expenses', 'journal_entries', 'work_logs', 'xp_history', 'goals']),
     from: dateArg.optional(), to: dateArg.optional(), limit: z.number().int().min(1).max(200).optional(),
   }, async ({ area, from, to, limit }, sb, uid) => {
     const end = to || getLocalDateStr()
@@ -181,6 +182,19 @@ export function registerTools(server, asOwner) {
       description: a.description || '', ...(typeof a.include_in_daily === 'boolean' ? { exclude_daily: !a.include_in_daily } : {}),
     })
     return { logged: true, entry: { id: entry.id, date: entry.date, amount: entry.amount, category: entry.category, counts_toward_daily: !entry.exclude_daily } }
+  }, write)
+
+  tool('log_business_expense', 'Log business expense', `Log a business expense (₹), kept apart from the personal budget. Categories: ${BIZ_CATEGORIES.map((c) => `${c.id} (${c.label})`).join(', ')}. Payment: ${PAYMENT_MODES.join(', ')}. Use log_expense instead for personal spending.`, {
+    amount: z.number().positive().max(100000000), category: z.enum(BIZ_CATEGORIES.map((c) => c.id)).default('other'),
+    description: z.string().max(500).optional(), vendor: z.string().max(200).optional(), date: dateArg.optional(),
+    payment_mode: z.enum(PAYMENT_MODES).optional(), receipt_url: z.string().url().optional(),
+  }, async (a, sb, uid) => {
+    const res = await addBusinessExpense(uid, a)
+    if (res.error) throw new Error(`business expense: ${res.error.message}`)
+    const month = res.data.date.slice(0, 7)
+    const rows = must(await sb.from('business_expenses').select('date, amount, category').eq('user_id', uid).gte('date', `${month}-01`).lte('date', `${month}-31`), 'business_expenses')
+    const sum = monthSummary(rows, month)
+    return { logged: true, entry: { date: res.data.date, amount: res.data.amount, category: res.data.category, vendor: res.data.vendor }, month_total: sum.total, month_by_category: sum.byCategory.map((c) => ({ category: c.id, amount: c.amount })) }
   }, write)
 
   tool('save_journal_entry', 'Save journal entry', 'Write or update the journal for a date (default today). Only the fields you pass are changed.', {
