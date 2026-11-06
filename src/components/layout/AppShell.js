@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useOSSlice } from '@/lib/context/OSContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Home, Crosshair, Target, CheckSquare,
+  Building2, Home, Crosshair, Target, CheckSquare,
   BookOpen, Briefcase, Monitor, User,
   Menu, X, Shield, Trophy, RefreshCw, LogOut, Download, Mic, Wallet, Award, Snowflake, Sun, Settings
 } from 'lucide-react'
@@ -34,6 +34,7 @@ const NAV_ITEMS = [
   { href: '/work', icon: Briefcase, label: 'Work log', group: 'Build' },
   { href: '/speaking', icon: Mic, label: 'Speaking', group: 'Build' },
   { href: '/budget', icon: Wallet, label: 'Budget', group: 'Build' },
+  { href: '/business', icon: Building2, label: 'Business', group: 'Build' },
   { href: '/journal', icon: BookOpen, label: 'Journal', group: 'Reflect' },
   { href: '/portfolio-log', icon: Award, label: 'Portfolio', group: 'Reflect' },
   { href: '/screen-time', icon: Monitor, label: 'Screen time', group: 'Reflect' },

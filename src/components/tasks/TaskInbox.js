@@ -13,7 +13,7 @@ import { kindOf, textOf, titleOf } from '@/lib/utils/brainDump'
 /** Brain dump, folded into Tasks: capture a thought, then turn it into a task, a mission idea, or trash it. */
 export default function TaskInbox({ goals, today, schemaReady, addTask }) {
   const bd = useOSSlice('brainDump')
-  const [pref, setPref] = useLocalPref('lokios_tasks_inbox', 'open', ['open', 'closed'])
+  const [pref, setPref] = useLocalPref('lokios_tasks_inbox_v2', 'closed', ['open', 'closed'])
   const open = pref === 'open'
   const [taskFrom, setTaskFrom] = useState(null)
   const [now] = useState(() => Date.now())
