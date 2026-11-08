@@ -7,6 +7,7 @@ import { applyHabitStatus } from '@/lib/actions/habitStatus'
 import { completeTaskAction } from '@/lib/actions/taskComplete'
 import { saveSleepAction } from '@/lib/actions/sleepLog'
 import { saveScreenTimeAction } from '@/lib/actions/screenTimeLog'
+import { addChecklistItem, setChecklistDone } from '@/lib/utils/checklist'
 import { addBusinessExpense, BIZ_CATEGORIES, PAYMENT_MODES, monthSummary } from '@/lib/utils/businessExpenses'
 import { addBudgetExpense, BUDGET_CATEGORIES, isExcludedFromDaily, getCategoryById } from '@/lib/utils/budget'
 import { habitsScheduledOn } from '@/lib/utils/xpRules'
@@ -41,7 +42,7 @@ export function registerTools(server, asOwner) {
   // ── Read ─────────────────────────────────────────────────────────────────
   tool('get_today', 'Today in Loki OS', 'Today\'s (or a given date\'s) habits with status, open and done tasks, sleep, spend and XP. Call this first to get habit and task names/ids.', { date: dateArg.optional() }, async ({ date }, sb, uid) => {
     const day = date || getLocalDateStr()
-    const [habits, logs, tasks, sleep, budget, xp, profile] = await Promise.all([
+    const [habits, logs, tasks, sleep, budget, xp, profile, checklist] = await Promise.all([
       sb.from('habits').select('*').eq('user_id', uid).then((r) => must(r, 'habits')),
       sb.from('habit_logs').select('habit_id, status').eq('user_id', uid).eq('date', day).then((r) => must(r, 'habit_logs')),
       sb.from('tasks').select('id, title, status, due_date, difficulty, category, estimate_minutes, goal_id, completed_at').eq('user_id', uid).not('status', 'in', '(completed,cancelled,failed)').then((r) => must(r, 'tasks')),
@@ -49,6 +50,7 @@ export function registerTools(server, asOwner) {
       sb.from('budget_logs').select('*').eq('user_id', uid).eq('date', day).then((r) => r.data || []),
       sb.from('xp_history').select('amount, source_type, description').eq('user_id', uid).eq('occurred_on', day).then((r) => r.data || []),
       sb.from('profiles').select('total_xp, streak_days, longest_streak').eq('id', uid).maybeSingle().then((r) => r.data),
+      sb.from('checklist_items').select('id, title, due_date, task_id, goal_id').eq('user_id', uid).is('done_at', null).lte('due_date', addDays(day, 7)).then((r) => r.data || []),
     ])
     const status = new Map(logs.map((l) => [l.habit_id, l.status || 'completed']))
     const active = habits.filter((h) => h.is_active !== false)
@@ -59,6 +61,7 @@ export function registerTools(server, asOwner) {
       profile,
       habits: active.map((h) => ({ id: h.id, title: h.title, scheduled: scheduled.has(h.id), status: status.get(h.id) || 'none', xp: h.xp_per_completion || 25, time_of_day: h.time_of_day || 'anytime' })),
       open_tasks: tasks.filter((t) => !t.due_date || String(t.due_date).slice(0, 10) <= addDays(day, 7)).map((t) => ({ ...t, due_date: t.due_date ? String(t.due_date).slice(0, 10) : null })),
+      checklist_due: checklist,
       sleep,
       spend: { total: budget.filter((l) => !isExcludedFromDaily(l)).reduce((s, l) => s + Number(l.amount || 0), 0), entries: budget.map((l) => ({ amount: l.amount, category: l.category, description: l.description })) },
       xp_today: xp.reduce((s, r) => s + Number(r.amount || 0), 0),
@@ -195,6 +198,30 @@ export function registerTools(server, asOwner) {
     const rows = must(await sb.from('business_expenses').select('date, amount, category').eq('user_id', uid).gte('date', `${month}-01`).lte('date', `${month}-31`), 'business_expenses')
     const sum = monthSummary(rows, month)
     return { logged: true, entry: { date: res.data.date, amount: res.data.amount, category: res.data.category, vendor: res.data.vendor }, month_total: sum.total, month_by_category: sum.byCategory.map((c) => ({ category: c.id, amount: c.amount })) }
+  }, write)
+
+  tool('add_checklist_item', 'Add checklist item', 'Add a to-do with a deadline to the Checklist (no XP). Optionally link it to a task and/or a mission (id or name). Linking a task also links that task\'s mission.', {
+    title: z.string().min(1).max(300), due_date: dateArg.optional(), task: z.string().optional(), mission: z.string().optional(),
+  }, async (a, sb, uid) => {
+    let task_id = null, goal_id = null
+    if (a.task) {
+      const t = pick(must(await sb.from('tasks').select('id, title, goal_id').eq('user_id', uid).not('status', 'in', '(completed,cancelled)'), 'tasks'), a.task, 'task')
+      task_id = t.id; goal_id = t.goal_id || null
+    }
+    if (a.mission) goal_id = pick(must(await sb.from('goals').select('id, title').eq('user_id', uid).neq('status', 'completed'), 'goals'), a.mission, 'mission').id
+    const res = await addChecklistItem(uid, { title: a.title, due_date: a.due_date || null, task_id, goal_id })
+    if (res.error) throw new Error(`checklist: ${res.error.message}`)
+    return { added: true, item: res.data }
+  }, write)
+
+  tool('check_checklist_item', 'Tick checklist item', 'Mark a checklist item done (or undone with done=false). Item = id or name. No XP.', {
+    item: z.string().min(1), done: z.boolean().default(true),
+  }, async ({ item, done }, sb, uid) => {
+    const rows = must(await sb.from('checklist_items').select('id, title, done_at').eq('user_id', uid), 'checklist_items')
+    const it = pick(rows.filter((r) => (done ? !r.done_at : r.done_at)), item, 'checklist item')
+    const res = await setChecklistDone(uid, it.id, done)
+    if (res.error) throw new Error(`checklist: ${res.error.message}`)
+    return { item: it.title, done }
   }, write)
 
   tool('save_journal_entry', 'Save journal entry', 'Write or update the journal for a date (default today). Only the fields you pass are changed.', {
