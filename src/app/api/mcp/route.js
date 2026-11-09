@@ -19,8 +19,9 @@ const CORS = {
 
 const INSTRUCTIONS = `You are connected to Loki OS, the owner's personal operating system (habits, tasks, missions, sleep, budget, journal, XP).
 Call get_today first to see today's habits and tasks with their names and ids.
-Write tools (set_habit_status, complete_task, add_task, log_sleep, log_screen_time, log_expense, log_business_expense, save_journal_entry, add_brain_dump) change real data and XP: use them only when the owner asks, and say what changed (including the XP change) afterwards.
+Write tools (set_habit_status, complete_task, add_task, log_sleep, log_screen_time, log_expense, log_business_expense, add_checklist_item, check_checklist_item, save_journal_entry, add_brain_dump) change real data and XP: use them only when the owner asks, and say what changed (including the XP change) afterwards.
 Dates are YYYY-MM-DD in the owner's local time; times are 24h HH:MM.
+Missions are long goals, tasks are precise work that earns XP, checklist items are to-dos with a deadline (no XP).
 Business spending goes to log_business_expense, personal spending to log_expense.
 When the owner sends an iPhone Screen Time screenshot, read the total and per-app times and call log_screen_time.`
 

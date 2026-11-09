@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Plus, Search, LayoutGrid, List, Target, AlertTriangle, Clock, Sun, TrendingUp, X } from 'lucide-react'
+import { Plus, Search, LayoutGrid, List, Target, AlertTriangle, Clock, Sun, TrendingUp, X, ListChecks } from 'lucide-react'
 import AppShell from '@/components/layout/AppShell'
 import WinterLoader from '@/components/ui/WinterLoader'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -10,6 +10,7 @@ import TaskBoard from '@/components/tasks/TaskBoard'
 import TaskList from '@/components/tasks/TaskList'
 import TaskDrawer from '@/components/tasks/TaskDrawer'
 import TaskInbox from '@/components/tasks/TaskInbox'
+import ChecklistView from '@/components/tasks/ChecklistView'
 import { CompleteTaskModal, FailTaskModal, NewTaskSheet } from '@/components/tasks/TaskModals'
 import { useOS, useOSSlice } from '@/lib/context/OSContext'
 import { useIsPhone } from '@/lib/hooks/useMediaQuery'
@@ -27,11 +28,12 @@ export default function TasksPage() {
     pushTaskToTomorrow, undoCompleteTask,
   } = useOSSlice('tasks')
   const { goals = [] } = useOSSlice('goals')
+  const { user } = useOSSlice('auth')
   const { completeOperation, deleteOperation, failOperation, undoFailOperation } = useOS()
   const phone = useIsPhone()
   const today = getLocalDateStr()
 
-  const [view, changeView] = useLocalPref(VIEW_KEY, 'board', ['board', 'list'])
+  const [view, changeView] = useLocalPref(VIEW_KEY, 'board', ['board', 'list', 'checklist'])
   const [query, setQuery] = useState('')
   const [catFilter, setCatFilter] = useState(null)
   const [prFilter, setPrFilter] = useState(null)
@@ -176,6 +178,7 @@ export default function TasksPage() {
             <div className="tk-view" role="tablist" aria-label="View">
               <button type="button" role="tab" aria-selected={view === 'board'} className={view === 'board' ? 'is-on' : ''} onClick={() => changeView('board')}><LayoutGrid size={14} /> Board</button>
               <button type="button" role="tab" aria-selected={view === 'list'} className={view === 'list' ? 'is-on' : ''} onClick={() => changeView('list')}><List size={14} /> List</button>
+              <button type="button" role="tab" aria-selected={view === 'checklist'} className={view === 'checklist' ? 'is-on' : ''} onClick={() => changeView('checklist')}><ListChecks size={14} /> Checklist</button>
             </div>
             <button type="button" className="btn btn-primary tk-add" onClick={() => setNewTask({ due_date: today, n: Date.now() })}><Plus size={16} /> Task</button>
           </div>
@@ -188,6 +191,9 @@ export default function TasksPage() {
           <div className="is-good"><TrendingUp size={14} /><b>{doneWeek}</b><span>Done · 7d</span></div>
         </div>
 
+        {view === 'checklist' ? (
+          <ChecklistView userId={user?.id} tasks={tasks} goals={goals} today={today} />
+        ) : <>
         <div className="tk-filters">
           <label className="tk-search">
             <Search size={14} />
@@ -244,6 +250,7 @@ export default function TasksPage() {
             onAdd={addFromColumn}
           />
         )}
+        </>}
 
         <TaskDrawer
           key={openId || 'none'}
