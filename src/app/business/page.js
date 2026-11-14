@@ -5,6 +5,7 @@ import { Building2, ChevronLeft, ChevronRight, Download, Trash2, Plus, ExternalL
 import AppShell from '@/components/layout/AppShell'
 import WinterLoader from '@/components/ui/WinterLoader'
 import SchemaHint from '@/components/ui/SchemaHint'
+import SubscriptionsPanel from '@/components/budget/SubscriptionsPanel'
 import { useOSSlice } from '@/lib/context/OSContext'
 import { getLocalDateStr } from '@/lib/utils/dates'
 import { isMissingSchema } from '@/lib/utils/schema'
@@ -102,6 +103,13 @@ export default function BusinessExpensesPage() {
         </header>
 
         {state.missing ? <SchemaHint feature="Business expenses" file={MIGRATION} /> : <AddForm userId={user?.id} onSaved={load} />}
+
+        {!state.missing && (
+          <section className="pf-card">
+            <div className="pf-card-head">Monthly business subscriptions</div>
+            <SubscriptionsPanel userId={user?.id} scope="business" onLogged={load} />
+          </section>
+        )}
 
         <section className="pf-card bx-month">
           <div className="bx-month-head">

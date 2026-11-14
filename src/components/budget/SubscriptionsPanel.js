@@ -10,19 +10,23 @@ import { getLocalDateStr } from '@/lib/utils/dates'
 import { formatMoney } from '@/lib/utils/money'
 import { CYCLES, monthlyCost, advanceDate, runSubscriptionAutopilot } from '@/lib/utils/subscriptions'
 import { BUDGET_CATEGORIES } from '@/lib/utils/budget'
+import { BIZ_CATEGORIES, PAYMENT_MODES } from '@/lib/utils/businessExpenses'
 
 const daysUntil = (d, today) => (d ? Math.round((new Date(`${d}T12:00:00`) - new Date(`${today}T12:00:00`)) / 86400000) : NaN)
 const shortDate = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 const relDay = (n) => (n === 0 ? 'today' : n === 1 ? 'tomorrow' : n < 0 ? `${-n}d overdue` : `in ${n} days`)
 
-function SubForm({ sub, onClose, onSave }) {
+function SubForm({ sub, onClose, onSave, scope }) {
+  const biz = scope === 'business'
   const today = getLocalDateStr()
   const [f, setF] = useState(() => ({
     name: sub?.name || '',
     amount: sub?.amount ?? '',
     cycle: sub?.cycle || 'monthly',
     next_charge_date: sub?.next_charge_date || today,
-    category: sub?.category || 'subscriptions',
+    category: sub?.category || (biz ? 'software' : 'subscriptions'),
+    vendor: sub?.vendor || '',
+    payment_mode: sub?.payment_mode || 'upi',
     active: sub?.active ?? true,
   }))
   const [busy, setBusy] = useState(false)
@@ -33,7 +37,7 @@ function SubForm({ sub, onClose, onSave }) {
     if (!f.name.trim() || !(Number(f.amount) > 0)) { setError('Name and an amount above 0 are required.'); return }
     if (!f.next_charge_date) { setError('Pick the next charge date.'); return }
     setBusy(true)
-    const res = await onSave({ name: f.name.trim(), amount: Number(f.amount), cycle: f.cycle, next_charge_date: f.next_charge_date, billing_day: new Date(`${f.next_charge_date}T12:00:00`).getDate(), category: f.category, active: f.active, currency: 'INR' })
+    const res = await onSave({ name: f.name.trim(), amount: Number(f.amount), cycle: f.cycle, next_charge_date: f.next_charge_date, billing_day: new Date(`${f.next_charge_date}T12:00:00`).getDate(), category: f.category, active: f.active, currency: 'INR', scope: biz ? 'business' : 'personal', ...(biz ? { vendor: f.vendor.trim() || null, payment_mode: f.payment_mode } : {}) })
     setBusy(false)
     if (res?.error) setError(res.error.message); else onClose()
   }
@@ -46,8 +50,14 @@ function SubForm({ sub, onClose, onSave }) {
       </div>
       <div className="td-grid">
         <div className="td-field"><label className="td-label" htmlFor="sf-next">Next charge</label><input id="sf-next" className="input" type="date" value={f.next_charge_date} onChange={set('next_charge_date')} /></div>
-        <div className="td-field"><label className="td-label" htmlFor="sf-cat">Category</label><select id="sf-cat" className="select" value={f.category} onChange={set('category')}>{BUDGET_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.shortLabel}</option>)}</select></div>
+        <div className="td-field"><label className="td-label" htmlFor="sf-cat">Category</label><select id="sf-cat" className="select" value={f.category} onChange={set('category')}>{biz ? BIZ_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>) : BUDGET_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.shortLabel}</option>)}</select></div>
       </div>
+      {biz && (
+        <div className="td-grid">
+          <div className="td-field"><label className="td-label" htmlFor="sf-ven">Paid to</label><input id="sf-ven" className="input" value={f.vendor} onChange={set('vendor')} placeholder="e.g. Anthropic, Adobe" /></div>
+          <div className="td-field"><label className="td-label" htmlFor="sf-pm">Payment</label><select id="sf-pm" className="select" value={f.payment_mode} onChange={set('payment_mode')}>{PAYMENT_MODES.map((m) => <option key={m} value={m}>{m.toUpperCase()}</option>)}</select></div>
+        </div>
+      )}
       <label className="sub-active"><input type="checkbox" checked={f.active} onChange={(e) => set('active')(e.target.checked)} /> Active — log it automatically on the billing date</label>
       {error && <p className="tm-warn">{error}</p>}
       <button type="submit" className="btn btn-primary td-submit" disabled={busy}>{busy ? 'Saving…' : sub ? 'Save' : 'Add subscription'}</button>
@@ -56,8 +66,10 @@ function SubForm({ sub, onClose, onSave }) {
 }
 
 /** Budget → Subscriptions (#25): recurring bills logged automatically. */
-export default function SubscriptionsPanel({ userId, billsLimit }) {
-  const subs = useTable('subscriptions', userId, { order: ['next_charge_date', true] })
+export default function SubscriptionsPanel({ userId, billsLimit, scope = 'personal', onLogged }) {
+  const table = useTable('subscriptions', userId, { order: ['next_charge_date', true] })
+  const biz = scope === 'business'
+  const subs = { ...table, rows: table.rows.filter((s) => (s.scope || 'personal') === scope) }
   const [editing, setEditing] = useState(null) // sub | 'new'
   const [running, setRunning] = useState(false)
   const today = getLocalDateStr()
@@ -73,6 +85,7 @@ export default function SubscriptionsPanel({ userId, billsLimit }) {
     setRunning(true)
     await runSubscriptionAutopilot(userId)
     subs.reload()
+    onLogged?.()
     setRunning(false)
   }
 
@@ -82,9 +95,9 @@ export default function SubscriptionsPanel({ userId, billsLimit }) {
         <div className="sub-total">
           <span className="record-label">Monthly total</span>
           <span className="record-value">{formatMoney(monthly)}</span>
-          <span className="record-sub">{active.length} active · bills limit {formatMoney(billsLimit)}</span>
+          <span className="record-sub">{active.length} active{billsLimit ? ` · bills limit ${formatMoney(billsLimit)}` : ' · logged to business expenses'}</span>
         </div>
-        <div className="sub-bar" aria-label={`${Math.round(pct * 100)}% of the monthly bills limit`}><span style={{ width: `${pct * 100}%`, background: pct >= 1 ? 'var(--danger)' : pct > 0.8 ? 'var(--warning)' : 'var(--accent-gradient)' }} /></div>
+        {billsLimit > 0 && <div className="sub-bar" aria-label={`${Math.round(pct * 100)}% of the monthly bills limit`}><span style={{ width: `${pct * 100}%`, background: pct >= 1 ? 'var(--danger)' : pct > 0.8 ? 'var(--warning)' : 'var(--accent-gradient)' }} /></div>}
         <div className="sub-actions">
           <button type="button" className="btn btn-primary btn-sm" onClick={() => setEditing('new')}><Plus size={14} /> Subscription</button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={runNow} disabled={running}>{running ? 'Checking…' : 'Log due charges now'}</button>
@@ -99,7 +112,7 @@ export default function SubscriptionsPanel({ userId, billsLimit }) {
       )}
 
       {subs.rows.length === 0 && !subs.loading ? (
-        <div className="tb-empty"><div className="tb-empty-art"><CreditCard size={22} /></div><p>Add your recurring bills once — they log themselves from then on.</p><button type="button" className="tb-empty-cta" onClick={() => setEditing('new')}><Plus size={13} /> Add a subscription</button></div>
+        <div className="tb-empty"><div className="tb-empty-art"><CreditCard size={22} /></div><p>{biz ? 'Add your recurring business tools once — they log to business expenses on the billing date.' : 'Add your recurring bills once — they log themselves from then on.'}</p><button type="button" className="tb-empty-cta" onClick={() => setEditing('new')}><Plus size={13} /> Add a subscription</button></div>
       ) : (
         <div className="sub-list">
           {subs.rows.map((s) => {
@@ -114,7 +127,7 @@ export default function SubscriptionsPanel({ userId, billsLimit }) {
                 <span className="sub-amt">{formatMoney(s.amount)}<em>/{s.cycle === 'weekly' ? 'wk' : s.cycle === 'yearly' ? 'yr' : 'mo'}</em></span>
                 <button type="button" className={`settings-toggle ${s.active ? 'is-on' : ''}`} onClick={() => subs.update(s.id, { active: !s.active })} aria-label={s.active ? 'Pause' : 'Activate'} aria-pressed={s.active}><span /></button>
                 <button type="button" className="tl-icon" onClick={() => setEditing(s)} aria-label={`Edit ${s.name}`}><Pencil size={14} /></button>
-                <button type="button" className="tl-icon is-danger" onClick={() => { if (window.confirm(`Delete ${s.name}? Past charges stay in your budget log.`)) subs.remove(s.id) }} aria-label={`Delete ${s.name}`}><Trash2 size={14} /></button>
+                <button type="button" className="tl-icon is-danger" onClick={() => { if (window.confirm(`Delete ${s.name}? Past charges stay logged.`)) subs.remove(s.id) }} aria-label={`Delete ${s.name}`}><Trash2 size={14} /></button>
               </article>
             )
           })}
@@ -122,7 +135,7 @@ export default function SubscriptionsPanel({ userId, billsLimit }) {
       )}
 
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={editing === 'new' ? 'New subscription' : 'Edit subscription'}>
-        {editing && <SubForm key={editing === 'new' ? 'new' : editing.id} sub={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSave={(row) => (editing === 'new' ? subs.insert(row) : subs.update(editing.id, row))} />}
+        {editing && <SubForm key={editing === 'new' ? 'new' : editing.id} scope={scope} sub={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSave={(row) => (editing === 'new' ? subs.insert(row) : subs.update(editing.id, row))} />}
       </Sheet>
     </div>
   )
