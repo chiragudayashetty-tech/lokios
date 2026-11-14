@@ -59,7 +59,25 @@ export async function runSubscriptionAutopilot(userId, today = getLocalDateStr()
     let next = sub.next_charge_date
     if (!next) continue // no charge date set: nothing to log until it's edited
     let guard = 0
+    const isBiz = sub.scope === 'business'
     while (next <= today && guard++ < 60) {
+      if (isBiz) {
+        // Business charge -> business_expenses; the deterministic id makes it log once.
+        const { error: bizErr } = await sb.from('business_expenses').upsert({
+          id: chargeId(sub.id, next),
+          user_id: userId,
+          date: next,
+          amount: Number(sub.amount),
+          category: sub.category || 'software',
+          vendor: sub.vendor || sub.name,
+          description: `${sub.name} (auto, ${sub.cycle || 'monthly'})`,
+          payment_mode: sub.payment_mode || null,
+        }, { onConflict: 'id', ignoreDuplicates: true })
+        if (bizErr) break // keep next_charge_date so it retries tomorrow
+        logged.push({ sub, date: next })
+        next = advanceDate(next, sub.cycle, sub.billing_day)
+        continue
+      }
       const marker = chargeMarker(sub.id, next)
       const { data: existing } = await sb.from('budget_logs').select('id').eq('user_id', userId).like('description', `%${marker}%`).limit(1)
       if (!existing?.length) {
@@ -86,7 +104,7 @@ export async function runSubscriptionAutopilot(userId, today = getLocalDateStr()
     await sb.from('subscriptions').update({ next_charge_date: next }).eq('id', sub.id)
   }
   for (const { sub } of logged.slice(-3)) {
-    emitGame('toast', { icon: 'wallet', title: `${sub.name} ${formatMoney(sub.amount)} logged`, sub: 'Subscription autopilot · counted in monthly bills', tone: 'accent' })
+    emitGame('toast', { icon: 'wallet', title: `${sub.name} ${formatMoney(sub.amount)} logged`, sub: sub.scope === 'business' ? 'Business subscription · logged to business expenses' : 'Subscription autopilot · counted in monthly bills', tone: 'accent' })
   }
   return logged
 }
